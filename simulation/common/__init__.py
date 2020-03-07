@@ -1,3 +1,3 @@
-from .consumer import Consumer
-from .producer import Producer
-from .storage import Storage
+from simulation.common.consumer import Consumer
+from simulation.common.producer import Producer
+from simulation.common.storage import Storage

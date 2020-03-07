@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from ..common import Consumer
+from simulation.common import Consumer
 
 class BaseLVS(Consumer):
     def __init__(self):

@@ -1,8 +1,8 @@
-from .base_array import BaseArray
+from simulation.array.base_array import BaseArray
 
 class BasicArray(BaseArray):
     def __init__(self):
-        super().__init__(self)
+        super().__init__()
 
     def update(self, tick):
         """

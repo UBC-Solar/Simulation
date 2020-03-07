@@ -1,1 +1,1 @@
-from .base_battery import BaseBattery
+from simulation.battery.base_battery import BaseBattery
