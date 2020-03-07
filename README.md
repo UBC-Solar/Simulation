@@ -13,7 +13,7 @@ sudo apt update && sudo apt install python3-dev
 ```
 
 #### Windows 10
-NOT VERIFIED
+Install the latest stable release from https://www.python.org/downloads/windows/
 
 ### Install using pip
 Install the Simulation package:
