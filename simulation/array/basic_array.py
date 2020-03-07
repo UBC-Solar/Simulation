@@ -11,6 +11,8 @@ class BasicArray(BaseArray):
         :param tick: (float) the length of time for the tick (in seconds)
         """
         print("Hello world")
+        self._foo()
 
-array = BasicArray()
-array.update(1)
+    # use this for all private functions
+    def _foo(self):
+        print("bar")

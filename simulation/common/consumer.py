@@ -16,7 +16,7 @@ class Consumer(ABC):
 
         :param tick: (float) the length of time for the tick (in seconds)
         """
-        pass
+        raise NotImplementedError
         
     def get_consumed_energy(self):
         return self.consumed_energy

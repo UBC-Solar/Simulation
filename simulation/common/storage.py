@@ -12,14 +12,14 @@ class Storage(ABC):
     @abstractmethod
     def update(self, tick):
 
-        pass
+        raise NotImplementedError
 
     @abstractmethod 
     def charge(self, energy):
 
-        pass
+        raise NotImplementedError
 
     @abstractmethod 
     def discharge(self, energy):
 
-        pass
+        raise NotImplementedError
