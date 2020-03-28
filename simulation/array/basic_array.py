@@ -13,10 +13,9 @@ class BasicArray(BaseArray):
         :param tick: (float) the length of time for the tick (in seconds)
         
         """
+        self.produced_energy = calculate_produced_power(CONSTANT_SUNLIGHT) * tick
         return self.produced_energy
 
-     def calculate_produced_energy(self):
-
-         produced_energy = CONSTANT_SUNLIGHT
-
-         self.produced_energy = produced_energy
+     def calculate_produced_power(self, sunlight):
+         produced_power = sunlight
+         return produced_power
