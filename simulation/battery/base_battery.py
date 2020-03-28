@@ -34,7 +34,7 @@ class BaseBattery(Storage):
             self.stored_energy -= energy
             return energy
 
-    def status_report(self):
-        print("Battery stored energy: {}Wh".format(round(self.stored_energy, 2)))
-        print("Battery state of charge: {}%".format(round(self.state_of_charge*100, 2)))
-        print("Battery voltage: {}V \n".format(round(self.voltage, 2)))
+    def __str__(self):
+        return ("Battery stored energy: {}Wh".format(round(self.stored_energy, 2)) + "\n" + 
+                "Battery state of charge: {}%".format(round(self.state_of_charge*100, 2)) + "\n" + 
+                "Battery voltage: {}V \n".format(round(self.voltage, 2)))
