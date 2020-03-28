@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
-from simulation.common import Producer
-
 class BaseRegen(Producer):
     def __init__(self):
         super().__init__(self)
+
+    def update(self):
+
+        return 0;
