@@ -6,4 +6,4 @@ class BaseRegen(Producer):
 
     def update(self):
 
-        return 0;
+        return 0
