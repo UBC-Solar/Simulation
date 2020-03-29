@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from simulation.common import Storage
 
+
 class BaseBattery(Storage):
     def __init__(self, initial_energy, max_current_capacity, max_energy_capacity):
         super().__init__()                                                              # calls Storage class __init__ method
