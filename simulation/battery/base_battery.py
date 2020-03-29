@@ -16,9 +16,10 @@ class BaseBattery(Storage):
         self.voltage = 5                                              # terminal voltage of the battery
         self.max_voltage = 5
         self.min_voltage = 2.5
+        self.empty = 0                  # 1 if battery is empty, 0 if battery is not empty
 
     def update(self, tick):             # not quite sure what to do with this function
-        pass                            # probably updates all the attributes for a given time interval
+        raise NotImplementedError       # probably updates all the attributes for a given time interval
 
     def charge(self, energy):
         if self.stored_energy + energy >= self.max_current_capacity:        # handles the possibility that adding energy exceeds the max capacity of the battery
@@ -30,10 +31,15 @@ class BaseBattery(Storage):
         if self.stored_energy - energy <= 0:
             returned_energy = self.stored_energy
             self.stored_energy = 0
+            self.empty = 1
+
             return returned_energy                  # i'm sure there's a cleaner way to do this
         else:
             self.stored_energy -= energy
             return energy
+
+    def is_empty(self):
+        return self.empty
 
     def __str__(self):
         return ("Battery stored energy: {}Wh".format(round(self.stored_energy, 2)) + "\n" + 
