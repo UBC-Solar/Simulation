@@ -10,7 +10,7 @@ class BasicBattery(BaseBattery):
         self.max_energy_capacity = 4573         # in Wh
         self.max_current_capacity = 48.75       # in Ah
 
-        self.state_of_charge = state_of_charge
+        self.state_of_charge = state_of_charge                      # 0.00 <= state_of_charge <= 1.00
         self.depth_of_discharge = 1 - self.state_of_charge
 
         self.discharge_capacity = self.calculate_discharge_capacity_from_soc(self.state_of_charge)      # calculates discharge capacity from state of charge
@@ -52,5 +52,4 @@ class BasicBattery(BaseBattery):
     def discharge(self, energy):
         super().discharge(energy)
         self.update(1)
-
 
