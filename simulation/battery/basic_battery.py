@@ -13,8 +13,8 @@ class BasicBattery(BaseBattery):
         self.state_of_charge = state_of_charge                      # 0.00 <= state_of_charge <= 1.00
         self.depth_of_discharge = 1 - self.state_of_charge
 
-        self.discharge_capacity = self.calculate_discharge_capacity_from_soc(self.state_of_charge)      # calculates discharge capacity from state of charge
-        self.voltage = self.calculate_voltage(self.discharge_capacity)               # calculates voltage of battery from discharge capacity
+        self.discharge_capacity = self.calculate_discharge_capacity_from_soc(self.state_of_charge)                                              # calculates discharge capacity from state of charge
+        self.voltage = self.calculate_voltage(self.discharge_capacity)                                                                          # calculates voltage of battery from discharge capacity
         self.stored_energy = self.max_energy_capacity - self.calculate_energy_discharged_from_discharge_capacity(self.discharge_capacity)       # calculates stored energy from discharge capacity
 
         super().__init__(self.stored_energy, self.max_current_capacity, self.max_energy_capacity, self.max_voltage,
@@ -53,3 +53,5 @@ class BasicBattery(BaseBattery):
         super().discharge(energy)
         self.update(1)
 
+
+# TODO: create class for energy transfer between components maybe?

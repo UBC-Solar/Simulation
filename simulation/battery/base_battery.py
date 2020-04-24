@@ -29,8 +29,8 @@ class BaseBattery(Storage):
         raise NotImplementedError       # probably updates all the attributes for a given time interval
 
     def charge(self, energy):
-        if self.stored_energy + energy >= self.max_current_capacity:        # handles the possibility that adding energy exceeds the max capacity of the battery
-            self.stored_energy = self.max_current_capacity
+        if self.stored_energy + energy >= self.max_energy_capacity:        # handles the possibility that adding energy exceeds the max capacity of the battery
+            self.stored_energy = self.max_energy_capacity
         else:
             self.stored_energy += energy
 
