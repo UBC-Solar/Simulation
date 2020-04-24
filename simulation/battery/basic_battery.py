@@ -45,12 +45,12 @@ class BasicBattery(BaseBattery):
         self.state_of_charge = self.calculate_state_of_charge(discharge_capacity)
         self.voltage = self.calculate_voltage(discharge_capacity)
 
-    def charge(self, energy):
-        super().charge(energy)
+    def charge(self, energy):           # assuming energy parameter is in joules
+        super().charge(energy / 3600)   # divide by 3600 to convert from joules to watt-hours
         self.update(1)                  # this makes it so that the update() method need not always be called separately
 
     def discharge(self, energy):
-        super().discharge(energy)
+        super().discharge(energy / 3600)
         self.update(1)
 
 
