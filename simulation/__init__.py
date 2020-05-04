@@ -10,4 +10,7 @@ from simulation.regen import BaseRegen
 
 from simulation.array import BasicArray
 
+from simulation.battery import BasicBattery
+
 __version__ = "0.0.1"
+
