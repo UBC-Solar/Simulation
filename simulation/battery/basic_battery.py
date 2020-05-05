@@ -1,6 +1,5 @@
 from simulation.battery.base_battery import BaseBattery
 
-
 class BasicBattery(BaseBattery):
     def __init__(self, state_of_charge):
 

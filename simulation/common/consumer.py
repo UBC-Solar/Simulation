@@ -28,3 +28,4 @@ class Consumer(ABC):
         energy = self.get_consumed_energy()
         self.set_consumed_energy(0)
         return energy
+

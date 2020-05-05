@@ -9,8 +9,12 @@ from simulation.motor import BaseMotor
 from simulation.regen import BaseRegen
 
 from simulation.array import BasicArray
-
 from simulation.battery import BasicBattery
+from simulation.lvs import BasicLVS
+from simulation.motor import BasicMotor
+from simulation.regen import BasicRegen
 
 __version__ = "0.0.1"
+
+print("package 'simulation' imported. version: {}".format(__version__))
 
