@@ -16,15 +16,18 @@ class BasicMotor(BaseMotor):
         self.vehicle_mass = 250
         self.acceleration_g = 9.81
         self.road_friction = 0.0055
-        self.tire_radius = 0.35
+        self.tire_radius = 0.2032
 
-        self.constant_torque = (self.vehicle_mass * self.acceleration_g * self.road_friction)/ \
-                                self.tire_radius
+        self.air_density = 1.225
+        self.vehicle_frontal_area = 0.952
+        self.drag_coefficient = 0.223
+
+        self.friction_force = (self.vehicle_mass * self.acceleration_g * self.road_friction)
 
         self.e_mc = 0.98 #motor controller efficiency, subject to change
-        self.e_m = 0.7  #motor efficiency, subject to change
+        self.e_m = 0.9  #motor efficiency, subject to change
 
-        print("torque experienced by motor: {} Nm".format(self.constant_torque))
+        #print("torque experienced by motor: {} Nm".format(self.constant_torque))
         print("tire radius: {}m".format(self.tire_radius))
         print("rolling resistance coefficient: {}".format(self.road_friction))
         print("vehicle mass: {}kg".format(self.vehicle_mass))
@@ -57,9 +60,11 @@ class BasicMotor(BaseMotor):
 
         required_speed_ms = required_speed_kmh / 3.6
         required_angular_speed_rads = required_speed_ms / self.tire_radius 
-        
-        motor_output_power = required_angular_speed_rads * self.constant_torque
-        #print("     output_power: {} J".format(motor_output_power))
+
+        drag_force = 0.5 * self.air_density * ((required_speed_ms)**2) *\
+                     self.drag_coefficient * self.vehicle_frontal_area
+
+        motor_output_power = required_angular_speed_rads * (self.friction_force + drag_force)
 
         motor_input_power = motor_output_power/self.e_m
         
@@ -70,8 +75,3 @@ class BasicMotor(BaseMotor):
         #   time
 
         self.consumed_energy = self.input_power * tick
-
-    #test 
-    #input dc_v = 5, dc_c = 2 , wth e_mc = 0.7 and e_m = 0.7 , expected output 4.9 W
-    #testex =  calculate_pout(5, 2)
-    #print(testex)

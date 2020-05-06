@@ -1,9 +1,17 @@
 #TODO
+To be complete at the end this Saturday, 09 May 2020
 
-##David Specifically
+##For Everyone
 
+- If a line of code is too long, shorten it using line breaks. PEP8 specifies 72 columns as a recommended length, but try to keep it below 90
 
-##Battery
+- Document your code properly. Write descriptive function specifications. Use the """ """
+
+- Dont put comments at the end of a line of code. Put comments on top of a line of code (PEP8)
+
+- avoid magic numbers
+
+##Battery - Mihir
 
 - fix usage of variables in base_battery: make them parameterized.
 
@@ -11,28 +19,12 @@
 
 - try to move more model-specific variables to basic_battery, as base_battery is supposed to be extensible across all possible batteries.
 
-- avoid magic numbers
-
 - fix pass on update function in BaseBattery, let BasicBattery override it (this is valid, as Python will leave something not implemented in a subclass when you don't declare it again)
 
-##Motor
+##Motor - Harry and Chris Aung
 
-DC Voltage, DC Current is needed to obtain energy consumed
-DC Voltage is given by the Battery
-DC Current depends on many factors:
-    - Road, Tire Friction = 0.7
-    - Vehicle Mass = 250 kg
-    - Vehicle Acceleration = 0
-    - Vehicle Speed = user determined
+- Clean up code as above and submit pull request. Fisher might have more comments
 
-    - (Mass * gravity * friction)/(Wheel Radius) = Torque
-    - motor_controller_efficiency = f(Torque, speed)
-    - motor_output_power = Torque * angular_speed
-    - motor_input_power = (Torque * angular_speed)/motor_efficiency 
-    - motor_controller_input_power = (Torque * angular_speed)/(mc_efficiency * motor_efficiency)
-    - motor_controller_input = (Torque * angular_speed)/(mc_efficiency * motor_efficiency * input voltage)
+##Vehicle Body Losses - Fisher and David
 
-
-
-
-
+- Currently, David has put the Vehicle Drag in the motor class. But it would be better if the vehicle drag is implemented as a seperate class

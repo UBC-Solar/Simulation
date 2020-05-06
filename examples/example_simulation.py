@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 #ticks are in seconds
 tick = 1
 sim_duration = 60 * 60 * 6
-speed_kmh = 30
+speed_kmh = 60
 
 #Initialize all simulation classes
 incident_sunlight = 1000
