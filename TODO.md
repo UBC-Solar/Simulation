@@ -1,5 +1,8 @@
 #TODO
 
+##David Specifically
+
+
 ##Battery
 
 - fix usage of variables in base_battery: make them parameterized.
@@ -14,5 +17,22 @@
 
 ##Motor
 
-- please document all functions properly
+DC Voltage, DC Current is needed to obtain energy consumed
+DC Voltage is given by the Battery
+DC Current depends on many factors:
+    - Road, Tire Friction = 0.7
+    - Vehicle Mass = 250 kg
+    - Vehicle Acceleration = 0
+    - Vehicle Speed = user determined
+
+    - (Mass * gravity * friction)/(Wheel Radius) = Torque
+    - motor_controller_efficiency = f(Torque, speed)
+    - motor_output_power = Torque * angular_speed
+    - motor_input_power = (Torque * angular_speed)/motor_efficiency 
+    - motor_controller_input_power = (Torque * angular_speed)/(mc_efficiency * motor_efficiency)
+    - motor_controller_input = (Torque * angular_speed)/(mc_efficiency * motor_efficiency * input voltage)
+
+
+
+
 
