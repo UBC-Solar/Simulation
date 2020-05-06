@@ -1,7 +1,7 @@
 from simulation.battery.base_battery import BaseBattery
 
-
 class BasicBattery(BaseBattery):
+
     def __init__(self, state_of_charge):
 
         # DayBreak battery constants
@@ -47,11 +47,11 @@ class BasicBattery(BaseBattery):
 
     def charge(self, energy):           # assuming energy parameter is in joules
         super().charge(energy / 3600)   # divide by 3600 to convert from joules to watt-hours
-        self.update(1)                  # this makes it so that the update() method need not always be called separately
+        #self.update(1)                  # this makes it so that the update() method need not always be called separately
 
     def discharge(self, energy):
         super().discharge(energy / 3600)
-        self.update(1)
+        #self.update(1)
 
 
 # TODO: create class for energy transfer between components maybe?

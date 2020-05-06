@@ -21,9 +21,9 @@ class BaseBattery(Storage):
         self.voltage = voltage                                          # terminal voltage of the battery (V)
 
         if self.state_of_charge > 0:
-            self.empty = 0                  # 1 if battery is empty, 0 if battery is not empty
+            self.empty = False                  # 1 if battery is empty, 0 if battery is not empty
         else:
-            self.empty = 1
+            self.empty = True
 
     def update(self, tick):             # not quite sure what to do with this function
         raise NotImplementedError       # probably updates all the attributes for a given time interval
@@ -38,7 +38,7 @@ class BaseBattery(Storage):
         if self.stored_energy - energy <= 0:
             returned_energy = self.stored_energy
             self.stored_energy = 0
-            self.empty = 1
+            self.empty = True
 
             return returned_energy                  # i'm sure there's a cleaner way to do this
         else:
@@ -47,6 +47,15 @@ class BaseBattery(Storage):
 
     def is_empty(self):
         return self.empty
+
+    def get_stored_energy(self):
+        return self.stored_energy
+
+    def get_state_of_charge(self):
+        return self.state_of_charge
+
+    def get_output_voltage(self):
+        return self.voltage
 
     def __str__(self):
         return ("Battery stored energy: {}Wh".format(round(self.stored_energy, 2)) + "\n" + 
