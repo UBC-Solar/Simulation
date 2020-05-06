@@ -25,6 +25,10 @@ class BasicMotor(BaseMotor):
         self.e_m = 0.7  #motor efficiency, subject to change
 
         print("torque experienced by motor: {} Nm".format(self.constant_torque))
+        print("tire radius: {}m".format(self.tire_radius))
+        print("rolling resistance coefficient: {}".format(self.road_friction))
+        print("vehicle mass: {}kg".format(self.vehicle_mass))
+        print("acceleration of gravity: {}m/s2".format(self.acceleration_g))
         print("motor controller efficiency: {}%".format(self.e_mc))
         print("motor efficiency: {}%".format(self.e_m))
    
