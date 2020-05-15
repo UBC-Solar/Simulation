@@ -7,9 +7,6 @@ to make it within the day [distance -> speed]
 
 """
 
-# TODO: adding an exception if the battery is empty would make life a bit easier here.
-# TODO: add a try and except statement around the battery class every time a discharge is made.
-
 # Time parameters
 tick = 1  # in seconds
 simulation_duration = 60 * 60 * 9  # 9 hours
@@ -19,24 +16,23 @@ incident_sunlight = 1000
 initial_battery_charge = 0.9
 lvs_power_loss = 0
 speed_increment = 1
-max_speed_kmh = 100  # is in km/h
+max_speed_kmh = 50  # is in km/h
 
 # Simulation inputs
 distance = 200  # in kilometers
 
 # Flags
-optimal_solution_found = False
-no_solutions = False
+simulation_complete = False
 
 optimal_solution = ()
-final_parameters = ()
 
 # Minimum speed that the car must go to cover the given distance in the given time
 speed_kmh = round(distance / (simulation_duration / 3600))
 
 # Runs the simulation at each speed
-while speed_kmh < max_speed_kmh and optimal_solution_found is False and no_solutions is False:
+while speed_kmh < max_speed_kmh and simulation_complete is False:
 
+    distance_travelled = 0
     speed_kmh += speed_increment
 
     # Initialise simulation
@@ -49,10 +45,9 @@ while speed_kmh < max_speed_kmh and optimal_solution_found is False and no_solut
 
     basic_motor = simulation.BasicMotor()
 
-    for time in range(0, simulation_duration, tick):  # for every time interval
+    for time in range(tick, simulation_duration, tick):  # for every time interval
 
-        # Perform energy exchanges (this whole mechanism needs to be improved)
-
+        # Perform energy exchanges between components (this whole mechanism needs to be improved)
         basic_array.update(tick)
         produced_energy = basic_array.get_produced_energy()
 
@@ -64,36 +59,28 @@ while speed_kmh < max_speed_kmh and optimal_solution_found is False and no_solut
         motor_consumed_energy = basic_motor.get_consumed_energy()
 
         basic_battery.charge(produced_energy)
-        basic_battery.discharge(lvs_consumed_energy)
-        basic_battery.discharge(motor_consumed_energy)
 
-        basic_battery.update(tick)
+        try:  # try removing some energy from the battery
+            basic_battery.discharge(lvs_consumed_energy)
+            basic_battery.discharge(motor_consumed_energy)
 
-        battery_charge = basic_battery.get_state_of_charge()
-        distance_travelled = speed_kmh * (time / 3600)
-
-        # if the car has travelled the whole distance
-        if distance_travelled >= distance:
-            # save the final parameters for this trip
-            final_parameters = (round(speed_kmh, 1), round(distance_travelled, 2), round(battery_charge * 100, 2),
-                                round(time / 3600, 2))
-            optimal_solution = final_parameters
+        except Exception as exp:  # if the battery is empty
+            simulation_complete = True
             break
 
-        # if the car hasn't yet travelled the whole distance and its battery is empty...
-        # (this line can be replaced with a try and except around the battery charge() and discharge() method calls)
-        elif basic_battery.is_empty():
+        else:  # if the battery still has some charge in it
+            distance_travelled = speed_kmh * (time / 3600)
 
-            # and if the car has not ever travelled the entire distance at slower speeds...
-            if len(final_parameters) == 0:
-                # then the simulation won't have any solutions
-                no_solutions = True
+            if distance_travelled >= distance:
+                optimal_solution = (
+                    round(speed_kmh, 1), round(distance_travelled, 2),
+                    round(basic_battery.get_state_of_charge() * 100, 2),
+                    round(time / 3600, 2))
+                break
 
-            else:
-                optimal_solution_found = True
-                optimal_solution = final_parameters
-
-            break
+        finally:
+            basic_battery.update(tick)
+            battery_charge = basic_battery.get_state_of_charge()
 
         if time % 60 == 0:
             print("Time: {} sec / {} mins".format(time, time / 60))
