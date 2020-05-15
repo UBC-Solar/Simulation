@@ -29,18 +29,19 @@ class BaseBattery(Storage):
         raise NotImplementedError       # probably updates all the attributes for a given time interval
 
     def charge(self, energy):
-        if self.stored_energy + energy >= self.max_energy_capacity:        # handles the possibility that adding energy exceeds the max capacity of the battery
+        # handles the possibility that adding energy exceeds the max capacity of the battery
+        if self.stored_energy + energy >= self.max_energy_capacity:
             self.stored_energy = self.max_energy_capacity
         else:
             self.stored_energy += energy
 
-    def discharge(self, energy):                # removes energy from the battery and returns it as a number
+    def discharge(self, energy):
+        # in the case that the required energy is more than what the battery currently stores
         if self.stored_energy - energy <= 0:
-            returned_energy = self.stored_energy
+            # currently the remaining energy in the battery just evaporates but this should be changed in the future
             self.stored_energy = 0
             self.empty = True
-
-            return returned_energy                  # i'm sure there's a cleaner way to do this
+            raise Exception("Battery is empty.")
         else:
             self.stored_energy -= energy
             return energy
@@ -61,4 +62,3 @@ class BaseBattery(Storage):
         return ("Battery stored energy: {}Wh".format(round(self.stored_energy, 2)) + "\n" + 
                 "Battery state of charge: {}%".format(round(self.state_of_charge*100, 2)) + "\n" + 
                 "Battery voltage: {}V \n".format(round(self.voltage, 2)))
-
