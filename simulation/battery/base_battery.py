@@ -59,6 +59,6 @@ class BaseBattery(Storage):
         return self.voltage
 
     def __str__(self):
-        return ("Battery stored energy: {}Wh".format(round(self.stored_energy, 2)) + "\n" + 
-                "Battery state of charge: {}%".format(round(self.state_of_charge*100, 2)) + "\n" + 
-                "Battery voltage: {}V \n".format(round(self.voltage, 2)))
+        return (f"Battery stored energy: {round(self.stored_energy, 2)}Wh\n" 
+                f"Battery state of charge: {round(self.state_of_charge * 100, 2)}%\n"
+                f"Battery voltage: {round(self.voltage, 2)}V\n")
