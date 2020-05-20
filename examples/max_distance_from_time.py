@@ -37,7 +37,7 @@ for speed_kmh in range(1, max_speed_kmh + 1, speed_increment):
     basic_lvs = simulation.BasicLVS(lvs_power_loss * tick)
     basic_motor = simulation.BasicMotor()
 
-    # run the simulation at a specific speed
+    # Run the simulation at a specific speed
     for time in range(tick, simulation_duration + tick, tick):
 
         basic_array.update(tick)
@@ -54,14 +54,12 @@ for speed_kmh in range(1, max_speed_kmh + 1, speed_increment):
             basic_battery.discharge(motor_consumed_energy)
             basic_battery.update(tick)
 
-        # battery is empty
+        # Battery is empty
         except Exception as exp:
-            # start simulation at next speed
             break
 
-        # battery still has some charge in it
+        # Battery still has some charge in it
         else:
-            # calculates the new distance that the car has moved
             distance_travelled += speed_kmh * (tick / 3600)
 
             # Ensures that the simulation doesn't run completely when the battery charge reaches equilibrium
