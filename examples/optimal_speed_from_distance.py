@@ -1,4 +1,6 @@
 import simulation
+import datetime
+import math
 
 """
 Description: Given an input distance to travel, 
@@ -19,7 +21,7 @@ speed_increment = 1
 max_speed_kmh = 50  # is in km/h
 
 # Simulation inputs
-distance = 200  # in kilometers
+distance = float(input("Enter distance to travel: "))  # in kilometers
 
 # Flags
 simulation_complete = False
@@ -27,13 +29,12 @@ simulation_complete = False
 optimal_solution = ()
 
 # Minimum speed that the car must go to cover the given distance in the given time
-speed_kmh = round(distance / (simulation_duration / 3600))
+speed_kmh = math.ceil(distance / (simulation_duration / 3600))
 
 # Runs the simulation at each speed
-while speed_kmh < max_speed_kmh and simulation_complete is False:
+while speed_kmh <= max_speed_kmh and simulation_complete is False:
 
     distance_travelled = 0
-    speed_kmh += speed_increment
 
     # Initialise simulation
     basic_array = simulation.BasicArray(incident_sunlight)
@@ -45,7 +46,7 @@ while speed_kmh < max_speed_kmh and simulation_complete is False:
 
     basic_motor = simulation.BasicMotor()
 
-    for time in range(tick, simulation_duration, tick):  # for every time interval
+    for time in range(tick, simulation_duration + tick, tick):  # for every time interval
 
         # Perform energy exchanges between components (this whole mechanism needs to be improved)
         basic_array.update(tick)
@@ -63,13 +64,14 @@ while speed_kmh < max_speed_kmh and simulation_complete is False:
         try:  # try removing some energy from the battery
             basic_battery.discharge(lvs_consumed_energy)
             basic_battery.discharge(motor_consumed_energy)
+            basic_battery.update(tick)
 
-        except Exception as exp:  # if the battery is empty
+        except simulation.BatteryEmptyError as exc:  # if the battery is empty
             simulation_complete = True
             break
 
         else:  # if the battery still has some charge in it
-            distance_travelled = speed_kmh * (time / 3600)
+            distance_travelled += speed_kmh * (tick / 3600)
 
             if distance_travelled >= distance:
                 optimal_solution = (
@@ -79,21 +81,28 @@ while speed_kmh < max_speed_kmh and simulation_complete is False:
                 break
 
         finally:
-            basic_battery.update(tick)
             battery_charge = basic_battery.get_state_of_charge()
 
+        # prints simulation information every 60 seconds
         if time % 60 == 0:
-            print("Time: {} sec / {} mins".format(time, time / 60))
-            print("Car speed: {}km/h".format(round(speed_kmh, 2)))
-            print("Distance travelled: {}km".format(round(distance_travelled, 3)))
-            print("Battery SOC: {}%\n".format(round(battery_charge * 100, 3)))
+            print(f"Time: {time} sec / {str(datetime.timedelta(seconds=time))}")
+            print(f"Car speed: {round(speed_kmh, 2)}km/h")
+            print(f"Distance travelled: {round(distance_travelled, 3)}km")
+            print(f"Battery SOC: {round(battery_charge * 100, 3)}%\n")
+
+    speed_kmh += speed_increment
+
 
 if len(optimal_solution) > 0:
+    optimal_speed, final_distance_travelled, final_battery_charge, time_taken = optimal_solution
+
     print("Simulation successful! Optimal solution found.\n")
     print("-------- Optimal solution --------")
-    print("Optimal speed: {0}km/h\nDistance travelled: {1}km \nFinal battery charge: {2}% \nTime taken {3}hrs".format(
-        *optimal_solution))
+    print(f"Optimal speed: {optimal_speed}km/h \n"
+          f"Distance travelled: {final_distance_travelled}km \n"
+          f"Final battery charge: {final_battery_charge}% \n"
+          f"Time taken: {str(datetime.timedelta(hours=time_taken))}")
 
 else:
-    print("No solution found. Distance of {}km untraversable in {}hrs at any speed.".format(distance,
-                                                                                            simulation_duration / 3600))
+    print(f"No solution found. Distance of {distance}km "
+          f"untraversable in {str(datetime.timedelta(seconds=simulation_duration))} at any speed.")
