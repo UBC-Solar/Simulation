@@ -26,6 +26,8 @@ class BasicBattery(BaseBattery):
         super().__init__(self.stored_energy, self.max_current_capacity, self.max_energy_capacity, self.max_voltage,
                          self.min_voltage, self.voltage, self.state_of_charge)
 
+    # TODO: replace equations with NumPy polynomial class
+
     @staticmethod
     def calculate_discharge_capacity(energy):
         return (-117.6 + pow(13829.76 - 1.952 * energy, 0.5)) / (-0.976)
@@ -46,7 +48,8 @@ class BasicBattery(BaseBattery):
     def calculate_energy_discharged_from_discharge_capacity(discharge_capacity):
         return 117.6 * discharge_capacity - 0.488 * pow(discharge_capacity, 2)
 
-    def update(self, tick):  # updates relevant battery variables
+    # updates relevant battery variables
+    def update(self, tick):
         discharge_capacity = self.calculate_discharge_capacity(self.max_energy_capacity - self.stored_energy)
         self.state_of_charge = self.calculate_state_of_charge(discharge_capacity)
         self.voltage = self.calculate_voltage(discharge_capacity)

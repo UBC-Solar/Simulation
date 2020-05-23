@@ -43,8 +43,12 @@ for i in range(sim_duration):
     # Add up energy balance on the battery
     basic_battery.update(tick)
     basic_battery.charge(produced_energy)
-    basic_battery.discharge(lvs_consumed_energy)
-    basic_battery.discharge(motor_consumed_energy)
+
+    try:
+        basic_battery.discharge(lvs_consumed_energy)
+        basic_battery.discharge(motor_consumed_energy)
+    except simulation.BatteryEmptyError as exc:
+        print(exc)
 
     battery_energy = basic_battery.get_stored_energy()
     battery_charge = basic_battery.get_state_of_charge()

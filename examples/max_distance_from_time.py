@@ -1,5 +1,5 @@
 import simulation
-import numpy as np
+from simulation import BatteryEmptyError
 import datetime
 
 """
@@ -11,7 +11,7 @@ Note: this example assumes constant speed throughout
 # TODO: replace final_parameters dictionary with NumPy ndarray
 
 # Time parameters
-tick = 60
+tick = 1
 
 # Inputs
 simulation_duration = int(60 * 60 * 9)  # 9 hours
@@ -55,7 +55,7 @@ for speed_kmh in range(1, max_speed_kmh + 1, speed_increment):
             basic_battery.update(tick)
 
         # Battery is empty
-        except Exception as exp:
+        except BatteryEmptyError as exc:
             break
 
         # Battery still has some charge in it

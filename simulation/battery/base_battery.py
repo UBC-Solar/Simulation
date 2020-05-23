@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
 from simulation.common import Storage
+from simulation.common import BatteryEmptyError
 
 
 class BaseBattery(Storage):
@@ -41,7 +41,7 @@ class BaseBattery(Storage):
             # currently the remaining energy in the battery just evaporates but this should be changed in the future
             self.stored_energy = 0
             self.empty = True
-            raise Exception("Battery is empty.")
+            raise BatteryEmptyError("ERROR: Battery is empty.\n")
         else:
             self.stored_energy -= energy
             return energy
