@@ -20,7 +20,7 @@ max_speed = 50
 # Inputs
 
 while True:
-    speed_kmh = int(input("Enter a distance: "))
+    speed_kmh = int(input("Enter a speed (km/h): "))
 
     if 0 < speed_kmh <= max_speed:
         break
