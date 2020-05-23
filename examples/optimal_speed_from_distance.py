@@ -5,7 +5,7 @@ import math
 """
 Description: Given an input distance to travel, 
 determine the speed the car must travel 
-to make it within the day [distance -> speed]
+to make it within the day. [distance -> speed]
 
 """
 
@@ -66,7 +66,7 @@ while speed_kmh <= max_speed_kmh and simulation_complete is False:
             basic_battery.discharge(motor_consumed_energy)
             basic_battery.update(tick)
 
-        except simulation.BatteryEmptyError as exc:  # if the battery is empty
+        except simulation.BatteryEmptyError:  # if the battery is empty
             simulation_complete = True
             break
 
