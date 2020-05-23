@@ -1,9 +1,8 @@
 import simulation
-from simulation import BatteryEmptyError
 import datetime
 
 """
-Given an input time, determine the largest distance the car can travel in that time. 
+Description: Given an input time, determine the largest distance the car can travel in that time. [time -> distance] 
 Note: this example assumes constant speed throughout
 """
 
@@ -49,13 +48,14 @@ for speed_kmh in range(1, max_speed_kmh + 1, speed_increment):
         motor_consumed_energy = basic_motor.get_consumed_energy()
         basic_battery.charge(produced_energy)
 
+        # tries to remove some energy from the battery
         try:
             basic_battery.discharge(lvs_consumed_energy)
             basic_battery.discharge(motor_consumed_energy)
             basic_battery.update(tick)
 
         # Battery is empty
-        except BatteryEmptyError as exc:
+        except simulation.BatteryEmptyError:
             break
 
         # Battery still has some charge in it
