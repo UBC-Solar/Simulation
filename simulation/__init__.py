@@ -17,5 +17,5 @@ from simulation.regen import BasicRegen
 
 __version__ = "0.0.1"
 
-print("package 'simulation' imported. version: {}".format(__version__))
+print("Package 'simulation' imported. Version: {}\n".format(__version__))
 
