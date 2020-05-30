@@ -10,7 +10,7 @@ to make it within the day. [distance -> speed]
 """
 
 # Time parameters
-tick = 1  # in seconds
+tick = 60  # in seconds
 simulation_duration = 60 * 60 * 9  # 9 hours
 
 # Simulation constants
@@ -18,7 +18,7 @@ incident_sunlight = 1000
 initial_battery_charge = 0.9
 lvs_power_loss = 0
 speed_increment = 1
-max_speed_kmh = 50  # is in km/h
+max_speed_kmh = 50
 
 # Simulation inputs
 distance = float(input("Enter distance to travel: "))  # in kilometers
@@ -27,24 +27,23 @@ distance = float(input("Enter distance to travel: "))  # in kilometers
 simulation_complete = False
 
 optimal_solution = ()
+final_parameters = []
 
 # Minimum speed that the car must go to cover the given distance in the given time
 speed_kmh = math.ceil(distance / (simulation_duration / 3600))
 
 # Runs the simulation at each speed
-while speed_kmh <= max_speed_kmh and simulation_complete is False:
+while speed_kmh <= max_speed_kmh:
 
     distance_travelled = 0
 
-    # Initialise simulation
+    # region: Initialise simulation
     basic_array = simulation.BasicArray(incident_sunlight)
     basic_array.set_produced_energy(0)
-
     basic_battery = simulation.BasicBattery(initial_battery_charge)
-
     basic_lvs = simulation.BasicLVS(lvs_power_loss * tick)
-
     basic_motor = simulation.BasicMotor()
+    # endregion
 
     for time in range(tick, simulation_duration + tick, tick):  # for every time interval
 
@@ -67,23 +66,21 @@ while speed_kmh <= max_speed_kmh and simulation_complete is False:
             basic_battery.update(tick)
 
         except simulation.BatteryEmptyError:  # if the battery is empty
-            simulation_complete = True
             break
 
         else:  # if the battery still has some charge in it
             distance_travelled += speed_kmh * (tick / 3600)
 
             if distance_travelled >= distance:
-                optimal_solution = (
+                final_parameters.append((
                     round(speed_kmh, 1), round(distance_travelled, 2),
                     round(basic_battery.get_state_of_charge() * 100, 2),
-                    round(time / 3600, 2))
+                    round(time / 3600, 2)))
                 break
 
         finally:
             battery_charge = basic_battery.get_state_of_charge()
 
-        # prints simulation information every 60 seconds
         if time % 60 == 0:
             print(f"Time: {time} sec / {str(datetime.timedelta(seconds=time))}")
             print(f"Car speed: {round(speed_kmh, 2)}km/h")
@@ -92,8 +89,13 @@ while speed_kmh <= max_speed_kmh and simulation_complete is False:
 
     speed_kmh += speed_increment
 
-
-if len(optimal_solution) > 0:
+if len(final_parameters) == 0:
+    print(f"No solution found. Distance of {distance}km "
+          f"untraversable in {str(datetime.timedelta(seconds=simulation_duration))} at any speed.")
+else:
+    # optimal solution will always be the last element of final_parameters because the last element gives
+    # the maximum speed at which the entire distance is travelled (final_parameters is ordered by speed)
+    optimal_solution = final_parameters[-1]
     optimal_speed, final_distance_travelled, final_battery_charge, time_taken = optimal_solution
 
     print("Simulation successful! Optimal solution found.\n")
@@ -102,7 +104,3 @@ if len(optimal_solution) > 0:
           f"Distance travelled: {final_distance_travelled}km \n"
           f"Final battery charge: {final_battery_charge}% \n"
           f"Time taken: {str(datetime.timedelta(hours=time_taken))}")
-
-else:
-    print(f"No solution found. Distance of {distance}km "
-          f"untraversable in {str(datetime.timedelta(seconds=simulation_duration))} at any speed.")
