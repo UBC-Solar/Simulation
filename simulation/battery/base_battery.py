@@ -5,19 +5,19 @@ from simulation.common import BatteryEmptyError
 class BaseBattery(Storage):
     def __init__(self, initial_energy, max_current_capacity, max_energy_capacity,
                  max_voltage, min_voltage, voltage, state_of_charge):
-        super().__init__()                                                       # calls Storage class __init__ method
+        super().__init__()
 
         # Constants
-        self.max_current_capacity = max_current_capacity                         # max capacity of battery (Ah)
-        self.max_energy_capacity = max_energy_capacity                           # max energy inside battery (Wh)
+        self.max_current_capacity = max_current_capacity          # max capacity of battery (Ah)
+        self.max_energy_capacity = max_energy_capacity            # max energy inside battery (Wh)
 
         self.max_voltage = max_voltage                      # maximum battery voltage (V)
         self.min_voltage = min_voltage                      # battery cut-off voltage (V)
 
         # Variables
         self.stored_energy = initial_energy                             # energy inside battery (Wh)
-        self.state_of_charge = state_of_charge                          # battery state of charge (%)
-        self.depth_of_discharge = 1 - self.state_of_charge              # inverse of state of charge (%)
+        self.state_of_charge = state_of_charge                          # battery state of charge
+        self.depth_of_discharge = 1 - self.state_of_charge              # inverse of state of charge
         self.voltage = voltage                                          # terminal voltage of the battery (V)
 
         if self.state_of_charge > 0:
@@ -25,8 +25,8 @@ class BaseBattery(Storage):
         else:
             self.empty = True
 
-    def update(self, tick):             # not quite sure what to do with this function
-        raise NotImplementedError       # probably updates all the attributes for a given time interval
+    def update(self, tick):
+        raise NotImplementedError
 
     def charge(self, energy):
         # handles the possibility that adding energy exceeds the max capacity of the battery
@@ -41,6 +41,8 @@ class BaseBattery(Storage):
             # currently the remaining energy in the battery just evaporates but this should be changed in the future
             self.stored_energy = 0
             self.empty = True
+
+            # TODO: consider removing exception
             raise BatteryEmptyError("ERROR: Battery is empty.\n")
         else:
             self.stored_energy -= energy
