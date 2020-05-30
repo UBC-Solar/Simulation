@@ -8,7 +8,7 @@ before the battery runs out [speed -> distance]
 """
 
 # Time parameters
-tick = 1
+tick = 60
 
 # Simulation constants
 incident_sunlight = 1000
@@ -39,6 +39,7 @@ time = tick
 
 while True:
 
+    # Energy transfers (which will be replaced)
     basic_array.update(tick)
     produced_energy = basic_array.get_produced_energy()
     basic_lvs.update(tick)
