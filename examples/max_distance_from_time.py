@@ -7,7 +7,6 @@ Note: this example assumes constant speed throughout
 """
 
 # TODO: add a momentum gradient descent algorithm to find optimal speed
-# TODO: replace final_parameters dictionary with NumPy ndarray
 
 # Time parameters
 tick = 1
