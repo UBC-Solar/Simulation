@@ -67,9 +67,9 @@ class BasicMotor(BaseMotor):
         self.consumed_energy = self.input_power * tick
 
     def __str__(self):
-        return(f"Tire radius: {self.tire_radius}m"
-               f"Rolling resistance coefficient: {self.road_friction}"
-               f"Vehicle mass: {self.vehicle_mass}kg"
-               f"Acceleration of gravity: {self.acceleration_g}m/s2"
-               f"Motor controller efficiency: {self.e_mc}%"
-               f"Motor efficiency: {self.e_m}%")
+        return(f"Tire radius: {self.tire_radius}m\n"
+               f"Rolling resistance coefficient: {self.road_friction}\n"
+               f"Vehicle mass: {self.vehicle_mass}kg\n"
+               f"Acceleration of gravity: {self.acceleration_g}m/s^2\n"
+               f"Motor controller efficiency: {self.e_mc}%\n"
+               f"Motor efficiency: {self.e_m}%\n")

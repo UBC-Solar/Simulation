@@ -29,6 +29,6 @@ class BasicArray(BaseArray):
                                                              self.panel_efficiency, self.panel_size) * tick
 
     def __str__(self):
-        return(f"BasicArray: incident_sunlight: {self.sunlight}W/m2\n" +
-               f"BasicArray: panel_size: {self.panel_size}m2\n" +
+        return(f"BasicArray: incident_sunlight: {self.sunlight}W/m^2\n"
+               f"BasicArray: panel_size: {self.panel_size}m^2\n"
                f"BasicArray: panel_efficiency: {self.panel_efficiency * 100}%\n")
