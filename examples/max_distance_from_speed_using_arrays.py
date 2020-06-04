@@ -1,0 +1,80 @@
+import simulation
+import numpy as np
+import datetime
+
+"""
+Description: Given a constant driving speed, find the range at the speed
+before the battery runs out [speed -> distance]
+"""
+
+# ----- Simulation input -----
+
+speed = float(input("Enter a speed (km/h): "))
+
+# ----- Time parameters -----
+
+simulation_duration = 60 * 60 * 9
+tick = 1
+
+# ----- Simulation constants -----
+
+incident_sunlight = 1000
+initial_battery_charge = 0.9
+lvs_power_loss = 0
+max_speed = 50
+
+# ----- Component initialisation -----
+
+basic_array = simulation.BasicArray(incident_sunlight)
+basic_array.set_produced_energy(0)
+
+basic_battery = simulation.BasicBattery(initial_battery_charge)
+
+basic_lvs = simulation.BasicLVS(lvs_power_loss * tick)
+
+basic_motor = simulation.BasicMotor()
+
+# ----- Energy calculations -----
+
+basic_array.update(tick)
+
+basic_lvs.update(tick)
+lvs_consumed_energy = basic_lvs.get_consumed_energy()
+
+basic_motor.calculate_power_in(speed)
+basic_motor.update(tick)
+motor_consumed_energy = basic_motor.get_consumed_energy()
+
+produced_energy = basic_array.get_produced_energy()
+consumed_energy = motor_consumed_energy + lvs_consumed_energy
+
+net_energy = produced_energy - consumed_energy
+
+# ----- Array initialisation -----
+
+time = np.linspace(0, simulation_duration, num=int(simulation_duration / tick) + 1, dtype='u4')
+speed_kmh = np.full(time.size, fill_value=speed, dtype='f4')
+delta_energy = np.full(time.size, fill_value=net_energy, dtype='f4')
+tick_array = np.full(time.size, fill_value=tick, dtype='u4')
+
+# ----- Array calculations -----
+
+cumulative_delta_energy = np.cumsum(delta_energy)
+stored_energy, discharge_capacity, state_of_charge = basic_battery.update_array(cumulative_delta_energy)
+
+state_of_charge = state_of_charge.round(3)
+
+speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
+
+time_in_motion = np.logical_and(tick_array, state_of_charge) * tick
+time_taken = np.sum(time_in_motion)
+
+# ----- Target value -----
+
+distance = speed_kmh * (tick / 3600)
+distance_travelled = np.sum(distance)
+
+print(f"Time taken: {datetime.timedelta(seconds=int(time_taken))}\n"
+      f"Speed: {speed}km/h\n"
+      f"Maximum distance traversable: {distance_travelled:.2f}km\n"
+      f"Final battery SOC: {state_of_charge[-1] * 100 + 0.:.2f}%")
