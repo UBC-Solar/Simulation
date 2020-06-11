@@ -17,7 +17,6 @@ class BaseBattery(Storage):
         # Variables
         self.stored_energy = initial_energy                             # energy inside battery (Wh)
         self.state_of_charge = state_of_charge                          # battery state of charge
-        self.depth_of_discharge = 1 - self.state_of_charge              # inverse of state of charge
         self.voltage = voltage                                          # terminal voltage of the battery (V)
 
         if self.state_of_charge > 0:
