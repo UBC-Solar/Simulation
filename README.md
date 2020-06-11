@@ -30,3 +30,14 @@ pip install -e .
 python3 example_simulation.py
 ```
 
+## Testing
+
+### Installation
+``` bash
+pip install -U pytest
+```
+
+### Run
+``` bash
+pytest tests/
+```
