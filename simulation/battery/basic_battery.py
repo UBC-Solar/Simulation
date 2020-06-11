@@ -59,7 +59,7 @@ class BasicBattery(BaseBattery):
 
         # discharge_capacity -> energy
         self.stored_energy = self.max_energy_capacity - self.calculate_energy_from_discharge_capacity(
-            self.discharge_capacity)
+                                                        self.discharge_capacity)
 
         # ----- DayBreak battery initialisation -----
 
@@ -105,12 +105,12 @@ class BasicBattery(BaseBattery):
         :param cumulative_energy_array: a NumPy array containing the cumulative energy changes at each time step
         experienced by the battery
 
-        :return stored_energy_array: a NumPy array containing the energy stored in the battery at each time step
-
-        :return discharge_capacity_array: a NumPy array containing the discharge capacity of the battery at each time
-        step
-
         :return soc_array: a NumPy array containing the battery state of charge at each time step
+
+        :return voltage_array: a NumPy array containing the voltage of the battery at each time step
+
+        :return stored_energy_array: a NumPy array containing the energy stored in the battery at each time step
+        step
         """
 
         stored_energy_array = np.full_like(cumulative_energy_array, fill_value=self.stored_energy)
@@ -121,6 +121,7 @@ class BasicBattery(BaseBattery):
                                   stored_energy_array
 
         discharge_capacity_array = self.calculate_discharge_capacity_from_energy(energy_discharged_array)
+
         soc_array = self.calculate_soc_from_discharge_capacity(discharge_capacity_array)
         voltage_array = self.calculate_voltage_from_discharge_capacity(discharge_capacity_array)
 
