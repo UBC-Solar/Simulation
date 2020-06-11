@@ -54,10 +54,13 @@ net_energy = produced_energy - consumed_energy
 
 time = np.linspace(0, simulation_duration, num=int(simulation_duration / tick) + 1, dtype='f4')
 
+# stores speed of car at each time step
 speed_kmh = np.full_like(time, fill_value=speed, dtype='f4')
 
+# stores the amount of energy transferred from/to the battery at each time step
 delta_energy = np.full_like(time, fill_value=net_energy, dtype='f4')
 
+# used to calculate the time the car was in motion
 tick_array = np.full_like(time, fill_value=tick, dtype='f4')
 tick_array[0] = 0
 
@@ -66,8 +69,10 @@ tick_array[0] = 0
 cumulative_delta_energy = np.cumsum(delta_energy)
 battery_variables = basic_battery.update_array(cumulative_delta_energy)
 
+# stores the battery SOC at each time step
 state_of_charge = battery_variables[0].round(3)
 
+# when the battery is empty the car will not move
 speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
 
 time_in_motion = np.logical_and(tick_array, state_of_charge) * tick
@@ -79,7 +84,7 @@ final_soc = state_of_charge[-1] * 100 + 0.
 
 # ----- Target value -----
 
-distance = speed_kmh * (tick / 3600)
+distance = speed * (time_in_motion / 3600)
 distance_travelled = np.sum(distance)
 
 print(f"Time taken: {time_taken}\n"
