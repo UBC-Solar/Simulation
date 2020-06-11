@@ -71,15 +71,15 @@ for speed_kmh in range(1, max_speed_kmh + 1, speed_increment):
             battery_charge = basic_battery.get_state_of_charge()
 
         if time % 60 == 0:
-            print(f"Time: {time} sec / {str(datetime.timedelta(seconds=time))}")
-            print(f"Car speed: {round(speed_kmh, 2)}km/h")
-            print(f"Distance travelled: {round(distance_travelled, 3)}km")
-            print(f"Battery SOC: {round(battery_charge * 100, 3)}%\n")
+            print(f"Time: {time} sec / {datetime.timedelta(seconds=time)}")
+            print(f"Car speed: {speed_kmh:.2f}km/h")
+            print(f"Distance travelled: {distance_travelled:.2f}km")
+            print(f"Battery SOC: {float(battery_charge) * 100:.3f}%\n")
 
     final_parameters[speed_kmh] = distance_travelled
 
 max_distance = round(max(final_parameters.values()), 2)
 optimal_speed = round(max(final_parameters, key=final_parameters.get), 2)
 
-print(f"Simulation complete! Maximum traversable distance in {simulation_duration / 3600}hrs is "
+print(f"Simulation complete! Maximum traversable distance in {datetime.timedelta(seconds=simulation_duration)} is "
       f"{max_distance}km at speed {optimal_speed}km/h.")
