@@ -52,7 +52,7 @@ net_energy = produced_energy - consumed_energy
 
 # ----- Array initialisation -----
 
-time = np.linspace(0, simulation_duration, num=int(simulation_duration / tick) + 1, dtype='f4')
+time = np.arange(0, simulation_duration + tick, tick, dtype='f4')
 
 # stores speed of car at each time step
 speed_kmh = np.full_like(time, fill_value=speed, dtype='f4')
