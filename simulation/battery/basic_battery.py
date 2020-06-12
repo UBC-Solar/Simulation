@@ -15,7 +15,6 @@ class BasicBattery(BaseBattery):
         max_energy_capacity (float): nominal energy capacity of the DayBreak battery pack (Wh)
 
         state_of_charge (float): instantaneous battery state-of-charge (0.00 - 1.00)
-        depth_of_discharge (float): inverse of battery state-of-charge (0.00 - 1.00)
         discharge_capacity (float): instantaneous amount of charge extracted from battery (Ah)
         voltage (float): instantaneous voltage of the battery (V)
         stored_energy (float): instantaneous energy stored in the battery (Wh)
@@ -94,9 +93,12 @@ class BasicBattery(BaseBattery):
         Takes energy from the battery.
 
         :param energy: energy (in joules) to be taken from battery.
+        
+        :return discharged_energy: energy (in joules) removed from the battery.
         """
 
-        super().discharge(energy / 3600)
+        return super().discharge(energy / 3600)
+
 
     def update_array(self, cumulative_energy_array):
         """
