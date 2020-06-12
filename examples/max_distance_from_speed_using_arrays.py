@@ -1,6 +1,7 @@
 import simulation
 import numpy as np
 import datetime
+import time as timer
 
 """
 Description: Given a constant driving speed, find the range at the speed
@@ -11,7 +12,7 @@ before the battery runs out [speed -> distance]
 
 speed = float(input("Enter a speed (km/h): "))
 
-# ----- Time parameters -----
+start = timer.perf_counter()
 
 simulation_duration = 60 * 60 * 9
 tick = 1
@@ -91,3 +92,7 @@ print(f"Time taken: {time_taken}\n"
       f"Speed: {speed}km/h\n"
       f"Maximum distance traversable: {distance_travelled:.2f}km\n"
       f"Final battery SOC: {final_soc:.2f}%\n")
+
+stop = timer.perf_counter()
+
+print(f"Calculation time: {stop - start:.3f}s")

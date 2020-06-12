@@ -1,11 +1,14 @@
 import simulation
 import numpy as np
 import datetime
+import time as timer
 
 """
 Description: Given an input time, determine the largest distance the car can travel in that time. [time -> distance] 
 Note: this example assumes constant speed throughout
 """
+
+start = timer.perf_counter()
 
 # ----- Simulation input -----
 
@@ -105,3 +108,7 @@ print(f"Simulation complete!\n\n"
       f"Speed: {max_distance_speed}km/h\n"
       f"Maximum distance traversable: {max_distance:.2f}km\n"
       f"Final battery SOC: {max_distance_final_soc:.2f}%\n")
+
+stop = timer.perf_counter()
+
+print(f"Calculation time: {stop - start:.3f}s")
