@@ -11,7 +11,7 @@ to make it within the day. [distance -> speed]
 
 # ----- Simulation input -----
 
-input_distance = float(input("Enter distance to travel: "))
+input_distance = 300
 
 start = timer.perf_counter()
 
@@ -25,7 +25,7 @@ initial_battery_charge = 0.9
 lvs_power_loss = 0
 
 speed_increment = 1
-max_speed = 50
+max_speed = 104
 
 # ----- Component initialisation -----
 
@@ -40,16 +40,16 @@ basic_motor = simulation.BasicMotor()
 
 # ----- Array initialisation -----
 
-time = np.arange(0, simulation_duration + tick, tick, dtype='f4')
+time = np.arange(0, simulation_duration + tick, tick, dtype=np.uint32)
 
 # stores the speeds that are considered in the simulation
-speeds_simulated = np.arange(1, max_speed + speed_increment, speed_increment, dtype='f4')
+speeds_simulated = np.arange(1, max_speed + speed_increment, speed_increment, dtype=np.uint8)
 
 # creates a 2D array of simulated speeds at each time step
 speed_kmh = np.meshgrid(time, speeds_simulated)[-1]
 
 # used to calculate car's time in motion
-tick_array = np.full_like(speed_kmh, fill_value=tick, dtype='f4')
+tick_array = np.full_like(speed_kmh, fill_value=tick, dtype=np.uint32)
 tick_array[:, 0] = 0
 
 # ----- Energy calculations -----
@@ -75,7 +75,8 @@ cumulative_delta_energy = np.cumsum(delta_energy, axis=1)
 
 battery_variables_array = basic_battery.update_array(cumulative_delta_energy)
 
-state_of_charge = battery_variables_array[0].round(3) + 0.
+state_of_charge = battery_variables_array[0]
+state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
 
 # when the battery SOC is empty, the car doesn't move
 speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
@@ -98,7 +99,7 @@ speeds_successful_indices = np.nonzero(time_taken_for_distance)[0]
 
 if len(speeds_successful_indices) == 0:
     print(f"\nNo solution found. Distance of {input_distance}km "
-          f"untraversable in {str(datetime.timedelta(seconds=simulation_duration))} at any speed.")
+          f"untraversable in {datetime.timedelta(seconds=simulation_duration)} at any speed.\n")
 else:
     optimal_speed_index = np.max(speeds_successful_indices)
     optimal_time_taken_index = time_taken_for_distance[optimal_speed_index]
@@ -108,11 +109,11 @@ else:
     optimal_final_soc = state_of_charge[optimal_speed_index][optimal_time_taken_index]
     optimal_time_taken = time[optimal_time_taken_index]
 
-    print(f"\nSimulation complete! \n\n"
+    print(f"Simulation complete! \n\n"
           f"Optimal speed: {optimal_speed:.2f}km/h \n"
           f"Distance travelled: {optimal_distance_travelled:.2f}km \n"
-          f"Final battery charge: {optimal_final_soc}% \n"
-          f"Time taken: {str(datetime.timedelta(seconds=int(optimal_time_taken)))} \n")
+          f"Final battery charge: {optimal_final_soc:.2f}% \n"
+          f"Time taken: {datetime.timedelta(seconds=int(optimal_time_taken))} \n")
 
 stop = timer.perf_counter()
 
