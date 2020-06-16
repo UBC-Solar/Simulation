@@ -21,7 +21,7 @@ speed_increment = 1
 incident_sunlight = 1000
 initial_battery_charge = 0.9
 lvs_power_loss = 0
-max_speed = 50
+max_speed = 104
 
 # ----- Component initialisation -----
 
@@ -71,7 +71,8 @@ cumulative_delta_energy = np.cumsum(delta_energy, axis=1)
 
 battery_variables_array = basic_battery.update_array(cumulative_delta_energy)
 
-state_of_charge = battery_variables_array[0].round(3) + 0.
+state_of_charge = battery_variables_array[0]
+state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
 
 # when the battery SOC is empty, the car doesn't move
 speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
@@ -105,8 +106,8 @@ max_distance_final_soc = final_soc[max_distance_index]
 
 print(f"Simulation complete!\n\n"
       f"Time taken: {max_distance_time}\n"
-      f"Speed: {max_distance_speed}km/h\n"
       f"Maximum distance traversable: {max_distance:.2f}km\n"
+      f"Speed: {max_distance_speed}km/h\n"
       f"Final battery SOC: {max_distance_final_soc:.2f}%\n")
 
 stop = timer.perf_counter()
