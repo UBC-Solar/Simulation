@@ -4,7 +4,8 @@ import datetime
 import time as timer
 
 """
-Description: Given an input time, determine the largest distance the car can travel in that time. [time -> distance] 
+Description: Given an input time, determine the largest distance the car can travel in that time. 
+[time -> distance] 
 Note: this example assumes constant speed throughout
 """
 
@@ -82,7 +83,7 @@ time_in_motion = np.logical_and(tick_array, state_of_charge) * tick
 time_taken = np.sum(time_in_motion, axis=1)
 
 # stores final SOC for each simulated speed
-final_soc = state_of_charge[:, -1] * 100 + 0.
+final_soc = state_of_charge[:, -1] * 100
 
 distance = speed_kmh * (time_in_motion / 3600)
 
