@@ -2,7 +2,21 @@ import simulation
 import time as timer
 import numpy as np
 import datetime
-from scipy.optimize import minimize
+from scipy.optimize import minimize, shgo, differential_evolution
+import functools
+
+
+def timeit(func):
+    @functools.wraps(func)
+    def wrapper_timer(*args, **kwargs):
+        print(f">>> Running {func.__name__!r}... \n")
+        start = timer.perf_counter()
+        value = func(*args, **kwargs)
+        stop = timer.perf_counter()
+        run_time = stop - start
+        print(f"Finished {func.__name__!r} in {run_time:.3f}s. \n")
+
+    return wrapper_timer
 
 
 def negative_distance_from_speed_array(speed_kmh):
@@ -18,6 +32,7 @@ def negative_distance_from_speed_array(speed_kmh):
 
     # ----- Speed array manipulations -----
 
+    # TODO: replace clipping with optimization bounds or constraints
     speed_kmh = np.clip(speed_kmh, a_min=0, a_max=max_speed)
     speed_kmh = np.repeat(speed_kmh, 60 * 60)
     speed_kmh = np.insert(speed_kmh, 0, 0)
@@ -84,20 +99,77 @@ def negative_distance_from_speed_array(speed_kmh):
     return distance_travelled
 
 
-start = timer.perf_counter()
+@timeit
+def nelder_mead_optimisation(initial_speed):
+    # Result: works quite well
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='Nelder-Mead',
+                                options={'disp': True, 'xatol': 1e-1})
 
-average_speed = 40
+    print(f"{optimal_solution.message} \n")
+    print(f"Optimal solution: {optimal_solution.x} \n")
 
-initial_guess = np.repeat(average_speed, 8)
-optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='Nelder-Mead',
-                            options={'disp': True, 'xatol': 1e-1})
+    maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
+    print(f"Maximum distance: {maximum_distance:.2f}km\n")
 
-print(optimal_solution.message, optimal_solution.x, "\n")
 
-maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
+@timeit
+def powell_optimisation(initial_speed):
+    # Result: bit of a weird optimal result
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='Powell',
+                                options={'disp': True, 'xtol': 1e-1})
 
-print(f"Maximum distance: {maximum_distance:.2f}km\n")
+    print(f"{optimal_solution.message} \n")
+    print(f"Optimal solution: {optimal_solution.x} \n")
 
-stop = timer.perf_counter()
+    maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
+    print(f"Maximum distance: {maximum_distance:.2f}km\n")
 
-print(f"Calculation time: {stop - start:.3f}s")
+
+@timeit
+def cg_optimization(initial_speed):
+    # Result: straight up does not work
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='CG',
+                                options={'disp': True, 'gtol': 1e-5})
+
+    print(f"{optimal_solution.message} \n")
+    print(f"Optimal solution: {optimal_solution.x} \n")
+
+    maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
+    print(f"Maximum distance: {maximum_distance:.2f}km\n")
+
+
+@timeit
+def shgo_optimization():
+    # Result: does not work well for our usage
+
+    max_speed = 104
+    bounds = [(1, max_speed), ] * 8
+
+    optimal_solution = shgo(negative_distance_from_speed_array, bounds=bounds, n=10,
+                            options={'ftol': 1e-12, 'disp': True})
+
+    print(f"{optimal_solution.message} \n")
+    print(f"Optimal solution: {optimal_solution.x} \n")
+
+    maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
+    print(f"Maximum distance: {maximum_distance:.2f}km\n")
+
+
+@timeit
+def differential_evolution_optimisation():
+    # Result: takes a long time but works really well, maybe altering parameters will increase speed
+
+    max_speed = 104
+    bounds = [(20, max_speed), ] * 8
+
+    optimal_solution = differential_evolution(negative_distance_from_speed_array, bounds=bounds,
+                                              disp=True)
+
+    print(f"{optimal_solution.message} \n")
+    print(f"Optimal solution: {optimal_solution.x} \n")
+
+    maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
+    print(f"Maximum distance: {maximum_distance:.2f}km\n")
