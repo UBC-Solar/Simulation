@@ -32,8 +32,6 @@ def negative_distance_from_speed_array(speed_kmh):
 
     # ----- Speed array manipulations -----
 
-    # TODO: replace clipping with optimization bounds or constraints
-    speed_kmh = np.clip(speed_kmh, a_min=0, a_max=max_speed)
     speed_kmh = np.repeat(speed_kmh, 60 * 60)
     speed_kmh = np.insert(speed_kmh, 0, 0)
 
@@ -101,7 +99,8 @@ def negative_distance_from_speed_array(speed_kmh):
 
 @timeit
 def nelder_mead_optimisation(initial_speed):
-    # Result: works quite well
+    # Result: works quite well but depends quite a bit on initial condition
+
     initial_guess = np.repeat(initial_speed, 8)
     optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='Nelder-Mead',
                                 options={'disp': True, 'xatol': 1e-1})
@@ -115,7 +114,8 @@ def nelder_mead_optimisation(initial_speed):
 
 @timeit
 def powell_optimisation(initial_speed):
-    # Result: bit of a weird optimal result
+    # Result: returns a bit of a weird optimal result
+
     initial_guess = np.repeat(initial_speed, 8)
     optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='Powell',
                                 options={'disp': True, 'xtol': 1e-1})
@@ -130,6 +130,7 @@ def powell_optimisation(initial_speed):
 @timeit
 def cg_optimization(initial_speed):
     # Result: straight up does not work
+
     initial_guess = np.repeat(initial_speed, 8)
     optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='CG',
                                 options={'disp': True, 'gtol': 1e-5})
@@ -161,15 +162,18 @@ def shgo_optimization():
 @timeit
 def differential_evolution_optimisation():
     # Result: takes a long time but works really well, maybe altering parameters will increase speed
+    # a huge advantage here is that it doesn't take an initial condition
 
     max_speed = 104
     bounds = [(20, max_speed), ] * 8
 
+    # may have to re-tune the mutation and recombination parameters in the future
     optimal_solution = differential_evolution(negative_distance_from_speed_array, bounds=bounds,
-                                              disp=True)
+                                              disp=True, strategy="best1bin", atol=1e-2, mutation=(0.2, 0.5),
+                                              popsize=15, recombination=0.9)
 
     print(f"{optimal_solution.message} \n")
-    print(f"Optimal solution: {optimal_solution.x} \n")
+    print(f"Optimal solution: {optimal_solution.x.round(1)}")
 
     maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
     print(f"Maximum distance: {maximum_distance:.2f}km\n")
