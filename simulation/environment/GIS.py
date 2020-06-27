@@ -5,14 +5,13 @@ import json
 import polyline
 import numpy as np
 
-google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
-
 
 class GIS:
 
 
     def __init__(self, api_key, origin_coord, dest_coord, waypoints):
 
+        #Radius of the Earth in metres
         self.R = 6371009
 
         self.api_key = api_key
@@ -31,21 +30,37 @@ class GIS:
         
 
     def get_path(self):
+        """
+        Returns all N coordinates of the path in a numpy array 
+        [N][latitude, longitude]
+        """
 
         return self.path
 
     
     def get_path_elevations(self):
+        """
+        Returns all N elevations of the path in a numpy array
+        [N][elevation]
+        """
 
         return self.path_elevations
 
 
     def get_path_distances(self):
+        """
+        Returns all N-1 distances of the path in a numpy array
+        [N-1][elevation]
+        """
 
         return self.path_distances
 
 
     def get_path_gradients(self):
+        """
+        Returns all N-1 gradients of a path in a numpy array
+        [N-1][gradient]
+        """
 
         return self.path_gradients
 
@@ -134,25 +149,25 @@ class GIS:
 
         print("diff_lat: {}".format(diff_lat.shape))
         print("diff_lng: {}".format(diff_lng.shape))
-
+        
         #get the mean latitude for every latitude, in radians
         mean_lat = ((coords + offset)[1:, 0] * np.pi/180)/ 2
         cosine_mean_lat = np.cos(mean_lat)
-
+        
         print("cosine_mean_lat: {}".format(cosine_mean_lat.shape))
-
+        
         #multiply the latitude difference with the cosine_mean_latitude
         diff_lng_adjusted = cosine_mean_lat * diff_lng 
-
+        
         print("diff_lng_adjusted: {}".format(diff_lng_adjusted.shape))
-
+        
         #square, sum and square-root
         square_lat = np.square(diff_lat)
         square_lng = np.square(diff_lng_adjusted)
         square_sum = square_lat + square_lng
-        
+         
         path_distances = self.R * np.sqrt(square_sum)
-        
+         
         return path_distances  
         
          
@@ -160,16 +175,29 @@ class GIS:
         """
         Get the approximate gradients of every point on the path.
         
-        elevations: [n][elevations]
-        distances: [n-1][distances]
+        elevations: [N][elevations]
+        distances: [N-1][distances]
         
         Returns:
-            - gradients[n-1]
+            - gradients[N-1]
+
+        Note:
+            - gradient > 0 corresponds to uphill
+            - gradient < 0 corresponds to downhill
         """
-        
+    
+        #subtract every next elevation with the previous elevation to 
+        # get the difference in elevation
+        # [1 2 3 4 5]
+        # [5 1 2 3 4] -
+        # -------------
+        #   [1 1 1 1]
         offset = np.roll(elevations, 1)
         delta_elevations = (elevations - offset)[1:]
-        
+       
+        #Divide the difference in elevation to get the gradient
+        # gradient > 0: uphill
+        # gradient < 0: downhill
         gradients = delta_elevations / distances
         
         return gradients
@@ -213,20 +241,31 @@ class GIS:
          
     def update_vehicle_position(self, incremental_distance):
         """
-        Returns the closest coordinate to the current coordinate 
+        Returns the closest coordinate to the current coordinate
+        
+        incremental_distance: distance in m covered in the latest tick
+        
+        Returns: The new index of the vehicle
         """
-
+ 
         additional_distance = self.distance_remainder + incremental_distance
 
+        #while the index of position can still be advanced
         while additional_distance > 0:
 
-            self.distance_remainder = additional_distance
+            #subtract contributions from every new index
             additional_distance = additional_distance - \
-                                    self.path_distances[current_index]
+                                    self.path_distances[self.current_index]
 
+            #advance the index
             self.current_index = self.current_index + 1
 
-        return self.current_index - 1
+        #backtrack a bit
+        self.distance_remainder = additional_distance + \
+                                self.path_distances[self.current_index - 1]
+        self.current_index = self.current_index - 1
+
+        return self.current_index
 
 
     def update_path(self, origin_coord, dest_coord, waypoints):

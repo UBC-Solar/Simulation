@@ -20,7 +20,6 @@ class SolarCalculations:
 
         #Solar Constant in W/m2
         self.S_0 = 1353
-        #self.S_0 = 1330
 
 
     def calculate_eot_correction(self, day_of_year):
@@ -46,8 +45,7 @@ class SolarCalculations:
         """
         Calculates and returns the LSTM, or Local Solar Time Meridian.
 
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example,
-            Vancouver has time_zone_utc = -
+        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
 
         Returns: The Local Solar Time Meridian in degrees
         """
@@ -61,8 +59,7 @@ class SolarCalculations:
         Converts between the local time to the apparent solar time and returns the apparent
             solar time
 
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example,
-            Vancouver has time_zone_utc = -7
+        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
         Confirm your email:local_time: The local time in hours from midnight
@@ -83,8 +80,7 @@ class SolarCalculations:
         """
         Calculates and returns the Hour Angle of the Sun in the sky.
         
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example,
-            Vancouver has time_zone_utc = -7
+        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
         local_time: The local time in hours from midnight
@@ -266,12 +262,11 @@ class SolarCalculations:
             local_time, elevation):
         """
         Calculates the Direct Normal Irradiance from the Sun, relative to a location
-            on the Earth.
+            on the Earth (clearsky)
 
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example,
-            Vancouver has time_zone_utc = -7
+        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
         local_time: The local time in hours from midnight
@@ -305,12 +300,11 @@ class SolarCalculations:
             local_time, elevation):
         """
         Calculates the Diffuse Horizontal Irradiance from the Sun, relative to a location 
-            on the Earth
+            on the Earth (clearsky)
 
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example,
-            Vancouver has time_zone_utc = -7
+        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
         local_time: The local time in hours from midnight
@@ -335,17 +329,16 @@ class SolarCalculations:
         
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example,
-            Vancouver has time_zone_utc = -7
+        time_zone_utc: The UTC time zone of your area in hours of UTC offset, without 
+            including the effects of Daylight Savings Time. For example, Vancouver
+             has time_zone_utc = -8 year-round.
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
-        local_time: The local time in hours from midnight
+        local_time: The local time in hours from midnight. 
         elevation: The local elevation of a location in metres
 
         Returns: The Global Horizontal Irradiance in W/m2 
         """
-
-        #TODO: Calibrate cloud cover
         
         DHI = self.calculate_DHI(latitude, longitude, time_zone_utc, day_of_year, \
             local_time, elevation)

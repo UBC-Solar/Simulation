@@ -12,7 +12,7 @@ import time
 import numpy as np
 
 
-class WeatherForecast():
+class WeatherForecasts():
 
 
     def __init__(self, api_key, coords, time):
@@ -29,9 +29,24 @@ class WeatherForecast():
         self.coords = coords
         self.last_updated_time = time
 
-        self.weather_forecast = self.update_path_weather_forecast(self, \
-                                    coords, last_updated_time)
+        coords = self.cull_dataset(coords)
 
+        self.weather_forecast = self.update_path_weather_forecast(coords,\
+                                     self.last_updated_time)
+
+    def cull_dataset(self, coords):
+        """
+        As we currently have a limited number of API calls(60) every minute with the 
+            current Weather API, we must shrink the dataset significantly. As the
+            OpenWeatherAPI models have a resolution of between 2.5 - 70 km, we will
+            go for a resolution of 25km. Assuming we travel at 100km/h for 12 hours,
+            1200 kilometres/25 = 48 API calls
+
+        As the Google Maps API has a resolution of around 40m between points, 
+            we must cull at 625:1    
+        """
+
+        return coords[::625]
 
     def update_local_weather_forecast(self, coord):
         """
@@ -70,7 +85,7 @@ class WeatherForecast():
         return weather_array
 
 
-    def update_local_current_weather(self, coord):
+    def update_local_current_weather(self, coord, time):
         """
         Passes in a single coordinate, returns the current weather for the
             coordinate
@@ -120,14 +135,19 @@ class WeatherForecast():
 
         Modifies: self.weather_forecast
         """
-
+        
         num_coords = len(coords)
-
-        weather_forecast = np.zeros(num_coords)
-
+        
+        weather_forecast = np.zeros((num_coords, 24, 7))
+        
         for i, coord in enumerate(coords):
-
-            weather_forecast[i] = self.update_local_weather_forecast(coord) 
+       
+            #If the limit has not been reached, then continue getting the hourly forecast 
+            if i < 10:
+                weather_forecast[i] = self.update_local_weather_forecast(coord)
+            else:
+                weather_forecast[i] = np.zeros((24,7))
+                
   
         self.coords = coords 
         self.last_updated_time = last_updated_time
@@ -225,5 +245,4 @@ class WeatherForecast():
             return "Clear"
         else:
             return "Unknown"
-
 
