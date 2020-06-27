@@ -26,7 +26,7 @@ class BasicArray(BaseArray):
 
         # Assume constant sunlight in this simple model.
         self.produced_energy = self.calculate_produced_power(self.sunlight,
-                                                             self.panel_efficiency, self.panel_size) * tick
+                                        self.panel_efficiency, self.panel_size) * tick
 
     def __str__(self):
         return(f"BasicArray: incident_sunlight: {self.sunlight}W/m^2\n"
