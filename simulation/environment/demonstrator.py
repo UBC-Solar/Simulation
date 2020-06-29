@@ -36,7 +36,7 @@ waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734], \
 #Ending Point: Jack's Urban Meeting Place, Boise, ID
 dest_coord = np.array([43.6142, -116.2080])
 
-"""
+
 #GIS class and get the path variables
 gis = GIS(google_api_key, origin_coord, dest_coord, waypoints)
 path = gis.get_path()
@@ -44,17 +44,20 @@ path_elevations = gis.get_path_elevations()
 path_distances = gis.get_path_distances()
 path_gradients = gis.get_path_gradients()
 
+"""
 #write to pickle file
 f = open('path.pickle', 'wb')
 pickle.dump((path, path_elevations, path_distances, path_gradients), f, \
             protocol = pickle.HIGHEST_PROTOCOL)
 """
 
+"""
 f_2 = open('path.pickle', 'rb')
 path,path_elevations,path_distances,path_gradients = pickle.load(f_2)
 
 f_2 = open('weather.pickle', 'rb')
 path_weather = pickle.load(f_2)
+"""
 
 #Plot elevation against cumulative distance
 cumulative_distances = np.cumsum(path_distances)
