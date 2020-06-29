@@ -32,6 +32,7 @@ def test_xfail():
 def test_xpass():
     pass
 
+
 def test_battery():
     battery = BasicBattery(0.5)
     assert battery.discharge(1) > 0
