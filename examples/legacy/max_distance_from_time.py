@@ -6,8 +6,6 @@ Description: Given an input time, determine the largest distance the car can tra
 Note: this example assumes constant speed throughout
 """
 
-# TODO: add a momentum gradient descent algorithm to find optimal speed
-
 # Time parameters
 tick = 1
 
