@@ -1,9 +1,16 @@
-import simulation
-import time as timer
-import numpy as np
 import datetime
-from scipy.optimize import minimize, shgo, differential_evolution
 import functools
+import time as timer
+
+import numpy as np
+from scipy.optimize import minimize, shgo, differential_evolution
+
+import simulation
+
+
+# TODO: make objective function take simulation_duration as argument
+
+# ----- Helper functions -----
 
 
 def timeit(func):
@@ -15,10 +22,12 @@ def timeit(func):
         stop = timer.perf_counter()
         run_time = stop - start
         print(f"Finished {func.__name__!r} in {run_time:.3f}s. \n")
+        return value
 
     return wrapper_timer
 
 
+# TODO: move this to a different file
 def negative_distance_from_speed_array(speed_kmh):
     # ----- Simulation constants -----
 
@@ -31,6 +40,9 @@ def negative_distance_from_speed_array(speed_kmh):
     tick = 1
 
     # ----- Speed array manipulations -----
+
+    if len(speed_kmh) != (simulation_duration / 3600):
+        raise Exception(f"Speed array of incorrect shape: {speed_kmh.shape}")
 
     speed_kmh = np.repeat(speed_kmh, 60 * 60)
     speed_kmh = np.insert(speed_kmh, 0, 0)
@@ -97,49 +109,51 @@ def negative_distance_from_speed_array(speed_kmh):
     return distance_travelled
 
 
+def display_result(res):
+    print(f"{res.message} \n")
+    print(f"Optimal solution: {res.x.round(2)} \n")
+    print(f"Average speed: {np.mean(res.x).round(1)}km/h")
+
+    maximum_distance = np.abs(negative_distance_from_speed_array(res.x))
+    print(f"Maximum distance: {maximum_distance:.2f}km\n")
+
+
+# ----- Optimization methods -----
+
 @timeit
-def nelder_mead_optimisation(initial_speed):
+def nelder_mead_optimization(initial_speed=0):
     # Result: works quite well but depends quite a bit on initial condition
 
     initial_guess = np.repeat(initial_speed, 8)
     optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='Nelder-Mead',
                                 options={'disp': True, 'xatol': 1e-1})
 
-    print(f"{optimal_solution.message} \n")
-    print(f"Optimal solution: {optimal_solution.x} \n")
-
-    maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
-    print(f"Maximum distance: {maximum_distance:.2f}km\n")
+    display_result(optimal_solution)
+    return optimal_solution.x
 
 
 @timeit
-def powell_optimisation(initial_speed):
+def powell_optimization(initial_speed=0):
     # Result: returns a bit of a weird optimal result
 
     initial_guess = np.repeat(initial_speed, 8)
     optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='Powell',
                                 options={'disp': True, 'xtol': 1e-1})
 
-    print(f"{optimal_solution.message} \n")
-    print(f"Optimal solution: {optimal_solution.x} \n")
-
-    maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
-    print(f"Maximum distance: {maximum_distance:.2f}km\n")
+    display_result(optimal_solution)
+    return optimal_solution.x
 
 
 @timeit
-def cg_optimization(initial_speed):
+def cg_optimization(initial_speed=0):
     # Result: straight up does not work
 
     initial_guess = np.repeat(initial_speed, 8)
     optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='CG',
                                 options={'disp': True, 'gtol': 1e-5})
 
-    print(f"{optimal_solution.message} \n")
-    print(f"Optimal solution: {optimal_solution.x} \n")
-
-    maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
-    print(f"Maximum distance: {maximum_distance:.2f}km\n")
+    display_result(optimal_solution)
+    return optimal_solution.x
 
 
 @timeit
@@ -152,15 +166,12 @@ def shgo_optimization():
     optimal_solution = shgo(negative_distance_from_speed_array, bounds=bounds, n=10,
                             options={'ftol': 1e-12, 'disp': True})
 
-    print(f"{optimal_solution.message} \n")
-    print(f"Optimal solution: {optimal_solution.x} \n")
-
-    maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
-    print(f"Maximum distance: {maximum_distance:.2f}km\n")
+    display_result(optimal_solution)
+    return optimal_solution.x
 
 
 @timeit
-def differential_evolution_optimisation():
+def differential_evolution_optimization():
     # Result: takes a long time but works really well, maybe altering parameters will increase speed
     # a huge advantage here is that it doesn't take an initial condition
 
@@ -172,8 +183,116 @@ def differential_evolution_optimisation():
                                               disp=True, strategy="best1bin", atol=1e-2, mutation=(0.2, 0.5),
                                               popsize=15, recombination=0.9)
 
-    print(f"{optimal_solution.message} \n")
-    print(f"Optimal solution: {optimal_solution.x.round(1)}")
+    display_result(optimal_solution)
+    return optimal_solution.x
 
-    maximum_distance = np.abs(negative_distance_from_speed_array(optimal_solution.x))
-    print(f"Maximum distance: {maximum_distance:.2f}km\n")
+
+@timeit
+def bfgs_optimization(initial_speed=0):
+    # Result: does not work
+
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='BFGS',
+                                options={'disp': True})
+
+    display_result(optimal_solution)
+    return optimal_solution
+
+
+@timeit
+def l_bfgs_b_optimization(initial_speed=0):
+    # Result: does not work
+
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='L-BFGS-B',
+                                options={'disp': True, 'iprint': 99})
+
+    display_result(optimal_solution)
+    return optimal_solution
+
+
+@timeit
+def tnc_optimization(initial_speed=0):
+    # Result: fast and finds a remarkably accurate result provided
+    # that the initial guess is kept low
+
+    max_speed = 104
+    bounds = [(20, max_speed), ] * 8
+
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='TNC', bounds=bounds,
+                                options={'disp': True, 'mesg_num': 0, 'eta': 0.01, 'xtol': 0.005, 'ftol': 0.005,
+                                         'maxCGit': 0})
+
+    display_result(optimal_solution)
+    return optimal_solution
+
+
+@timeit
+def cobyla_optimization(initial_speed=0):
+    # Result: scary fast and result is by far the most accurate
+    # this is probably the best optimization method
+
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='COBYLA',
+                                options={'disp': True})
+
+    display_result(optimal_solution)
+    return optimal_solution
+
+
+@timeit
+def slsqp_optimization(initial_speed=0):
+    # Result: runs but doesn't give an accurate answer
+
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='SLSQP',
+                                options={'disp': True, 'iprint': 2})
+
+    display_result(optimal_solution)
+    return optimal_solution
+
+
+@timeit
+def trust_constr_optimization(initial_speed=0):
+    # Result: does not work
+
+    max_speed = 104
+    bounds = [(20, max_speed), ] * 8
+
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='trust-constr',
+                                bounds=bounds, options={'disp': True, 'verbose': 1})
+
+    display_result(optimal_solution)
+    return optimal_solution
+
+
+@timeit
+def dogleg_optimization(initial_speed=0):
+    # Result: requires Jacobian of objective function and
+    # I don't know how to compute that for our function
+
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='dogleg',
+                                options={'disp': True, 'initial_trust_radius': 1, 'max_trust_radius': 1})
+
+    display_result(optimal_solution)
+    return optimal_solution
+
+
+@timeit
+def trust_ncg_optimization(initial_speed=0):
+    # Result: Jacobian matrix of the objective function
+    # is required here as well
+
+    initial_guess = np.repeat(initial_speed, 8)
+    optimal_solution = minimize(negative_distance_from_speed_array, x0=initial_guess, method='trust-ncg',
+                                options={'disp': True, 'initial_trust_radius': 1, 'max_trust_radius': 1})
+
+    display_result(optimal_solution)
+    return optimal_solution
+
+
+if __name__ == "__main__":
+    cobyla_optimization()
