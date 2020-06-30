@@ -59,7 +59,7 @@ class ExampleSimulation:
 
 
     def update_model(tick, simulation_duration, initial_battery_charge, speed, \
-                    unix_dt, utc_diff)
+                    unix_dt, start_coords)
         """
         Updates the model in tick increments for the entire simulation duration. Returns
             a final battery charge and a distance travelled for this duration, given an 
@@ -71,6 +71,23 @@ class ExampleSimulation:
             of the vehicle at every tick, the gradients at every tick, the weather at every
             tick, the GHI at every tick, is known.
         """
+
+        # ----- Expected Distance Estimate -----
+
+        #TODO: from tick, simulation_duration, speed, create a 1D array of cumulative
+        #       distances of size (number of ticks)
+        # Also an array of unix_dt with ticks
+
+        #TODO: from cumulative distances array, create a 1D array of "close_enough" indices
+        #       of coords from the route of GIS of size (number of ticks)
+
+        #TODO: from "close_enough" GIS indices array, get the elevation at every location
+        #       as an 1D array of size (number of ticks)
+        # Similarly, get arrays of time differences at every tick and GHI at every tick
+
+        #TODO: from cumulative distances array, create an array of "close_enough" indices 
+        #       of coords from the route of Weather
+        # Get the weather at every location
 
         # ----- Energy calculations -----
     

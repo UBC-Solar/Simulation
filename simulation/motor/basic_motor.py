@@ -12,6 +12,7 @@ class BasicMotor(BaseMotor):
         # Instantaneous current supplied by the battery to the motor controller
         self.dc_i = 0
 
+        #TODO: organize this mess
         self.input_power = 0
         self.vehicle_mass = 250
         self.acceleration_g = 9.81
@@ -48,6 +49,8 @@ class BasicMotor(BaseMotor):
         self.dc_v = dc_v
         self.dc_i = dc_i
 
+    #TODO: add effects of elevation to this
+    #TODO: deprecate this
     def calculate_power_in(self, required_speed_kmh):
         required_speed_ms = required_speed_kmh / 3.6
         required_angular_speed_rads = required_speed_ms / self.tire_radius
@@ -65,6 +68,9 @@ class BasicMotor(BaseMotor):
         # For the motor, the update tick calculates a value for the energy expended in a period of time
 
         self.consumed_energy = self.input_power * tick
+
+    #TODO: create a function which takes in array of elevation, array of wind speed, required
+    #       speed, returns the consumed energy
 
     def __str__(self):
         return(f"Tire radius: {self.tire_radius}m\n"

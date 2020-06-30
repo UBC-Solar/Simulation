@@ -16,6 +16,7 @@ class BasicArray(BaseArray):
         produced_power = sunlight * panel_efficiency * panel_size
         return produced_power
 
+    #TODO: make a convention to deprecate this
     def update(self, tick):
         """
         updates model for a single tick
@@ -27,6 +28,10 @@ class BasicArray(BaseArray):
         # Assume constant sunlight in this simple model.
         self.produced_energy = self.calculate_produced_power(self.sunlight,
                                         self.panel_efficiency, self.panel_size) * tick
+
+    #TODO: Create a function which takes in array of unix_dt, array of "close enough" 
+    #       GIS indices, array of time_differences, and returns an array of the energy
+    #       produced every tick
 
     def __str__(self):
         return(f"BasicArray: incident_sunlight: {self.sunlight}W/m^2\n"

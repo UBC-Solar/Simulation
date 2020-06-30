@@ -27,7 +27,14 @@ class GIS:
          
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,\
                                  self.path_distances)
-        
+
+    #TODO: function which takes in array of cumulative distances, returns list of "closest"
+    #       coordinate indices
+
+    #TODO: function which takes in array of coordinates, returns time difference at
+    #       each coordinate from UTC
+
+    #TODO: function which takes in array of path indices, returns list of gradients
 
     def get_path(self):
         """
