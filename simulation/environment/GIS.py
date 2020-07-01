@@ -25,6 +25,17 @@ class GIS:
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
 
+        self.path_gradients = self.calculate_path_gradients(self.path_elevations,\
+                                                            self.path_distances)
+
+    # TODO: function which takes in array of cumulative distances, returns list of "closest"
+    #       coordinate indices
+
+    # TODO: function which takes in array of coordinates, returns time difference at
+    #       each coordinate from UTC
+
+    # TODO: function which takes in array of path indices, returns list of gradients
+
     # ----- Getters -----
 
     def get_path(self):
@@ -328,72 +339,3 @@ class GIS:
         self.current_index = self.current_index - 1
 
         return self.current_index
-
-
-    def update_path(self, origin_coord, dest_coord, waypoints):
-        """
-        Returns a path between the origin coordinate and the destination coordinate,
-            passing through a group of optional waypoints.
-
-        origin_coord: A numpy array [latitude, longitude] of the starting coordinate
-        dest_coord: A numpy array [latitude, longitude] of the destination coordinate
-        waypoint: A numpy array [n][latitude, longitude], where n<=10
-
-        Returns: A numpy array [n][latitude, longitude], marking out the path.
-
-        https://developers.google.com/maps/documentation/directions/start
-        """
-
-        #set up URL
-        url_head = "https://maps.googleapis.com/maps/api/directions/json?origin={},{}&destination={},{}".format(origin_coord[0], origin_coord[1], dest_coord[0], dest_coord[1])
-    
-        url_waypoints = ""
-        if len(waypoints) != 0:
-            
-            url_waypoints="&waypoints="
-
-            if len(waypoints) > 10:
-                print("Too many waypoints; Truncating to 10 waypoints total")
-                waypoints = waypoints[0:10]
-            
-            for waypoint in waypoints:
-                
-                url_waypoints = url_waypoints + "via:{},{}|".format(waypoint[0],\
-                                waypoint[1])
-
-            url_waypoints = url_waypoints[:-1]
-
-        url_end = "&key={}".format(self.api_key)
-
-        url = url_head + url_waypoints + url_end
-
-        print("url: {}".format(url))
-
-        #HTTP GET
-        r = requests.get(url)
-        response = json.loads(r.text)
-
-        path_points = []
-
-        #If a route is found,
-        if response['status'] == "OK":
-            print("A route was found.")
-
-            #Pick the first route in the list of available routes
-            #A route consists of a series of legs
-            for leg in response['routes'][0]['legs']:
-
-                #Every leg contains an array of steps.
-                for step in leg['steps']:
-                
-                    #every step contains an encoded polyline
-                    polyline_raw = step['polyline']['points']
-                    polyline_coords = polyline.decode(polyline_raw)
-                    path_points = path_points + polyline_coords
-
-        else:
-            print("No route was found: {}".format(response['status']))
-
-        return np.array(path_points)
-
-

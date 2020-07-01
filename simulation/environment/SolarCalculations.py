@@ -21,6 +21,8 @@ class SolarCalculations:
         #Solar Constant in W/m2
         self.S_0 = 1353
 
+    #TODO: function which takes in an array of coordinates, array of time difference, 
+    #   array of times, returns GHI
 
     def calculate_eot_correction(self, day_of_year):
         """

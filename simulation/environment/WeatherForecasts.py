@@ -174,6 +174,11 @@ class WeatherForecasts():
 
         return self.weather_forecast
 
+    #TODO: function which takes in a list of coordinates, and returns a list of
+    #       weather_forecast indices which are closest to the coordinate
+
+    #TODO: function which takes in a list of weather_forcast indices, and returns the 
+    #       wind speed for all the coordinates there
 
     def get_closest_weather_forecast(self, coord):
         """
