@@ -20,7 +20,7 @@ tick = 1
 # ----- Simulation constants -----
 
 incident_sunlight = 1000
-initial_battery_charge = 0.9
+initial_battery_charge = 0.90
 lvs_power_loss = 0
 max_speed = 104
 
@@ -82,7 +82,7 @@ time_in_motion = np.logical_and(tick_array, state_of_charge) * tick
 time_taken = np.sum(time_in_motion)
 time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
-final_soc = state_of_charge[-1] * 100 + 0.
+final_soc = state_of_charge[-1] * 100
 
 # ----- Target value -----
 
@@ -90,8 +90,9 @@ distance = speed * (time_in_motion / 3600)
 distance_travelled = np.sum(distance)
 
 print(f"\nSimulation successful!\n"
+      f"\n----- Simulation result -----\n"
       f"Time taken: {time_taken}\n"
-      f"Maximum distance traversable: {distance_travelled:.2f}km\n"
+      f"Maximum traversable distance: {distance_travelled:.2f}km\n"
       f"Speed: {speed}km/h\n"
       f"Final battery SOC: {final_soc:.2f}%\n")
 

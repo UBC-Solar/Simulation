@@ -11,7 +11,7 @@ to make it within the day. [distance -> speed]
 
 # ----- Simulation input -----
 
-input_distance = 300
+input_distance = float(input("Enter distance: "))
 
 start = timer.perf_counter()
 
@@ -112,7 +112,7 @@ else:
     print(f"Simulation complete! \n\n"
           f"Optimal speed: {optimal_speed:.2f}km/h \n"
           f"Distance travelled: {optimal_distance_travelled:.2f}km \n"
-          f"Final battery charge: {optimal_final_soc:.2f}% \n"
+          f"Final battery charge: {optimal_final_soc * 100:.2f}% \n"
           f"Time taken: {datetime.timedelta(seconds=int(optimal_time_taken))} \n")
 
 stop = timer.perf_counter()
