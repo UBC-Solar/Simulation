@@ -58,7 +58,7 @@ class BasicBattery(BaseBattery):
 
         # discharge_capacity -> energy
         self.stored_energy = self.max_energy_capacity - self.calculate_energy_from_discharge_capacity(
-                                                        self.discharge_capacity)
+            self.discharge_capacity)
 
         # ----- DayBreak battery initialisation -----
 
@@ -99,7 +99,6 @@ class BasicBattery(BaseBattery):
 
         return super().discharge(energy / 3600)
 
-
     def update_array(self, cumulative_energy_array):
         """
         Performs energy calculations with NumPy arrays
@@ -120,7 +119,7 @@ class BasicBattery(BaseBattery):
         stored_energy_array = np.clip(stored_energy_array, a_min=0, a_max=self.max_energy_capacity)
 
         energy_discharged_array = np.full_like(cumulative_energy_array, fill_value=self.max_energy_capacity) - \
-                                  stored_energy_array
+            stored_energy_array
 
         discharge_capacity_array = self.calculate_discharge_capacity_from_energy(energy_discharged_array)
 
