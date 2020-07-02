@@ -28,13 +28,48 @@ class GIS:
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,\
                                                             self.path_distances)
 
-    # TODO: function which takes in array of cumulative distances, returns list of "closest"
-    #       coordinate indices
+    def calculate_closest_gis_indices(self, cumulative_distances):
+        """
+        Takes in an array of point distances from starting point, returns a list of 
+            self.path indices of coordinates which have a distance from the starting point
+            closest to the point distances
 
-    # TODO: function which takes in array of coordinates, returns time difference at
-    #       each coordinate from UTC
+        :param cumulative_distances: (float[N]) array of distances, where 
+            cumulative_distances[x] > cumulative_distances[x-1]
+        
+        returns: (float[N]) array of indices of path
+        """ 
 
-    # TODO: function which takes in array of path indices, returns list of gradients
+        #TODO: implement this
+
+        pass
+
+    def calculate_time_differences(self, coords):
+        """
+        Takes in an array of coordinates, returns time difference in seconds at each 
+            coordinate from UTC
+
+        :param coords: (float[N][lat lng]) array of coordinates
+
+        returns: (float[N]) array of time differences in seconds
+        """
+
+        #TODO: implement this
+
+        pass
+
+    def get_gradients(self, gis_indices):
+        """
+        Takes in an array of path indices, returns the road gradient at each indice
+
+        :param gis_indices: (float[N]) array of path indices
+
+        returns: (float[N]) array of road gradients
+        """
+
+        #TODO: implement this
+
+        pass
 
     # ----- Getters -----
 
@@ -339,3 +374,4 @@ class GIS:
         self.current_index = self.current_index - 1
 
         return self.current_index
+

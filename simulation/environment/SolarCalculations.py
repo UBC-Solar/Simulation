@@ -21,9 +21,6 @@ class SolarCalculations:
         #Solar Constant in W/m2
         self.S_0 = 1353
 
-    #TODO: function which takes in an array of coordinates, array of time difference, 
-    #   array of times, returns GHI
-
     def calculate_eot_correction(self, day_of_year):
         """
         Approximates and returns the correction factor between the apparent 
@@ -355,4 +352,21 @@ class SolarCalculations:
          
         return GHI
 
+    def calculate_array_GHI(self, coords, time_zones, datetimes_utc, \
+                                elevations, cloud_covers):
+
+        """
+        Calculates the Global Horizontal Irradiance from the Sun, relative to a location
+            on the Earth, for arrays of coordinates, times, elevations and weathers
+
+        coords: (float[N][lat, lng]) array of latitudes and longitudes
+        time_zones: (int[N]) time zones at different locations in seconds
+        datetimes_utc: (int[N]) unix times at UTC
+        elevations: (float[N]) elevation from sea level in m
+        cloud_covers: (float[N]) percentage cloud cover in range of 0 to 1 
+
+        Returns: (float[N]) Global Horizontal Irradiance in W/m2
+        """
+
+        pass
 

@@ -4,22 +4,40 @@ from simulation.array.base_array import BaseArray
 class BasicArray(BaseArray):
 
     # incident_sunlight:
-    def __init__(self, incident_sunlight):
+    def __init__(self):
         super().__init__()
 
-        self.sunlight = incident_sunlight
+        #solar cell efficiency
         self.panel_efficiency = 0.2
+
+        #solar panel size in m2
         self.panel_size = 6
 
     @staticmethod
-    def calculate_produced_power(sunlight, panel_efficiency, panel_size):
+    def calculate_produced_power(solar_irradiance, panel_efficiency, panel_size):
+        """
+        returns the power produced by a solar panel in W
+
+        :param solar_irradiance: (float) a value for global horizontal irradiance(GHI)
+            in W/m2
+        :param panel_efficiency: (float) the efficiency of the solar cells as a number
+            between 0 and 1, in atmosphere and with sunlight.
+        :param panel_size: (float) the area of the solar panels in m2
+        
+        returns: the power produced by a solar panel in W
+        """
+
+        #Note: The equation below might not actually be right. Solar Panels
+        #       have metal busbars on the top of the panel, and this causes a slight
+        #       shading effect.
+
         produced_power = sunlight * panel_efficiency * panel_size
+
         return produced_power
 
-    #TODO: make a convention to deprecate this
     def update(self, tick):
         """
-        updates model for a single tick
+        updates solar array model for a single tick
 
         :param tick: (float) the length of time for the tick (in seconds)
 
@@ -29,11 +47,25 @@ class BasicArray(BaseArray):
         self.produced_energy = self.calculate_produced_power(self.sunlight,
                                         self.panel_efficiency, self.panel_size) * tick
 
-    #TODO: Create a function which takes in array of unix_dt, array of "close enough" 
-    #       GIS indices, array of time_differences, and returns an array of the energy
-    #       produced every tick
+    def calculate_produced_energy(self, solar_irradiance, tick):
+        """
+        returns a numpy array with the energy produced by the solar panels across
+        each the length of each tick
+
+        :param solar_irradiance: (float[N]) the global horizontal irradiance(GHI) at
+            each moment experienced by the vehicle, in W/m2
+        :param tick: (float) the duration of a time step in seconds
+
+        returns: (float[N]) array of energy produced by the solar panels on the vehicle
+            in Joules
+        """
+
+        #TODO: implement this
+        
+        pass
 
     def __str__(self):
         return(f"BasicArray: incident_sunlight: {self.sunlight}W/m^2\n"
                f"BasicArray: panel_size: {self.panel_size}m^2\n"
                f"BasicArray: panel_efficiency: {self.panel_efficiency * 100}%\n")
+
