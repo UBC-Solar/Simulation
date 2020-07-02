@@ -117,7 +117,6 @@ class WeatherForecasts():
 
         return current_weather
 
-
     def update_path_weather_forecast(self, coords, last_updated_time):
         """
         Passes in a list of coordinates, returns the hourly weather forecast
@@ -154,7 +153,6 @@ class WeatherForecasts():
         self.weather_forecast = weather_forecast
 
         return weather_forecast 
-
  
     def get_path_weather_forecast(self):
         """
@@ -174,11 +172,39 @@ class WeatherForecasts():
 
         return self.weather_forecast
 
-    #TODO: function which takes in a list of coordinates, and returns a list of
-    #       weather_forecast indices which are closest to the coordinate
+    def calculate_closest_weather_indices(self, cumulative_distances, cumulative_distances_gis):
+        """
+        Takes in an array of point distances from starting point, returns a list of 
+            weather_forecast indices in the region closest to the point
+        
+        cumulative_distances: (float[N]) distances between calculated points in m
+        cumulative_distances_gis: (float[M]) distances between GIS path points in m
 
-    #TODO: function which takes in a list of weather_forcast indices, and returns the 
-    #       wind speed for all the coordinates there
+        Returns: (float[N]) indices of weather_forecast closest to the distances specified 
+            in cumulative_distances 
+        """
+
+        #TODO: implement this
+
+        pass
+
+    def get_weather_forecasts(self, indices):
+        """
+        Takes in an array of indices of the weather_forecast, and returns a list of 
+            weather_forecasts
+
+        indices: (int[N]) indices of self.weather_forecast
+
+        Returns:
+        - A numpy array [24][7]
+        - [24]: hours from the self.last_updated_time
+        - [7]: (latitude, longitude, wind_speed, wind_direction, 
+                    cloud_cover, precipitation, description)
+        """
+
+        #TODO: implement this
+
+        pass
 
     def get_closest_weather_forecast(self, coord):
         """
@@ -202,7 +228,6 @@ class WeatherForecasts():
 
         return weather_forecast[temp5.index(max(temp_5))]
 
-
     def get_last_updated_time(self):
         """
         Returns the UNIX time in which the list of coordinates comprising the 
@@ -210,7 +235,6 @@ class WeatherForecasts():
         """    
 
         return self.last_updated_time
-
 
     def get_directional_wind_speed(self, vehicle_azimuth, wind_speed, wind_direction):
         """
@@ -229,7 +253,6 @@ class WeatherForecasts():
 
         return wind_speed * (math.cos(math.radians(wind_direction - vehicle_azimuth)))
         
-
     def get_weather_advisory(self, ID):
         """
         Returns a string indicating the type of weather to expect, from the standardized
