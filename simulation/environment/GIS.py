@@ -15,6 +15,8 @@ class GIS:
         self.current_index = 0
         self.distance_remainder = 0
 
+        # TODO: make it so that the path and path_elevations are pickled and API calls are only made if there is no
+        #  pickle already created
         self.path = self.update_path(origin_coord, dest_coord, waypoints)
 
         # TODO: This method takes quite a while to run, should probably be moved elsewhere
@@ -25,7 +27,7 @@ class GIS:
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
 
-        self.path_gradients = self.calculate_path_gradients(self.path_elevations,\
+        self.path_gradients = self.calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
 
     def calculate_closest_gis_indices(self, cumulative_distances):
@@ -54,7 +56,7 @@ class GIS:
         returns: (float[N]) array of time differences in seconds
         """
 
-        #TODO: implement this
+        # TODO: implement this
 
         pass
 
