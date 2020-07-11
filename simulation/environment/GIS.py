@@ -40,11 +40,20 @@ class GIS:
             cumulative_distances[x] > cumulative_distances[x-1]
         
         returns: (float[N]) array of indices of path
-        """ 
+        """
 
-        #TODO: implement this
+        current_waypoint_index = 0
+        next_waypoint_index = 1
+        result = []
 
-        pass
+        for distance in np.nditer(cumulative_distances):
+            if distance > np.average(self.path_distances[current_waypoint_index:next_waypoint_index + 1]):
+                current_waypoint_index += 1
+                next_waypoint_index += 1
+
+            result.append(current_waypoint_index)
+
+        return np.array(result)
 
     def calculate_time_differences(self, coords):
         """
