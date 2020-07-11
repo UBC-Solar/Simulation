@@ -58,7 +58,7 @@ class BasicMotor(BaseMotor):
         self.dc_v = dc_v
         self.dc_i = dc_i
 
-    def calculate_power_in(self, required_speed_kmh, gradient)
+    def calculate_power_in(self, required_speed_kmh, gradient):
         """
         For a given road gradient, calculate the power that must be inputted into
             the motor to maintain a required speed
