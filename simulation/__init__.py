@@ -1,6 +1,7 @@
 from simulation.common import Consumer
 from simulation.common import Producer
 from simulation.common import Storage
+from simulation.common import BatteryEmptyError
 
 from simulation.array import BaseArray
 from simulation.battery import BaseBattery
@@ -14,7 +15,11 @@ from simulation.lvs import BasicLVS
 from simulation.motor import BasicMotor
 from simulation.regen import BasicRegen
 
+from simulation.environment import GIS
+from simulation.environment import SolarCalculations
+from simulation.environment import WeatherForecast
+
 __version__ = "0.0.1"
 
-print("package 'simulation' imported. version: {}".format(__version__))
+print("Package 'simulation' imported. Version: {}\n".format(__version__))
 
