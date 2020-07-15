@@ -3,6 +3,8 @@ import json
 import polyline
 import numpy as np
 import math
+import os
+from data.route.__init__ import route_directory
 
 
 class GIS:
@@ -15,18 +17,20 @@ class GIS:
         self.current_index = 0
         self.distance_remainder = 0
 
-        # TODO: make it so that the path and path_elevations are pickled and API calls are only made if there is no
-        #  pickle already created
-        self.path = self.update_path(origin_coord, dest_coord, waypoints)
+        route_file = route_directory / "route_data.npz"
 
-        # TODO: This method takes quite a while to run, should probably be moved elsewhere
-        self.path_elevations = self.calculate_path_elevations(self.path)
+        if os.path.isfile(route_file):
+            with np.load(route_file) as route_data:
+                self.path = route_data['path']
+                self.path_elevations = route_data['elevations']
+        else:
+            self.path = self.update_path(origin_coord, dest_coord, waypoints)
+            self.path_elevations = self.calculate_path_elevations(self.path)
+
+            with open(route_file, 'wb') as f:
+                np.savez(f, path=self.path, elevations=self.path_elevations)
 
         self.path_distances = self.calculate_path_distances(self.path)
-
-        self.path_gradients = self.calculate_path_gradients(self.path_elevations,
-                                                            self.path_distances)
-
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
 
@@ -42,16 +46,16 @@ class GIS:
         returns: (float[N]) array of indices of path
         """
 
-        current_waypoint_index = 0
-        next_waypoint_index = 1
+        current_coordinate_index = 0
+        next_coordinate_index = 1
         result = []
 
         for distance in np.nditer(cumulative_distances):
-            if distance > np.average(self.path_distances[current_waypoint_index:next_waypoint_index + 1]):
-                current_waypoint_index += 1
-                next_waypoint_index += 1
+            if distance > np.average(self.path_distances[current_coordinate_index:next_coordinate_index + 1]):
+                current_coordinate_index += 1
+                next_coordinate_index += 1
 
-            result.append(current_waypoint_index)
+            result.append(current_coordinate_index)
 
         return np.array(result)
 
@@ -335,7 +339,6 @@ class GIS:
         """
         From the current and previous coordinate, calculate the current bearing of the vehicle.
         """
-        # TODO: consider making a dedicated coordinate object
 
         if self.current_index - 1 < 0:
             coord_1 = self.path[self.current_index + 1]
