@@ -17,7 +17,7 @@ from simulation.regen import BasicRegen
 
 from simulation.environment import GIS
 from simulation.environment import SolarCalculations
-from simulation.environment import WeatherForecast
+from simulation.environment import WeatherForecasts
 
 __version__ = "0.0.1"
 
