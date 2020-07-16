@@ -17,12 +17,16 @@ class GIS:
         self.current_index = 0
         self.distance_remainder = 0
 
+        # path to file storing the route and elevation NumPy arrays
         route_file = route_directory / "route_data.npz"
 
+        # if the file exists, load path from file
         if os.path.isfile(route_file):
             with np.load(route_file) as route_data:
                 self.path = route_data['path']
                 self.path_elevations = route_data['elevations']
+
+        # otherwise call API and then save arrays to file
         else:
             self.path = self.update_path(origin_coord, dest_coord, waypoints)
             self.path_elevations = self.calculate_path_elevations(self.path)
