@@ -9,6 +9,7 @@ from data.route.__init__ import route_directory
 
 class GIS:
     def __init__(self, api_key, origin_coord, dest_coord, waypoints):
+
         # Radius of the Earth in metres
         self.R = 6371009
 
@@ -23,16 +24,33 @@ class GIS:
         # if the file exists, load path from file
         if os.path.isfile(route_file):
             with np.load(route_file) as route_data:
-                self.path = route_data['path']
-                self.path_elevations = route_data['elevations']
+                save_file_start_coord = route_data['origin_coord']
+                save_file_end_coord = route_data['dest_coord']
+                save_file_waypoints = route_data['waypoints']
+
+                if (save_file_start_coord == origin_coord).all() and (save_file_end_coord == dest_coord).all() \
+                        and (save_file_waypoints == waypoints).all():
+                    print("Previous save file is being used...")
+                    self.path = route_data['path']
+                    self.path_elevations = route_data['elevations']
+                else:
+                    print("New route requested. Creating new save file...")
+                    self.path = self.update_path(origin_coord, dest_coord, waypoints)
+                    self.path_elevations = self.calculate_path_elevations(self.path)
+
+                    with open(route_file, 'wb') as f:
+                        np.savez(f, path=self.path, elevations=self.path_elevations, origin_coord=origin_coord,
+                                 dest_coord=dest_coord, waypoints=waypoints)
 
         # otherwise call API and then save arrays to file
         else:
+            print("Save file doesn't not exist. Calling API and creating save file...")
             self.path = self.update_path(origin_coord, dest_coord, waypoints)
             self.path_elevations = self.calculate_path_elevations(self.path)
 
             with open(route_file, 'wb') as f:
-                np.savez(f, path=self.path, elevations=self.path_elevations)
+                np.savez(f, path=self.path, elevations=self.path_elevations, origin_coord=origin_coord,
+                         dest_coord=dest_coord, waypoints=waypoints)
 
         self.path_distances = self.calculate_path_distances(self.path)
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,
