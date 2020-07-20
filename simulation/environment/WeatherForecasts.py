@@ -184,9 +184,30 @@ class WeatherForecasts():
             in cumulative_distances 
         """
 
-        #TODO: implement this
+        indices = np.zeros(len(cumulative_distances))
+        i = 0
+        j = 0
+        while i < len(cumulative_distances) and j < len(cumulative_distances_gis):
+    
+            if cumulative_distances[i] > cumulative_distances_gis[j]:
+                
+                #count upwards on cumulative_distances, append current value of j
+                indices[i] = j/625
+                i = i + 1
 
-        pass
+            elif cumulative_distances[i] < cumulative_distances_gis[j]:
+
+                #count upwards on cumulative_distances_gis
+                j = j + 1
+
+            else:
+            
+                #count upwards on both, append current value of j
+                indices[i] = j/625
+                i = i + 1
+                j = j + 1
+
+       return indices 
 
     def get_weather_forecasts(self, indices):
         """
@@ -202,9 +223,7 @@ class WeatherForecasts():
                     cloud_cover, precipitation, description)
         """
 
-        #TODO: implement this
-
-        pass
+        return self.weather_forecasts[indices]
 
     def get_closest_weather_forecast(self, coord):
         """
