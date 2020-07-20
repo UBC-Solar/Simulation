@@ -367,6 +367,25 @@ class SolarCalculations:
 
         Returns: (float[N]) Global Horizontal Irradiance in W/m2
         """
+    
+        ghi = np.zeros(len(coords))
 
-        pass
+        for i in len(coords):
 
+            date = datetime.fromtimestamp(datetimes_utc[i])
+            
+            day_of_year = self.get_day_of_year(date.day, date.month, date.year)
+
+            local_time = (date.hour) + float(date.minute * 60 + date.second)/3600
+
+            ghi[i] = self.calculate_GHI(coords[i][0], coords[i][1], time_zones[i], \
+                    day_of_year, local_time, elevations[i], cloud_covers[i]) 
+        
+        return ghi
+
+    def get_day_of_year(self, day, month, year):
+
+        return (datetime.date(date.year, date.month, date.day) - \
+                    datetime.date(date.year, 1, 1)).days + 1
+
+        
