@@ -23,7 +23,7 @@ setup(name='simulation',
           'simulation': ['py.typed'],
       },
       install_requires=[
-          'numpy'
+          'numpy', 'scipy'
       ],
       extras_require={
         'mpi': [

@@ -157,4 +157,3 @@ class ExampleSimulation:
                 f"Maximum distance traversable: {distance_travelled:.2f}km\n"
                 f"Speed: {speed}km/h\n"
                 f"Final battery SOC: {final_soc:.2f}%\n")
-
