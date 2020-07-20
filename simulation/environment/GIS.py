@@ -3,10 +3,13 @@ import json
 import polyline
 import numpy as np
 import math
+import os
+from data.route.__init__ import route_directory
 
 
 class GIS:
     def __init__(self, api_key, origin_coord, dest_coord, waypoints):
+
         # Radius of the Earth in metres
         self.R = 6371009
 
@@ -15,17 +18,42 @@ class GIS:
         self.current_index = 0
         self.distance_remainder = 0
 
-        self.path = self.update_path(origin_coord, dest_coord, waypoints)
+        # path to file storing the route and elevation NumPy arrays
+        route_file = route_directory / "route_data.npz"
 
-        # TODO: This method takes quite a while to run, should probably be moved elsewhere
-        self.path_elevations = self.calculate_path_elevations(self.path)
+        # if the file exists, load path from file
+        if os.path.isfile(route_file):
+            with np.load(route_file) as route_data:
+                save_file_start_coord = route_data['origin_coord']
+                save_file_end_coord = route_data['dest_coord']
+                save_file_waypoints = route_data['waypoints']
+
+                if (save_file_start_coord == origin_coord).all() and (save_file_end_coord == dest_coord).all() \
+                        and (save_file_waypoints == waypoints).all():
+                    print("Previous save file is being used...")
+                    self.path = route_data['path']
+                    self.path_elevations = route_data['elevations']
+                else:
+                    print("New route requested. Creating new save file...")
+                    self.path = self.update_path(origin_coord, dest_coord, waypoints)
+                    self.path_elevations = self.calculate_path_elevations(self.path)
+
+                    with open(route_file, 'wb') as f:
+                        np.savez(f, path=self.path, elevations=self.path_elevations, origin_coord=origin_coord,
+                                 dest_coord=dest_coord, waypoints=waypoints)
+
+        # otherwise call API and then save arrays to file
+        else:
+            print("Save file doesn't not exist. Calling API and creating save file...")
+            self.path = self.update_path(origin_coord, dest_coord, waypoints)
+            self.path_elevations = self.calculate_path_elevations(self.path)
+
+            with open(route_file, 'wb') as f:
+                np.savez(f, path=self.path, elevations=self.path_elevations, origin_coord=origin_coord,
+                         dest_coord=dest_coord, waypoints=waypoints)
 
         self.path_distances = self.calculate_path_distances(self.path)
-
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,
-                                                            self.path_distances)
-
-        self.path_gradients = self.calculate_path_gradients(self.path_elevations,\
                                                             self.path_distances)
 
     def calculate_closest_gis_indices(self, cumulative_distances):
@@ -38,11 +66,20 @@ class GIS:
             cumulative_distances[x] > cumulative_distances[x-1]
         
         returns: (float[N]) array of indices of path
-        """ 
+        """
 
-        #TODO: implement this
+        current_coordinate_index = 0
+        next_coordinate_index = 1
+        result = []
 
-        pass
+        for distance in np.nditer(cumulative_distances):
+            if distance > np.average(self.path_distances[current_coordinate_index:next_coordinate_index + 1]):
+                current_coordinate_index += 1
+                next_coordinate_index += 1
+
+            result.append(current_coordinate_index)
+
+        return np.array(result)
 
     def calculate_time_differences(self, coords):
         """
@@ -54,22 +91,20 @@ class GIS:
         returns: (float[N]) array of time differences in seconds
         """
 
-        #TODO: implement this
+        # TODO: implement this
 
         pass
 
     def get_gradients(self, gis_indices):
         """
-        Takes in an array of path indices, returns the road gradient at each indice
+        Takes in an array of path indices, returns the road gradient at each index
 
         :param gis_indices: (float[N]) array of path indices
 
         returns: (float[N]) array of road gradients
         """
 
-        #TODO: implement this
-
-        pass
+        return self.path_gradients[gis_indices]
 
     # ----- Getters -----
 
@@ -326,7 +361,6 @@ class GIS:
         """
         From the current and previous coordinate, calculate the current bearing of the vehicle.
         """
-        # TODO: consider making a dedicated coordinate object
 
         if self.current_index - 1 < 0:
             coord_1 = self.path[self.current_index + 1]
@@ -375,3 +409,16 @@ class GIS:
 
         return self.current_index
 
+
+if __name__ == "__main__":
+    google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
+
+    origin_coord = np.array([39.0918, -94.4172])
+
+    waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
+                          [41.8392, -103.7115], [42.8663, -106.3372], [42.8408, -108.7452],
+                          [42.3224, -111.2973], [42.5840, -114.4703]])
+
+    dest_coord = np.array([43.6142, -116.2080])
+
+    locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints)
