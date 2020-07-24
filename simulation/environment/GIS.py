@@ -5,6 +5,7 @@ import numpy as np
 import math
 import os
 from data.route.__init__ import route_directory
+from simulation.common.helpers import timeit
 
 
 class GIS:
@@ -34,7 +35,7 @@ class GIS:
                     self.path = route_data['path']
                     self.path_elevations = route_data['elevations']
                 else:
-                    print("New route requested. Creating new save file...")
+                    print("New route requested. Calling Google API and creating new save file...")
                     self.path = self.update_path(origin_coord, dest_coord, waypoints)
                     self.path_elevations = self.calculate_path_elevations(self.path)
 
@@ -44,7 +45,7 @@ class GIS:
 
         # otherwise call API and then save arrays to file
         else:
-            print("Save file doesn't not exist. Calling API and creating save file...")
+            print("Save file does not exist. Calling Google API and creating save file...")
             self.path = self.update_path(origin_coord, dest_coord, waypoints)
             self.path_elevations = self.calculate_path_elevations(self.path)
 
@@ -72,6 +73,7 @@ class GIS:
         next_coordinate_index = 1
         result = []
 
+        # TODO: np.average the entire array rather than just slices
         for distance in np.nditer(cumulative_distances):
             if distance > np.average(self.path_distances[current_coordinate_index:next_coordinate_index + 1]):
                 current_coordinate_index += 1
@@ -92,6 +94,8 @@ class GIS:
         """
 
         # TODO: implement this
+        # find the timezone of each coordinate
+        # call google API that does this
 
         pass
 
@@ -142,6 +146,7 @@ class GIS:
 
     # ----- Path calculation functions -----
 
+    @timeit
     def update_path(self, origin_coord, dest_coord, waypoints):
         """
         Returns a path between the origin coordinate and the destination coordinate,
@@ -157,8 +162,8 @@ class GIS:
         """
 
         # set up URL
-        url_head = "https://maps.googleapis.com/maps/api/directions/json?origin={},{}&destination={},{}".format(
-            origin_coord[0], origin_coord[1], dest_coord[0], dest_coord[1])
+        url_head = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin_coord[0]},{origin_coord[1]}" \
+                   f"&destination={dest_coord[0]},{dest_coord[1]}"
 
         url_waypoints = ""
         if len(waypoints) != 0:
@@ -170,11 +175,11 @@ class GIS:
                 waypoints = waypoints[0:10]
 
             for waypoint in waypoints:
-                url_waypoints = url_waypoints + "via:{},{}|".format(waypoint[0], waypoint[1])
+                url_waypoints = url_waypoints + f"via:{waypoint[0]},{waypoint[1]}|"
 
             url_waypoints = url_waypoints[:-1]
 
-        url_end = "&key={}".format(self.api_key)
+        url_end = f"&key={self.api_key}"
 
         url = url_head + url_waypoints + url_end
 
@@ -202,7 +207,7 @@ class GIS:
                     path_points = path_points + polyline_coords
 
         else:
-            print("No route was found: {}".format(response['status']))
+            print(f"No route was found: {response['status']}")
 
         route = np.array(path_points)
 
@@ -212,6 +217,7 @@ class GIS:
 
         return route
 
+    @timeit
     def calculate_path_elevations(self, coords):
         """
         Returns the elevations of every coordinate the array of coordinates passed in
@@ -263,6 +269,7 @@ class GIS:
 
         return elevations
 
+    @timeit
     def calculate_path_distances(self, coords):
         """
         The coordinates are spaced quite tightly together, and they capture the
@@ -309,6 +316,7 @@ class GIS:
         return path_distances
 
     @staticmethod
+    @timeit
     def calculate_path_gradients(elevations, distances):
         """
         Get the approximate gradients of every point on the path.
