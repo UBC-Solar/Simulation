@@ -10,7 +10,9 @@ import json
 import polyline
 import time
 import numpy as np
-
+import math
+import os
+from data.weather.__init__ import weather_directory
 
 class WeatherForecasts():
 
@@ -30,9 +32,36 @@ class WeatherForecasts():
         self.last_updated_time = time
 
         coords = self.cull_dataset(coords)
+        origin_coord = coords[0]
+        dest_coord = coords[-1]
 
-        self.weather_forecast = self.update_path_weather_forecast(coords,\
-                                     self.last_updated_time)
+        # path to file storing the weather data
+        weather_file = weather_directory / "weather_data.npz"
+
+        # if the file exists, load path from file
+        if os.path.isfile(weather_file):
+            with np.load(weather_file) as weather_data:
+
+                if (weather_data['origin_coord'] == origin_coord) and (weather_data['dest_coord'] == dest_coord):
+                    print("Previous save file is being used...")
+                    self.weather_forecast = weather_data['weather_forecast']
+
+                else:
+                    print("Save file doesn't not exist. Calling API and creating save file...")
+                    self.weather_forecast = self.update_path_weather_forecast(coords, self.last_updated_time)
+
+                    with open(weather_file, 'wb') as f:
+                        np.savez(f, weather_forecast=self.weather_forecast, origin_coord=origin_coord,
+                            dest_coord=dest_coord)
+
+        # otherwise call API and then save arrays to file
+        else:
+            print("Save file doesn't not exist. Calling API and creating save file...")
+            self.weather_forecast = self.update_path_weather_forecast(coords, self.last_updated_time)
+
+            with open(weather_file, 'wb') as f:
+                np.savez(f, weather_forecast=self.weather_forecast, origin_coord=origin_coord,
+                         dest_coord=dest_coord)
 
     def cull_dataset(self, coords):
         """
@@ -83,7 +112,6 @@ class WeatherForecasts():
             weather_array[i][6] = response["hourly"][i]["weather"][0]["id"]  
 
         return weather_array
-
 
     def update_local_current_weather(self, coord, time):
         """
@@ -152,7 +180,7 @@ class WeatherForecasts():
         self.last_updated_time = last_updated_time
         self.weather_forecast = weather_forecast
 
-        return weather_forecast 
+        return self.weather_forecast 
  
     def get_path_weather_forecast(self):
         """
@@ -207,7 +235,7 @@ class WeatherForecasts():
                 i = i + 1
                 j = j + 1
 
-       return indices 
+        return indices 
 
     def get_weather_forecasts(self, indices):
         """
@@ -223,7 +251,7 @@ class WeatherForecasts():
                     cloud_cover, precipitation, description)
         """
 
-        return self.weather_forecasts[indices]
+        return self.weather_forecast[indices]
 
     def get_closest_weather_forecast(self, coord):
         """
@@ -245,7 +273,7 @@ class WeatherForecasts():
         temp_4 = np.sum(temp_3, axis=1)
         temp_5 = np.sqrt(temp_4)
 
-        return weather_forecast[temp5.index(max(temp_5))]
+        return self.weather_forecast[temp_5.index(max(temp_5))]
 
     def get_last_updated_time(self):
         """
@@ -267,10 +295,21 @@ class WeatherForecasts():
         Returns: The wind speed in the direction opposite to the bearing of the vehicle
         """
 
-        #if driving at heading x clockwise from north
-        #wind direction at heading y clockwise from north
-
         return wind_speed * (math.cos(math.radians(wind_direction - vehicle_azimuth)))
+
+    def get_array_directional_wind_speed(self, vehicle_bearings, wind_speeds, wind_directions):
+        """
+        Returns the array of wind speed in m/s, in the direction opposite to the 
+            bearing of the vehicle
+
+        vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
+        wind_speeds: (float[N]) The absolute speeds in m/s
+        wind_directions: (float[N]) The azimuth angle of the wind, in degrees
+
+        Returns: The wind speeds in the direction opposite to the bearing of the vehicle
+        """
+        
+        return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings))) 
         
     def get_weather_advisory(self, ID):
         """

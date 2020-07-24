@@ -12,58 +12,70 @@ before the battery runs out [speed -> distance]
 
 speed = float(input("Enter a speed (km/h): "))
 
-
 simulation_duration = 60 * 60 * 9
 tick = 1
 
+google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
+weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
+
+origin_coord = np.array([39.0918, -94.4172])
+
+waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
+                    [41.8392, -103.7115], [42.8663, -106.3372], [42.8408, -108.7452],
+                    [42.3224, -111.2973], [42.5840, -114.4703]])
+
+dest_coord = np.array([43.6142, -116.2080])
+
+
+
 class ExampleSimulation:
 
-    def __init__(self, lvs_power_loss, max_speed):
+    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coords, waypoints):
     """
     Instantiates a simple model of the car
 
     lvs_power_loss: power loss in Watts due to the lvs system
-    max_speed: maximum speed of the vehicle on horizontal ground, with no
-                wind
-    """
+    max_speed: maximum speed of the vehicle on horizontal ground, with no wind
+    """  
+        
         #TODO: replace max_speed with a direct calculation taking into account the 
         #   elevation and wind_speed
+        max_speed = 104
+
+        #LVS power loss is pretty small
+        lvs_power_loss = 0
 
         # ----- Simulation constants -----
-
-        #TODO: Replace with the actual model
-        self.incident_sunlight = 1000
-        self.initial_battery_charge = 0.9
+        self.initial_battery_charge = 1.0
 
         self.lvs_power_loss = lvs_power_loss
-        #self.lvs_power_loss = 0
             
         self.max_speed = max_speed
-        #self.max_speed = 104
 
         # ----- Component initialisation -----
    
-        #TODO: convert the array class to use the new model 
-        self.basic_array = simulation.BasicArray(incident_sunlight)
-        self.basic_array.set_produced_energy(0)
+        self.basic_array = simulation.BasicArray()
         
-        self.basic_battery = simulation.BasicBattery(initial_battery_charge)
+        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)
         
         self.basic_lvs = simulation.BasicLVS(lvs_power_loss * tick)
-         
+        
         self.basic_motor = simulation.BasicMotor()
 
-        #TODO: use the GIS class
-        #TODO: use the WeatherForecasts class
-        #TODO: use the SolarCalculations class
+        self.gis = simulation.GIS(api, google_api_key, origin_coord, dest_coord, waypoints)
+        self.route_coords = gis.get_path()
 
+        self.time_of_initialization = 1593604800
+        self.weather = simulation.WeatherForecasts(weather_api_key, self.route, time_of_initialization)
+
+        self.solar_calculations = simulation.SolarCalculations()
 
     def update_model(tick, simulation_duration, initial_battery_charge, speed, \
                     unix_dt, start_coords)
         """
         Updates the model in tick increments for the entire simulation duration. Returns
-            a final battery charge and a distance travelled for this duration, given an 
-            initial charge, and a target speed. Also requires the current time and location.
+        a final battery charge and a distance travelled for this duration, given an 
+        initial charge, and a target speed. Also requires the current time and location.
 
         Note: if the speed remains constant throughout this update, and knowing the starting 
             time, the cumulative distance at every time can be known. From the cumulative 
@@ -74,59 +86,75 @@ class ExampleSimulation:
 
         # ----- Expected Distance Estimate -----
 
-        #TODO: from tick, simulation_duration, speed, create a 1D array of cumulative
-        #       distances of size (number of ticks)
-        # Also an array of unix_dt with ticks
+        #Array of cumulative distances hopefully travelled in this round
+        timestamps = np.arange(0, simulation_duration + tick, tick)
+        cumulative_distances = timestamps * speed
 
-        #TODO: from cumulative distances array, create a 1D array of "close_enough" indices
-        #       of coords from the route of GIS of size (number of ticks)
+        gis_distances = self.gis.calculate_path_distances(self.path)
+        cumulative_distances_gis = np.cumsum(gis_distances)
 
-        #TODO: from "close_enough" GIS indices array, get the elevation at every location
-        #       as an 1D array of size (number of ticks)
+        #From cumulative distances array, create a 1D array of "close_enough" indices
+        # of coords from the route of GIS of size (number of ticks)
+        closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
+        closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances, cumulative_distances_gis)
+
+        #Get the azimuth angle of the vehicle at every location
+        vehicle_bearings = self.gis.calculate_vehicle_heading()[closest_gis_indices]
+
+        #From "close_enough" GIS indices array, get the elevation at every location
+        # as an 1D array of size (number of ticks)
         # Similarly, get arrays of time differences at every tick and GHI at every tick
+        gradients = self.gis.get_gradients(closest_gis_indices)
+        time_zones = self.gis.get_time_zones(closest_gis_indices)
+        local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
-        #TODO: from cumulative distances array, create an array of "close_enough" indices 
-        #       of coords from the route of Weather
         # Get the weather at every location
+        weather_forecasts = self.weather.get_weather_forecasts(closest_weather_indices)
+        absolute_wind_speeds = weather_forecasts[:, :, 2]
+        wind_directions = weather_forecasts[:, :, 3]
+        cloud_covers = weather_forecasts[:, :, 4]
+
+        wind_speeds = self.weather.get_array_directional_wind_speeds(vehicle_bearings, absolute_wind_speeds, wind_directions)
+        solar_irradiances = self.solar_calculations.calculate_array_GHI(route_coords, time_zones, local_times, elevations, cloud_covers)
+
+        #key takeways: solar_irradiances at every tick, wind_speeds at every tick, gradients at every tick
 
         # ----- Energy calculations -----
-    
-        self.basic_array.update(tick)
+
+        #Note: This does nothing
+        #self.basic_array.update(tick)
          
         self.basic_lvs.update(tick)
         lvs_consumed_energy = basic_lvs.get_consumed_energy()
    
-        #TODO: convert the motor class to receive both the speed, and a range of
-        #       elevations
-        #TODO: calculate new motor_consumed_energy from this 
-        self.basic_motor.calculate_power_in(speed)
-        self.basic_motor.update(tick)
-        motor_consumed_energy = basic_motor.get_consumed_energy()
+        motor_consumed_energy = self.basic_motor.calculate_power_in(speed, gradients, wind_speeds, tick)
         
-        #TODO: convert the array class to use the new model 
-        #TODO: calculate new array output based on the time and location
-        self.produced_energy = basic_array.get_produced_energy()
+        #Note: this does nothing
+        #self.basic_motor.update(tick)
+        #motor_consumed_energy = basic_motor.get_consumed_energy()
+
+        array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, tick)
+
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
+        produced_energy = array_produced_energy
          
         # net energy added to the battery
         net_energy = produced_energy - consumed_energy
 
-        #TODO: net_energy should become an array like time
-         
         # ----- Array initialisation -----
         
         # array of times for the simulation
-        time = np.arange(0, simulation_duration + tick, tick, dtype='f4')
+        #time = np.arange(0, simulation_duration + tick, tick, dtype='f4')
          
         # stores speed of car at each time step
-        speed_kmh = np.full_like(time, fill_value=speed, dtype='f4')
+        speed_kmh = np.full_like(timestamps, fill_value=speed, dtype='f4')
          
         # stores the amount of energy transferred from/to the battery at each time step
-        #TODO: change the net_energy fill value to be like time
-        delta_energy = np.full_like(time, fill_value=net_energy, dtype='f4')
+        delta_energy = net_energy
+        #delta_energy = np.full_like(timestamps, fill_value=net_energy, dtype='f4')
 
         # used to calculate the time the car was in motion
-        tick_array = np.full_like(time, fill_value=tick, dtype='f4')
+        tick_array = np.full_like(timestamps, fill_value=tick, dtype='f4')
         tick_array[0] = 0
          
         # ----- Array calculations -----

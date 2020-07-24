@@ -8,7 +8,8 @@ A class to perform calculation and approximations for obtaining quantities
 
 
 import math
-
+import datetime
+import numpy as np
 
 class SolarCalculations:
 
@@ -21,10 +22,12 @@ class SolarCalculations:
         #Solar Constant in W/m2
         self.S_0 = 1353
 
+    # ----- Calculation of Apparent Solar Time -----
+
     def calculate_eot_correction(self, day_of_year):
         """
         Approximates and returns the correction factor between the apparent 
-            solar time and the mean solar time
+        solar time and the mean solar time
 
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
@@ -39,7 +42,6 @@ class SolarCalculations:
 
         return eot
 
-
     def calculate_LSTM(self, time_zone_utc):
         """
         Calculates and returns the LSTM, or Local Solar Time Meridian.
@@ -51,18 +53,20 @@ class SolarCalculations:
 
         return 15*time_zone_utc
 
-
     def local_time_to_apparent_solar_time(self, time_zone_utc, day_of_year, local_time, \
             longitude):
         """
         Converts between the local time to the apparent solar time and returns the apparent
-            solar time
+        solar time
 
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
+        time_zone_utc: The UTC time zone of your area in hours of UTC offset. 
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
-        Confirm your email:local_time: The local time in hours from midnight
+        local_time: The local time in hours from midnight (Adjust for Daylight Savings)
         longitude: The longitude of a location on Earth
+
+        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+                calculation will end up just the same
 
         Returns: The Apparent Solar Time of a location, in hours from midnight
         """
@@ -70,10 +74,12 @@ class SolarCalculations:
         lstm = self.calculate_LSTM(time_zone_utc)
         eot = self.calculate_eot_correction(day_of_year)
         
+        #local solar time
         lst = local_time + float(longitude - lstm)/15 + float(eot)/60
 
         return lst
 
+    # ----- Calculation of solar position in the sky -----
     
     def calculate_hour_angle(self, time_zone_utc, day_of_year, local_time, longitude):
         """
@@ -82,8 +88,11 @@ class SolarCalculations:
         time_zone_utc: The UTC time zone of your area in hours of UTC offset.
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
-        local_time: The local time in hours from midnight
+        local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
         longitude: The longitude of a location on Earth
+
+        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+                calculation will end up just the same
 
         Returns: The Hour Angle in degrees. 
         """
@@ -94,7 +103,6 @@ class SolarCalculations:
         hour_angle = 15 * (lst - 12)
 
         return hour_angle
-
 
     def calculate_declination_angle(self, day_of_year):
         """
@@ -112,7 +120,6 @@ class SolarCalculations:
 
         return declination_angle
 
-
     def calculate_elevation_angle(self, latitude, longitude, time_zone_utc, day_of_year,\
             local_time):
         """
@@ -124,7 +131,10 @@ class SolarCalculations:
             Vancouver has time_zone_utc = -7
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
-        local_time: The local time in hours from midnight
+        local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
+
+        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+                calculation will end up just the same
 
         Returns: The elevation angle in degrees
         """
@@ -144,7 +154,6 @@ class SolarCalculations:
 
         return math.degrees(elevation_angle)
 
-
     def calculate_zenith_angle(self, latitude, longitude, time_zone_utc, day_of_year,\
             local_time):
         """
@@ -152,11 +161,13 @@ class SolarCalculations:
 
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example,
-            Vancouver has time_zone_utc = -7
+        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
-        local_time: The local time in hours from midnight
+        local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
+
+        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+                calculation will end up just the same
 
         Returns: The zenith angle in degrees
         """
@@ -164,8 +175,7 @@ class SolarCalculations:
         elevation_angle = self.calculate_elevation_angle(latitude, longitude, \
                             time_zone_utc, day_of_year, local_time)
 
-        return 90 - elevation_angle
-        
+        return 90 - elevation_angle  
     
     def calculate_azimuth_angle(self, latitude, longitude, time_zone_utc, day_of_year, \
             local_time):
@@ -178,7 +188,10 @@ class SolarCalculations:
             Vancouver has time_zone_utc = -7
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
-        local_time: The local time in hours from midnight
+        local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
+
+        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+                calculation will end up just the same
 
         Returns: The azimuth angle in degrees
         """
@@ -208,6 +221,7 @@ class SolarCalculations:
 
         return math.degrees(azimuth_angle)
 
+    # ----- Calculation of sunrise and sunset times -----
 
     def calculate_sunrise_time(self, latitude, day_of_year):
         """
@@ -217,7 +231,7 @@ class SolarCalculations:
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
 
-        Returns: The sunrise time in hours from midnight 
+        Returns: The sunrise time in hours from midnight. (Not adjusted for Daylight Savings)
         """
 
         declination_angle = self.calculate_declination_angle(day_of_year)
@@ -232,7 +246,6 @@ class SolarCalculations:
 
         return sunrise_time
 
-
     def calculate_sunset_time(self, latitude, day_of_year):
         """
         Calculates the sunset time relative to a location on the Earth
@@ -241,7 +254,7 @@ class SolarCalculations:
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
 
-        Returns: The sunset time in hours from midnight 
+        Returns: The sunset time in hours from midnight. (Not adjusted for Daylight Savings)
         """
 
         declination_angle = self.calculate_declination_angle(day_of_year)
@@ -256,20 +269,24 @@ class SolarCalculations:
 
         return sunset_time
 
+    # ----- Calculation of modes of solar irradiance -----
 
     def calculate_DNI(self, latitude, longitude, time_zone_utc, day_of_year, \
             local_time, elevation):
         """
         Calculates the Direct Normal Irradiance from the Sun, relative to a location
-            on the Earth (clearsky)
+        on the Earth (clearsky)
 
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
         time_zone_utc: The UTC time zone of your area in hours of UTC offset.
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
-        local_time: The local time in hours from midnight
+        local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
         elevation: The local elevation of a location in metres
+
+        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+                calculation will end up just the same
 
         Returns: The Direct Normal Irradiance in W/m2
         """
@@ -294,12 +311,11 @@ class SolarCalculations:
 
             return DNI
 
-
     def calculate_DHI(self, latitude, longitude, time_zone_utc, day_of_year, \
             local_time, elevation):
         """
         Calculates the Diffuse Horizontal Irradiance from the Sun, relative to a location 
-            on the Earth (clearsky)
+        on the Earth (clearsky)
 
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
@@ -308,6 +324,9 @@ class SolarCalculations:
             being the first day of the year.
         local_time: The local time in hours from midnight
         elevation: The local elevation of a location in metres
+
+        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+                calculation will end up just the same
 
         Returns: The Diffuse Horizontal Irradiance in W/m2
         """
@@ -318,13 +337,12 @@ class SolarCalculations:
         DHI = 0.1 * DNI 
         
         return DHI
-        
-        
+              
     def calculate_GHI(self, latitude, longitude, time_zone_utc, day_of_year, \
             local_time, elevation, cloud_cover):
         """
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
-            on the Earth
+        on the Earth
         
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
@@ -335,6 +353,9 @@ class SolarCalculations:
             being the first day of the year.
         local_time: The local time in hours from midnight. 
         elevation: The local elevation of a location in metres
+
+        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+                calculation will end up just the same
 
         Returns: The Global Horizontal Irradiance in W/m2 
         """
@@ -352,18 +373,24 @@ class SolarCalculations:
          
         return GHI
 
-    def calculate_array_GHI(self, coords, time_zones, datetimes_utc, \
+    # ----- Calculation of modes of solar irradiance, but returning numpy arrays -----
+
+    def calculate_array_GHI(self, coords, time_zones, local_times, \
                                 elevations, cloud_covers):
 
         """
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
-            on the Earth, for arrays of coordinates, times, elevations and weathers
+        on the Earth, for arrays of coordinates, times, elevations and weathers
 
         coords: (float[N][lat, lng]) array of latitudes and longitudes
-        time_zones: (int[N]) time zones at different locations in seconds
-        datetimes_utc: (int[N]) unix times at UTC
+        time_zones: (int[N]) time zones at different locations in seconds relative to UTC
+        local_times: (int[N]) unix time that the vehicle will be at each location. 
+                        (Adjusted for Daylight Savings)
         elevations: (float[N]) elevation from sea level in m
         cloud_covers: (float[N]) percentage cloud cover in range of 0 to 1 
+
+        note: If local_times and time_zones are both unadjusted for Daylight Savings, the 
+                calculation will end up just the same
 
         Returns: (float[N]) Global Horizontal Irradiance in W/m2
         """
@@ -372,20 +399,27 @@ class SolarCalculations:
 
         for i in len(coords):
 
-            date = datetime.fromtimestamp(datetimes_utc[i])
+            date = datetime.date.fromtimestamp(local_times[i])
             
             day_of_year = self.get_day_of_year(date.day, date.month, date.year)
 
-            local_time = (date.hour) + float(date.minute * 60 + date.second)/3600
+            local_time = (date.hour) + (float(date.minute * 60 + date.second)/3600)
 
             ghi[i] = self.calculate_GHI(coords[i][0], coords[i][1], time_zones[i], \
                     day_of_year, local_time, elevations[i], cloud_covers[i]) 
         
         return ghi
 
-    def get_day_of_year(self, day, month, year):
+    # ----- Helper Functions -----
 
-        return (datetime.date(date.year, date.month, date.day) - \
-                    datetime.date(date.year, 1, 1)).days + 1
+    def get_day_of_year(self, day, month, year):
+        """
+        Calculates the day of the year, given the day, month and year.
+
+        day, month, year: self explanatory
+        """
+
+        return (datetime.date(year, month, day) - \
+                    datetime.date(year, 1, 1)).days + 1
 
         

@@ -6,7 +6,6 @@ import math
 import os
 from data.route.__init__ import route_directory
 
-
 class GIS:
     def __init__(self, api_key, origin_coord, dest_coord, waypoints):
 
@@ -33,13 +32,15 @@ class GIS:
                     print("Previous save file is being used...")
                     self.path = route_data['path']
                     self.path_elevations = route_data['elevations']
+                    self.path_time_zones = route_data['time_zones']
                 else:
                     print("New route requested. Creating new save file...")
                     self.path = self.update_path(origin_coord, dest_coord, waypoints)
                     self.path_elevations = self.calculate_path_elevations(self.path)
+                    self.path_time_zones = self.calculate_time_zones(self.path)
 
                     with open(route_file, 'wb') as f:
-                        np.savez(f, path=self.path, elevations=self.path_elevations, origin_coord=origin_coord,
+                        np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones, origin_coord=origin_coord,
                                  dest_coord=dest_coord, waypoints=waypoints)
 
         # otherwise call API and then save arrays to file
@@ -47,9 +48,10 @@ class GIS:
             print("Save file doesn't not exist. Calling API and creating save file...")
             self.path = self.update_path(origin_coord, dest_coord, waypoints)
             self.path_elevations = self.calculate_path_elevations(self.path)
+            self.path_time_zones = self.calculate_time_zones(self.path)
 
             with open(route_file, 'wb') as f:
-                np.savez(f, path=self.path, elevations=self.path_elevations, origin_coord=origin_coord,
+                np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones, origin_coord=origin_coord,
                          dest_coord=dest_coord, waypoints=waypoints)
 
         self.path_distances = self.calculate_path_distances(self.path)
@@ -59,8 +61,8 @@ class GIS:
     def calculate_closest_gis_indices(self, cumulative_distances):
         """
         Takes in an array of point distances from starting point, returns a list of 
-            self.path indices of coordinates which have a distance from the starting point
-            closest to the point distances
+        self.path indices of coordinates which have a distance from the starting point
+        closest to the point distances
 
         :param cumulative_distances: (float[N]) array of distances, where 
             cumulative_distances[x] > cumulative_distances[x-1]
@@ -81,19 +83,54 @@ class GIS:
 
         return np.array(result)
 
-    def calculate_time_differences(self, coords):
+    def calculate_time_zones(self, coords):
         """
-        Takes in an array of coordinates, returns time difference in seconds at each 
-            coordinate from UTC
+        Takes in an array of coordinates, return the time zone relative to UTC, of each location in seconds
 
         :param coords: (float[N][lat lng]) array of coordinates
 
         returns: (float[N]) array of time differences in seconds
         """
 
-        # TODO: implement this
+        time_diff_temp = np.zeros(len(coords)/625 + 1)
 
-        pass
+        for i in range(0, len(coords), 625):
+            
+            dummy_time = 1593604800
+            url = "https://maps.googleapis.com/maps/api/timezone/json?location={},{}&timestamp={}&key={}".format(coords[0],coords[1],\
+                    dummy_time, self.api_key)
+
+            r = requests.get(url)
+            response = json.loads(r.text)
+
+            time_diff_temp[i] = response['dstOffset'] + response['rawOffset']
+
+        time_diff = np.repeat(time_diff_temp, 625)[0:len(coords)]
+
+        return time_diff
+
+    def get_time_zones(self, gis_indices):
+        """
+        Takes in an array of path indices, returns the time zone at each index
+
+        :param gis_indices: (float[N]) array of path indices
+
+        returns: (float[N]) array of time zones in seconds
+        """
+
+        return self.path_time_zones[gis_indices]
+
+    def adjust_timestamps_to_local_times(self, timestamps, starting_drive_time, time_zones):
+        """
+        Takes in the timestamps of the vehicle's driving duration, starting drive time, and a list of time zones,
+            returns the local times at each point
+
+        :param timestamps: (int[N]) timestamps starting from 0, in seconds
+        :param starting_drive_time: (int[N]) local time that the car was start to be driven in UNIX time (Daylight Saving included)
+        :param time_zones: (int[N]) 
+        """
+
+        return timestamps + (starting_drive_time + time_zones[0]) + time_zones
 
     def get_gradients(self, gis_indices):
         """
@@ -145,7 +182,7 @@ class GIS:
     def update_path(self, origin_coord, dest_coord, waypoints):
         """
         Returns a path between the origin coordinate and the destination coordinate,
-            passing through a group of optional waypoints.
+        passing through a group of optional waypoints.
 
         origin_coord: A numpy array [latitude, longitude] of the starting coordinate
         dest_coord: A numpy array [latitude, longitude] of the destination coordinate
@@ -360,6 +397,7 @@ class GIS:
     def calculate_current_heading(self):
         """
         From the current and previous coordinate, calculate the current bearing of the vehicle.
+            This is also the azimuth angle of the vehicle
         """
 
         if self.current_index - 1 < 0:
@@ -408,7 +446,6 @@ class GIS:
         self.current_index = self.current_index - 1
 
         return self.current_index
-
 
 if __name__ == "__main__":
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"

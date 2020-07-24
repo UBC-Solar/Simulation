@@ -13,6 +13,9 @@ class BasicArray(BaseArray):
         #solar panel size in m2
         self.panel_size = 6
 
+        #please do not use this.
+        self.solar_irradiance = 1200
+
     @staticmethod
     def calculate_produced_power(solar_irradiance, panel_efficiency, panel_size):
         """
@@ -31,7 +34,7 @@ class BasicArray(BaseArray):
         #       have metal busbars on the top of the panel, and this causes a slight
         #       shading effect.
 
-        produced_power = sunlight * panel_efficiency * panel_size
+        produced_power = solar_irradiance * panel_efficiency * panel_size
 
         return produced_power
 
@@ -41,10 +44,11 @@ class BasicArray(BaseArray):
 
         :param tick: (float) the length of time for the tick (in seconds)
 
+        note: do not use this please. Use calculate_produced_energy instead.
         """
 
         # Assume constant sunlight in this simple model.
-        self.produced_energy = self.calculate_produced_power(self.sunlight,
+        self.produced_energy = self.calculate_produced_power(self.solar_irradiance,
                                         self.panel_efficiency, self.panel_size) * tick
 
     def calculate_produced_energy(self, solar_irradiance, tick):
@@ -60,12 +64,9 @@ class BasicArray(BaseArray):
             in Joules
         """
 
-        #TODO: implement this
-        
-        pass
+        return solar_irradiance * self.panel_efficiency * self.panel_size * tick
 
     def __str__(self):
-        return(f"BasicArray: incident_sunlight: {self.sunlight}W/m^2\n"
+        return(f"BasicArray: incident_sunlight: {self.solar_irradiance}W/m^2\n"
                f"BasicArray: panel_size: {self.panel_size}m^2\n"
                f"BasicArray: panel_efficiency: {self.panel_efficiency * 100}%\n")
-
