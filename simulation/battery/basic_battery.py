@@ -44,7 +44,7 @@ class BasicBattery(BaseBattery):
 
         self.calculate_discharge_capacity_from_soc = Polynomial([self.max_current_capacity, -self.max_current_capacity])
 
-        self.calculate_discharge_capacity_from_energy = lambda x: 136.92 - pow(18747.06027 - 2.32857*x, 0.5)
+        self.calculate_discharge_capacity_from_energy = lambda x: 136.92 - np.sqrt(18747.06027 - 2.32857*x)
 
         # ----- DayBreak battery variables -----
 

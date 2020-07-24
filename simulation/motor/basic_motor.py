@@ -1,6 +1,7 @@
-from simulation.motor.base_motor import BaseMotor
+import math
+import numpy as np
 
-# TODO: improve motor implementation
+from simulation.motor.base_motor import BaseMotor
 
 
 class BasicMotor(BaseMotor):
@@ -60,26 +61,27 @@ class BasicMotor(BaseMotor):
         self.dc_v = dc_v
         self.dc_i = dc_i
 
-    def calculate_power_in(self, required_speed_kmh, gradient):
+    def calculate_power_in(self, required_speed_kmh, gradient, wind_speed):
         """
         For a given road gradient, calculate the power that must be inputted into
             the motor to maintain a required speed
 
         :param required_speed_kmh: required speed in km/h
-        :param gradient: road gradient
+        :param gradient: road gradient, where > 0 means uphill and < 0 means downhill
+        :param wind_speed: speed of wind in m/s, where > 0 means against the direction of the vehicle.
 
         returns: power required to travel at a speed and gradient in W
         """
-
-        # TODO: use road gradient here
 
         required_speed_ms = required_speed_kmh / 3.6
         required_angular_speed_rads = required_speed_ms / self.tire_radius
 
         drag_force = 0.5 * self.air_density * (
-                    required_speed_ms ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+                    (required_speed_ms + wind_speed) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
 
-        motor_output_power = required_angular_speed_rads * (self.friction_force + drag_force)
+        g_force = self.vehicle_mass * self.acceleration_g * gradient
+
+        motor_output_power = required_angular_speed_rads * (self.friction_force + drag_force + g_force)
 
         motor_input_power = motor_output_power / self.e_m
 
@@ -95,19 +97,34 @@ class BasicMotor(BaseMotor):
 
         self.consumed_energy = self.input_power * tick
 
-    def calculate_energy_in(self, required_speed_kmh, gradients, tick):
+    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, tick):
         """
         Create a function which takes in array of elevation, array of wind speed, required
             speed, returns the consumed energy.
 
         :param required_speeds: (float) required speed in kmh
         :param gradients: (float[N]) gradient at parts of the road
+        :param wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means agains the direction of the vehicle
         :param tick: (int) length of 1 update cycle in seconds
 
         returns: (float[N]) energy expended at every tick
         """
 
-        pass
+        required_speed_ms = required_speed_kmh / 3.6
+
+        required_angular_speed_rads = required_speed_ms / self.tire_radius
+        required_angular_speed_rads_array = np.ones(len(gradients)) * required_angular_speed_rads
+
+        drag_forces = 0.5 * self.air_density * (
+                    (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+
+        g_forces = self.vehicle_mass * self.acceleration_g * gradients
+
+        motor_output_energies = required_angular_speed_rads_array * (self.friction_force + drag_forces + g_forces) * tick
+
+        motor_input_energies = motor_output_energies / self.e_m
+
+        return motor_input_energies
 
     def __str__(self):
         return(f"Tire radius: {self.tire_radius}m\n"
