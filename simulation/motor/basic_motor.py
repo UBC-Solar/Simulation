@@ -1,5 +1,7 @@
 from simulation.motor.base_motor import BaseMotor
 
+# TODO: improve motor implementation
+
 
 class BasicMotor(BaseMotor):
 
@@ -12,7 +14,7 @@ class BasicMotor(BaseMotor):
         # Instantaneous current supplied by the battery to the motor controller
         self.dc_i = 0
 
-        #TODO: organize this mess
+        # TODO: organize this mess
         self.input_power = 0
         self.vehicle_mass = 250
         self.acceleration_g = 9.81
@@ -69,7 +71,7 @@ class BasicMotor(BaseMotor):
         returns: power required to travel at a speed and gradient in W
         """
 
-        #TODO: use road gradient here
+        # TODO: use road gradient here
 
         required_speed_ms = required_speed_kmh / 3.6
         required_angular_speed_rads = required_speed_ms / self.tire_radius
