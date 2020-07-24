@@ -7,11 +7,13 @@ class BasicArray(BaseArray):
     def __init__(self):
         super().__init__()
 
-        #solar cell efficiency
+        # solar cell efficiency
         self.panel_efficiency = 0.2
 
-        #solar panel size in m2
+        # solar panel size in m2
         self.panel_size = 6
+
+        self.sunlight = 1000
 
     @staticmethod
     def calculate_produced_power(solar_irradiance, panel_efficiency, panel_size):
@@ -27,11 +29,11 @@ class BasicArray(BaseArray):
         returns: the power produced by a solar panel in W
         """
 
-        #Note: The equation below might not actually be right. Solar Panels
+        # Note: The equation below might not actually be right. Solar Panels
         #       have metal busbars on the top of the panel, and this causes a slight
         #       shading effect.
 
-        produced_power = sunlight * panel_efficiency * panel_size
+        produced_power = solar_irradiance * panel_efficiency * panel_size
 
         return produced_power
 
@@ -45,7 +47,7 @@ class BasicArray(BaseArray):
 
         # Assume constant sunlight in this simple model.
         self.produced_energy = self.calculate_produced_power(self.sunlight,
-                                        self.panel_efficiency, self.panel_size) * tick
+                                                             self.panel_efficiency, self.panel_size) * tick
 
     def calculate_produced_energy(self, solar_irradiance, tick):
         """
@@ -60,12 +62,11 @@ class BasicArray(BaseArray):
             in Joules
         """
 
-        #TODO: implement this
-        
+        # TODO: implement this
+
         pass
 
     def __str__(self):
-        return(f"BasicArray: incident_sunlight: {self.sunlight}W/m^2\n"
-               f"BasicArray: panel_size: {self.panel_size}m^2\n"
-               f"BasicArray: panel_efficiency: {self.panel_efficiency * 100}%\n")
-
+        return (f"BasicArray: incident_sunlight: {self.sunlight}W/m^2\n"
+                f"BasicArray: panel_size: {self.panel_size}m^2\n"
+                f"BasicArray: panel_efficiency: {self.panel_efficiency * 100}%\n")
