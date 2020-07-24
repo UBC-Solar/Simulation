@@ -31,29 +31,31 @@ class GIS:
 
                 if (save_file_start_coord == origin_coord).all() and (save_file_end_coord == dest_coord).all() \
                         and (save_file_waypoints == waypoints).all():
-                    print("Previous save file is being used...")
+                    print("Previous save file is being used...\n")
                     self.path = route_data['path']
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
                 else:
-                    print("New route requested. Calling Google API and creating new save file...")
+                    print("New route requested. Calling Google API and creating new save file...\n")
                     self.path = self.update_path(origin_coord, dest_coord, waypoints)
                     self.path_elevations = self.calculate_path_elevations(self.path)
                     self.path_time_zones = self.calculate_time_zones(self.path)
 
                     with open(route_file, 'wb') as f:
-                        np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones, origin_coord=origin_coord,
+                        np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
+                                 origin_coord=origin_coord,
                                  dest_coord=dest_coord, waypoints=waypoints)
 
         # otherwise call API and then save arrays to file
         else:
-            print("Save file does not exist. Calling Google API and creating save file...")
+            print("Save file does not exist. Calling Google API and creating save file...\n")
             self.path = self.update_path(origin_coord, dest_coord, waypoints)
             self.path_elevations = self.calculate_path_elevations(self.path)
             self.path_time_zones = self.calculate_time_zones(self.path)
 
             with open(route_file, 'wb') as f:
-                np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones, origin_coord=origin_coord,
+                np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
+                         origin_coord=origin_coord,
                          dest_coord=dest_coord, waypoints=waypoints)
 
         self.path_distances = self.calculate_path_distances(self.path)
@@ -95,18 +97,16 @@ class GIS:
         returns: (float[N]) array of time differences in seconds
         """
 
-        time_diff_temp = np.zeros(len(coords)/625 + 1)
+        time_diff_temp = np.zeros(int(len(coords) / 625 + 1))
 
         for i in range(0, len(coords), 625):
-
             dummy_time = 1593604800
-            url = "https://maps.googleapis.com/maps/api/timezone/json?location={},{}&timestamp={}&key={}".format(coords[0],coords[1],\
-                    dummy_time, self.api_key)
+            url = f"https://maps.googleapis.com/maps/api/timezone/json?location={coords[i][0]},{coords[i][1]}&timestamp={dummy_time}&key={self.api_key}"
 
             r = requests.get(url)
             response = json.loads(r.text)
 
-            time_diff_temp[i] = response['dstOffset'] + response['rawOffset']
+            time_diff_temp[int(i / 625)] = response['dstOffset'] + response['rawOffset']
 
         time_diff = np.repeat(time_diff_temp, 625)[0:len(coords)]
 
