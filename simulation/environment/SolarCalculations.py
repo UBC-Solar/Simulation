@@ -6,25 +6,25 @@ A class to perform calculation and approximations for obtaining quantities
     such as solar time, solar position, and the various types of solar irradiance.
 """
 
-
 import math
 import datetime
 import numpy as np
 
-class SolarCalculations:
 
+class SolarCalculations:
 
     def __init__(self):
         """
         Initializes the instance of a SolarCalculations class
         """
 
-        #Solar Constant in W/m2
+        # Solar Constant in W/m2
         self.S_0 = 1353
 
     # ----- Calculation of Apparent Solar Time -----
 
-    def calculate_eot_correction(self, day_of_year):
+    @staticmethod
+    def calculate_eot_correction(day_of_year):
         """
         Approximates and returns the correction factor between the apparent 
         solar time and the mean solar time
@@ -38,11 +38,12 @@ class SolarCalculations:
 
         b = math.radians((float(360) / 364) * (day_of_year - 81))
 
-        eot = 9.87*math.sin(2*b) - 7.83*math.cos(b) - 1.5*math.sin(b)
+        eot = 9.87 * math.sin(2 * b) - 7.83 * math.cos(b) - 1.5 * math.sin(b)
 
         return eot
 
-    def calculate_LSTM(self, time_zone_utc):
+    @staticmethod
+    def calculate_LSTM(time_zone_utc):
         """
         Calculates and returns the LSTM, or Local Solar Time Meridian.
 
@@ -51,10 +52,10 @@ class SolarCalculations:
         Returns: The Local Solar Time Meridian in degrees
         """
 
-        return 15*time_zone_utc
+        return 15 * time_zone_utc
 
-    def local_time_to_apparent_solar_time(self, time_zone_utc, day_of_year, local_time, \
-            longitude):
+    def local_time_to_apparent_solar_time(self, time_zone_utc, day_of_year, local_time,
+                                          longitude):
         """
         Converts between the local time to the apparent solar time and returns the apparent
         solar time
@@ -73,14 +74,14 @@ class SolarCalculations:
 
         lstm = self.calculate_LSTM(time_zone_utc)
         eot = self.calculate_eot_correction(day_of_year)
-        
-        #local solar time
-        lst = local_time + float(longitude - lstm)/15 + float(eot)/60
+
+        # local solar time
+        lst = local_time + float(longitude - lstm) / 15 + float(eot) / 60
 
         return lst
 
     # ----- Calculation of solar position in the sky -----
-    
+
     def calculate_hour_angle(self, time_zone_utc, day_of_year, local_time, longitude):
         """
         Calculates and returns the Hour Angle of the Sun in the sky.
@@ -96,15 +97,16 @@ class SolarCalculations:
 
         Returns: The Hour Angle in degrees. 
         """
-    
-        lst = self.local_time_to_apparent_solar_time(time_zone_utc, day_of_year, \
-                    local_time, longitude)
+
+        lst = self.local_time_to_apparent_solar_time(time_zone_utc, day_of_year,
+                                                     local_time, longitude)
 
         hour_angle = 15 * (lst - 12)
 
         return hour_angle
 
-    def calculate_declination_angle(self, day_of_year):
+    @staticmethod
+    def calculate_declination_angle(day_of_year):
         """
         Calculates the Declination Angle of the Earth at a given day
         
@@ -115,13 +117,13 @@ class SolarCalculations:
             degrees
         """
 
-        declination_angle = -23.45 * math.cos(math.radians((float(360)/365) * \
-             (day_of_year + 10)))
+        declination_angle = -23.45 * math.cos(math.radians((float(360) / 365) *
+                                                           (day_of_year + 10)))
 
         return declination_angle
 
-    def calculate_elevation_angle(self, latitude, longitude, time_zone_utc, day_of_year,\
-            local_time):
+    def calculate_elevation_angle(self, latitude, longitude, time_zone_utc, day_of_year,
+                                  local_time):
         """
         Calculates the Elevation Angle of the Sun relative to a location on the Earth
 
@@ -138,24 +140,24 @@ class SolarCalculations:
 
         Returns: The elevation angle in degrees
         """
-        
+
         declination_angle = self.calculate_declination_angle(day_of_year)
-        hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year, \
-            local_time, longitude)
+        hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year,
+                                               local_time, longitude)
 
         term_1 = math.sin(math.radians(declination_angle)) * \
-                 math.sin(math.radians(latitude))
+            math.sin(math.radians(latitude))
 
         term_2 = math.cos(math.radians(declination_angle)) * \
-                 math.cos(math.radians(latitude)) * \
-                 math.cos(math.radians(hour_angle))
+            math.cos(math.radians(latitude)) * \
+            math.cos(math.radians(hour_angle))
 
         elevation_angle = math.asin(term_1 + term_2)
 
         return math.degrees(elevation_angle)
 
-    def calculate_zenith_angle(self, latitude, longitude, time_zone_utc, day_of_year,\
-            local_time):
+    def calculate_zenith_angle(self, latitude, longitude, time_zone_utc, day_of_year,
+                               local_time):
         """
         Calculates the Zenith Angle of the Sun relative to a location on the Earth
 
@@ -172,13 +174,13 @@ class SolarCalculations:
         Returns: The zenith angle in degrees
         """
 
-        elevation_angle = self.calculate_elevation_angle(latitude, longitude, \
-                            time_zone_utc, day_of_year, local_time)
+        elevation_angle = self.calculate_elevation_angle(latitude, longitude,
+                                                         time_zone_utc, day_of_year, local_time)
 
-        return 90 - elevation_angle  
-    
-    def calculate_azimuth_angle(self, latitude, longitude, time_zone_utc, day_of_year, \
-            local_time):
+        return 90 - elevation_angle
+
+    def calculate_azimuth_angle(self, latitude, longitude, time_zone_utc, day_of_year,
+                                local_time):
         """
         Calculates the Azimuth Angle of the Sun relative to a location on the Earth
 
@@ -197,18 +199,18 @@ class SolarCalculations:
         """
 
         declination_angle = self.calculate_declination_angle(day_of_year)
-        hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year, \
-            local_time, longitude)
+        hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year,
+                                               local_time, longitude)
 
         term_1 = math.sin(math.radians(declination_angle)) * \
-                 math.sin(math.radians(latitude))
+            math.sin(math.radians(latitude))
 
         term_2 = math.cos(math.radians(declination_angle)) * \
-                 math.sin(math.radians(latitude)) * \
-                 math.cos(math.radians(hour_angle)) 
+            math.sin(math.radians(latitude)) * \
+            math.cos(math.radians(hour_angle))
 
-        elevation_angle = self.calculate_elevation_angle(latitude, longitude,\
-                             time_zone_utc, day_of_year, local_time)
+        elevation_angle = self.calculate_elevation_angle(latitude, longitude,
+                                                         time_zone_utc, day_of_year, local_time)
 
         term_3 = float(term_1 - term_2) / math.cos(math.radians(elevation_angle))
 
@@ -237,12 +239,12 @@ class SolarCalculations:
         declination_angle = self.calculate_declination_angle(day_of_year)
 
         term_1 = -math.sin(math.radians(latitude)) * \
-                    math.sin(math.radians(declination_angle))
+            math.sin(math.radians(declination_angle))
 
         term_2 = math.cos(math.radians(latitude)) * \
-                    math.cos(math.radians(declination_angle)) 
+            math.cos(math.radians(declination_angle))
 
-        sunrise_time = 12 - (float(1)/15) * math.degrees(math.acos( float(term_1) / term_2))
+        sunrise_time = 12 - (float(1) / 15) * math.degrees(math.acos(float(term_1) / term_2))
 
         return sunrise_time
 
@@ -260,19 +262,19 @@ class SolarCalculations:
         declination_angle = self.calculate_declination_angle(day_of_year)
 
         term_1 = -math.sin(math.radians(latitude)) * \
-                    math.sin(math.radians(declination_angle))
+            math.sin(math.radians(declination_angle))
 
         term_2 = math.cos(math.radians(latitude)) * \
-                    math.cos(math.radians(declination_angle)) 
+            math.cos(math.radians(declination_angle))
 
-        sunset_time = 12 + (float(1)/15) * math.degrees(math.acos( float(term_1) / term_2))
+        sunset_time = 12 + (float(1) / 15) * math.degrees(math.acos(float(term_1) / term_2))
 
         return sunset_time
 
     # ----- Calculation of modes of solar irradiance -----
 
-    def calculate_DNI(self, latitude, longitude, time_zone_utc, day_of_year, \
-            local_time, elevation):
+    def calculate_DNI(self, latitude, longitude, time_zone_utc, day_of_year,
+                      local_time, elevation):
         """
         Calculates the Direct Normal Irradiance from the Sun, relative to a location
         on the Earth (clearsky)
@@ -291,8 +293,8 @@ class SolarCalculations:
         Returns: The Direct Normal Irradiance in W/m2
         """
 
-        zenith_angle = self.calculate_zenith_angle(latitude, longitude, \
-                            time_zone_utc, day_of_year, local_time)
+        zenith_angle = self.calculate_zenith_angle(latitude, longitude,
+                                                   time_zone_utc, day_of_year, local_time)
         a = 0.14
 
         if zenith_angle > 90:
@@ -301,18 +303,18 @@ class SolarCalculations:
 
         else:
 
-            #air_mass = 1 / (math.cos(math.radians(zenith_angle)) + \
+            # air_mass = 1 / (math.cos(math.radians(zenith_angle)) + \
             #            0.50572*pow((96.07995 - zenith_angle), -1.6364))
 
             air_mass = float(1) / float(math.cos(math.radians(zenith_angle)))
 
-            DNI = self.S_0 * ((1 - a * elevation * 0.001) * math.pow(math.pow(0.7, air_mass), \
-                    0.678) + a * elevation * 0.001)
+            DNI = self.S_0 * ((1 - a * elevation * 0.001) * math.pow(math.pow(0.7, air_mass),
+                                                                     0.678) + a * elevation * 0.001)
 
             return DNI
 
-    def calculate_DHI(self, latitude, longitude, time_zone_utc, day_of_year, \
-            local_time, elevation):
+    def calculate_DHI(self, latitude, longitude, time_zone_utc, day_of_year,
+                      local_time, elevation):
         """
         Calculates the Diffuse Horizontal Irradiance from the Sun, relative to a location 
         on the Earth (clearsky)
@@ -330,16 +332,16 @@ class SolarCalculations:
 
         Returns: The Diffuse Horizontal Irradiance in W/m2
         """
-        
-        DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year, \
-                local_time, elevation)
-        
-        DHI = 0.1 * DNI 
-        
+
+        DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
+                                 local_time, elevation)
+
+        DHI = 0.1 * DNI
+
         return DHI
-              
-    def calculate_GHI(self, latitude, longitude, time_zone_utc, day_of_year, \
-            local_time, elevation, cloud_cover):
+
+    def calculate_GHI(self, latitude, longitude, time_zone_utc, day_of_year,
+                      local_time, elevation, cloud_cover):
         """
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
         on the Earth
@@ -359,24 +361,24 @@ class SolarCalculations:
 
         Returns: The Global Horizontal Irradiance in W/m2 
         """
-        
-        DHI = self.calculate_DHI(latitude, longitude, time_zone_utc, day_of_year, \
-            local_time, elevation)
-        
-        DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year, \
-            local_time, elevation)
-        
-        zenith_angle = self.calculate_zenith_angle(latitude, longitude, \
-                            time_zone_utc, day_of_year, local_time)
-        
+
+        DHI = self.calculate_DHI(latitude, longitude, time_zone_utc, day_of_year,
+                                 local_time, elevation)
+
+        DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
+                                 local_time, elevation)
+
+        zenith_angle = self.calculate_zenith_angle(latitude, longitude,
+                                                   time_zone_utc, day_of_year, local_time)
+
         GHI = DNI * math.cos(math.radians(zenith_angle)) + DHI
-         
+
         return GHI
 
     # ----- Calculation of modes of solar irradiance, but returning numpy arrays -----
 
-    def calculate_array_GHI(self, coords, time_zones, local_times, \
-                                elevations, cloud_covers):
+    def calculate_array_GHI(self, coords, time_zones, local_times,
+                            elevations, cloud_covers):
 
         """
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
@@ -394,32 +396,30 @@ class SolarCalculations:
 
         Returns: (float[N]) Global Horizontal Irradiance in W/m2
         """
-    
+
         ghi = np.zeros(len(coords))
 
-        for i in len(coords):
+        for i in coords:
+            date = datetime.datetime.fromtimestamp(local_times[i])
 
-            date = datetime.date.fromtimestamp(local_times[i])
-            
             day_of_year = self.get_day_of_year(date.day, date.month, date.year)
 
-            local_time = (date.hour) + (float(date.minute * 60 + date.second)/3600)
+            local_time = date.hour + (float(date.minute * 60 + date.second) / 3600)
 
-            ghi[i] = self.calculate_GHI(coords[i][0], coords[i][1], time_zones[i], \
-                    day_of_year, local_time, elevations[i], cloud_covers[i]) 
-        
+            ghi[i] = self.calculate_GHI(coords[i][0], coords[i][1], time_zones[i],
+                                        day_of_year, local_time, elevations[i], cloud_covers[i])
+
         return ghi
 
     # ----- Helper Functions -----
 
-    def get_day_of_year(self, day, month, year):
+    @staticmethod
+    def get_day_of_year(day, month, year):
         """
         Calculates the day of the year, given the day, month and year.
 
         day, month, year: self explanatory
         """
 
-        return (datetime.date(year, month, day) - \
-                    datetime.date(year, 1, 1)).days + 1
-
-        
+        return (datetime.date(year, month, day) -
+                datetime.date(year, 1, 1)).days + 1
