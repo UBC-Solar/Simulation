@@ -77,7 +77,7 @@ class BasicMotor(BaseMotor):
         required_angular_speed_rads = required_speed_ms / self.tire_radius
 
         drag_force = 0.5 * self.air_density * (
-                    (required_speed_ms + wind_speed) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+                (required_speed_ms + wind_speed) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
 
         g_force = self.vehicle_mass * self.acceleration_g * gradient
 
@@ -102,7 +102,7 @@ class BasicMotor(BaseMotor):
         Create a function which takes in array of elevation, array of wind speed, required
             speed, returns the consumed energy.
 
-        :param required_speeds: (float) required speed in kmh
+        :param required_speed_kmh: (float) required speed in kmh
         :param gradients: (float[N]) gradient at parts of the road
         :param wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means agains the direction of the vehicle
         :param tick: (int) length of 1 update cycle in seconds
@@ -116,21 +116,21 @@ class BasicMotor(BaseMotor):
         required_angular_speed_rads_array = np.ones(len(gradients)) * required_angular_speed_rads
 
         drag_forces = 0.5 * self.air_density * (
-                    (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+                (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
 
         g_forces = self.vehicle_mass * self.acceleration_g * gradients
 
-        motor_output_energies = required_angular_speed_rads_array * (self.friction_force + drag_forces + g_forces) * tick
+        motor_output_energies = required_angular_speed_rads_array * (
+                    self.friction_force + drag_forces + g_forces) * tick
 
         motor_input_energies = motor_output_energies / self.e_m
 
         return motor_input_energies
 
     def __str__(self):
-        return(f"Tire radius: {self.tire_radius}m\n"
-               f"Rolling resistance coefficient: {self.road_friction}\n"
-               f"Vehicle mass: {self.vehicle_mass}kg\n"
-               f"Acceleration of gravity: {self.acceleration_g}m/s^2\n"
-               f"Motor controller efficiency: {self.e_mc}%\n"
-               f"Motor efficiency: {self.e_m}%\n")
-
+        return (f"Tire radius: {self.tire_radius}m\n"
+                f"Rolling resistance coefficient: {self.road_friction}\n"
+                f"Vehicle mass: {self.vehicle_mass}kg\n"
+                f"Acceleration of gravity: {self.acceleration_g}m/s^2\n"
+                f"Motor controller efficiency: {self.e_mc}%\n"
+                f"Motor efficiency: {self.e_m}%\n")
