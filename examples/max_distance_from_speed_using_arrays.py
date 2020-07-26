@@ -2,6 +2,7 @@ import simulation
 import numpy as np
 import datetime
 import time as timer
+
 from simulation.common.helpers import timeit
 
 """
@@ -26,6 +27,7 @@ class ExampleSimulation:
 
         # TODO: replace max_speed with a direct calculation taking into account the
         #   elevation and wind_speed
+        # TODO: max speed at any given moment actually depends on the elevation of the road, and the wind speed
         max_speed = 104
 
         # LVS power loss is pretty small
@@ -81,15 +83,16 @@ class ExampleSimulation:
         distances = tick_array * speed
         cumulative_distances = np.cumsum(distances)
 
-        # cumulative_distances = timestamps * speed   # only works if the speed is constant for the entire time frame
-
+        #Array of cumulative distances obtained from the route checkpoints
         gis_distances = self.gis.get_path_distances()
         cumulative_distances_gis = np.cumsum(gis_distances)
 
+        #Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
 
-        # From cumulative distances array, create a 1D array of "close_enough" indices
-        # of coords from the route of GIS of size (number of ticks)
+        # From cumulative distances array, create a 1D array of "close enough" indices
+        # of coords from the route of GIS of size (number of ticks).
+        # Also create a 1D array of "close enough" indices for weather.
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances,
                                                                                  cumulative_distances_gis)
@@ -98,25 +101,30 @@ class ExampleSimulation:
         # TODO: Huge fix required here
         vehicle_bearings = self.gis.calculate_current_heading()[closest_gis_indices]
 
-        # From "close_enough" GIS indices array, get the elevation at every location
-        # as an 1D array of size (number of ticks)
-        # Similarly, get arrays of time differences at every tick and GHI at every tick
+        #Get array of path gradients
         gradients = self.gis.get_gradients(closest_gis_indices)
+
+        #Get the time zones of all the starting times
         time_zones = self.gis.get_time_zones(closest_gis_indices)
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
         # Get the weather at every location
+        # TODO: The weather returned here still has all the times on it. Need to create a method taking in timestamps and weather and return
+        #       the weather at each timestamp
         weather_forecasts = self.weather.get_weather_forecasts(closest_weather_indices)
         absolute_wind_speeds = weather_forecasts[:, :, 2]
         wind_directions = weather_forecasts[:, :, 3]
         cloud_covers = weather_forecasts[:, :, 4]
 
+        #Get the wind speeds at every location
         wind_speeds = self.weather.get_array_directional_wind_speed(vehicle_bearings, absolute_wind_speeds,
                                                                     wind_directions)
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords, time_zones, local_times,
                                                                         gis_route_elevations, cloud_covers)
 
-        # key takeaways: solar_irradiances at every tick, wind_speeds at every tick, gradients at every tick
+        # TLDR: obtain solar_irradiances at every tick, wind_speeds at every tick, gradients at every tick
+
+        # TODO: Problem: 
 
         # ----- Energy calculations -----
 
@@ -126,7 +134,7 @@ class ExampleSimulation:
         self.basic_lvs.update(tick)
         lvs_consumed_energy = self.basic_lvs.get_consumed_energy()
 
-        motor_consumed_energy = self.basic_motor.calculate_power_in(speed, gradients, wind_speeds)
+        motor_consumed_energy = self.basic_motor.calculate_energy_in(speed, gradients, wind_speeds, tick)
 
         # Note: this does nothing
         # self.basic_motor.update(tick)
@@ -138,19 +146,12 @@ class ExampleSimulation:
         produced_energy = array_produced_energy
 
         # net energy added to the battery
-        net_energy = produced_energy - consumed_energy
+        delta_energy = produced_energy - consumed_energy
 
         # ----- Array initialisation -----
 
-        # array of times for the simulation
-        # time = np.arange(0, simulation_duration + tick, tick, dtype='f4')
-
         # stores speed of car at each time step
         speed_kmh = np.full_like(timestamps, fill_value=speed, dtype='f4')
-
-        # stores the amount of energy transferred from/to the battery at each time step
-        delta_energy = net_energy
-        # delta_energy = np.full_like(timestamps, fill_value=net_energy, dtype='f4')
 
         # used to calculate the time the car was in motion
         tick_array = np.full_like(timestamps, fill_value=tick, dtype='f4')
@@ -165,7 +166,7 @@ class ExampleSimulation:
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
 
         # when the battery is empty the car will not move
-        # TODO: if the car cannot climb the elevation, the car also does not move
+        # TODO: if the car cannot climb the slope, the car also does not move
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
         time_in_motion = np.logical_and(tick_array, state_of_charge) * tick
 
