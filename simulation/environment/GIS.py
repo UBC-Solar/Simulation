@@ -31,12 +31,12 @@ class GIS:
 
                 if (save_file_start_coord == origin_coord).all() and (save_file_end_coord == dest_coord).all() \
                         and (save_file_waypoints == waypoints).all():
-                    print("Previous save file is being used...\n")
+                    print("Previous route save file is being used...\n")
                     self.path = route_data['path']
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
                 else:
-                    print("New route requested. Calling Google API and creating new save file...\n")
+                    print("New route requested. Calling Google API and creating new route save file...\n")
                     self.path = self.update_path(origin_coord, dest_coord, waypoints)
                     self.path_elevations = self.calculate_path_elevations(self.path)
                     self.path_time_zones = self.calculate_time_zones(self.path)
@@ -48,7 +48,7 @@ class GIS:
 
         # otherwise call API and then save arrays to file
         else:
-            print("Save file does not exist. Calling Google API and creating save file...\n")
+            print("Route save file does not exist. Calling Google API and creating new route save file...\n")
             self.path = self.update_path(origin_coord, dest_coord, waypoints)
             self.path_elevations = self.calculate_path_elevations(self.path)
             self.path_time_zones = self.calculate_time_zones(self.path)
@@ -123,7 +123,8 @@ class GIS:
 
         return self.path_time_zones[gis_indices]
 
-    def adjust_timestamps_to_local_times(self, timestamps, starting_drive_time, time_zones):
+    @staticmethod
+    def adjust_timestamps_to_local_times(timestamps, starting_drive_time, time_zones):
         """
         Takes in the timestamps of the vehicle's driving duration, starting drive time, and a list of time zones,
             returns the local times at each point
@@ -150,7 +151,7 @@ class GIS:
 
     def get_path(self):
         """
-        Returns all N coordinates of the path in a numpy array 
+       self,  Returns all N coordinates of the path in a numpy array
         [N][latitude, longitude]
         """
 
