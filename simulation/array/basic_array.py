@@ -30,10 +30,6 @@ class BasicArray(BaseArray):
         returns: the power produced by a solar panel in W
         """
 
-        # Note: The equation below might not actually be right. Solar Panels
-        #       have metal busbars on the top of the panel, and this causes a slight
-        #       shading effect.
-
         produced_power = solar_irradiance * panel_efficiency * panel_size
 
         return produced_power

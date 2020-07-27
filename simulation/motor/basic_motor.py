@@ -123,9 +123,9 @@ class BasicMotor(BaseMotor):
         motor_output_energies = required_angular_speed_rads_array * (
                     self.friction_force + drag_forces + g_forces) * tick
 
-        motor_input_energies = motor_output_energies / self.e_m
+        motor_controller_input_energies = motor_output_energies / (self.e_m * self.e_mc)
 
-        return motor_input_energies
+        return motor_controller_input_energies
 
     def __str__(self):
         return (f"Tire radius: {self.tire_radius}m\n"
