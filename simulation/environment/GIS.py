@@ -415,20 +415,48 @@ class GIS:
             coord_1 = self.path[self.current_index]
             coord_2 = self.path[self.current_index - 1]
 
-        y = math.sin(math.radians(coord_2[1] - coord_1[1])) * \
-            math.cos(math.radians(coord_2[0]))
+        coord_1 = np.radians(coord_1)
+        coord_2 = np.radians(coord_2)
 
-        x = math.cos(math.radians(coord_1[0])) * \
-            math.sin(math.radians(coord_2[0])) - \
-            math.sin(math.radians(coord_1[0])) * \
-            math.sin(math.radians(coord_2[0])) * \
-            math.cos(math.radians(coord_2[1] - coord_1[0]))
+        y = math.sin(coord_2[1] - coord_1[1]) \
+            * math.cos(coord_2[0])
+
+        x = math.cos(coord_1[0]) \
+            * math.sin(coord_2[0]) \
+            - math.sin(coord_1[0]) \
+            * math.cos(coord_2[0]) \
+            * math.cos(coord_2[1] - coord_1[1])
 
         theta = math.atan2(y, x)
 
         bearing = ((theta * 180) / math.pi + 360) % 360
 
         return bearing
+
+    def calculate_current_heading_array(self):
+        bearing_array = np.zeros(len(self.path))
+
+        for index in range(0, len(self.path) - 1):
+            coord_1 = np.radians(self.path[index])
+            coord_2 = np.radians(self.path[index + 1])
+
+            y = math.sin(coord_2[1] - coord_1[1]) \
+                * math.cos(coord_2[0])
+
+            x = math.cos(coord_1[0]) \
+                * math.sin(coord_2[0]) \
+                - math.sin(coord_1[0]) \
+                * math.cos(coord_2[0]) \
+                * math.cos(coord_2[1] - coord_1[1])
+
+            theta = math.atan2(y, x)
+
+            bearing_array[index] = ((theta * 180) / math.pi + 360) % 360
+
+        bearing_array[-1] = bearing_array[-2]
+
+        return bearing_array
+
 
     def update_vehicle_position(self, incremental_distance):
         """
