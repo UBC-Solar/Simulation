@@ -1,7 +1,6 @@
 import simulation
 import numpy as np
 import datetime
-import time as timer
 from simulation.common.helpers import timeit
 
 """
@@ -95,8 +94,7 @@ class ExampleSimulation:
                                                                                  cumulative_distances_gis)
 
         # Get the azimuth angle of the vehicle at every location
-        # TODO: Huge fix required here
-        vehicle_bearings = self.gis.calculate_current_heading()[closest_gis_indices]
+        vehicle_bearings = self.gis.calculate_current_heading_array()[closest_gis_indices]
 
         # From "close_enough" GIS indices array, get the elevation at every location
         # as an 1D array of size (number of ticks)
