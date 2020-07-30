@@ -73,11 +73,12 @@ class ExampleSimulation:
 
         # ----- Expected Distance Estimate -----
 
-        # Array of cumulative distances hopefully travelled in this round
+        # Array of cumulative distances hopefully travelled in this round. 
         timestamps = np.arange(0, simulation_duration + tick, tick)
         tick_array = np.diff(timestamps)
         tick_array = np.insert(tick_array, 0, 0)
 
+        # Array of cumulative distances obtained from the timestamps
         distances = tick_array * speed
         cumulative_distances = np.cumsum(distances)
 
@@ -85,15 +86,15 @@ class ExampleSimulation:
         gis_distances = self.gis.get_path_distances()
         cumulative_distances_gis = np.cumsum(gis_distances)
 
-        # Array of elevations at every route point
-        gis_route_elevations = self.gis.get_path_elevations()
-
-        # From cumulative distances array, create a 1D array of "close enough" indices
-        # of coords from the route of GIS of size (number of ticks).
-        # Also create a 1D array of "close enough" indices for weather.
+        # closest_gis_indices is a 1:1 mapping between each point which has within it a timestamp and cumulative distance from
+        #   a starting point, to its closest point on a map.
+        # closet_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances,
                                                                                  cumulative_distances_gis)
+
+        # Array of elevations at every route point
+        gis_route_elevations = self.gis.get_path_elevations()
 
         # Get the azimuth angle of the vehicle at every location
         vehicle_bearings = self.gis.calculate_current_heading_array()[closest_gis_indices]
@@ -103,25 +104,24 @@ class ExampleSimulation:
 
         # Get the time zones of all the starting times
         time_zones = self.gis.get_time_zones(closest_gis_indices)
+
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
         # Get the weather at every location
-        # TODO: The weather returned here still has all the times on it. Need to create a method taking in timestamps
-        #  and weather and return the weather at each timestamp
-        weather_forecasts = self.weather.get_weather_forecasts(closest_weather_indices)
-        absolute_wind_speeds = weather_forecasts[:, :, 2]
-        wind_directions = weather_forecasts[:, :, 3]
-        cloud_covers = weather_forecasts[:, :, 4]
+        weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, timestamps)
+        absolute_wind_speeds = weather_forecasts[:, 2]
+        wind_directions = weather_forecasts[:, 3]
+        cloud_covers = weather_forecasts[:, 4]
 
         # Get the wind speeds at every location
         wind_speeds = self.weather.get_array_directional_wind_speed(vehicle_bearings, absolute_wind_speeds,
                                                                     wind_directions)
+
+        # Get an array of solar irradiance at every coordinate and time. 
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords, time_zones, local_times,
                                                                         gis_route_elevations, cloud_covers)
 
         # TLDR: obtain solar_irradiances at every tick, wind_speeds at every tick, gradients at every tick
-
-        # TODO: Problem:
 
         # ----- Energy calculations -----
 

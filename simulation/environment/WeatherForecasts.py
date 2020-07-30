@@ -84,7 +84,8 @@ class WeatherForecasts:
         coords: A numpy array of [latitude, longitude]
         
         Returns:
-        - A numpy array [24][7]
+        - A numpy array [N][24][7]
+        - [N]: number of coordinates
         - [24]: hours from current time
         - [7]: (latitude, longitude, dt, wind_speed, wind_direction,
                     cloud_cover, description_id)
@@ -232,7 +233,7 @@ class WeatherForecasts:
 
         return indices
 
-    def get_weather_forecasts(self, indices):
+    def get_weather_forecasts_full(self, indices):
         """
         Takes in an array of indices of the weather_forecast, and returns a list of 
             weather_forecasts
@@ -240,13 +241,40 @@ class WeatherForecasts:
         indices: (int[N]) indices of self.weather_forecast
 
         Returns:
-        - A numpy array [24][7]
+        - A numpy array [N][24][7]
         - [24]: hours from the self.last_updated_time
         - [7]: (latitude, longitude, wind_speed, wind_direction, 
                     cloud_cover, precipitation, description)
         """
 
         return self.weather_forecast[indices]
+
+    def get_weather_forecast_in_time(self, indices, timestamps):
+        """
+        Takes in an array of indices of the weather_forecast array, and an array of timestamps.
+
+        indices: (int[N]) indices of self.weather_forecast
+        timestamps: (int[N]) timestamps of the vehicle's journey
+
+        Returns:
+        - A numpy array of size [N][7]
+        - [7]: (latitude, longitude, wind_speed, wind_direction, 
+                    cloud_cover, precipitation, description)
+        """
+
+        #TODO: Mihir / Fisher, please see if this can be done entirely within numpy
+
+        timestamp_hours = timestamps / 3600
+
+        forecast = self.get_weather_forecasts_full(indices)
+
+        result = np.empty((len(timestamps), 7))
+
+        for i in range(len(forecast)):
+
+            result[i] = forecast[i][timestamp_hours[i]]
+
+        return result
 
     def get_closest_weather_forecast(self, coord):
         """
