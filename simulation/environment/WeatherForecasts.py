@@ -298,3 +298,24 @@ class WeatherForecasts:
             return "Clear"
         else:
             return "Unknown"
+
+
+if __name__ == "__main__":
+    google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
+
+    origin_coord = np.array([39.0918, -94.4172])
+
+    waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
+                          [41.8392, -103.7115], [42.8663, -106.3372], [42.8408, -108.7452],
+                          [42.3224, -111.2973], [42.5840, -114.4703]])
+
+    dest_coord = np.array([43.6142, -116.2080])
+
+    gis = simulation.GIS(google_api_key, origin_coord, dest_coord, waypoints)
+    route_coords = gis.get_path()
+
+    weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
+
+    # TODO: get rid of this variable since weather data cannot be gathered for a particular time
+    time_of_initialization = 1593604800
+    weather = simulation.WeatherForecasts(weather_api_key, route_coords, time_of_initialization)
