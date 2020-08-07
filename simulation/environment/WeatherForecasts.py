@@ -15,7 +15,8 @@ import simulation.common.helpers as helpers
 
 class WeatherForecasts:
 
-    def __init__(self, api_key, coords, time):
+    # TODO: add a force-update argument to update the weather_data.npz file cache
+    def __init__(self, api_key, coords, time, weather_data_frequency="daily"):
         """
         Initializes the instance of a WeatherForecast class
 
@@ -62,202 +63,128 @@ class WeatherForecasts:
                 np.savez(f, weather_forecast=self.weather_forecast, origin_coord=self.origin_coord,
                          dest_coord=self.dest_coord)
 
-    @staticmethod
-    def cull_dataset(coords):
+    def get_coord_weather_forecast(self, coord, weather_data_frequency):
         """
-        As we currently have a limited number of API calls(60) every minute with the 
-            current Weather API, we must shrink the dataset significantly. As the
-            OpenWeatherAPI models have a resolution of between 2.5 - 70 km, we will
-            go for a resolution of 25km. Assuming we travel at 100km/h for 12 hours,
-            1200 kilometres/25 = 48 API calls
+        Passes in a single coordinate, returns a weather forecast
+        for the coordinate depending on the entered "weather_data_frequency"
+        argument. This function is unlikely to ever be called directly.
 
-        As the Google Maps API has a resolution of around 40m between points, 
-            we must cull at 625:1    
-        """
+        :param coord: A single coordinate stored inside a NumPy array [latitude, longitude]
+        :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
+            "current", "hourly", or "daily"
 
-        return coords[::625]
-
-    def update_local_weather_forecast(self, coord):
-        """
-        Passes in a single coordinate, returns the hourly weather forecast 
-            for the coordinate
-
-        coords: A numpy array of [latitude, longitude]
-        
-        Returns:
-        - A numpy array [24][7]
-        - [24]: hours from current time
-        - [7]: (latitude, longitude, dt, wind_speed, wind_direction,
+        :returns weather_array: [N][7]
+        - [N]: is 1 for "current", 24 for "hourly", 8 for "daily"
+        - [7]: (latitude, longitude, dt (UNIX timestamp), wind_speed, wind_direction,
                     cloud_cover, description_id)
 
         For reference to the API used:
         - https://openweathermap.org/api/one-call-api
         """
 
+        # ----- Building API URL -----
+
+        data_frequencies = ["current", "hourly", "daily"]
+
+        if weather_data_frequency in data_frequencies:
+            data_frequencies.remove(weather_data_frequency)
+        else:
+            raise RuntimeError(f"\"weather_data_frequency\" argument is invalid. Must be one of {str(data_frequencies)}")
+
+        exclude_string = ",".join(data_frequencies)
+
         url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
-              f"&exclude=current,minutely,daily&appid={self.key}"
+              f"&exclude={exclude_string}&appid={self.api_key}"
+
+        # ----- Calling OpenWeatherAPI ------
 
         r = requests.get(url)
         response = json.loads(r.text)
 
-        weather_array = np.zeros((24, 7))
+        # ----- Processing API response -----
 
-        for i in range(24):
+        # Ensures that response[weather_data_frequency] is always a list of dictionaries
+        if isinstance(response[weather_data_frequency], dict):
+            weather_data_list = [response[weather_data_frequency]]
+        else:
+            weather_data_list = response[weather_data_frequency]
+
+        """ weather_data_list is a list of weather forecast dictionaries.
+            Weather dictionaries contain weather data points (wind speed, direction, cloud cover)
+            for a given timestamp."""
+
+        # ----- Packing weather data into a NumPy array -----
+
+        weather_array = np.zeros((len(weather_data_list), 7))
+
+        for i, weather_data_dict in enumerate(weather_data_list):
             weather_array[i][0] = coord[0]
             weather_array[i][1] = coord[1]
-            weather_array[i][2] = response["hourly"][i]["dt"]
-            weather_array[i][3] = response["hourly"][i]["wind_speed"]
-            weather_array[i][4] = response["hourly"][i]["wind_deg"]
-            weather_array[i][5] = response["hourly"][i]["clouds"]
-            weather_array[i][6] = response["hourly"][i]["weather"][0]["id"]
+            weather_array[i][2] = weather_data_dict["dt"]
+            weather_array[i][3] = weather_data_dict["wind_speed"]
+            weather_array[i][4] = weather_data_dict["wind_deg"]
+            weather_array[i][5] = weather_data_dict["clouds"]
+            weather_array[i][6] = weather_data_dict["weather"][0]["id"]
 
         return weather_array
 
-    def update_local_current_weather(self, coord, time=0):
-        """
-        Passes in a single coordinate, returns the current weather for the
-            coordinate
-
-        coords: A numpy array of [latitude, longitude]
-    
-        Returns:
-        - A numpy array [7]
-        - [7]: (latitude, longitude, dt, wind_speed, wind_direction,
-                    cloud_cover, description_id)
-
-        """
-
-        url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&exclude=minutely,daily,hourly&appid={}". \
-            format(coord[0], coord[1], self.key)
-        r = requests.get(url)
-
-        response = json.loads(r.text)
-
-        current_weather = np.zeros(7)
-
-        current_weather[0] = coord[0]
-        current_weather[1] = coord[1]
-        current_weather[2] = response["current"]["dt"]
-        current_weather[3] = response["current"]["wind_speed"]
-        current_weather[4] = response["current"]["wind_deg"]
-        current_weather[5] = response["current"]["clouds"]
-        current_weather[6] = response["current"]["weather"][0]["id"]
-
-        return current_weather
-
-    def update_path_weather_forecast(self, coords, last_updated_time):
+    def update_path_weather_forecast(self, coords, weather_data_frequency):
         """
         Passes in a list of coordinates, returns the hourly weather forecast
-            for each of the coordinates
+        for each of the coordinates
         
-        coords: A numpy array of [coord_index][2]
+        :param coords: A NumPy array of [coord_index][2]
         - [2] => [latitude, longitude]
+        :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
+            "current", "hourly", or "daily"
         
         Returns: 
-        - A numpy array [coord_index][24][7]
+        - A NumPy array [coord_index][N][7]
         - [coord_index]: the index of the coordinates passed into the function
-        - [24]: hours from self.last_updated_time
+        - [N]: is 1 for "current", 24 for "hourly", 8 for "daily"
         - [7]: (latitude, longitude, wind_speed, wind_direction, 
                      cloud_cover, precipitation, description)
-
-        Modifies: self.weather_forecast
         """
+        time_length = {"current": 1, "hourly": 24, "daily": 8}
 
         num_coords = len(coords)
 
-        weather_forecast = np.zeros((num_coords, 24, 7))
+        weather_forecast = np.zeros((num_coords, time_length[weather_data_frequency], 7))
 
         for i, coord in enumerate(coords):
+            weather_forecast[i] = self.get_coord_weather_forecast(coord, weather_data_frequency)
+            print(f"Called API {i} time(s) on {coord} coordinates")
 
-            # If the limit has not been reached, then continue getting the hourly forecast
-            if i < 10:
-                weather_forecast[i] = self.update_local_weather_forecast(coord)
-            else:
-                weather_forecast[i] = np.zeros((24, 7))
+        return weather_forecast
 
-        self.coords = coords
-        self.last_updated_time = last_updated_time
-        self.weather_forecast = weather_forecast
+    def calculate_closest_weather_indices(self, cumulative_distances):
+        current_coordinate_index = 0
+        result = []
 
-        return self.weather_forecast
+        weather_coords = self.weather_forecast[:, 0, 0:2]
+        path_distances = self.calculate_path_distances(weather_coords)
+        cumulative_path_distances = np.cumsum(path_distances)
 
-    def get_path_weather_forecast(self):
-        """
-        Passes in a list of coordinates, returns the hourly weather forecast
-            for each of the coordinates without calculating
-        
-        coords: A numpy array of [coord_index][2]
-        - [2] => [latitude, longitude]
-        
-        Returns: 
-        - A numpy array [coord_index][24][7]
-        - [coord_index]: the index of the coordinates passed into the function
-        - [24]: hours from self.last_updated_time
-        - [7]: (latitude, longitude, wind_speed, wind_direction, 
-                     cloud_cover, precipitation, description)
-        """
+        cumulative_path_distances[::2] *= -1
+        average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
 
-        return self.weather_forecast
+        for distance in np.nditer(cumulative_distances):
+            if distance > average_distances[current_coordinate_index]:
+                current_coordinate_index += 1
 
-    @staticmethod
-    def calculate_closest_weather_indices(cumulative_distances, cumulative_distances_gis):
-        """
-        Takes in an array of point distances from starting point, returns a list of 
-            weather_forecast indices in the region closest to the point
-        
-        cumulative_distances: (float[N]) distances between calculated points in m
-        cumulative_distances_gis: (float[M]) distances between GIS path points in m
+            result.append(current_coordinate_index)
 
-        Returns: (float[N]) indices of weather_forecast closest to the distances specified 
-            in cumulative_distances 
-        """
-
-        indices = np.zeros(len(cumulative_distances))
-        i, j = 0, 0
-        while i < len(cumulative_distances) and j < len(cumulative_distances_gis):
-
-            if cumulative_distances[i] > cumulative_distances_gis[j]:
-                # count upwards on cumulative_distances, append current value of j
-                indices[i] = j / 625
-                i += 1
-
-            elif cumulative_distances[i] < cumulative_distances_gis[j]:
-                # count upwards on cumulative_distances_gis
-                j += 1
-
-            else:
-                # count upwards on both, append current value of j
-                indices[i] = j / 625
-                i += 1
-                j += 1
-
-        return indices
-
-    def get_weather_forecasts(self, indices):
-        """
-        Takes in an array of indices of the weather_forecast, and returns a list of 
-            weather_forecasts
-
-        indices: (int[N]) indices of self.weather_forecast
-
-        Returns:
-        - A numpy array [24][7]
-        - [24]: hours from the self.last_updated_time
-        - [7]: (latitude, longitude, wind_speed, wind_direction, 
-                    cloud_cover, precipitation, description)
-        """
-
-        return self.weather_forecast[indices]
+        return np.array(result)
 
     def get_closest_weather_forecast(self, coord):
         """
         Passes in a single coordinate, calculates the closest coordinate to that
         coordinate, returns the forecast for the closest location
 
-        coord: A numpy array of [latitude, longitude]
+        coord: A NumPy array of [latitude, longitude]
 
         Returns:
-        - A numpy array [24][7]
+        - A NumPy array [24][7]
         - [24]: hours from the self.last_updated_time
         - [7]: (latitude, longitude, wind_speed, wind_direction, 
                     cloud_cover, precipitation, description)
@@ -271,28 +198,65 @@ class WeatherForecasts:
 
         return self.weather_forecast[temp_5.index(max(temp_5))]
 
-    def get_last_updated_time(self):
+    @staticmethod
+    def cull_dataset(coords):
         """
-        Returns the UNIX time in which the list of coordinates comprising the 
-            current route was updated
+        As we currently have a limited number of API calls(60) every minute with the
+            current Weather API, we must shrink the dataset significantly. As the
+            OpenWeatherAPI models have a resolution of between 2.5 - 70 km, we will
+            go for a resolution of 25km. Assuming we travel at 100km/h for 12 hours,
+            1200 kilometres/25 = 48 API calls
+
+        As the Google Maps API has a resolution of around 40m between points,
+            we must cull at 625:1 (because 25,000m / 40m = 625)
         """
 
-        return self.last_updated_time
+        return coords[::625]
 
     @staticmethod
-    def get_directional_wind_speed(vehicle_azimuth, wind_speed, wind_direction):
+    def calculate_path_distances(coords):
         """
-        Returns the wind speed in m/s, in the direction opposite to the
-            bearing of the vehicle
+        The coordinates are spaced quite tightly together, and they capture the
+        features of the road. So, the lines between every pair of adjacent
+        coordinates can be treated like a straight line, and the distances can
+        thus be obtained.
 
-        vehicle_bearing: The azimuth angle that the vehicle is moving in, in degrees
-        wind_speed: The absolute speed of the wind in m/s
-        wind_direction: The azimuth angle of the wind, in degrees
+        :param coords: A NumPy array [n][latitude, longitude]
 
-        Returns: The wind speed in the direction opposite to the bearing of the vehicle
+        :returns path_distances: a NumPy array [n-1][distances],
         """
 
-        return wind_speed * (math.cos(math.radians(wind_direction - vehicle_azimuth)))
+        # TODO: can simplify this using np.diff()
+        offset = np.roll(coords, (1, 1))
+
+        # get the latitude and longitude differences, in radians
+        diff = (coords - offset)[1:] * np.pi / 180
+        diff_lat, diff_lng = np.split(diff, 2, axis=1)
+        diff_lat = np.squeeze(diff_lat)
+        diff_lng = np.squeeze(diff_lng)
+
+        print(f"diff_lat: {diff_lat.shape}")
+        print(f"diff_lng: {diff_lng.shape}")
+
+        # get the mean latitude for every latitude, in radians
+        mean_lat = ((coords + offset)[1:, 0] * np.pi / 180) / 2
+        cosine_mean_lat = np.cos(mean_lat)
+
+        print(f"cosine_mean_lat: {cosine_mean_lat.shape}")
+
+        # multiply the latitude difference with the cosine_mean_latitude
+        diff_lng_adjusted = cosine_mean_lat * diff_lng
+
+        print(f"diff_lng_adjusted: {diff_lng_adjusted.shape}\n")
+
+        # square, sum and square-root
+        square_lat = np.square(diff_lat)
+        square_lng = np.square(diff_lng_adjusted)
+        square_sum = square_lat + square_lng
+
+        path_distances = EARTH_RADIUS * np.sqrt(square_sum)
+
+        return path_distances
 
     @staticmethod
     def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
@@ -310,7 +274,7 @@ class WeatherForecasts:
         return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
 
     @staticmethod
-    def get_weather_advisory(ID):
+    def get_weather_advisory(weather_id):
         """
         Returns a string indicating the type of weather to expect, from the standardized
             weather code passed as a parameter
@@ -318,15 +282,15 @@ class WeatherForecasts:
         https://openweathermap.org/weather-conditions#Weather-Condition-Codes-2
         """
 
-        if 200 <= ID < 300:
+        if 200 <= weather_id < 300:
             return "Thunderstorm"
-        elif 300 <= ID < 500:
+        elif 300 <= weather_id < 500:
             return "Drizzle"
-        elif 500 <= ID < 600:
+        elif 500 <= weather_id < 600:
             return "Rain"
-        elif 600 <= ID < 700:
+        elif 600 <= weather_id < 700:
             return "Snow"
-        elif ID == 800:
+        elif weather_id == 800:
             return "Clear"
         else:
             return "Unknown"
