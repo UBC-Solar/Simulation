@@ -90,8 +90,8 @@ class ExampleSimulation:
         gis_distances = self.gis.get_path_distances()
         cumulative_distances_gis = np.cumsum(gis_distances)
 
-        # closest_gis_indices is a 1:1 mapping between each point which has within it a timestamp and cumulative distance from
-        #   a starting point, to its closest point on a map.
+        # closest_gis_indices is a 1:1 mapping between each point which has within it a timestamp and cumulative
+        # distance from a starting point, to its closest point on a map.
         # closet_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
@@ -111,6 +111,7 @@ class ExampleSimulation:
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
         # Get the weather at every location
+        # TODO: finish implementing this
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, timestamps)
         absolute_wind_speeds = weather_forecasts[:, 2]
         wind_directions = weather_forecasts[:, 3]
