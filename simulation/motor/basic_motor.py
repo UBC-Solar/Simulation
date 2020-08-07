@@ -104,7 +104,7 @@ class BasicMotor(BaseMotor):
 
         :param required_speed_kmh: (float) required speed in kmh
         :param gradients: (float[N]) gradient at parts of the road
-        :param wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means agains the direction of the vehicle
+        :param wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
         :param tick: (int) length of 1 update cycle in seconds
 
         returns: (float[N]) energy expended at every tick
