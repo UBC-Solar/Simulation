@@ -12,6 +12,8 @@ before the battery runs out [speed -> distance]
 
 # speed = float(input("Enter a speed (km/h): "))
 
+# Simulation considers the weather along the path at the time the simulation is run
+
 
 class ExampleSimulation:
 
@@ -26,12 +28,14 @@ class ExampleSimulation:
         # TODO: replace max_speed with a direct calculation taking into account the
         #   elevation and wind_speed
         # TODO: max speed at any given moment actually depends on the elevation of the road, and the wind speed
+
         max_speed = 104
 
         # LVS power loss is pretty small
         lvs_power_loss = 0
 
         # ----- Simulation constants -----
+
         self.initial_battery_charge = 1.0
 
         self.lvs_power_loss = lvs_power_loss
@@ -71,7 +75,7 @@ class ExampleSimulation:
             tick, the GHI at every tick, is known.
         """
 
-        # ----- Expected Distance Estimate -----
+        # ----- Expected distance estimate -----
 
         # Array of cumulative distances hopefully travelled in this round
         timestamps = np.arange(0, simulation_duration + tick, tick)
@@ -92,8 +96,7 @@ class ExampleSimulation:
         # of coords from the route of GIS of size (number of ticks).
         # Also create a 1D array of "close enough" indices for weather.
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
-        closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances,
-                                                                                 cumulative_distances_gis)
+        closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
         # Get the azimuth angle of the vehicle at every location
         vehicle_bearings = self.gis.calculate_current_heading_array()[closest_gis_indices]
@@ -108,7 +111,7 @@ class ExampleSimulation:
         # Get the weather at every location
         # TODO: The weather returned here still has all the times on it. Need to create a method taking in timestamps
         #  and weather and return the weather at each timestamp
-        weather_forecasts = self.weather.get_weather_forecasts(closest_weather_indices)
+        weather_forecasts = self.weather.weather_forecast[closest_weather_indices]
         absolute_wind_speeds = weather_forecasts[:, :, 2]
         wind_directions = weather_forecasts[:, :, 3]
         cloud_covers = weather_forecasts[:, :, 4]
@@ -120,8 +123,6 @@ class ExampleSimulation:
                                                                         gis_route_elevations, cloud_covers)
 
         # TLDR: obtain solar_irradiances at every tick, wind_speeds at every tick, gradients at every tick
-
-        # TODO: Problem:
 
         # ----- Energy calculations -----
 
