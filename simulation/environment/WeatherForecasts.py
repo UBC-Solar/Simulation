@@ -171,7 +171,10 @@ class WeatherForecasts:
 
         for distance in np.nditer(cumulative_distances):
             if distance > average_distances[current_coordinate_index]:
-                current_coordinate_index += 1
+                if current_coordinate_index > len(average_distances) - 1:
+                    current_coordinate_index = len(average_distances) - 1
+                else:
+                    current_coordinate_index += 1
 
             result.append(current_coordinate_index)
 
