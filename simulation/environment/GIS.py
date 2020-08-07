@@ -10,51 +10,53 @@ from simulation.common.constants import EARTH_RADIUS
 
 
 class GIS:
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints):
+    def __init__(self, api_key, origin_coord, dest_coord, waypoints, force_update=False):
 
         self.api_key = api_key
 
         self.current_index = 0
         self.distance_remainder = 0
 
+        self.origin_coord = origin_coord
+        self.dest_coord = dest_coord
+        self.waypoints = waypoints
+
         # path to file storing the route and elevation NumPy arrays
         route_file = route_directory / "route_data.npz"
 
-        # if the file exists, load path from file
-        if os.path.isfile(route_file):
-            with np.load(route_file) as route_data:
-                save_file_start_coord = route_data['origin_coord']
-                save_file_end_coord = route_data['dest_coord']
-                save_file_waypoints = route_data['waypoints']
+        api_call_required = True
 
-                if (save_file_start_coord == origin_coord).all() and (save_file_end_coord == dest_coord).all() \
-                        and (save_file_waypoints == waypoints).all():
+        # if the file exists, load path from file
+        if os.path.isfile(route_file) and force_update is False:
+            with np.load(route_file) as route_data:
+                if np.array_equal(route_data['origin_coord'], self.origin_coord) \
+                        and np.array_equal(route_data['dest_coord'], self.dest_coord) \
+                        and np.array_equal(route_data['waypoints'], self.waypoints):
+
+                    api_call_required = False
+
                     print("Previous route save file is being used...\n")
+
+                    print("----- Route save file information -----")
+                    for key in route_data:
+                        print(f"> {key}: {route_data[key].shape}")
+                    print("\n")
+
                     self.path = route_data['path']
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
-                else:
-                    print("New route requested. Calling Google API and creating new route save file...\n")
-                    self.path = self.update_path(origin_coord, dest_coord, waypoints)
-                    self.path_elevations = self.calculate_path_elevations(self.path)
-                    self.path_time_zones = self.calculate_time_zones(self.path)
 
-                    with open(route_file, 'wb') as f:
-                        np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
-                                 origin_coord=origin_coord,
-                                 dest_coord=dest_coord, waypoints=waypoints)
-
-        # otherwise call API and then save arrays to file
-        else:
-            print("Route save file does not exist. Calling Google API and creating new route save file...\n")
-            self.path = self.update_path(origin_coord, dest_coord, waypoints)
+        if api_call_required or force_update:
+            print("New route requested and/or route save file does not exist. "
+                  "Calling Google API and creating new route save file...\n")
+            self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
             self.path_elevations = self.calculate_path_elevations(self.path)
             self.path_time_zones = self.calculate_time_zones(self.path)
 
             with open(route_file, 'wb') as f:
                 np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
-                         origin_coord=origin_coord,
-                         dest_coord=dest_coord, waypoints=waypoints)
+                         origin_coord=self.origin_coord,
+                         dest_coord=self.dest_coord, waypoints=self.waypoints)
 
         self.path_distances = self.calculate_path_distances(self.path)
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,
@@ -140,6 +142,8 @@ class GIS:
 
         return timestamps + (starting_drive_time + time_zones[0]) + time_zones
 
+    # ----- Getters -----
+
     def get_gradients(self, gis_indices):
         """
         Takes in an array of path indices, returns the road gradient at each index
@@ -150,8 +154,6 @@ class GIS:
         """
 
         return self.path_gradients[gis_indices]
-
-    # ----- Getters -----
 
     def get_path(self):
         """
@@ -233,7 +235,7 @@ class GIS:
 
         # If a route is found...
         if response['status'] == "OK":
-            print("A route was found.")
+            print("A route was found.\n")
 
             # Pick the first route in the list of available routes
             # A route consists of a series of legs
@@ -494,7 +496,3 @@ if __name__ == "__main__":
     dest_coord = np.array([43.6142, -116.2080])
 
     locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints)
-    # np.savetxt("C:\\Users\\mihir\\PycharmProjects\\Simulation\\data\\route\\route_path.csv", X=locationSystem.path,
-    #            delimiter=",", fmt="%.5f")
-    # np.savetxt("C:\\Users\\mihir\\PycharmProjects\\Simulation\\data\\route\\route_path_distances.csv",
-    #            X=locationSystem.path_distances, delimiter=",", fmt="%.5f")
