@@ -2,7 +2,7 @@ import functools
 import time as timer
 
 """
-Contains the simulations helper functions.
+Description: contains the simulation's helper functions.
 """
 
 
