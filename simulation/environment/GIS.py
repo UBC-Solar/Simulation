@@ -60,6 +60,7 @@ class GIS:
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
 
+    @helpers.timeit
     def calculate_closest_gis_indices(self, cumulative_distances):
         """
         Takes in an array of point distances from starting point, returns a list of 
@@ -73,14 +74,19 @@ class GIS:
         """
 
         current_coordinate_index = 0
-        next_coordinate_index = 1
         result = []
 
-        # TODO: np.average the entire array rather than just slices
+        path_distances = self.path_distances.copy()
+        cumulative_path_distances = np.cumsum(path_distances)
+        cumulative_path_distances[::2] *= -1
+        average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
+
         for distance in np.nditer(cumulative_distances):
-            if distance > np.average(self.path_distances[current_coordinate_index:next_coordinate_index + 1]):
-                current_coordinate_index += 1
-                next_coordinate_index += 1
+            if distance > average_distances[current_coordinate_index]:
+                if current_coordinate_index > len(average_distances) - 1:
+                    current_coordinate_index = len(average_distances) - 1
+                else:
+                    current_coordinate_index += 1
 
             result.append(current_coordinate_index)
 
@@ -92,7 +98,7 @@ class GIS:
 
         :param coords: (float[N][lat lng]) array of coordinates
 
-        returns: (float[N]) array of time differences in seconds
+        :returns time_diff: (float[N]) array of time differences in seconds
         """
 
         time_diff_temp = np.zeros(int(len(coords) / 625 + 1))
@@ -181,7 +187,6 @@ class GIS:
 
     # ----- Path calculation functions -----
 
-    @timeit
     def update_path(self, origin_coord, dest_coord, waypoints):
         """
         Returns a path between the origin coordinate and the destination coordinate,
@@ -252,7 +257,6 @@ class GIS:
 
         return route
 
-    @timeit
     def calculate_path_elevations(self, coords):
         """
         Returns the elevations of every coordinate the array of coordinates passed in
@@ -294,18 +298,16 @@ class GIS:
             response = json.loads(r.text)
 
             if response['status'] == "OK":
-
                 for result in response['results']:
                     elevations[i] = result['elevation']
                     i = i + 1
-
             else:
                 print("Error: No elevation was found")
 
         return elevations
 
-    @timeit
-    def calculate_path_distances(self, coords):
+    @staticmethod
+    def calculate_path_distances(coords):
         """
         The coordinates are spaced quite tightly together, and they capture the
             features of the road. So, the lines between every pair of adjacent
@@ -339,7 +341,7 @@ class GIS:
         # multiply the latitude difference with the cosine_mean_latitude
         diff_lng_adjusted = cosine_mean_lat * diff_lng
 
-        print(f"diff_lng_adjusted: {diff_lng_adjusted.shape}")
+        print(f"diff_lng_adjusted: {diff_lng_adjusted.shape} \n")
 
         # square, sum and square-root
         square_lat = np.square(diff_lat)
@@ -351,7 +353,6 @@ class GIS:
         return path_distances
 
     @staticmethod
-    @timeit
     def calculate_path_gradients(elevations, distances):
         """
         Get the approximate gradients of every point on the path.
@@ -455,7 +456,6 @@ class GIS:
 
         return bearing_array
 
-
     def update_vehicle_position(self, incremental_distance):
         """
         Returns the closest coordinate to the current coordinate
@@ -494,3 +494,7 @@ if __name__ == "__main__":
     dest_coord = np.array([43.6142, -116.2080])
 
     locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints)
+    # np.savetxt("C:\\Users\\mihir\\PycharmProjects\\Simulation\\data\\route\\route_path.csv", X=locationSystem.path,
+    #            delimiter=",", fmt="%.5f")
+    # np.savetxt("C:\\Users\\mihir\\PycharmProjects\\Simulation\\data\\route\\route_path_distances.csv",
+    #            X=locationSystem.path_distances, delimiter=",", fmt="%.5f")
