@@ -5,14 +5,12 @@ import numpy as np
 import math
 import os
 from data.route.__init__ import route_directory
-from simulation.common.helpers import timeit
+import simulation.common.helpers as helpers
+from simulation.common.constants import EARTH_RADIUS
 
 
 class GIS:
     def __init__(self, api_key, origin_coord, dest_coord, waypoints):
-
-        # Radius of the Earth in metres
-        self.R = 6371009
 
         self.api_key = api_key
 
@@ -348,7 +346,7 @@ class GIS:
         square_lng = np.square(diff_lng_adjusted)
         square_sum = square_lat + square_lng
 
-        path_distances = self.R * np.sqrt(square_sum)
+        path_distances = EARTH_RADIUS * np.sqrt(square_sum)
 
         return path_distances
 
