@@ -6,60 +6,61 @@ A class to extract local and path weather predictions such as wind_speed,
 import requests
 import json
 import numpy as np
-import math
 import os
+import simulation
 from data.weather.__init__ import weather_directory
+from simulation.common.constants import EARTH_RADIUS
+import simulation.common.helpers as helpers
 
 
 class WeatherForecasts:
 
     def __init__(self, api_key, coords, time):
         """
-        Initializes the instance of a WeatherForecast class 
+        Initializes the instance of a WeatherForecast class
 
-        api_key: A personal OpenWeatherAPI key to access weather forecasts
-        coords: A numpy array of [latitude, longitude]
-        time: The UNIX time of initialization
+        :param api_key: A personal OpenWeatherAPI key to access weather forecasts
+        :param coords: A NumPy array of [latitude, longitude]
+        :param time: The UNIX time of initialization
+        :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
+            "current", "hourly", or "daily"
         """
 
-        self.key = api_key
-
-        self.coords = coords
+        self.api_key = api_key
         self.last_updated_time = time
 
-        coords = self.cull_dataset(coords)
-        origin_coord = coords[0]
-        dest_coord = coords[-1]
+        self.coords = self.cull_dataset(coords)
+        self.origin_coord = coords[0]
+        self.dest_coord = coords[-1]
 
         # path to file storing the weather data
         weather_file = weather_directory / "weather_data.npz"
 
+        api_call_required = True
+
         # if the file exists, load path from file
         if os.path.isfile(weather_file):
             with np.load(weather_file) as weather_data:
+                if (weather_data['origin_coord'] == self.origin_coord).all() and \
+                        (weather_data['dest_coord'] == self.dest_coord).all():
 
-                if (weather_data['origin_coord'] == origin_coord).all() and \
-                   (weather_data['dest_coord'] == dest_coord).all():
+                    api_call_required = False
                     print("Previous weather save file is being used...\n")
+                    print("----- Weather save file information -----")
+
+                    for key in weather_data:
+                        print(f"> {key}: {weather_data[key].shape}")
+
                     self.weather_forecast = weather_data['weather_forecast']
 
-                else:
-                    print("Alternate weather data requested. "
-                          "Calling OpenWeather API and creating weather save file...\n")
-                    self.weather_forecast = self.update_path_weather_forecast(coords, self.last_updated_time)
-
-                    with open(weather_file, 'wb') as f:
-                        np.savez(f, weather_forecast=self.weather_forecast, origin_coord=origin_coord,
-                                 dest_coord=dest_coord)
-
-        # otherwise call API and then save arrays to file
-        else:
-            print("Weather save file does not exist. Calling OpenWeather API and creating save file...\n")
-            self.weather_forecast = self.update_path_weather_forecast(coords, self.last_updated_time)
+        if api_call_required:
+            print("Different weather data requested and/or weather file does not exist."
+                  "Calling OpenWeather API and creating weather save file...\n")
+            self.weather_forecast = self.update_path_weather_forecast(self.coords, weather_data_frequency)
 
             with open(weather_file, 'wb') as f:
-                np.savez(f, weather_forecast=self.weather_forecast, origin_coord=origin_coord,
-                         dest_coord=dest_coord)
+                np.savez(f, weather_forecast=self.weather_forecast, origin_coord=self.origin_coord,
+                         dest_coord=self.dest_coord)
 
     @staticmethod
     def cull_dataset(coords):
