@@ -10,13 +10,11 @@ import os
 import simulation
 from data.weather.__init__ import weather_directory
 from simulation.common.constants import EARTH_RADIUS
-import simulation.common.helpers as helpers
 
 
 class WeatherForecasts:
 
-    # TODO: add a force-update argument to update the weather_data.npz file cache
-    def __init__(self, api_key, coords, time, weather_data_frequency="daily"):
+    def __init__(self, api_key, coords, time, weather_data_frequency="daily", force_update=False):
         """
         Initializes the instance of a WeatherForecast class
 
@@ -25,6 +23,7 @@ class WeatherForecasts:
         :param time: The UNIX time of initialization
         :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
             "current", "hourly", or "daily"
+        :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
         """
 
         self.api_key = api_key
@@ -40,22 +39,24 @@ class WeatherForecasts:
         api_call_required = True
 
         # if the file exists, load path from file
-        if os.path.isfile(weather_file):
+        if os.path.isfile(weather_file) and force_update is False:
             with np.load(weather_file) as weather_data:
                 if (weather_data['origin_coord'] == self.origin_coord).all() and \
                         (weather_data['dest_coord'] == self.dest_coord).all():
 
                     api_call_required = False
-                    print("Previous weather save file is being used...\n")
-                    print("----- Weather save file information -----")
 
+                    print("Previous weather save file is being used...\n")
+
+                    print("----- Weather save file information -----")
                     for key in weather_data:
                         print(f"> {key}: {weather_data[key].shape}")
+                    print("\n")
 
                     self.weather_forecast = weather_data['weather_forecast']
 
-        if api_call_required:
-            print("Different weather data requested and/or weather file does not exist."
+        if api_call_required or force_update:
+            print("Different weather data requested and/or weather file does not exist. "
                   "Calling OpenWeather API and creating weather save file...\n")
             self.weather_forecast = self.update_path_weather_forecast(self.coords, weather_data_frequency)
 
@@ -153,7 +154,7 @@ class WeatherForecasts:
 
         for i, coord in enumerate(coords):
             weather_forecast[i] = self.get_coord_weather_forecast(coord, weather_data_frequency)
-            print(f"Called API {i} time(s) on {coord} coordinates")
+            print(f"Called OpenWeatherAPI {i} time(s) on coordinates: {coord}")
 
         return weather_forecast
 
