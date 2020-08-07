@@ -3,8 +3,9 @@ import numpy as np
 
 
 def test_calculate_closest_gis_indices():
-    cumulative_distances = np.array([0, 9, 18, 19, 27, 35, 38, 47, 48, 56, 63])
-    cumulative_path_distances = np.linspace(0, 240, num=13)
+    test_cumulative_distances = np.array([0, 9, 18, 19, 27, 35, 38, 47, 48, 56, 63])
+    test_path_distances = np.repeat(20, 13)
+    test_path_distances[0] = 0
 
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
 
@@ -19,8 +20,8 @@ def test_calculate_closest_gis_indices():
     locationSystem = simulation.environment.GIS(api_key=google_api_key, origin_coord=origin_coord,
                                                 waypoints=waypoints, dest_coord=dest_coord)
 
-    locationSystem.path_distances = cumulative_path_distances
+    locationSystem.path_distances = test_path_distances
 
-    result = locationSystem.calculate_closest_gis_indices(cumulative_distances)
+    result = locationSystem.calculate_closest_gis_indices(test_cumulative_distances)
 
     assert np.all(result == np.array([0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3]))
