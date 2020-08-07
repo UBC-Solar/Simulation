@@ -51,7 +51,6 @@ class WeatherForecasts:
                     print("----- Weather save file information -----")
                     for key in weather_data:
                         print(f"> {key}: {weather_data[key].shape}")
-                    print("\n")
 
                     self.weather_forecast = weather_data['weather_forecast']
 
@@ -180,6 +179,7 @@ class WeatherForecasts:
 
         return np.array(result)
 
+    # TODO: finish this
     def get_weather_forecast_in_time(self, indices, timestamps):
         """
         Takes in an array of indices of the weather_forecast array, and an array of timestamps.
@@ -193,19 +193,19 @@ class WeatherForecasts:
                     cloud_cover, precipitation, description)
         """
 
-        #TODO: Mihir / Fisher, please see if this can be done entirely within numpy
+        raise NotImplementedError
 
-        timestamp_hours = timestamps / 3600
-
-        forecast = self.get_weather_forecasts_full(indices)
-
-        result = np.empty((len(timestamps), 7))
-
-        for i in range(len(forecast)):
-
-            result[i] = forecast[i][timestamp_hours[i]]
-
-        return result
+        # timestamp_hours = timestamps / 3600
+        #
+        # forecast = self.get_weather_forecasts_full(indices)
+        #
+        # result = np.empty((len(timestamps), 7))
+        #
+        # for i in range(len(forecast)):
+        #
+        #     result[i] = forecast[i][timestamp_hours[i]]
+        #
+        # return result
 
     def get_closest_weather_forecast(self, coord):
         """
