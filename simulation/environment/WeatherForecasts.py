@@ -138,7 +138,7 @@ class WeatherForecasts:
         - [2] => [latitude, longitude]
         :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
             "current", "hourly", or "daily"
-        
+
         Returns: 
         - A NumPy array [coord_index][N][7]
         - [coord_index]: the index of the coordinates passed into the function
@@ -179,6 +179,33 @@ class WeatherForecasts:
             result.append(current_coordinate_index)
 
         return np.array(result)
+
+    def get_weather_forecast_in_time(self, indices, timestamps):
+        """
+        Takes in an array of indices of the weather_forecast array, and an array of timestamps.
+
+        indices: (int[N]) indices of self.weather_forecast
+        timestamps: (int[N]) timestamps of the vehicle's journey
+
+        Returns:
+        - A numpy array of size [N][7]
+        - [7]: (latitude, longitude, wind_speed, wind_direction,
+                    cloud_cover, precipitation, description)
+        """
+
+        #TODO: Mihir / Fisher, please see if this can be done entirely within numpy
+
+        timestamp_hours = timestamps / 3600
+
+        forecast = self.get_weather_forecasts_full(indices)
+
+        result = np.empty((len(timestamps), 7))
+
+        for i in range(len(forecast)):
+
+            result[i] = forecast[i][timestamp_hours[i]]
+
+        return result
 
     def get_closest_weather_forecast(self, coord):
         """
