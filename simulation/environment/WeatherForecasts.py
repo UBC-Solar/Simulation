@@ -183,11 +183,11 @@ class WeatherForecasts:
         average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
 
         for distance in np.nditer(cumulative_distances):
+            if current_coordinate_index > len(average_distances) - 1:
+                current_coordinate_index = len(average_distances) - 1
+
             if distance > average_distances[current_coordinate_index]:
-                if current_coordinate_index > len(average_distances) - 1:
-                    current_coordinate_index = len(average_distances) - 1
-                else:
-                    current_coordinate_index += 1
+                current_coordinate_index += 1
 
             result.append(current_coordinate_index)
 
