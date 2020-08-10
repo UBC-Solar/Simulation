@@ -10,6 +10,7 @@ import os
 import simulation
 from data.weather.__init__ import weather_directory
 from simulation.common.constants import EARTH_RADIUS
+from simulation.common import helpers
 
 
 class WeatherForecasts:
@@ -179,8 +180,7 @@ class WeatherForecasts:
 
         return np.array(result)
 
-    # TODO: finish this
-    def get_weather_forecast_in_time(self, indices, timestamps):
+    def get_weather_forecast_in_time(self, indices, unix_timestamps):
         """
         Takes in an array of indices of the weather_forecast array, and an array of timestamps.
 
@@ -193,19 +193,27 @@ class WeatherForecasts:
                     cloud_cover, precipitation, description)
         """
 
-        raise NotImplementedError
+        full_weather_forecast_at_coords = self.weather_forecast[indices]
+        dt_local_array = full_weather_forecast_at_coords[0, :, 4]
 
-        # timestamp_hours = timestamps / 3600
-        #
-        # forecast = self.get_weather_forecasts_full(indices)
-        #
-        # result = np.empty((len(timestamps), 7))
-        #
-        # for i in range(len(forecast)):
-        #
-        #     result[i] = forecast[i][timestamp_hours[i]]
-        #
-        # return result
+        closest_time_stamp_indices = []
+
+        # TODO: might be able to remove the for loop from here
+        for unix_timestamp in unix_timestamps:
+            unix_timestamp_array = np.full_like(dt_local_array, fill_value=unix_timestamp)
+            differences = np.abs(unix_timestamp_array - dt_local_array)
+            minimum_index = np.argmin(differences)
+            closest_time_stamp_indices.append(minimum_index)
+
+        closest_time_stamp_indices = np.asarray(closest_time_stamp_indices, dtype=np.int32)
+
+        temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
+
+        # if you're wondering why or how this works, don't ask because I don't know, it just does
+        # this is what duct-taping looks like in software engineering
+        result = full_weather_forecast_at_coords[tuple((temp_0, closest_time_stamp_indices))]
+
+        return result
 
     def get_closest_weather_forecast(self, coord):
         """
@@ -266,19 +274,19 @@ class WeatherForecasts:
         diff_lat = np.squeeze(diff_lat)
         diff_lng = np.squeeze(diff_lng)
 
-        print(f"diff_lat: {diff_lat.shape}")
-        print(f"diff_lng: {diff_lng.shape}")
+        # print(f"diff_lat: {diff_lat.shape}")
+        # print(f"diff_lng: {diff_lng.shape}")
 
         # get the mean latitude for every latitude, in radians
         mean_lat = ((coords + offset)[1:, 0] * np.pi / 180) / 2
         cosine_mean_lat = np.cos(mean_lat)
 
-        print(f"cosine_mean_lat: {cosine_mean_lat.shape}")
+        # print(f"cosine_mean_lat: {cosine_mean_lat.shape}")
 
         # multiply the latitude difference with the cosine_mean_latitude
         diff_lng_adjusted = cosine_mean_lat * diff_lng
 
-        print(f"diff_lng_adjusted: {diff_lng_adjusted.shape}\n")
+        # print(f"diff_lng_adjusted: {diff_lng_adjusted.shape}\n")
 
         # square, sum and square-root
         square_lat = np.square(diff_lat)
@@ -343,6 +351,4 @@ if __name__ == "__main__":
 
     weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
 
-    # TODO: get rid of this variable since weather data cannot be gathered for a particular time
-    time_of_initialization = 1593604800
-    weather = simulation.WeatherForecasts(weather_api_key, route_coords, time_of_initialization)
+    weather = simulation.WeatherForecasts(weather_api_key, route_coords)
