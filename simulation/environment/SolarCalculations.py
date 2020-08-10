@@ -9,6 +9,9 @@ A class to perform calculation and approximations for obtaining quantities
 import math
 import datetime
 import numpy as np
+from simulation.common import helpers
+from tqdm import tqdm
+import sys
 
 
 class SolarCalculations:
@@ -402,15 +405,19 @@ class SolarCalculations:
 
         ghi = np.zeros(len(coords))
 
-        for i in coords:
-            date = datetime.datetime.fromtimestamp(local_times[i])
+        with tqdm(total=len(coords), file=sys.stdout, desc="Calculating GHI at each time step") as pbar:
+            for i, _ in enumerate(coords):
+                date = datetime.datetime.fromtimestamp(local_times[i])
 
-            day_of_year = self.get_day_of_year(date.day, date.month, date.year)
+                day_of_year = self.get_day_of_year(date.day, date.month, date.year)
 
-            local_time = date.hour + (float(date.minute * 60 + date.second) / 3600)
+                local_time = date.hour + (float(date.minute * 60 + date.second) / 3600)
 
-            ghi[i] = self.calculate_GHI(coords[i][0], coords[i][1], time_zones[i],
-                                        day_of_year, local_time, elevations[i], cloud_covers[i])
+                ghi[i] = self.calculate_GHI(coords[i][0], coords[i][1], time_zones[i],
+                                            day_of_year, local_time, elevations[i], cloud_covers[i])
+
+                pbar.update(1)
+        print()
 
         return ghi
 
