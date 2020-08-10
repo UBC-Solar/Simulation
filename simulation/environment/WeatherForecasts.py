@@ -129,16 +129,18 @@ class WeatherForecasts:
 
         # ----- Packing weather data into a NumPy array -----
 
-        weather_array = np.zeros((len(weather_data_list), 7))
+        weather_array = np.zeros((len(weather_data_list), 9))
 
         for i, weather_data_dict in enumerate(weather_data_list):
             weather_array[i][0] = coord[0]
             weather_array[i][1] = coord[1]
             weather_array[i][2] = weather_data_dict["dt"]
-            weather_array[i][3] = weather_data_dict["wind_speed"]
-            weather_array[i][4] = weather_data_dict["wind_deg"]
-            weather_array[i][5] = weather_data_dict["clouds"]
-            weather_array[i][6] = weather_data_dict["weather"][0]["id"]
+            weather_array[i][3] = response['timezone_offset']
+            weather_array[i][4] = weather_data_dict["dt"] + response["timezone_offset"]
+            weather_array[i][5] = weather_data_dict["wind_speed"]
+            weather_array[i][6] = weather_data_dict["wind_deg"]
+            weather_array[i][7] = weather_data_dict["clouds"]
+            weather_array[i][8] = weather_data_dict["weather"][0]["id"]
 
         return weather_array
 
@@ -156,14 +158,14 @@ class WeatherForecasts:
         - A NumPy array [coord_index][N][7]
         - [coord_index]: the index of the coordinates passed into the function
         - [N]: is 1 for "current", 24 for "hourly", 8 for "daily"
-        - [7]: (latitude, longitude, wind_speed, wind_direction, 
-                     cloud_cover, precipitation, description)
+        - [7]: (latitude, longitude, dt (UNIX time), wind_speed, wind_direction,
+                     cloud_cover, description_id)
         """
         time_length = {"current": 1, "hourly": 24, "daily": 8}
 
         num_coords = len(coords)
 
-        weather_forecast = np.zeros((num_coords, time_length[weather_data_frequency], 7))
+        weather_forecast = np.zeros((num_coords, time_length[weather_data_frequency], 9))
 
         for i, coord in enumerate(coords):
             weather_forecast[i] = self.get_coord_weather_forecast(coord, weather_data_frequency)
