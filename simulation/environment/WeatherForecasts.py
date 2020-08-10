@@ -15,7 +15,7 @@ from simulation.common import helpers
 
 class WeatherForecasts:
 
-    def __init__(self, api_key, coords, time, weather_data_frequency="daily", force_update=False):
+    def __init__(self, api_key, coords, weather_data_frequency="daily", force_update=False):
         """
         Initializes the instance of a WeatherForecast class
 
@@ -28,7 +28,7 @@ class WeatherForecasts:
         """
 
         self.api_key = api_key
-        self.last_updated_time = time
+        self.last_updated_time = -1
 
         self.coords = self.cull_dataset(coords)
         self.origin_coord = coords[0]
@@ -42,18 +42,29 @@ class WeatherForecasts:
         # if the file exists, load path from file
         if os.path.isfile(weather_file) and force_update is False:
             with np.load(weather_file) as weather_data:
-                if (weather_data['origin_coord'] == self.origin_coord).all() and \
-                        (weather_data['dest_coord'] == self.dest_coord).all():
+                if np.array_equal(weather_data['origin_coord'], self.origin_coord) and \
+                        np.array_equal(weather_data['dest_coord'], self.dest_coord):
 
                     api_call_required = False
 
                     print("Previous weather save file is being used...\n")
 
-                    print("----- Weather save file information -----")
+                    self.weather_forecast = weather_data['weather_forecast']
+
+                    start_time_unix = self.weather_forecast[0, 0, 2]
+                    end_time_unix = self.weather_forecast[0, -1, 2]
+                    start_time = helpers.date_from_unix_timestamp(start_time_unix)
+                    end_time = helpers.date_from_unix_timestamp(end_time_unix)
+
+                    print("----- Weather save file information -----\n")
+                    print(f"--- Data time range ---")
+                    print(f"Start time (UTC): {start_time} [{start_time_unix:.0f}]\n"
+                          f"End time (UTC): {end_time} [{end_time_unix:.0f}]\n")
+
+                    print("--- Array information ---")
                     for key in weather_data:
                         print(f"> {key}: {weather_data[key].shape}")
-
-                    self.weather_forecast = weather_data['weather_forecast']
+                    print()
 
         if api_call_required or force_update:
             print("Different weather data requested and/or weather file does not exist. "
@@ -63,6 +74,8 @@ class WeatherForecasts:
             with open(weather_file, 'wb') as f:
                 np.savez(f, weather_forecast=self.weather_forecast, origin_coord=self.origin_coord,
                          dest_coord=self.dest_coord)
+
+        self.last_updated_time = self.weather_forecast[0, 0, 2]
 
     def get_coord_weather_forecast(self, coord, weather_data_frequency):
         """
