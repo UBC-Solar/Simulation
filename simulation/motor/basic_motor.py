@@ -118,10 +118,14 @@ class BasicMotor(BaseMotor):
         drag_forces = 0.5 * self.air_density * (
                 (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
 
-        g_forces = self.vehicle_mass * self.acceleration_g * gradients
+        angles = np.arctan(gradients)
+        g_forces = self.vehicle_mass * self.acceleration_g * np.sin(angles)
+
+        road_friction_array = np.full_like(g_forces, fill_value=self.road_friction)
+        road_friction_array = road_friction_array * self.vehicle_mass * self.acceleration_g * np.cos(angles)
 
         motor_output_energies = required_angular_speed_rads_array * (
-                    self.friction_force + drag_forces + g_forces) * tick
+                    road_friction_array + drag_forces + g_forces) * self.tire_radius * tick
 
         motor_controller_input_energies = motor_output_energies / (self.e_m * self.e_mc)
 
