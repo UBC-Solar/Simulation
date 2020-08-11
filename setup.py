@@ -22,7 +22,7 @@ setup(name='simulation',
           'simulation': ['py.typed'],
       },
       install_requires=[
-          'numpy', 'scipy', 'requests', 'polyline', 'tqdm'
+          'numpy', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn'
       ],
       extras_require={
         'mpi': [
