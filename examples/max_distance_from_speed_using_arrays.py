@@ -1,12 +1,14 @@
+import sys
 import simulation
 import numpy as np
 import datetime
-from simulation.common.helpers import timeit
+from simulation.common import helpers
 
 """
 Description: Given a constant driving speed, find the range at the speed
 before the battery runs out [speed -> distance]
 """
+
 
 # ----- Simulation input -----
 
@@ -55,12 +57,12 @@ class ExampleSimulation:
         self.gis = simulation.GIS(google_api_key, origin_coord, dest_coord, waypoints)
         self.route_coords = self.gis.get_path()
 
-        self.time_of_initialization = 1593604800
-        self.weather = simulation.WeatherForecasts(weather_api_key, self.route_coords, self.time_of_initialization)
+        self.weather = simulation.WeatherForecasts(weather_api_key, self.route_coords, weather_data_frequency="daily")
+        self.time_of_initialization = self.weather.last_updated_time
 
         self.solar_calculations = simulation.SolarCalculations()
 
-    @timeit
+    @helpers.timeit
     def update_model(self, tick, simulation_duration, speed, unix_dt, start_coords):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
@@ -83,6 +85,8 @@ class ExampleSimulation:
         tick_array = np.insert(tick_array, 0, 0)
 
         # Array of cumulative distances obtained from the timestamps
+        # TODO: there needs to be some kind of mechanism that stops the car travelling the max distance
+        #   and past the last coordinate in the provided route
         distances = tick_array * speed
         cumulative_distances = np.cumsum(distances)
 
@@ -111,19 +115,20 @@ class ExampleSimulation:
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
         # Get the weather at every location
-        # TODO: finish implementing this
-        weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, timestamps)
-        absolute_wind_speeds = weather_forecasts[:, 2]
-        wind_directions = weather_forecasts[:, 3]
-        cloud_covers = weather_forecasts[:, 4]
+        weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
+        absolute_wind_speeds = weather_forecasts[:, 5]
+        wind_directions = weather_forecasts[:, 6]
+        cloud_covers = weather_forecasts[:, 7]
 
         # Get the wind speeds at every location
         wind_speeds = self.weather.get_array_directional_wind_speed(vehicle_bearings, absolute_wind_speeds,
                                                                     wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time.
-        solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords, time_zones, local_times,
-                                                                        gis_route_elevations, cloud_covers)
+        solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
+                                                                        time_zones, local_times,
+                                                                        gis_route_elevations[closest_gis_indices],
+                                                                        cloud_covers)
 
         # TLDR: obtain solar_irradiances at every tick, wind_speeds at every tick, gradients at every tick
 
@@ -179,17 +184,22 @@ class ExampleSimulation:
         # ----- Target value -----
 
         distance = speed * (time_in_motion / 3600)
+
+        # if there are non-consecutive zeroes, then the distance array may have to be looped a couple times
+        helpers.checkForNonConsecutiveZeros(distance[1:])
+        print()
+
         distance_travelled = np.sum(distance)
 
-        print(f"\nSimulation successful!\n"
+        print(f"Simulation successful!\n"
               f"Time taken: {time_taken}\n"
               f"Maximum distance traversable: {distance_travelled:.2f}km\n"
-              f"Speed: {speed}km/h\n"
+              f"Average speed: {np.average(speed):.2f}km/h\n"
               f"Final battery SOC: {final_soc:.2f}%\n")
 
 
 if __name__ == "__main__":
-    speed_kmh = [30, 30, 30, 30, 30, 30, 30, 30, 30]
+    speed_kmh = [34, 58, 68, 15, 100, 98, 83, 103, 97]
     speed_kmh = np.repeat(speed_kmh, 60 * 60)
     speed_kmh = np.insert(speed_kmh, 0, 0)
 
