@@ -289,19 +289,12 @@ class WeatherForecasts:
         diff_lat = np.squeeze(diff_lat)
         diff_lng = np.squeeze(diff_lng)
 
-        # print(f"diff_lat: {diff_lat.shape}")
-        # print(f"diff_lng: {diff_lng.shape}")
-
         # get the mean latitude for every latitude, in radians
         mean_lat = ((coords + offset)[1:, 0] * np.pi / 180) / 2
         cosine_mean_lat = np.cos(mean_lat)
 
-        # print(f"cosine_mean_lat: {cosine_mean_lat.shape}")
-
         # multiply the latitude difference with the cosine_mean_latitude
         diff_lng_adjusted = cosine_mean_lat * diff_lng
-
-        # print(f"diff_lng_adjusted: {diff_lng_adjusted.shape}\n")
 
         # square, sum and square-root
         square_lat = np.square(diff_lat)
