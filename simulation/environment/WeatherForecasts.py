@@ -8,9 +8,11 @@ import json
 import numpy as np
 import os
 import simulation
+import sys
 from data.weather.__init__ import weather_directory
 from simulation.common.constants import EARTH_RADIUS
 from simulation.common import helpers
+from tqdm import tqdm
 
 
 class WeatherForecasts:
@@ -21,7 +23,6 @@ class WeatherForecasts:
 
         :param api_key: A personal OpenWeatherAPI key to access weather forecasts
         :param coords: A NumPy array of [latitude, longitude]
-        :param time: The UNIX time of initialization
         :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
             "current", "hourly", or "daily"
         :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
@@ -172,9 +173,11 @@ class WeatherForecasts:
 
         weather_forecast = np.zeros((num_coords, time_length[weather_data_frequency], 9))
 
-        for i, coord in enumerate(coords):
-            weather_forecast[i] = self.get_coord_weather_forecast(coord, weather_data_frequency)
-            print(f"Called OpenWeatherAPI {i} time(s) on coordinates: {coord}")
+        with tqdm(total=len(coords), file=sys.stdout, desc="Calling OpenWeatherAPI") as pbar:
+            for i, coord in enumerate(coords):
+                weather_forecast[i] = self.get_coord_weather_forecast(coord, weather_data_frequency)
+                pbar.update(1)
+        print()
 
         return weather_forecast
 
