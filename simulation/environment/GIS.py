@@ -147,7 +147,7 @@ class GIS:
         :param time_zones: (int[N])
         """
 
-        return timestamps + (starting_drive_time + time_zones[0]) + time_zones
+        return timestamps + (starting_drive_time + time_zones)
 
     # ----- Getters -----
 
@@ -261,8 +261,9 @@ class GIS:
         route = np.array(path_points)
 
         # Removes duplicate coordinates to prevent gradient calculation errors
-        duplicate_coordinate_indices = np.where((np.diff(route[:, 0]) == 0)) and np.where((np.diff(route[:, 1]) == 0))
-        route = np.delete(route, duplicate_coordinate_indices, axis=0)
+        if route.size != 0:
+            duplicate_coordinate_indices = np.where((np.diff(route[:, 0]) == 0)) and np.where((np.diff(route[:, 1]) == 0))
+            route = np.delete(route, duplicate_coordinate_indices, axis=0)
 
         return route
 
