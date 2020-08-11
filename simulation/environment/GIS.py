@@ -1,4 +1,6 @@
 import requests
+import time
+import sys
 import json
 import polyline
 import numpy as np
@@ -7,6 +9,7 @@ import os
 from data.route.__init__ import route_directory
 import simulation.common.helpers as helpers
 from simulation.common.constants import EARTH_RADIUS
+from tqdm import tqdm
 
 
 class GIS:
@@ -40,7 +43,7 @@ class GIS:
                     print("----- Route save file information -----")
                     for key in route_data:
                         print(f"> {key}: {route_data[key].shape}")
-                    print("\n")
+                    print()
 
                     self.path = route_data['path']
                     self.path_elevations = route_data['elevations']
@@ -62,7 +65,6 @@ class GIS:
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
 
-    @helpers.timeit
     def calculate_closest_gis_indices(self, cumulative_distances):
         """
         Takes in an array of point distances from starting point, returns a list of 
@@ -83,14 +85,19 @@ class GIS:
         cumulative_path_distances[::2] *= -1
         average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
 
-        for distance in np.nditer(cumulative_distances):
-            if distance > average_distances[current_coordinate_index]:
-                if current_coordinate_index > len(average_distances) - 1:
-                    current_coordinate_index = len(average_distances) - 1
-                else:
-                    current_coordinate_index += 1
+        with tqdm(total=len(cumulative_distances), file=sys.stdout, desc="Calculating closest GIS indices") as pbar:
+            for distance in np.nditer(cumulative_distances):
+                if distance > average_distances[current_coordinate_index]:
+                    if current_coordinate_index > len(average_distances) - 1:
+                        current_coordinate_index = len(average_distances) - 1
+                    else:
+                        current_coordinate_index += 1
 
-            result.append(current_coordinate_index)
+                result.append(current_coordinate_index)
+
+                pbar.update(1)
+
+        print()
 
         return np.array(result)
 
@@ -331,19 +338,12 @@ class GIS:
         diff_lat = np.squeeze(diff_lat)
         diff_lng = np.squeeze(diff_lng)
 
-        print(f"diff_lat: {diff_lat.shape}")
-        print(f"diff_lng: {diff_lng.shape}")
-
         # get the mean latitude for every latitude, in radians
         mean_lat = ((coords + offset)[1:, 0] * np.pi / 180) / 2
         cosine_mean_lat = np.cos(mean_lat)
 
-        print(f"cosine_mean_lat: {cosine_mean_lat.shape}")
-
         # multiply the latitude difference with the cosine_mean_latitude
         diff_lng_adjusted = cosine_mean_lat * diff_lng
-
-        print(f"diff_lng_adjusted: {diff_lng_adjusted.shape} \n")
 
         # square, sum and square-root
         square_lat = np.square(diff_lat)
