@@ -6,20 +6,13 @@ from simulation.common import helpers
 
 """
 Description: Given a constant driving speed, find the range at the speed
-before the battery runs out [speed -> distance]
+before the battery runs out [speed -> distance].
 """
-
-
-# ----- Simulation input -----
-
-# speed = float(input("Enter a speed (km/h): "))
-
-# Simulation considers the weather along the path at the time the simulation is run
 
 
 class ExampleSimulation:
 
-    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints):
+    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration):
         """
         Instantiates a simple model of the car
 
@@ -31,18 +24,30 @@ class ExampleSimulation:
         #   elevation and wind_speed
         # TODO: max speed at any given moment actually depends on the elevation of the road, and the wind speed
 
-        max_speed = 104
-
-        # LVS power loss is pretty small
-        lvs_power_loss = 0
-
         # ----- Simulation constants -----
 
         self.initial_battery_charge = 1.0
 
-        self.lvs_power_loss = lvs_power_loss
+        # LVS power loss is pretty small so it is neglected
+        self.lvs_power_loss = 0
 
-        self.max_speed = max_speed
+        self.max_speed = 104
+
+        # ----- Time constants -----
+
+        self.tick = tick
+        self.simulation_duration = simulation_duration
+
+        # ----- API keys -----
+
+        self.google_api_key = google_api_key
+        self.weather_api_key = weather_api_key
+
+        # ----- Route constants -----
+
+        self.origin_coord = origin_coord
+        self.dest_coord = dest_coord
+        self.waypoints = waypoints
 
         # ----- Component initialisation -----
 
@@ -50,20 +55,21 @@ class ExampleSimulation:
 
         self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)
 
-        self.basic_lvs = simulation.BasicLVS(lvs_power_loss * tick)
+        self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)
 
         self.basic_motor = simulation.BasicMotor()
 
-        self.gis = simulation.GIS(google_api_key, origin_coord, dest_coord, waypoints)
+        self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints)
         self.route_coords = self.gis.get_path()
 
-        self.weather = simulation.WeatherForecasts(weather_api_key, self.route_coords, weather_data_frequency="daily")
+        self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
+                                                   weather_data_frequency="daily")
         self.time_of_initialization = self.weather.last_updated_time
 
         self.solar_calculations = simulation.SolarCalculations()
 
     @helpers.timeit
-    def update_model(self, tick, simulation_duration, speed, unix_dt, start_coords):
+    def run_model(self, speed):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an 
@@ -75,12 +81,14 @@ class ExampleSimulation:
             distance, the GIS class updates the new location of the vehicle. From the location
             of the vehicle at every tick, the gradients at every tick, the weather at every
             tick, the GHI at every tick, is known.
+
+        Note 2: currently, the simulation can only be run for times during which weather data is available
         """
 
         # ----- Expected distance estimate -----
 
         # Array of cumulative distances hopefully travelled in this round.
-        timestamps = np.arange(0, simulation_duration + tick, tick)
+        timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
         tick_array = np.diff(timestamps)
         tick_array = np.insert(tick_array, 0, 0)
 
@@ -137,16 +145,16 @@ class ExampleSimulation:
         # Note: This does nothing
         # self.basic_array.update(tick)
 
-        self.basic_lvs.update(tick)
+        self.basic_lvs.update(self.tick)
         lvs_consumed_energy = self.basic_lvs.get_consumed_energy()
 
-        motor_consumed_energy = self.basic_motor.calculate_energy_in(speed, gradients, wind_speeds, tick)
+        motor_consumed_energy = self.basic_motor.calculate_energy_in(speed, gradients, wind_speeds, self.tick)
 
         # Note: this does nothing
         # self.basic_motor.update(tick)
         # motor_consumed_energy = basic_motor.get_consumed_energy()
 
-        array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, tick)
+        array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
 
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
         produced_energy = array_produced_energy
@@ -160,7 +168,7 @@ class ExampleSimulation:
         speed_kmh = np.full_like(timestamps, fill_value=speed, dtype='f4')
 
         # used to calculate the time the car was in motion
-        tick_array = np.full_like(timestamps, fill_value=tick, dtype='f4')
+        tick_array = np.full_like(timestamps, fill_value=self.tick, dtype='f4')
         tick_array[0] = 0
 
         # ----- Array calculations -----
@@ -174,7 +182,7 @@ class ExampleSimulation:
         # when the battery is empty the car will not move
         # TODO: if the car cannot climb the slope, the car also does not move
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
-        time_in_motion = np.logical_and(tick_array, state_of_charge) * tick
+        time_in_motion = np.logical_and(tick_array, state_of_charge) * self.tick
 
         time_taken = np.sum(time_in_motion)
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
@@ -184,10 +192,6 @@ class ExampleSimulation:
         # ----- Target value -----
 
         distance = speed * (time_in_motion / 3600)
-
-        # if there are non-consecutive zeroes, then the distance array may have to be looped a couple times
-        helpers.checkForNonConsecutiveZeros(distance[1:])
-        print()
 
         distance_travelled = np.sum(distance)
 
@@ -203,8 +207,13 @@ if __name__ == "__main__":
     speed_kmh = np.repeat(speed_kmh, 60 * 60)
     speed_kmh = np.insert(speed_kmh, 0, 0)
 
-    simulation_duration = 60 * 60 * 9
-    tick = 1
+
+def main():
+    input_speed = [34, 58, 68, 15, 100, 98, 83, 103, 97]
+    input_speed = np.repeat(input_speed, 60 * 60)
+    input_speed = np.insert(input_speed, 0, 0)
+
+    simulation_length = 60 * 60 * 9
 
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
     weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
@@ -217,6 +226,10 @@ if __name__ == "__main__":
 
     dest_coord = np.array([43.6142, -116.2080])
 
-    simulation = ExampleSimulation(google_api_key, weather_api_key, origin_coord, dest_coord, waypoints)
-    simulation.update_model(tick, simulation_duration, speed=speed_kmh,
-                            start_coords=origin_coord, unix_dt=1)
+    simulation_model = ExampleSimulation(google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick=1,
+                                         simulation_duration=simulation_length)
+    simulation_model.run_model(speed=input_speed)
+
+
+if __name__ == "__main__":
+    main()
