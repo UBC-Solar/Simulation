@@ -1,5 +1,7 @@
 import functools
+import numpy as np
 import time as timer
+from datetime import datetime
 
 """
 Description: contains the simulation's helper functions.
@@ -18,3 +20,24 @@ def timeit(func):
         return value
 
     return wrapper_timer
+
+
+def date_from_unix_timestamp(unix_timestamp):
+    return datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+
+def checkForNonConsecutiveZeros(array):
+    zeroed_indices = np.where(array == 0)[0]
+
+    if len(zeroed_indices) == 0:
+        print("No zeroes found in the array!")
+        return -1
+
+    zeroed_indices_diff = np.diff(zeroed_indices)
+
+    if np.max(zeroed_indices_diff) != 1 or np.min(zeroed_indices_diff) != 1:
+        print("Non-consecutive zeroes found!")
+        return True
+    else:
+        print("Only consecutive zeroes found!")
+        return False
