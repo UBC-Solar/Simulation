@@ -35,9 +35,9 @@ def checkForNonConsecutiveZeros(array):
 
     zeroed_indices_diff = np.diff(zeroed_indices)
 
-    if np.max(zeroed_indices_diff) != 1 or np.min(zeroed_indices_diff) != 1:
-        print("Non-consecutive zeroes found!")
-        return True
-    else:
+    if np.max(zeroed_indices_diff) == 1 and np.min(zeroed_indices_diff) == 1:
         print("Only consecutive zeroes found!")
         return False
+    else:
+        print("Non-consecutive zeroes found!")
+        return True
