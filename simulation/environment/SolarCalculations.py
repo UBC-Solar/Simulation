@@ -49,6 +49,7 @@ class SolarCalculations:
     def calculate_LSTM(time_zone_utc):
         """
         Calculates and returns the LSTM, or Local Solar Time Meridian.
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
 
         time_zone_utc: The UTC time zone of your area in hours of UTC offset.
 
@@ -61,7 +62,8 @@ class SolarCalculations:
                                           longitude):
         """
         Converts between the local time to the apparent solar time and returns the apparent
-        solar time
+        solar time.
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
 
         time_zone_utc: The UTC time zone of your area in hours of UTC offset. 
         day_of_year: The number of the day of the current year, with January 1
@@ -88,6 +90,7 @@ class SolarCalculations:
     def calculate_hour_angle(self, time_zone_utc, day_of_year, local_time, longitude):
         """
         Calculates and returns the Hour Angle of the Sun in the sky.
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
         
         time_zone_utc: The UTC time zone of your area in hours of UTC offset.
         day_of_year: The number of the day of the current year, with January 1
@@ -112,6 +115,7 @@ class SolarCalculations:
     def calculate_declination_angle(day_of_year):
         """
         Calculates the Declination Angle of the Earth at a given day
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/declination-angle
         
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
@@ -129,6 +133,7 @@ class SolarCalculations:
                                   local_time):
         """
         Calculates the Elevation Angle of the Sun relative to a location on the Earth
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/elevation-angle
 
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
@@ -163,6 +168,7 @@ class SolarCalculations:
                                local_time):
         """
         Calculates the Zenith Angle of the Sun relative to a location on the Earth
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/azimuth-angle
 
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
@@ -185,7 +191,8 @@ class SolarCalculations:
     def calculate_azimuth_angle(self, latitude, longitude, time_zone_utc, day_of_year,
                                 local_time):
         """
-        Calculates the Azimuth Angle of the Sun relative to a location on the Earth
+        Calculates the Azimuth Angle of the Sun relative to a location on the Earth.
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/azimuth-angle
 
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
@@ -231,6 +238,7 @@ class SolarCalculations:
     def calculate_sunrise_time(self, latitude, day_of_year):
         """
         Calculates the sunrise time relative to a location on the Earth
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
 
         latitude: The latitude of a location on Earth
         day_of_year: The number of the day of the current year, with January 1
@@ -254,6 +262,7 @@ class SolarCalculations:
     def calculate_sunset_time(self, latitude, day_of_year):
         """
         Calculates the sunset time relative to a location on the Earth
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
 
         latitude: The latitude of a location on Earth
         day_of_year: The number of the day of the current year, with January 1
@@ -281,6 +290,7 @@ class SolarCalculations:
         """
         Calculates the Direct Normal Irradiance from the Sun, relative to a location
         on the Earth (clearsky)
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
 
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
@@ -321,6 +331,7 @@ class SolarCalculations:
         """
         Calculates the Diffuse Horizontal Irradiance from the Sun, relative to a location 
         on the Earth (clearsky)
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
 
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
@@ -348,6 +359,7 @@ class SolarCalculations:
         """
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
         on the Earth
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
         
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth       
@@ -389,6 +401,7 @@ class SolarCalculations:
         """
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
         on the Earth, for arrays of coordinates, times, elevations and weathers
+        https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
 
         coords: (float[N][lat, lng]) array of latitudes and longitudes
         time_zones: (int[N]) time zones at different locations in seconds relative to UTC

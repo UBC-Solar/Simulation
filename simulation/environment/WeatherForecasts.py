@@ -96,6 +96,11 @@ class WeatherForecasts:
         - https://openweathermap.org/api/one-call-api
         """
 
+        #TODO: Who knows, maybe we want to run the simulation like a week into the future, when the weather forecast
+        #   api only allows 24 hours of hourly forecast. I think it is good to pad the end of the weather_array with
+        #   daily forecasts, after the hourly. Then in get_weather_forecast_in_time() the appropriate weather can be obtained
+        #   by using the same shortest place method that you did with the cumulative distances.
+
         # ----- Building API URL -----
 
         data_frequencies = ["current", "hourly", "daily"]
