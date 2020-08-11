@@ -2,7 +2,11 @@ import sys
 import simulation
 import numpy as np
 import datetime
+import seaborn as sns
+import pandas as pd
 from simulation.common import helpers
+import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 """
 Description: Given a constant driving speed, find the range at the speed
@@ -201,11 +205,22 @@ class ExampleSimulation:
               f"Average speed: {np.average(speed):.2f}km/h\n"
               f"Final battery SOC: {final_soc:.2f}%\n")
 
+        # ----- Plotting -----
 
-if __name__ == "__main__":
-    speed_kmh = [34, 58, 68, 15, 100, 98, 83, 103, 97]
-    speed_kmh = np.repeat(speed_kmh, 60 * 60)
-    speed_kmh = np.insert(speed_kmh, 0, 0)
+        arrays_to_plot = [np.cumsum(distance), speed_kmh, state_of_charge, delta_energy]
+        palettes = [["red"], ["blue"], ["green"], ["orange"]]
+        y_label = ["Distance (km)", "Speed (km/h)", "SOC (%)", "Delta energy (J)"]
+
+        with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
+            sns.set_style("dark")
+            for index, array in enumerate(arrays_to_plot):
+                df = pd.DataFrame(dict(time=timestamps, value=array))
+                sns.set_palette(palettes[index])
+                g = sns.relplot(x="time", y="value", kind="line", data=df)
+                g.set(xlabel="time(s)", ylabel=y_label[index])
+                pbar.update(1)
+        print()
+        plt.show()
 
 
 def main():
