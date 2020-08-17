@@ -25,6 +25,7 @@ class WeatherForecasts:
         :param coords: A NumPy array of [latitude, longitude]
         :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
             "current", "hourly", or "daily"
+        :param duration: amount of time simulated (in hours)
         :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
         """
 
@@ -87,6 +88,7 @@ class WeatherForecasts:
         :param coord: A single coordinate stored inside a NumPy array [latitude, longitude]
         :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
             "current", "hourly", or "daily"
+        :param duration: amount of time simulated (in hours)
 
         :returns weather_array: [N][7]
         - [N]: is 1 for "current", 24 for "hourly", 8 for "daily"
@@ -97,22 +99,25 @@ class WeatherForecasts:
         - https://openweathermap.org/api/one-call-api
         """
 
-        #TODO: Who knows, maybe we want to run the simulation like a week into the future, when the weather forecast
+        # TODO: Who knows, maybe we want to run the simulation like a week into the future, when the weather forecast
         #   api only allows 24 hours of hourly forecast. I think it is good to pad the end of the weather_array with
-        #   daily forecasts, after the hourly. Then in get_weather_forecast_in_time() the appropriate weather can be obtained
-        #   by using the same shortest place method that you did with the cumulative distances.
+        #   daily forecasts, after the hourly. Then in get_weather_forecast_in_time() the appropriate weather can be
+        #   obtained by using the same shortest place method that you did with the cumulative distances.
 
         # ----- Building API URL -----
 
         # If current weather is chosen, only return the instantaneous weather
-        # If hourly weather is chosen, then the first 24 hours of the data will use hourly data. If the duration of the simulation
-        #   is greater than 24 hours, then append on the daily weather forecast up until the 7th day.
+        # If hourly weather is chosen, then the first 24 hours of the data will use hourly data.
+        # If the duration of the simulation is greater than 24 hours, then append on the daily weather forecast
+        # up until the 7th day.
+
         data_frequencies = ["current", "hourly", "daily"]
 
         if weather_data_frequency in data_frequencies:
             data_frequencies.remove(weather_data_frequency)
         else:
-            raise RuntimeError(f"\"weather_data_frequency\" argument is invalid. Must be one of {str(data_frequencies)}")
+            raise RuntimeError(
+                f"\"weather_data_frequency\" argument is invalid. Must be one of {str(data_frequencies)}")
 
         exclude_string = ",".join(data_frequencies)
 
@@ -134,16 +139,16 @@ class WeatherForecasts:
 
         if weather_data_frequency == "hourly" and duration > 24:
 
-                url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
-                f"&exclude=minutely,hourly,current&appid={self.api_key}"
+            url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
+                  f"&exclude=minutely,hourly,current&appid={self.api_key}"
 
-                r = requests.get(url)
-                response = json.loads(r.text)
+            r = requests.get(url)
+            response = json.loads(r.text)
 
-                if isinstance(response["daily"], dict):
-                    weather_data_list = weather_data_list + [response["daily"]][1:]
-                else:
-                    weather_data_list = weather_data_list + response["daily"][1:]
+            if isinstance(response["daily"], dict):
+                weather_data_list = weather_data_list + [response["daily"]][1:]
+            else:
+                weather_data_list = weather_data_list + response["daily"][1:]
 
         """ weather_data_list is a list of weather forecast dictionaries.
             Weather dictionaries contain weather data points (wind speed, direction, cloud cover)
@@ -184,7 +189,7 @@ class WeatherForecasts:
         - [7]: (latitude, longitude, dt (UNIX time), wind_speed, wind_direction,
                      cloud_cover, description_id)
         """
-        #time_length = {"current": 1, "hourly": 24, "daily": 8}
+        # time_length = {"current": 1, "hourly": 24, "daily": 8}
         time_length = int(duration)
 
         num_coords = len(coords)
@@ -376,6 +381,8 @@ class WeatherForecasts:
 if __name__ == "__main__":
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
 
+    simulation_duration = 60 * 60 * 9
+
     origin_coord = np.array([39.0918, -94.4172])
 
     waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
@@ -389,4 +396,4 @@ if __name__ == "__main__":
 
     weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
 
-    weather = simulation.WeatherForecasts(weather_api_key, route_coords)
+    weather = simulation.WeatherForecasts(weather_api_key, route_coords, simulation_duration)
