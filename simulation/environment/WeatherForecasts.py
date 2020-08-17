@@ -103,6 +103,10 @@ class WeatherForecasts:
 
         # ----- Building API URL -----
 
+        # If current weather is chosen, only return the instantaneous weather
+        # If hourly weather is chosen, then the first 24 hours of the data will use hourly data. If the duration of the simulation
+        #   is greater than 24 hours, then append on the daily weather forecast up until the 7th day. If the duration of the simulation 
+        #   is even greater
         data_frequencies = ["current", "hourly", "daily"]
 
         if weather_data_frequency in data_frequencies:
@@ -113,7 +117,7 @@ class WeatherForecasts:
         exclude_string = ",".join(data_frequencies)
 
         url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
-              f"&exclude={exclude_string}&appid={self.api_key}"
+              f"&exclude=minutely,{exclude_string}&appid={self.api_key}"
 
         # ----- Calling OpenWeatherAPI ------
 
@@ -195,6 +199,8 @@ class WeatherForecasts:
 
             if distance > average_distances[current_coordinate_index]:
                 current_coordinate_index += 1
+                if current_coordinate_index > len(average_distances) - 1:
+                    current_coordinate_index = len(average_distances) - 1
 
             result.append(current_coordinate_index)
 
