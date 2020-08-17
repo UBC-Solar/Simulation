@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 """
-Description: Given a constant driving speed, find the range at the speed
+Description: Given an hourly driving speed, find the range at the speed
 before the battery runs out [speed -> distance].
 """
 
@@ -204,19 +204,21 @@ class ExampleSimulation:
 
         # ----- Plotting -----
 
-        arrays_to_plot = [np.cumsum(distance), speed_kmh, state_of_charge, delta_energy]
-        palettes = [["red"], ["blue"], ["green"], ["orange"]]
-        y_label = ["Distance (km)", "Speed (km/h)", "SOC (%)", "Delta energy (J)"]
+        arrays_to_plot = [speed_kmh, np.cumsum(distance), state_of_charge, delta_energy]
+        y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)"]
+        sns.set_style("whitegrid")
+        f, axes = plt.subplots(2, 2, figsize=(8, 8))
 
         with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
-            sns.set_style("dark")
-            for index, array in enumerate(arrays_to_plot):
-                df = pd.DataFrame(dict(time=timestamps, value=array))
-                sns.set_palette(palettes[index])
-                g = sns.relplot(x="time", y="value", kind="line", data=df)
+            for index, axis in enumerate(axes.flatten()):
+                df = pd.DataFrame(dict(time=timestamps, value=arrays_to_plot[index]))
+                g = sns.lineplot(x="time", y="value", data=df, ax=axis)
                 g.set(xlabel="time(s)", ylabel=y_label[index])
                 pbar.update(1)
         print()
+        sns.despine()
+        plt.setp(axes)
+        plt.tight_layout()
         plt.show()
 
 
