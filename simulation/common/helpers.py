@@ -41,3 +41,16 @@ def checkForNonConsecutiveZeros(array):
     else:
         print("Non-consecutive zeroes found!")
         return True
+
+
+def reshape_and_repeat(input_array, reshape_length):
+    if input_array.size >= reshape_length:
+        print(f"Input array of shape {input_array.shape} was not reshaped\n")
+        return input_array
+    else:
+        quotient_remainder_tuple = divmod(reshape_length, input_array.size)
+        temp = np.repeat(input_array, quotient_remainder_tuple[0])
+        result = np.append(temp, np.repeat(temp[-1], quotient_remainder_tuple[1]))
+
+        print(f"Reshaped input array from {input_array.shape} to {result.shape}\n")
+        return result
