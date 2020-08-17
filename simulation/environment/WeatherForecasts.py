@@ -15,7 +15,7 @@ from simulation.common import helpers
 
 class WeatherForecasts:
 
-    def __init__(self, api_key, coords, weather_data_frequency="daily", force_update=False):
+    def __init__(self, api_key, coords, duration, weather_data_frequency="daily", force_update=False):
         """
         Initializes the instance of a WeatherForecast class
 
@@ -69,7 +69,7 @@ class WeatherForecasts:
         if api_call_required or force_update:
             print("Different weather data requested and/or weather file does not exist. "
                   "Calling OpenWeather API and creating weather save file...\n")
-            self.weather_forecast = self.update_path_weather_forecast(self.coords, weather_data_frequency)
+            self.weather_forecast = self.update_path_weather_forecast(self.coords, weather_data_frequency, duration)
 
             with open(weather_file, 'wb') as f:
                 np.savez(f, weather_forecast=self.weather_forecast, origin_coord=self.origin_coord,
@@ -77,7 +77,7 @@ class WeatherForecasts:
 
         self.last_updated_time = self.weather_forecast[0, 0, 2]
 
-    def get_coord_weather_forecast(self, coord, weather_data_frequency):
+    def get_coord_weather_forecast(self, coord, weather_data_frequency, duration):
         """
         Passes in a single coordinate, returns a weather forecast
         for the coordinate depending on the entered "weather_data_frequency"
@@ -105,8 +105,7 @@ class WeatherForecasts:
 
         # If current weather is chosen, only return the instantaneous weather
         # If hourly weather is chosen, then the first 24 hours of the data will use hourly data. If the duration of the simulation
-        #   is greater than 24 hours, then append on the daily weather forecast up until the 7th day. If the duration of the simulation 
-        #   is even greater
+        #   is greater than 24 hours, then append on the daily weather forecast up until the 7th day.
         data_frequencies = ["current", "hourly", "daily"]
 
         if weather_data_frequency in data_frequencies:
@@ -132,6 +131,19 @@ class WeatherForecasts:
         else:
             weather_data_list = response[weather_data_frequency]
 
+        if weather_data_frequency == "hourly" and duration > 24:
+
+                url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
+                f"&exclude=minutely,hourly,current&appid={self.api_key}"
+
+                r = requests.get(url)
+                response = json.loads(r.text)
+
+                if isinstance(response["daily"], dict):
+                    weather_data_list = weather_data_list + [response["daily"]][1:]
+                else:
+                    weather_data_list = weather_data_list + response["daily"][1:]
+
         """ weather_data_list is a list of weather forecast dictionaries.
             Weather dictionaries contain weather data points (wind speed, direction, cloud cover)
             for a given timestamp."""
@@ -153,7 +165,7 @@ class WeatherForecasts:
 
         return weather_array
 
-    def update_path_weather_forecast(self, coords, weather_data_frequency):
+    def update_path_weather_forecast(self, coords, weather_data_frequency, duration):
         """
         Passes in a list of coordinates, returns the hourly weather forecast
         for each of the coordinates
@@ -162,6 +174,7 @@ class WeatherForecasts:
         - [2] => [latitude, longitude]
         :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
             "current", "hourly", or "daily"
+        :param duration: duration of weather requested, in hours
 
         Returns: 
         - A NumPy array [coord_index][N][7]
@@ -170,14 +183,15 @@ class WeatherForecasts:
         - [7]: (latitude, longitude, dt (UNIX time), wind_speed, wind_direction,
                      cloud_cover, description_id)
         """
-        time_length = {"current": 1, "hourly": 24, "daily": 8}
+        #time_length = {"current": 1, "hourly": 24, "daily": 8}
+        time_length = int(duration)
 
         num_coords = len(coords)
 
-        weather_forecast = np.zeros((num_coords, time_length[weather_data_frequency], 9))
+        weather_forecast = np.zeros((num_coords, time_length, 9))
 
         for i, coord in enumerate(coords):
-            weather_forecast[i] = self.get_coord_weather_forecast(coord, weather_data_frequency)
+            weather_forecast[i] = self.get_coord_weather_forecast(coord, weather_data_frequency, duration)
             print(f"Called OpenWeatherAPI {i} time(s) on coordinates: {coord}")
 
         return weather_forecast
@@ -329,6 +343,8 @@ class WeatherForecasts:
         Returns: The wind speeds in the direction opposite to the bearing of the vehicle
         """
 
+        # wind is 90 degrees, car is 90 degrees. cos(0) = 1. max wind speed opposite of car
+        # wind is 90 degrees, car is 180 degrees. cos(pi) = -1. max wind speed opposite of car
         return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
 
     @staticmethod

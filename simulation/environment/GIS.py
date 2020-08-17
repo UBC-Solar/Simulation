@@ -438,6 +438,10 @@ class GIS:
         return bearing
 
     def calculate_current_heading_array(self):
+        """
+        Calculates the bearing of the vehicle between consecutive points
+        https://www.movable-type.co.uk/scripts/latlong.html
+        """
         bearing_array = np.zeros(len(self.path))
 
         for index in range(0, len(self.path) - 1):
