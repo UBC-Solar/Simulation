@@ -223,11 +223,15 @@ class ExampleSimulation:
 
 
 def main():
-    input_speed = [34, 58, 68, 15, 100, 98, 83, 103, 97]
-    input_speed = np.repeat(input_speed, 60 * 60)
-    input_speed = np.insert(input_speed, 0, 0)
+    simulation_length = 60 * 60 * 10
 
-    simulation_length = 60 * 60 * 9
+    input_speed = np.array([54, 34, 45, 65, 43, 23, 89, 54, 100, 20])
+    print(f"Input speeds: {input_speed}\n")
+
+    input_speed = helpers.reshape_and_repeat(input_speed, simulation_length)
+
+    # input_speed = np.repeat(input_speed, 60 * 60)
+    input_speed = np.insert(input_speed, 0, 0)
 
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
     weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
