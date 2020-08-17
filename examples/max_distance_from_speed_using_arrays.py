@@ -91,6 +91,11 @@ class ExampleSimulation:
         Note 2: currently, the simulation can only be run for times during which weather data is available
         """
 
+        # ----- Reshape speed array -----
+
+        speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
+        speed_kmh = np.insert(speed_kmh, 0, 0)
+
         # ----- Expected distance estimate -----
 
         # Array of cumulative distances hopefully travelled in this round.
@@ -101,7 +106,7 @@ class ExampleSimulation:
         # Array of cumulative distances obtained from the timestamps
         # TODO: there needs to be some kind of mechanism that stops the car travelling the max distance
         #   and past the last coordinate in the provided route
-        distances = tick_array * speed
+        distances = tick_array * speed_kmh
         cumulative_distances = np.cumsum(distances)
 
         # closest_gis_indices is a 1:1 mapping between each point which has within it a timestamp and cumulative
@@ -150,7 +155,7 @@ class ExampleSimulation:
         self.basic_lvs.update(self.tick)
         lvs_consumed_energy = self.basic_lvs.get_consumed_energy()
 
-        motor_consumed_energy = self.basic_motor.calculate_energy_in(speed, gradients, wind_speeds, self.tick)
+        motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
 
         # Note: this does nothing
         # self.basic_motor.update(tick)
@@ -165,9 +170,6 @@ class ExampleSimulation:
         delta_energy = produced_energy - consumed_energy
 
         # ----- Array initialisation -----
-
-        # stores speed of car at each time step
-        speed_kmh = np.full_like(timestamps, fill_value=speed, dtype='f4')
 
         # used to calculate the time the car was in motion
         tick_array = np.full_like(timestamps, fill_value=self.tick, dtype='f4')
@@ -193,22 +195,24 @@ class ExampleSimulation:
 
         # ----- Target value -----
 
-        distance = speed * (time_in_motion / 3600)
+        distance = speed_kmh * (time_in_motion / 3600)
 
         distance_travelled = np.sum(distance)
 
         print(f"Simulation successful!\n"
               f"Time taken: {time_taken}\n"
               f"Maximum distance traversable: {distance_travelled:.2f}km\n"
-              f"Average speed: {np.average(speed):.2f}km/h\n"
+              f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
               f"Final battery SOC: {final_soc:.2f}%\n")
 
         # ----- Plotting -----
 
-        arrays_to_plot = [speed_kmh, np.cumsum(distance), state_of_charge, delta_energy]
-        y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)"]
+        arrays_to_plot = [speed_kmh, np.cumsum(distance), state_of_charge, delta_energy,
+                          solar_irradiances, wind_speeds]
+        y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                   "Solar irradiance (W/m^2)", "Wind speeds (km/h)"]
         sns.set_style("whitegrid")
-        f, axes = plt.subplots(2, 2, figsize=(8, 8))
+        f, axes = plt.subplots(3, 2, figsize=(12, 8))
 
         with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
             for index, axis in enumerate(axes.flatten()):
@@ -226,13 +230,30 @@ class ExampleSimulation:
 def main():
     simulation_length = 60 * 60 * 10
 
+    """
+    Note: it no longer matters how many elements the input_speed array has, the simulation automatically
+        reshapes the array depending on the simulation_length. 
+
+    Examples:
+      If you want a constant speed for the entire simulation, insert a single element
+      into the input_speed array.
+
+    >>> input_speed = np.array([30]) <-- constant speed of 30km/h
+
+      If you want 50km/h in the first half of the simulation and 60km/h in the second half,
+      do the following:
+
+    >>> input_speed = np.array([50, 60])
+    
+      This logic will apply for all subsequent array lengths (3, 4, 5, etc.)
+      
+      Keep in mind, however, that the condition len(input_speed) <= simulation_length must be true
+
+    """
+
     input_speed = np.array([54, 34, 45, 65, 43, 23, 89, 54, 100, 20])
+
     print(f"Input speeds: {input_speed}\n")
-
-    input_speed = helpers.reshape_and_repeat(input_speed, simulation_length)
-
-    # input_speed = np.repeat(input_speed, 60 * 60)
-    input_speed = np.insert(input_speed, 0, 0)
 
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
     weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
