@@ -28,3 +28,11 @@ To be complete at the end this Saturday, 09 May 2020
 ##Vehicle Body Losses - Fisher and David
 
 - Currently, David has put the Vehicle Drag in the motor class. But it would be better if the vehicle drag is implemented as a seperate class
+
+###
+
+Energy produced by the arrays depend on the following variables
+- location, location is known
+- time and day, is also known
+
+Speed of the car is given for this value

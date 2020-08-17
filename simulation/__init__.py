@@ -19,6 +19,7 @@ from simulation.environment.GIS import GIS
 from simulation.environment.SolarCalculations import SolarCalculations
 from simulation.environment.WeatherForecasts import WeatherForecasts
 
+
 __version__ = "0.0.1"
 
 print("Package 'simulation' imported. Version: {}\n".format(__version__))

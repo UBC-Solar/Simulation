@@ -58,7 +58,7 @@ class BasicBattery(BaseBattery):
 
         # discharge_capacity -> energy
         self.stored_energy = self.max_energy_capacity - self.calculate_energy_from_discharge_capacity(
-                                                        self.discharge_capacity)
+            self.discharge_capacity)
 
         # ----- DayBreak battery initialisation -----
 
