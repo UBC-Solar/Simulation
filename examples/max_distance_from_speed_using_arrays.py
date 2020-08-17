@@ -67,7 +67,8 @@ class ExampleSimulation:
         self.route_coords = self.gis.get_path()
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
-        self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords, self.simulation_duration/3600,
+        self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
+                                                   self.simulation_duration / 3600,
                                                    weather_data_frequency="daily")
         self.time_of_initialization = self.weather.last_updated_time
 
@@ -211,9 +212,9 @@ class ExampleSimulation:
 
         with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
             for index, axis in enumerate(axes.flatten()):
-                df = pd.DataFrame(dict(time=timestamps, value=arrays_to_plot[index]))
+                df = pd.DataFrame(dict(time=timestamps / 3600, value=arrays_to_plot[index]))
                 g = sns.lineplot(x="time", y="value", data=df, ax=axis)
-                g.set(xlabel="time(s)", ylabel=y_label[index])
+                g.set(xlabel="time (hrs)", ylabel=y_label[index])
                 pbar.update(1)
         print()
         sns.despine()
