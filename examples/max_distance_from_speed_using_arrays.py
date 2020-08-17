@@ -65,8 +65,9 @@ class ExampleSimulation:
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints)
         self.route_coords = self.gis.get_path()
+        self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
-        self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
+        self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords, self.simulation_duration/3600,
                                                    weather_data_frequency="daily")
         self.time_of_initialization = self.weather.last_updated_time
 
@@ -102,13 +103,9 @@ class ExampleSimulation:
         distances = tick_array * speed
         cumulative_distances = np.cumsum(distances)
 
-        # Array of cumulative distances obtained from the route checkpoints
-        gis_distances = self.gis.get_path_distances()
-        cumulative_distances_gis = np.cumsum(gis_distances)
-
         # closest_gis_indices is a 1:1 mapping between each point which has within it a timestamp and cumulative
         # distance from a starting point, to its closest point on a map.
-        # closet_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
+        # closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
@@ -116,7 +113,7 @@ class ExampleSimulation:
         gis_route_elevations = self.gis.get_path_elevations()
 
         # Get the azimuth angle of the vehicle at every location
-        vehicle_bearings = self.gis.calculate_current_heading_array()[closest_gis_indices]
+        gis_vehicle_bearings = self.vehicle_bearings[closest_gis_indices]
 
         # Get array of path gradients
         gradients = self.gis.get_gradients(closest_gis_indices)
@@ -133,7 +130,7 @@ class ExampleSimulation:
         cloud_covers = weather_forecasts[:, 7]
 
         # Get the wind speeds at every location
-        wind_speeds = self.weather.get_array_directional_wind_speed(vehicle_bearings, absolute_wind_speeds,
+        wind_speeds = self.weather.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
                                                                     wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time.

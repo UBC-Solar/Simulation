@@ -420,7 +420,7 @@ class SolarCalculations:
 
         with tqdm(total=len(coords), file=sys.stdout, desc="Calculating GHI at each time step") as pbar:
             for i, _ in enumerate(coords):
-                date = datetime.datetime.fromtimestamp(local_times[i])
+                date = datetime.datetime.utcfromtimestamp(local_times[i])
 
                 day_of_year = self.get_day_of_year(date.day, date.month, date.year)
 

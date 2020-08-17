@@ -92,6 +92,8 @@ class GIS:
                         current_coordinate_index = len(average_distances) - 1
                     else:
                         current_coordinate_index += 1
+                        if current_coordinate_index > len(average_distances) - 1:
+                            current_coordinate_index = len(average_distances) - 1
 
                 result.append(current_coordinate_index)
 
@@ -147,7 +149,7 @@ class GIS:
         :param time_zones: (int[N])
         """
 
-        return timestamps + (starting_drive_time + time_zones)
+        return timestamps + starting_drive_time - (time_zones[0] - time_zones)
 
     # ----- Getters -----
 
@@ -436,6 +438,10 @@ class GIS:
         return bearing
 
     def calculate_current_heading_array(self):
+        """
+        Calculates the bearing of the vehicle between consecutive points
+        https://www.movable-type.co.uk/scripts/latlong.html
+        """
         bearing_array = np.zeros(len(self.path))
 
         for index in range(0, len(self.path) - 1):
