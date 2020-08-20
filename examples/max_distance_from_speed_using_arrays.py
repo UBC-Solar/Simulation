@@ -75,10 +75,10 @@ class ExampleSimulation:
         self.solar_calculations = simulation.SolarCalculations()
 
     @helpers.timeit
-    def run_model(self, speed):
+    def run_model(self, speed, plot_results=True):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
-        a final battery charge and a distance travelled for this duration, given an 
+        a final battery charge and a distance travelled for this duration, given an
         initial charge, and a target speed. Also requires the current time and location.
         This is where the magic happens.
 
@@ -93,12 +93,14 @@ class ExampleSimulation:
 
         # ----- Reshape speed array -----
 
+        print(f"Input speeds: {speed}\n")
+
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
 
         # ----- Expected distance estimate -----
 
-        # Array of cumulative distances hopefully travelled in this round.
+        # Array of cumulative distances hopefully travelled in this round
         timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
         tick_array = np.diff(timestamps)
         tick_array = np.insert(tick_array, 0, 0)
@@ -109,14 +111,19 @@ class ExampleSimulation:
         distances = tick_array * speed_kmh
         cumulative_distances = np.cumsum(distances)
 
-        # closest_gis_indices is a 1:1 mapping between each point which has within it a timestamp and cumulative
-        # distance from a starting point, to its closest point on a map.
-        # closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
+        # ----- Weather and location calculations -----
+
+        """ closest_gis_indices is a 1:1 mapping between each point which has within it a timestamp and cumulative
+                distance from a starting point, to its closest point on a map.
+                
+            closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map."""
+
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
+        gis_route_elevations_at_each_tick = gis_route_elevations[closest_gis_indices]
 
         # Get the azimuth angle of the vehicle at every location
         gis_vehicle_bearings = self.vehicle_bearings[closest_gis_indices]
@@ -139,28 +146,20 @@ class ExampleSimulation:
         wind_speeds = self.weather.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
                                                                     wind_directions)
 
-        # Get an array of solar irradiance at every coordinate and time.
+        # Get an array of solar irradiance at every coordinate and time
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
                                                                         time_zones, local_times,
                                                                         gis_route_elevations[closest_gis_indices],
                                                                         cloud_covers)
 
-        # TLDR: obtain solar_irradiances at every tick, wind_speeds at every tick, gradients at every tick
+        # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
         # ----- Energy calculations -----
 
-        # Note: This does nothing
-        # self.basic_array.update(tick)
-
         self.basic_lvs.update(self.tick)
+
         lvs_consumed_energy = self.basic_lvs.get_consumed_energy()
-
         motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
-
-        # Note: this does nothing
-        # self.basic_motor.update(tick)
-        # motor_consumed_energy = basic_motor.get_consumed_energy()
-
         array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
 
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
@@ -176,6 +175,7 @@ class ExampleSimulation:
         tick_array[0] = 0
 
         # ----- Array calculations -----
+
         cumulative_delta_energy = np.cumsum(delta_energy)
         battery_variables_array = self.basic_battery.update_array(cumulative_delta_energy)
 
@@ -207,27 +207,39 @@ class ExampleSimulation:
 
         # ----- Plotting -----
 
-        arrays_to_plot = [speed_kmh, np.cumsum(distance), state_of_charge, delta_energy,
-                          solar_irradiances, wind_speeds]
-        y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                   "Solar irradiance (W/m^2)", "Wind speeds (km/h)"]
-        sns.set_style("whitegrid")
-        f, axes = plt.subplots(3, 2, figsize=(12, 8))
+        if plot_results:
+            arrays_to_plot = [speed_kmh, np.cumsum(distance), state_of_charge, delta_energy,
+                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
+                              cloud_covers]
 
-        with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
-            for index, axis in enumerate(axes.flatten()):
-                df = pd.DataFrame(dict(time=timestamps / 3600, value=arrays_to_plot[index]))
-                g = sns.lineplot(x="time", y="value", data=df, ax=axis)
-                g.set(xlabel="time (hrs)", ylabel=y_label[index])
-                pbar.update(1)
-        print()
-        sns.despine()
-        plt.setp(axes)
-        plt.tight_layout()
-        plt.show()
+            # increase this constant to speed up plotting, must be an integer
+            compress_constant = 4
+
+            for index, array in enumerate(arrays_to_plot):
+                arrays_to_plot[index] = array[::compress_constant]
+
+            y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
+            sns.set_style("whitegrid")
+            f, axes = plt.subplots(4, 2, figsize=(12, 8))
+
+            with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
+                for index, axis in enumerate(axes.flatten()):
+                    df = pd.DataFrame(dict(time=timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
+                    g = sns.lineplot(x="time", y="value", data=df, ax=axis)
+                    g.set(xlabel="time (hrs)", ylabel=y_label[index])
+                    pbar.update(1)
+            print()
+            sns.despine()
+            plt.setp(axes)
+            plt.tight_layout()
+            plt.show()
 
 
+# TODO: put this in a separate file
 def main():
+
+    # length of the simulation in seconds
     simulation_length = 60 * 60 * 10
 
     """
@@ -251,9 +263,9 @@ def main():
 
     """
 
-    input_speed = np.array([54, 34, 45, 65, 43, 23, 89, 54, 100, 20])
+    input_speed = np.array([100, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 
-    print(f"Input speeds: {input_speed}\n")
+    # input_speed = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
     weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
@@ -268,7 +280,7 @@ def main():
 
     simulation_model = ExampleSimulation(google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick=1,
                                          simulation_duration=simulation_length)
-    simulation_model.run_model(speed=input_speed)
+    simulation_model.run_model(speed=input_speed, plot_results=True)
 
 
 if __name__ == "__main__":
