@@ -351,9 +351,11 @@ class WeatherForecasts:
         Returns: The wind speeds in the direction opposite to the bearing of the vehicle
         """
 
-        # wind is 90 degrees, car is 90 degrees. cos(0) = 1. max wind speed opposite of car
-        # wind is 90 degrees, car is 180 degrees. cos(pi) = -1. max wind speed opposite of car
-        return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
+        # wind is 90 degrees, car is 90 degrees. cos(0) = 1. wind speed < 0, meaning in direction of the vehicle
+        # wind is 90 degrees, car is 180 degrees. cos(-pi/2) = 0 . wind speed = 0
+        # wind is 90 degrees, car is 270 degrees, cos(-pi) = -1 wind speed > 0, meaning in opposite direction
+        # wind is 90 degrees, car is 360 degrees, cos(-pi/3) = 0, wind speed = 0
+        return -1 * wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
 
     @staticmethod
     def get_weather_advisory(weather_id):
