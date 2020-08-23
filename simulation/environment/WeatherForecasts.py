@@ -137,6 +137,7 @@ class WeatherForecasts:
         else:
             weather_data_list = response[weather_data_frequency]
 
+        # If the weather data is too long, then append the daily requests as well.
         if weather_data_frequency == "hourly" and duration > 24:
 
             url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
@@ -146,9 +147,9 @@ class WeatherForecasts:
             response = json.loads(r.text)
 
             if isinstance(response["daily"], dict):
-                weather_data_list = weather_data_list + [response["daily"]][1:]
+                weather_data_list = weather_data_list + [response["daily"]][2:]
             else:
-                weather_data_list = weather_data_list + response["daily"][1:]
+                weather_data_list = weather_data_list + response["daily"][2:]
 
         """ weather_data_list is a list of weather forecast dictionaries.
             Weather dictionaries contain weather data points (wind speed, direction, cloud cover)
@@ -165,6 +166,10 @@ class WeatherForecasts:
             weather_array[i][3] = response['timezone_offset']
             weather_array[i][4] = weather_data_dict["dt"] + response["timezone_offset"]
             weather_array[i][5] = weather_data_dict["wind_speed"]
+
+            #wind degrees follows the meteorlogical convention. So, 0 degrees means that the wind is blowing
+            #   from the north to the south. Using the Azimuthal system, this would mean 180 degrees.
+            #   90 degrees becomes 270 degrees, 180 degrees becomes 0 degrees, etc
             weather_array[i][6] = weather_data_dict["wind_deg"]
             weather_array[i][7] = weather_data_dict["clouds"]
             weather_array[i][8] = weather_data_dict["weather"][0]["id"]
@@ -189,16 +194,19 @@ class WeatherForecasts:
         - [7]: (latitude, longitude, dt (UNIX time), wind_speed, wind_direction,
                      cloud_cover, description_id)
         """
-        # time_length = {"current": 1, "hourly": 24, "daily": 8}
-        time_length = int(duration)
+
+        if int(duration) > 48 and weather_data_frequency == "hourly":
+            time_length = {"current": 1, "hourly": 54, "daily": 8}
+        else:
+            time_length = {"current": 1, "hourly": 48, "daily": 8}
 
         num_coords = len(coords)
 
-        weather_forecast = np.zeros((num_coords, time_length, 9))
+        weather_forecast = np.zeros((num_coords, time_length[weather_data_frequency], 9))
 
         with tqdm(total=len(coords), file=sys.stdout, desc="Calling OpenWeatherAPI") as pbar:
             for i, coord in enumerate(coords):
-                weather_forecast[i] = self.get_coord_weather_forecast(coord, weather_data_frequency, duration)
+                weather_forecast[i] = self.get_coord_weather_forecast(coord, weather_data_frequency, int(duration))
                 pbar.update(1)
         print()
 
@@ -346,16 +354,16 @@ class WeatherForecasts:
 
         vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
         wind_speeds: (float[N]) The absolute speeds in m/s
-        wind_directions: (float[N]) The azimuth angle of the wind, in degrees
+        wind_directions: (float[N]) The wind direction in the meteorlogical convention. To convert from
+            meteorlogical convention to azimuth angle, use (x + 180) % 360
 
         Returns: The wind speeds in the direction opposite to the bearing of the vehicle
         """
 
-        # wind is 90 degrees, car is 90 degrees. cos(0) = 1. wind speed < 0, meaning in direction of the vehicle
-        # wind is 90 degrees, car is 180 degrees. cos(-pi/2) = 0 . wind speed = 0
-        # wind is 90 degrees, car is 270 degrees, cos(-pi) = -1 wind speed > 0, meaning in opposite direction
-        # wind is 90 degrees, car is 360 degrees, cos(-pi/3) = 0, wind speed = 0
-        return -1 * wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
+        #wind direction is 90 degrees meteorlogical, so it is 270 degrees azimuthal. car is 90 degrees
+        #   cos(90 - 90) = cos(0) = 1. Wind speed is moving opposite to the car,
+        #car is 270 degrees, cos(90-270) = -1. Wind speed is in direction of the car.
+        return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
 
     @staticmethod
     def get_weather_advisory(weather_id):
