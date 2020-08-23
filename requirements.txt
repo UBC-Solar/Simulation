@@ -4,7 +4,6 @@ requests>=2.24.0
 scipy>=1.5.1
 matplotlib>=3.2.2
 polyline>=1.4.0
-simulation~=0.0.1
 seaborn~=0.10.1
 pandas~=1.0.5
 tqdm~=4.48.2
