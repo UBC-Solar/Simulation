@@ -167,7 +167,7 @@ class WeatherForecasts:
             weather_array[i][4] = weather_data_dict["dt"] + response["timezone_offset"]
             weather_array[i][5] = weather_data_dict["wind_speed"]
 
-            #wind degrees follows the meteorlogical convention. So, 0 degrees means that the wind is blowing
+            # wind degrees follows the meteorlogical convention. So, 0 degrees means that the wind is blowing
             #   from the north to the south. Using the Azimuthal system, this would mean 180 degrees.
             #   90 degrees becomes 270 degrees, 180 degrees becomes 0 degrees, etc
             weather_array[i][6] = weather_data_dict["wind_deg"]
@@ -360,9 +360,9 @@ class WeatherForecasts:
         Returns: The wind speeds in the direction opposite to the bearing of the vehicle
         """
 
-        #wind direction is 90 degrees meteorlogical, so it is 270 degrees azimuthal. car is 90 degrees
+        # wind direction is 90 degrees meteorlogical, so it is 270 degrees azimuthal. car is 90 degrees
         #   cos(90 - 90) = cos(0) = 1. Wind speed is moving opposite to the car,
-        #car is 270 degrees, cos(90-270) = -1. Wind speed is in direction of the car.
+        # car is 270 degrees, cos(90-270) = -1. Wind speed is in direction of the car.
         return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
 
     @staticmethod
