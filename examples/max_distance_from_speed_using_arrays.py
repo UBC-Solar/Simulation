@@ -212,8 +212,7 @@ class ExampleSimulation:
                               solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
                               cloud_covers]
 
-            # increase this constant to speed up plotting, must be an integer
-            compress_constant = 4
+            compress_constant = int(timestamps.shape[0] / 5000)
 
             for index, array in enumerate(arrays_to_plot):
                 arrays_to_plot[index] = array[::compress_constant]
@@ -222,6 +221,7 @@ class ExampleSimulation:
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
             sns.set_style("whitegrid")
             f, axes = plt.subplots(4, 2, figsize=(12, 8))
+            f.suptitle("Simulation results", fontsize=16, weight="bold")
 
             with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
                 for index, axis in enumerate(axes.flatten()):
@@ -240,7 +240,11 @@ class ExampleSimulation:
 def main():
 
     # length of the simulation in seconds
-    simulation_length = 60 * 60 * 10
+    simulation_length = 60 * 60 * 9
+
+    # input_speed = np.array([100, 87, 65, 89, 43, 54, 45, 23, 34, 20])
+
+    input_speed = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 
     """
     Note: it no longer matters how many elements the input_speed array has, the simulation automatically
@@ -248,10 +252,10 @@ def main():
 
     Examples:
       If you want a constant speed for the entire simulation, insert a single element
-      into the input_speed array.
-
-    >>> input_speed = np.array([30]) <-- constant speed of 30km/h
-
+      into the input_speed array. 
+      
+      >>> input_speed = np.array([30]) <-- constant speed of 30km/h
+    
       If you want 50km/h in the first half of the simulation and 60km/h in the second half,
       do the following:
 
@@ -260,12 +264,7 @@ def main():
       This logic will apply for all subsequent array lengths (3, 4, 5, etc.)
       
       Keep in mind, however, that the condition len(input_speed) <= simulation_length must be true
-
     """
-
-    input_speed = np.array([100, 87, 65, 89, 43, 54, 45, 23, 34, 20])
-
-    # input_speed = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
     weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
