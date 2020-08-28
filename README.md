@@ -1,12 +1,14 @@
 # Simulation
 
+Welcome to UBC Solar's race strategy simulation environment!
+
 ## Getting started
 
 ### Prerequisites
 
-- Python 3 (Python 2.7 is not supported)
-- pip Python package installer (should come with your Python installation)
+- Python 3 (https://www.python.org/downloads/)
 - Git version control (https://git-scm.com/downloads)
+- pip Python package installer (should come with your Python installation)
 
 Open up your terminal/command prompt and execute the following commands to check your installations.
 
@@ -24,7 +26,7 @@ The above command should return a version number if you have Git installed.
 python --version
 ```
 
-Make sure that your Python version is in the format 3.x.x.
+NOTE: Python 2.7 is not supported so please make sure that your Python version is in the format 3.x.x.
 
 ### Installing the simulation package
 
@@ -49,7 +51,7 @@ import simulation
 battery = simulation.BasicBattery(0.90)
 ```
 
-## Run an example simulation:
+### Run an example simulation
 
 #### Ubuntu/MacOS
 
@@ -62,15 +64,15 @@ python3 examples/max_distance_from_speed_using_arrays.py
 python .\examples\max_distance_from_speed_using_arrays.py
 ```
 
-## Testing
+### Testing
 
-### Installation
+#### Installation
 
 ``` bash
 pip3 install -U pytest
 ```
 
-### Run
+#### Run
 
 To run the testing framework, navigate to the simulation directory and run the following:
 
