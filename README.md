@@ -1,30 +1,32 @@
 # Simulation
 
-## Installation
+## Getting started
 
-#### Ubuntu
-```bash
-sudo apt update && sudo apt install python3-dev
-pip3 install .
-```
+### Prerequisites
 
-#### Mac OS X
-```bash
-TODO
-```
+- Python 3 (Python 2.7 is not supported)
+- pip Python package installer (should come with your Python installation)
+- Git version control (https://git-scm.com/downloads)
 
-#### Windows 10
-Install the latest stable release from https://www.python.org/downloads/windows/
+Open up your terminal/command prompt and execute the following commands to check your installations.
 
-### Install using pip
-First ensure you have Git installed by running: 
+- Ensure you have Git installed by running: 
 
 ```bash
 git --version
 ```
 
-The command should return a version number if you have Git installed. If you do not have Git installed,
-install the latest stable release from https://git-scm.com/downloads before moving on.
+The above command should return a version number if you have Git installed.
+
+- Check your Python installation by running:
+
+```bash
+python --version
+```
+
+Make sure that your Python version is in the format 3.x.x.
+
+### Installing the simulation package
 
 Clone the simulation repository into any directory using: 
 
@@ -38,15 +40,19 @@ To install the simulation package, navigate to the directory you cloned the repo
 pip3 install -e .
 ```
 
-You should then be able to import the simulation module into your Python (.py) scripts as shown below:
+You should then be able to import the simulation module into your Python (.py) scripts and use the simulation objects as shown below:
 
 ```python
 import simulation
+
+# creates a battery object
+battery = simulation.BasicBattery(0.90)
 ```
 
 ## Run an example simulation:
 
 #### Ubuntu/MacOS
+
 ```bash
 python3 examples/max_distance_from_speed_using_arrays.py
 ```
@@ -59,11 +65,15 @@ python .\examples\max_distance_from_speed_using_arrays.py
 ## Testing
 
 ### Installation
+
 ``` bash
 pip3 install -U pytest
 ```
 
 ### Run
+
+To run the testing framework, navigate to the simulation directory and run the following:
+
 ``` bash
-pytest tests/
+pytest
 ```
