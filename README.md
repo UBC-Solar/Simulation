@@ -30,19 +30,19 @@ NOTE: Python 2.7 is not supported so please make sure that your Python version i
 
 ### Installing the simulation package
 
-1. Clone the simulation repository into any directory of your choosing by running: 
+- Clone the simulation repository into any directory of your choosing by running: 
 
     ```bash
     git clone https://github.com/UBC-Solar/Simulation.git
     ```
 
-2. You should now have a "Simulation" folder inside your chosen directory. To enter the "Simulation" folder run:
+- You should now have a "Simulation" folder inside your chosen directory. To enter the "Simulation" folder run:
 
     ```bash
     cd Simulation
     ```
 
-3. To install the simulation package, run the following:
+- To install the simulation package, run the following:
 
     ```bash
     pip install -e .
@@ -56,7 +56,7 @@ NOTE: Python 2.7 is not supported so please make sure that your Python version i
 
     If neither work, you either do not have pip installed or are not in the correct directory.
 
-4. If they did work, you should then be able to import the simulation module in your Python (.py) scripts and use the simulation objects as shown below:
+- If they did work, you should then be able to import the simulation module in your Python (.py) scripts and use the simulation objects as shown below:
 
     ```python
     import simulation
