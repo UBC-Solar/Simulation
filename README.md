@@ -30,28 +30,47 @@ NOTE: Python 2.7 is not supported so please make sure that your Python version i
 
 ### Installing the simulation package
 
-Clone the simulation repository into any directory using: 
+1. Clone the simulation repository into any directory of your choosing by running: 
 
-```bash
-git clone https://github.com/UBC-Solar/Simulation.git
-```
+    ```bash
+    git clone https://github.com/UBC-Solar/Simulation.git
+    ```
 
-To install the simulation package, navigate to the directory you cloned the repository into and run the following:
+2. You should now have a "Simulation" folder inside your chosen directory. To enter the "Simulation" folder run:
 
-```bash
-pip3 install -e .
-```
+    ```bash
+    cd Simulation
+    ```
 
-You should then be able to import the simulation module into your Python (.py) scripts and use the simulation objects as shown below:
+3. To install the simulation package, run the following:
 
-```python
-import simulation
+    ```bash
+    pip install -e .
+    ```
 
-# creates a battery object
-battery = simulation.BasicBattery(0.90)
-```
+    If the above command doesn't work, try the one below:
+
+    ```bash
+    pip3 install -e .
+    ```
+
+    If neither work, you either do not have pip installed or are not in the correct directory.
+
+4. If they did work, you should then be able to import the simulation module in your Python (.py) scripts and use the simulation objects as shown below:
+
+    ```python
+    import simulation
+
+    # creates a battery object
+    battery = simulation.BasicBattery(0.90)
+    ```
 
 ### Run an example simulation
+
+To run an example simulation, you can either run the main Python script directly from your IDE or you can run it from your terminal. 
+The following instructions are for running it from your terminal.
+
+Before running the following commands make sure you have navigated to the "Simulation" folder on your terminal or the commands will not work.
 
 #### Ubuntu/MacOS
 
@@ -66,16 +85,20 @@ python .\examples\max_distance_from_speed_using_arrays.py
 
 ### Testing
 
-#### Installation
-
-``` bash
-pip3 install -U pytest
-```
-
-#### Run
-
-To run the testing framework, navigate to the simulation directory and run the following:
+To run the pre-written tests and ensure the simulation package is functioning correctly, navigate to the "Simulation" folder on your terminal, and run:
 
 ``` bash
 pytest
+```
+
+If your terminal returns something like "pytest is not recognized as an internal or external command...", install PyTest by executing the following:
+
+``` bash
+pip install -U pytest
+```
+
+Or:
+
+```bash
+pip3 install -U pytest
 ```
