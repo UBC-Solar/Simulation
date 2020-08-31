@@ -29,7 +29,7 @@ class BasicMotor(BaseMotor):
         self.friction_force = (self.vehicle_mass * self.acceleration_g * self.road_friction)
 
         self.e_mc = 0.98  # motor controller efficiency, subject to change
-        self.e_m = 0.9  # motor efficiency, subject to change
+        self.e_m = 0.9  # motor efficiency, subject to chang
 
         # print("torque experienced by motor: {} Nm".format(self.constant_torque))
 
@@ -130,6 +130,30 @@ class BasicMotor(BaseMotor):
         motor_controller_input_energies = motor_output_energies / (self.e_m * self.e_mc)
 
         return motor_controller_input_energies
+
+    def calculate_motor_efficiency(self, motor_angular_speed, motor_output_power):
+        """
+        Create a function which takes in the motor's operating angular speed and output power and returns efficiency
+        of the motor. Based on data modelling done in MATLAB
+
+        :param motor_angular_speed: (float[N]) angular speed motor operates in rad/s
+        :param motor_output_power: (float[N]) power motor outputs to the wheel in W
+
+        : returns (float[N]) efficiency of the motor for a given angular speed and output power
+        """
+        rads_rpm_conversion_factor = 30 / math.pi
+
+        revolutions_per_minute = motor_angular_speed * rads_rpm_conversion_factor
+
+        motor_efficiency = 0.7382 - 6.281e-5 * motor_output_power + 6.708e-4 * revolutions_per_minute - 2.89e-8 * \
+            motor_output_power ** 2 + 2.416e-7 * motor_output_power * revolutions_per_minute - 8.672e-7 * \
+            revolutions_per_minute ** 2 + 5.653e-12 * motor_output_power ** 3 - 1.74e-11 * motor_output_power ** 2 \
+            * revolutions_per_minute - 7.322e-11 * motor_output_power * revolutions_per_minute ** 2 \
+            + 3.263e-10 * revolutions_per_minute ** 3
+
+        return motor_efficiency
+
+
 
     def __str__(self):
         return (f"Tire radius: {self.tire_radius}m\n"
