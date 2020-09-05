@@ -19,6 +19,7 @@ from simulation.environment.GIS import GIS
 from simulation.environment.SolarCalculations import SolarCalculations
 from simulation.environment.WeatherForecasts import WeatherForecasts
 
+from simulation.main import Simulation
 
 __version__ = "0.0.1"
 
