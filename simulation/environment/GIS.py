@@ -1,19 +1,30 @@
-import requests
-import time
-import sys
 import json
-import polyline
-import numpy as np
 import math
 import os
-from data.route.__init__ import route_directory
-import simulation.common.helpers as helpers
-from simulation.common.constants import EARTH_RADIUS
+import sys
+
+import numpy as np
+import polyline
+import requests
 from tqdm import tqdm
+
+from data.route.__init__ import route_directory
+from simulation.common import constants
 
 
 class GIS:
     def __init__(self, api_key, origin_coord, dest_coord, waypoints, force_update=False):
+        """
+        Initialises a GIS (geographic location system) object. This object is responsible for getting the
+        simulation's planned route from the Google Maps API and performing operations on the received data.
+
+        :param api_key: API key that allows access to the Google Maps API
+        :param origin_coord: NumPy array containing the start coordinate (lat, long) of the planned travel route
+        :param dest_coord: NumPy array containing the end coordinate (lat, long) of the planned travel route
+        :param waypoints: NumPy array containing the route waypoints to travel through during simulation
+        :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
+
+        """
 
         self.api_key = api_key
 
@@ -71,10 +82,10 @@ class GIS:
         self.path indices of coordinates which have a distance from the starting point
         closest to the point distances
 
-        :param cumulative_distances: (float[N]) array of distances, where 
-            cumulative_distances[x] > cumulative_distances[x-1]
+        :param cumulative_distances: (float[N]) array of distances,
+        where cumulative_distances[x] > cumulative_distances[x-1]
         
-        returns: (float[N]) array of indices of path
+        :returns: (float[N]) array of indices of path
         """
 
         current_coordinate_index = 0
@@ -125,7 +136,7 @@ class GIS:
 
         time_diff = np.repeat(time_diff_temp, 625)[0:len(coords)]
 
-        return time_diff
+        return np.array(time_diff, dtype=np.uint64)
 
     def get_time_zones(self, gis_indices):
         """
@@ -133,7 +144,7 @@ class GIS:
 
         :param gis_indices: (float[N]) array of path indices
 
-        returns: (float[N]) array of time zones in seconds
+        :returns: (float[N]) array of time zones in seconds
         """
 
         return self.path_time_zones[gis_indices]
@@ -149,7 +160,7 @@ class GIS:
         :param time_zones: (int[N])
         """
 
-        return timestamps + starting_drive_time - (time_zones[0] - time_zones)
+        return np.array(timestamps + starting_drive_time - (time_zones[0] - time_zones), dtype=np.uint64)
 
     # ----- Getters -----
 
@@ -159,14 +170,14 @@ class GIS:
 
         :param gis_indices: (float[N]) array of path indices
 
-        returns: (float[N]) array of road gradients
+        :returns: (float[N]) array of road gradients
         """
 
         return self.path_gradients[gis_indices]
 
     def get_path(self):
         """
-       self,  Returns all N coordinates of the path in a numpy array
+        Returns all N coordinates of the path in a NumPy array
         [N][latitude, longitude]
         """
 
@@ -174,7 +185,7 @@ class GIS:
 
     def get_path_elevations(self):
         """
-        Returns all N elevations of the path in a numpy array
+        Returns all N elevations of the path in a NumPy array
         [N][elevation]
         """
 
@@ -182,7 +193,7 @@ class GIS:
 
     def get_path_distances(self):
         """
-        Returns all N-1 distances of the path in a numpy array
+        Returns all N-1 distances of the path in a NumPy array
         [N-1][elevation]
         """
 
@@ -190,7 +201,7 @@ class GIS:
 
     def get_path_gradients(self):
         """
-        Returns all N-1 gradients of a path in a numpy array
+        Returns all N-1 gradients of a path in a NumPy array
         [N-1][gradient]
         """
 
@@ -203,11 +214,11 @@ class GIS:
         Returns a path between the origin coordinate and the destination coordinate,
         passing through a group of optional waypoints.
 
-        origin_coord: A numpy array [latitude, longitude] of the starting coordinate
-        dest_coord: A numpy array [latitude, longitude] of the destination coordinate
-        waypoint: A numpy array [n][latitude, longitude], where n<=10
+        origin_coord: A NumPy array [latitude, longitude] of the starting coordinate
+        dest_coord: A NumPy array [latitude, longitude] of the destination coordinate
+        waypoint: A NumPy array [n][latitude, longitude], where n<=10
 
-        Returns: A numpy array [n][latitude, longitude], marking out the path.
+        Returns: A NumPy array [n][latitude, longitude], marking out the path.
 
         https://developers.google.com/maps/documentation/directions/start
         """
@@ -264,19 +275,18 @@ class GIS:
 
         # Removes duplicate coordinates to prevent gradient calculation errors
         if route.size != 0:
-            duplicate_coordinate_indices = np.where((np.diff(route[:, 0]) == 0)) and np.where((np.diff(route[:, 1]) == 0))
+            duplicate_coordinate_indices = np.where((np.diff(route[:, 0]) == 0)) and np.where(
+                (np.diff(route[:, 1]) == 0))
             route = np.delete(route, duplicate_coordinate_indices, axis=0)
 
         return route
 
     def calculate_path_elevations(self, coords):
         """
-        Returns the elevations of every coordinate the array of coordinates passed in
-            as a coordinate
+        Returns the elevations of every coordinate in the array of coordinates passed in as a coordinate
 
-        coords: A numpy array [n][latitude, longitude]
-
-        Returns: A numpy array [n][elevation] in metres
+        :param coords: A NumPy array [n][latitude, longitude]
+        :returns: A NumPy array [n][elevation] in metres
         """
 
         # construct URL
@@ -322,17 +332,15 @@ class GIS:
     def calculate_path_distances(coords):
         """
         The coordinates are spaced quite tightly together, and they capture the
-            features of the road. So, the lines between every pair of adjacent
-            coordinates can be treated like a straight line, and the distances can
-            thus be obtained.
+        features of the road. So, the lines between every pair of adjacent
+        coordinates can be treated like a straight line, and the distances can
+        thus be obtained.
 
-        coords: A numpy array [n][latitude, longitude]
+        :param coords: a NumPy array of coordinates [n][latitude, longitude]
 
-        Returns:
-            - A numpy array [n-1][distances],
+        :returns path_distances: a NumPy array [n-1][distances],
         """
 
-        # TODO: can simplify this using np.diff()
         offset = np.roll(coords, (1, 1))
 
         # get the latitude and longitude differences, in radians
@@ -353,7 +361,7 @@ class GIS:
         square_lng = np.square(diff_lng_adjusted)
         square_sum = square_lat + square_lng
 
-        path_distances = EARTH_RADIUS * np.sqrt(square_sum)
+        path_distances = constants.EARTH_RADIUS * np.sqrt(square_sum)
 
         return path_distances
 
@@ -362,11 +370,10 @@ class GIS:
         """
         Get the approximate gradients of every point on the path.
 
-        elevations: [N][elevations]
-        distances: [N-1][distances]
+        :param elevations: [N][elevations]
+        :param distances: [N-1][distances]
 
-        Returns:
-            - gradients[N-1]
+        :returns gradients: [N-1][gradients]
 
         Note:
             - gradient > 0 corresponds to uphill
@@ -380,7 +387,6 @@ class GIS:
         # -------------
         #   [1 1 1 1]
 
-        # TODO: can simplify this using np.diff()
         offset = np.roll(elevations, 1)
         delta_elevations = (elevations - offset)[1:]
 
@@ -392,18 +398,16 @@ class GIS:
 
         return gradients
 
-    def calculate_current_elevation(self):
+    def get_current_elevation(self):
         """
         Get the elevation of the closest point to the current point
         """
-
         return self.path_elevations[self.current_index]
 
-    def calculate_current_gradient(self):
+    def get_current_gradient(self):
         """
         Get the gradient of the point closest to the current location
         """
-
         return self.path_gradients[self.current_index]
 
     def calculate_current_heading(self):
@@ -469,9 +473,9 @@ class GIS:
         """
         Returns the closest coordinate to the current coordinate
 
-        incremental_distance: distance in m covered in the latest tick
+        :param incremental_distance: distance in m covered in the latest tick
 
-        Returns: The new index of the vehicle
+        :returns: The new index of the vehicle
         """
 
         additional_distance = self.distance_remainder + incremental_distance
@@ -503,3 +507,4 @@ if __name__ == "__main__":
     dest_coord = np.array([43.6142, -116.2080])
 
     locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints)
+    print(locationSystem.path_elevations[0], locationSystem.path_elevations[-1])
