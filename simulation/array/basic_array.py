@@ -10,7 +10,7 @@ class BasicArray(BaseArray):
         # solar cell efficiency
         self.panel_efficiency = 0.2
 
-        # solar panel size in m2
+        # solar panel size in m^2
         self.panel_size = 6
 
         # please do not use this.
@@ -19,15 +19,15 @@ class BasicArray(BaseArray):
     @staticmethod
     def calculate_produced_power(solar_irradiance, panel_efficiency, panel_size):
         """
-        returns the power produced by a solar panel in W
+        returns the power produced by a solar panel in watts
 
-        :param solar_irradiance: (float) a value for global horizontal irradiance(GHI)
+        :param solar_irradiance: (float) a value for global horizontal irradiance (GHI)
             in W/m2
         :param panel_efficiency: (float) the efficiency of the solar cells as a number
             between 0 and 1, in atmosphere and with sunlight.
         :param panel_size: (float) the area of the solar panels in m2
         
-        returns: the power produced by a solar panel in W
+        :returns: the power produced by a solar panel in W
         """
 
         produced_power = solar_irradiance * panel_efficiency * panel_size
