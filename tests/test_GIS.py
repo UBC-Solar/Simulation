@@ -35,17 +35,17 @@ def test_calculate_closest_gis_indices(gis):
     assert np.all(result == np.array([0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3]))
 
 
-def test_calculate_time_zones(gis):
-    raise NotImplementedError
+# def test_calculate_time_zones(gis):
+#     raise NotImplementedError
 
 
-def test_adjust_timestamps_to_local_times(gis):
-    raise NotImplementedError
+# def test_adjust_timestamps_to_local_times(gis):
+#     raise NotImplementedError
 
 
-def test_calculate_path_distances(gis):
-    raise NotImplementedError
+# def test_calculate_path_distances(gis):
+#     raise NotImplementedError
 
 
-def test_calculate_path_gradients(gis):
-    raise NotImplementedError
+# def test_calculate_path_gradients(gis):
+#     raise NotImplementedError
