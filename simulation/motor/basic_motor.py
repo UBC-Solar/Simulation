@@ -106,7 +106,7 @@ class BasicMotor(BaseMotor):
         :param motor_angular_speed: (float[N]) angular speed motor operates in rad/s
         :param motor_output_power: (float[N]) power motor outputs to the wheel in W
 
-        : returns (float[N]) efficiency of the motor for a given angular speed and output power
+        : returns (float[N]) efficiency of the motor
         """
         rads_rpm_conversion_factor = 30 / math.pi
 
@@ -119,6 +119,34 @@ class BasicMotor(BaseMotor):
             + 3.263e-10 * revolutions_per_minute ** 3
 
         return e_m
+
+    @staticmethod
+    def calculate_motor_controller_efficiency(motor_angular_speed, motor_output_power):
+        """
+        Calculates a NumPy array of motor controller efficiency from NumPy array of operating angular speeds and
+        NumPy array of output power. Based on data obtained from the WaveSculptor Motor Controller Datasheet efficiency
+        curve for a 90 V DC Bus and modelling done in MATLAB.
+
+        r squared value: 0.7431
+        :param motor_angular_speed: (float[N]) angular speed motor operates in rad/s
+        :param motor_output_power: (float[N]) power motor outputs to the wheel in W
+
+        Returns: (float[N]) efficiency of the motor controller
+
+        """
+
+        motor_torque_array = motor_output_power / motor_angular_speed
+
+        e_mc = 0.7694 + 0.007818 * motor_angular_speed + 0.007043 * motor_torque_array - 1.658e-4 * motor_angular_speed\
+            ** 2 - 1.806e-5 * motor_torque_array * motor_angular_speed - 1.909e-4 * motor_torque_array ** 2 + 1.602e-6 \
+            * motor_angular_speed ** 3 + 4.236e-7 * motor_angular_speed ** 2 * motor_torque_array - 2.306e-7 \
+            * motor_angular_speed * motor_torque_array ** 2 + 2.122e-06 * motor_torque_array ** 3 - 5.701e-09 \
+            * motor_angular_speed ** 4 - 2.054e-9 * motor_angular_speed ** 3 * motor_torque_array \
+            - 3.126e-10 * motor_angular_speed ** 2 * motor_torque_array ** 2 + 1.708e-09 * motor_angular_speed \
+            * motor_torque_array ** 3 - 8.094e-09 * motor_torque_array ** 4
+
+        return e_mc
+
 
     def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, tick):
         """
@@ -151,6 +179,7 @@ class BasicMotor(BaseMotor):
                     road_friction_array + drag_forces + g_forces) * self.tire_radius * tick
 
         e_m = self.calculate_motor_efficiency(required_angular_speed_rads_array, motor_output_energies)
+        # e_mc = self.calculate_motor_controller_efficiency()
 
         motor_controller_input_energies = motor_output_energies / (e_m * self.e_mc)
 
@@ -163,3 +192,11 @@ class BasicMotor(BaseMotor):
                 f"Acceleration of gravity: {self.acceleration_g}m/s^2\n"
                 f"Motor controller efficiency: {self.e_mc}%\n"
                 f"Motor efficiency: {self.e_m}%\n")
+
+
+if __name__ == "__main__":
+    motor = BasicMotor()
+    required_speed_kmh = np.array([60, 60, 60])
+    gradients = np.array([0.3, 0.2, 0.1])
+    output_power = np.array([500, 1000, 4000])
+    print(motor.calculate_motor_efficiency(required_speed_kmh, output_power))
