@@ -98,17 +98,20 @@ class BasicMotor(BaseMotor):
         self.consumed_energy = self.input_power * tick
 
     @staticmethod
-    def calculate_motor_efficiency(motor_angular_speed, motor_output_power):
+    def calculate_motor_efficiency(motor_angular_speed, motor_output_energy, tick):
         """
         Calculates a NumPy array of motor efficiency from NumPy array of operating angular speeds and NumPy array
             of output power. Based on data obtained from NGM SC-M150 Datasheet and modelling done in MATLAB
 
         r squared value: 0.873
         :param motor_angular_speed: (float[N]) angular speed motor operates in rad/s
-        :param motor_output_power: (float[N]) power motor outputs to the wheel in W
+        :param motor_output_energy: (float[N]) energy motor outputs to the wheel in J
+        :param tick: length of 1 update cycle in seconds
 
         : returns (float[N]) efficiency of the motor
         """
+        # Power = Energy / Time
+        motor_output_power = motor_output_energy * tick
         rads_rpm_conversion_factor = 30 / math.pi
 
         revolutions_per_minute = motor_angular_speed * rads_rpm_conversion_factor
@@ -122,7 +125,7 @@ class BasicMotor(BaseMotor):
         return e_m
 
     @staticmethod
-    def calculate_motor_controller_efficiency(motor_angular_speed, motor_output_power):
+    def calculate_motor_controller_efficiency(motor_angular_speed, motor_output_energy, tick):
         """
         Calculates a NumPy array of motor controller efficiency from NumPy array of operating angular speeds and
         NumPy array of output power. Based on data obtained from the WaveSculptor Motor Controller Datasheet efficiency
@@ -130,13 +133,20 @@ class BasicMotor(BaseMotor):
 
         r squared value: 0.7431
         :param motor_angular_speed: (float[N]) angular speed motor operates in rad/s
-        :param motor_output_power: (float[N]) power motor outputs to the wheel in W
+        :param motor_output_energy: (float[N]) energy motor outputs to the wheel in J
+        :param tick: length of 1 update cycle in seconds
 
         Returns: (float[N]) efficiency of the motor controller
 
         """
 
-        motor_torque_array = motor_output_power / motor_angular_speed
+        # Ignore nan warning. Set nan value to 0
+        np.seterr(divide='ignore', invalid='ignore')
+        # Power = Energy / Time
+        motor_output_power = motor_output_energy / tick
+        # Torque = Power / Angular Speed
+        motor_torque_array = np.nan_to_num(motor_output_power / motor_angular_speed)
+        np.seterr(divide='warn', invalid='warn')
 
         e_mc = 0.7694 + 0.007818 * motor_angular_speed + 0.007043 * motor_torque_array - 1.658e-4 * motor_angular_speed\
             ** 2 - 1.806e-5 * motor_torque_array * motor_angular_speed - 1.909e-4 * motor_torque_array ** 2 + 1.602e-6 \
@@ -147,7 +157,6 @@ class BasicMotor(BaseMotor):
             * motor_torque_array ** 3 - 8.094e-09 * motor_torque_array ** 4
 
         return e_mc
-
 
     def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, tick):
         """
@@ -179,10 +188,10 @@ class BasicMotor(BaseMotor):
         motor_output_energies = required_angular_speed_rads_array * (
                     road_friction_array + drag_forces + g_forces) * self.tire_radius * tick
 
-        e_m = self.calculate_motor_efficiency(required_angular_speed_rads_array, motor_output_energies)
-        # e_mc = self.calculate_motor_controller_efficiency()
+        e_m = self.calculate_motor_efficiency(required_angular_speed_rads_array, motor_output_energies, tick)
+        e_mc = self.calculate_motor_controller_efficiency(required_angular_speed_rads_array, motor_output_energies, tick)
 
-        motor_controller_input_energies = motor_output_energies / (e_m * self.e_mc)
+        motor_controller_input_energies = motor_output_energies / (e_m * e_mc)
 
         return motor_controller_input_energies
 
@@ -193,11 +202,3 @@ class BasicMotor(BaseMotor):
                 f"Acceleration of gravity: {self.acceleration_g}m/s^2\n"
                 f"Motor controller efficiency: {self.e_mc}%\n"
                 f"Motor efficiency: {self.e_m}%\n")
-
-
-if __name__ == "__main__":
-    motor = BasicMotor()
-    required_speed_kmh = np.array([60, 60, 60])
-    gradients = np.array([0.3, 0.2, 0.1])
-    output_power = np.array([500, 1000, 4000])
-    print(motor.calculate_motor_efficiency(required_speed_kmh, output_power))
