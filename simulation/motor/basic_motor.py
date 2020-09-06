@@ -103,6 +103,7 @@ class BasicMotor(BaseMotor):
         Calculates a NumPy array of motor efficiency from NumPy array of operating angular speeds and NumPy array
             of output power. Based on data obtained from NGM SC-M150 Datasheet and modelling done in MATLAB
 
+        r squared value: 0.873
         :param motor_angular_speed: (float[N]) angular speed motor operates in rad/s
         :param motor_output_power: (float[N]) power motor outputs to the wheel in W
 
