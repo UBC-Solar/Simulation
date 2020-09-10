@@ -97,7 +97,7 @@ class ExampleSimulation:
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
-
+        speed_kmh = helpers.add_accelereation(speed_kmh,500)
         # ----- Expected distance estimate -----
 
         # Array of cumulative distances hopefully travelled in this round
