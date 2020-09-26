@@ -104,23 +104,26 @@ class BasicMotor(BaseMotor):
             of output power. Based on data obtained from NGM SC-M150 Datasheet and modelling done in MATLAB
 
         r squared value: 0.873
+
         :param motor_angular_speed: (float[N]) angular speed motor operates in rad/s
         :param motor_output_energy: (float[N]) energy motor outputs to the wheel in J
         :param tick: length of 1 update cycle in seconds
 
-        : returns (float[N]) efficiency of the motor
+        :returns e_m: (float[N]) efficiency of the motor
         """
+
         # Power = Energy / Time
         motor_output_power = motor_output_energy * tick
         rads_rpm_conversion_factor = 30 / math.pi
 
         revolutions_per_minute = motor_angular_speed * rads_rpm_conversion_factor
 
-        e_m = 0.7382 - 6.281e-5 * motor_output_power + 6.708e-4 * revolutions_per_minute - 2.89e-8 * \
-            motor_output_power ** 2 + 2.416e-7 * motor_output_power * revolutions_per_minute - 8.672e-7 * \
-            revolutions_per_minute ** 2 + 5.653e-12 * motor_output_power ** 3 - 1.74e-11 * motor_output_power ** 2 \
-            * revolutions_per_minute - 7.322e-11 * motor_output_power * revolutions_per_minute ** 2 \
-            + 3.263e-10 * revolutions_per_minute ** 3
+        e_m = 0.7382 - (6.281e-5 * motor_output_power) + (6.708e-4 * revolutions_per_minute) \
+            - (2.89e-8 * motor_output_power ** 2) + (2.416e-7 * motor_output_power * revolutions_per_minute) \
+            - (8.672e-7 * revolutions_per_minute ** 2) + (5.653e-12 * motor_output_power ** 3) \
+            - (1.74e-11 * motor_output_power ** 2 * revolutions_per_minute) \
+            - (7.322e-11 * motor_output_power * revolutions_per_minute ** 2)  \
+            + (3.263e-10 * revolutions_per_minute ** 3)
 
         e_m[e_m < 0.7382 ] = 0.7382
         e_m[e_m > 1] = 1
@@ -135,29 +138,36 @@ class BasicMotor(BaseMotor):
         curve for a 90 V DC Bus and modelling done in MATLAB.
 
         r squared value: 0.7431
+
         :param motor_angular_speed: (float[N]) angular speed motor operates in rad/s
         :param motor_output_energy: (float[N]) energy motor outputs to the wheel in J
         :param tick: length of 1 update cycle in seconds
 
-        Returns: (float[N]) efficiency of the motor controller
+        :returns e_mc (float[N]) efficiency of the motor controller
 
         """
 
         # Ignore nan warning. Set nan value to 0
         np.seterr(divide='ignore', invalid='ignore')
+
         # Power = Energy / Time
         motor_output_power = motor_output_energy / tick
+
         # Torque = Power / Angular Speed
         motor_torque_array = np.nan_to_num(motor_output_power / motor_angular_speed)
+
         np.seterr(divide='warn', invalid='warn')
 
-        e_mc = 0.7694 + 0.007818 * motor_angular_speed + 0.007043 * motor_torque_array - 1.658e-4 * motor_angular_speed\
-            ** 2 - 1.806e-5 * motor_torque_array * motor_angular_speed - 1.909e-4 * motor_torque_array ** 2 + 1.602e-6 \
-            * motor_angular_speed ** 3 + 4.236e-7 * motor_angular_speed ** 2 * motor_torque_array - 2.306e-7 \
-            * motor_angular_speed * motor_torque_array ** 2 + 2.122e-06 * motor_torque_array ** 3 - 5.701e-09 \
-            * motor_angular_speed ** 4 - 2.054e-9 * motor_angular_speed ** 3 * motor_torque_array \
-            - 3.126e-10 * motor_angular_speed ** 2 * motor_torque_array ** 2 + 1.708e-09 * motor_angular_speed \
-            * motor_torque_array ** 3 - 8.094e-09 * motor_torque_array ** 4
+        e_mc = 0.7694 + (0.007818 * motor_angular_speed) + (0.007043 * motor_torque_array) \
+            - (1.658e-4 * motor_angular_speed ** 2) - (1.806e-5 * motor_torque_array * motor_angular_speed) \
+            - (1.909e-4 * motor_torque_array ** 2) + (1.602e-6 * motor_angular_speed ** 3) \
+            + (4.236e-7 * motor_angular_speed ** 2 * motor_torque_array) \
+            - (2.306e-7 * motor_angular_speed * motor_torque_array ** 2) \
+            + (2.122e-06 * motor_torque_array ** 3) - (5.701e-09 * motor_angular_speed ** 4) \
+            - (2.054e-9 * motor_angular_speed ** 3 * motor_torque_array) \
+            - (3.126e-10 * motor_angular_speed ** 2 * motor_torque_array ** 2) \
+            + (1.708e-09 * motor_angular_speed * motor_torque_array ** 3) \
+            - (8.094e-09 * motor_torque_array ** 4)
 
         e_mc[e_mc < 0.9] = 0.9
         e_mc[e_mc > 1] = 1
@@ -169,12 +179,12 @@ class BasicMotor(BaseMotor):
         Create a function which takes in array of elevation, array of wind speed, required
             speed, returns the consumed energy.
 
-        :param required_speed_kmh: (float) required speed in kmh
+        :param required_speed_kmh: (float[N]) required speed array in km/h
         :param gradients: (float[N]) gradient at parts of the road
         :param wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
         :param tick: (int) length of 1 update cycle in seconds
 
-        returns: (float[N]) energy expended at every tick
+        returns: (float[N]) energy expended by the motor at every tick
         """
 
         required_speed_ms = required_speed_kmh / 3.6
@@ -195,7 +205,8 @@ class BasicMotor(BaseMotor):
                     road_friction_array + drag_forces + g_forces) * self.tire_radius * tick
 
         e_m = self.calculate_motor_efficiency(required_angular_speed_rads_array, motor_output_energies, tick)
-        e_mc = self.calculate_motor_controller_efficiency(required_angular_speed_rads_array, motor_output_energies, tick)
+        e_mc = self.calculate_motor_controller_efficiency(required_angular_speed_rads_array,
+                                                          motor_output_energies, tick)
 
         motor_controller_input_energies = motor_output_energies / (e_m * e_mc)
 
