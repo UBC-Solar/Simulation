@@ -1,101 +1,58 @@
 import simulation
 import numpy as np
-import datetime
-import time as timer
+from simulation.common import helpers
 
 """
-Description: Given a constant driving speed, find the range at the speed
-before the battery runs out [speed -> distance]
+Description: Given an hourly driving speed, find the range at the speed
+before the battery runs out [speed -> distance].
 """
 
-# ----- Simulation input -----
 
-speed = float(input("Enter a speed (km/h): "))
+@helpers.timeit
+def main():
+    # length of the simulation in seconds
+    simulation_length = 60 * 60 * 10
 
-start = timer.perf_counter()
+    input_speed = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 
-simulation_duration = 60 * 60 * 9
-tick = 1
+    """
+    Note: it no longer matters how many elements the input_speed array has, the simulation automatically
+        reshapes the array depending on the simulation_length. 
 
-# ----- Simulation constants -----
+    Examples:
+      If you want a constant speed for the entire simulation, insert a single element
+      into the input_speed array. 
+      
+      >>> input_speed = np.array([30]) <-- constant speed of 30km/h
+    
+      If you want 50km/h in the first half of the simulation and 60km/h in the second half,
+      do the following:
 
-incident_sunlight = 1000
-initial_battery_charge = 0.90
-lvs_power_loss = 0
-max_speed = 104
+    >>> input_speed = np.array([50, 60])
+    
+      This logic will apply for all subsequent array lengths (3, 4, 5, etc.)
+      
+      Keep in mind, however, that the condition len(input_speed) <= simulation_length must be true
+    """
 
-# ----- Component initialisation -----
+    google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
+    weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
 
-basic_array = simulation.BasicArray(incident_sunlight)
-basic_array.set_produced_energy(0)
+    origin_coord = np.array([39.0918, -94.4172])
 
-basic_battery = simulation.BasicBattery(initial_battery_charge)
+    waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
+                          [41.8392, -103.7115], [42.8663, -106.3372], [42.8408, -108.7452],
+                          [42.3224, -111.2973], [42.5840, -114.4703]])
 
-basic_lvs = simulation.BasicLVS(lvs_power_loss * tick)
+    dest_coord = np.array([43.6142, -116.2080])
 
-basic_motor = simulation.BasicMotor()
+    simulation_model = simulation.Simulation(google_api_key, weather_api_key, origin_coord, dest_coord, waypoints,
+                                             tick=1, simulation_duration=simulation_length)
 
-# ----- Energy calculations -----
+    for _ in range(1):
+        distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
+        print(distance_travelled)
 
-basic_array.update(tick)
 
-basic_lvs.update(tick)
-lvs_consumed_energy = basic_lvs.get_consumed_energy()
-
-basic_motor.calculate_power_in(speed)
-basic_motor.update(tick)
-motor_consumed_energy = basic_motor.get_consumed_energy()
-
-produced_energy = basic_array.get_produced_energy()
-consumed_energy = motor_consumed_energy + lvs_consumed_energy
-
-net_energy = produced_energy - consumed_energy
-
-# ----- Array initialisation -----
-
-time = np.arange(0, simulation_duration + tick, tick, dtype='f4')
-
-# stores speed of car at each time step
-speed_kmh = np.full_like(time, fill_value=speed, dtype='f4')
-
-# stores the amount of energy transferred from/to the battery at each time step
-delta_energy = np.full_like(time, fill_value=net_energy, dtype='f4')
-
-# used to calculate the time the car was in motion
-tick_array = np.full_like(time, fill_value=tick, dtype='f4')
-tick_array[0] = 0
-
-# ----- Array calculations -----
-
-cumulative_delta_energy = np.cumsum(delta_energy)
-battery_variables_array = basic_battery.update_array(cumulative_delta_energy)
-
-# stores the battery SOC at each time step
-state_of_charge = battery_variables_array[0]
-state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
-
-# when the battery is empty the car will not move
-speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
-
-time_in_motion = np.logical_and(tick_array, state_of_charge) * tick
-
-time_taken = np.sum(time_in_motion)
-time_taken = str(datetime.timedelta(seconds=int(time_taken)))
-
-final_soc = state_of_charge[-1] * 100
-
-# ----- Target value -----
-
-distance = speed * (time_in_motion / 3600)
-distance_travelled = np.sum(distance)
-
-print(f"\nSimulation successful!\n"
-      f"\n----- Simulation result -----\n"
-      f"Time taken: {time_taken}\n"
-      f"Maximum traversable distance: {distance_travelled:.2f}km\n"
-      f"Speed: {speed}km/h\n"
-      f"Final battery SOC: {final_soc:.2f}%\n")
-
-stop = timer.perf_counter()
-
-print(f"Calculation time: {stop - start:.3f}s")
+if __name__ == "__main__":
+    main()

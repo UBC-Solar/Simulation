@@ -9,7 +9,6 @@ if sys.version_info.major != 3:
           'Python {}. The installation will likely fail.'.format(sys.version_info.major))
 
 
-
 long_description = """
 CI Link
 Documentation Link
@@ -23,7 +22,7 @@ setup(name='simulation',
           'simulation': ['py.typed'],
       },
       install_requires=[
-          'numpy', 'scipy'
+          'numpy', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn'
       ],
       extras_require={
         'mpi': [
