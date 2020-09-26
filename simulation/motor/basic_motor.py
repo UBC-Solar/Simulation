@@ -122,6 +122,9 @@ class BasicMotor(BaseMotor):
             * revolutions_per_minute - 7.322e-11 * motor_output_power * revolutions_per_minute ** 2 \
             + 3.263e-10 * revolutions_per_minute ** 3
 
+        e_m[e_m < 0.7382 ] = 0.7382
+        e_m[e_m > 1] = 1
+
         return e_m
 
     @staticmethod
@@ -155,6 +158,9 @@ class BasicMotor(BaseMotor):
             * motor_angular_speed ** 4 - 2.054e-9 * motor_angular_speed ** 3 * motor_torque_array \
             - 3.126e-10 * motor_angular_speed ** 2 * motor_torque_array ** 2 + 1.708e-09 * motor_angular_speed \
             * motor_torque_array ** 3 - 8.094e-09 * motor_torque_array ** 4
+
+        e_mc[e_mc < 0.9] = 0.9
+        e_mc[e_mc > 1] = 1
 
         return e_mc
 
