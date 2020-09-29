@@ -7,6 +7,7 @@ import pandas as pd
 from simulation.common import helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from re import sub
 
 
 class Simulation:
@@ -140,7 +141,19 @@ class Simulation:
         # Get the time zones of all the starting times
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
+        # Local times in UNIX timestamps
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
+
+        # time_of_day based of UNIX timestamps
+        time_of_day = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
+        
+
+        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm)
+
+        not_charge = np.array(list(map(lambda v: sub('\A18:|\A19:|\A20:|\A07:|\A08:|\A09:','00000', v), time_of_day)))
+        not_charge = np.array([i[2] for i in not_charge])
+        not_charge = (not_charge == '0')
+
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
@@ -168,6 +181,8 @@ class Simulation:
         motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
         array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
 
+        motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
+        
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
         produced_energy = array_produced_energy
 
@@ -191,8 +206,10 @@ class Simulation:
 
         # when the battery is empty the car will not move
         # TODO: if the car cannot climb the slope, the car also does not move
+        # when the car is charging the car does not move
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
         time_in_motion = np.logical_and(tick_array, state_of_charge) * self.tick
+        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
 
         time_taken = np.sum(time_in_motion)
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
