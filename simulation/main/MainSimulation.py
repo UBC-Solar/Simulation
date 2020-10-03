@@ -114,7 +114,7 @@ class Simulation:
         # Array of cumulative distances obtained from the timestamps
         # TODO: there needs to be some kind of mechanism that stops the car travelling the max distance
         #   and past the last coordinate in the provided route
-        distances = tick_array * speed_kmh
+        distances = tick_array * speed_kmh / 3.6
         cumulative_distances = np.cumsum(distances)
 
         # ----- Weather and location calculations -----
