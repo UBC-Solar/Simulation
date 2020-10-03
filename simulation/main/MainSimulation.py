@@ -267,5 +267,6 @@ class Simulation:
 
         return distance_travelled
 
+    # added comment
     def optimize(self, *args, **kwargs):
         raise NotImplementedError
