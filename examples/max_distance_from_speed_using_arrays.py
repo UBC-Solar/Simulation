@@ -51,7 +51,10 @@ def main():
 
     for _ in range(1):
         distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
+        optimized = simulation_model.optimize()
+
         print(distance_travelled)
+        print(optimized)
 
 
 if __name__ == "__main__":

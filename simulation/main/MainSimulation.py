@@ -7,6 +7,7 @@ import pandas as pd
 from simulation.common import helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from scipy.optimize import minimize
 
 
 class Simulation:
@@ -250,5 +251,193 @@ class Simulation:
 
         return distance_travelled
 
+    def objective_function(self, speed, plot_results=False):
+        """
+        Updates the model in tick increments for the entire simulation duration. Returns
+        a final battery charge and a distance travelled for this duration, given an
+        initial charge, and a target speed. Also requires the current time and location.
+        This is where the magic happens.
+
+        Note: if the speed remains constant throughout this update, and knowing the starting
+            time, the cumulative distance at every time can be known. From the cumulative
+            distance, the GIS class updates the new location of the vehicle. From the location
+            of the vehicle at every tick, the gradients at every tick, the weather at every
+            tick, the GHI at every tick, is known.
+
+        Note 2: currently, the simulation can only be run for times during which weather data is available
+
+        :param speed: array that specifies the solar car's driving speed at each time step
+        :param plot_results: set to True to plot the results of the simulation (is True by default)
+        """
+
+        # ----- Reshape speed array -----
+
+        print(f"Input speeds: {speed}\n")
+
+        speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
+        speed_kmh = np.insert(speed_kmh, 0, 0)
+
+        # ----- Expected distance estimate -----
+
+        # Array of cumulative distances hopefully travelled in this round
+        timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
+        tick_array = np.diff(timestamps)
+        tick_array = np.insert(tick_array, 0, 0)
+
+        # Array of cumulative distances obtained from the timestamps
+        # TODO: there needs to be some kind of mechanism that stops the car travelling the max distance
+        #   and past the last coordinate in the provided route
+        distances = tick_array * speed_kmh
+        cumulative_distances = np.cumsum(distances)
+
+        # ----- Weather and location calculations -----
+
+        """ closest_gis_indices is a 1:1 mapping between each point which has within it a timestamp and cumulative
+                distance from a starting point, to its closest point on a map.
+
+            closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
+        """
+
+        closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
+        closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
+
+        # Array of elevations at every route point
+        gis_route_elevations = self.gis.get_path_elevations()
+        gis_route_elevations_at_each_tick = gis_route_elevations[closest_gis_indices]
+
+        # Get the azimuth angle of the vehicle at every location
+        gis_vehicle_bearings = self.vehicle_bearings[closest_gis_indices]
+
+        # Get array of path gradients
+        gradients = self.gis.get_gradients(closest_gis_indices)
+
+        # Get the time zones of all the starting times
+        time_zones = self.gis.get_time_zones(closest_gis_indices)
+
+        local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
+
+        # Get the weather at every location
+        weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
+        absolute_wind_speeds = weather_forecasts[:, 5]
+        wind_directions = weather_forecasts[:, 6]
+        cloud_covers = weather_forecasts[:, 7]
+
+        # Get the wind speeds at every location
+        wind_speeds = self.weather.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
+                                                                    wind_directions)
+
+        # Get an array of solar irradiance at every coordinate and time
+        solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
+                                                                        time_zones, local_times,
+                                                                        gis_route_elevations[closest_gis_indices],
+                                                                        cloud_covers)
+
+        # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
+
+        # ----- Energy calculations -----
+
+        self.basic_lvs.update(self.tick)
+
+        lvs_consumed_energy = self.basic_lvs.get_consumed_energy()
+        motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
+        array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
+
+        consumed_energy = motor_consumed_energy + lvs_consumed_energy
+        produced_energy = array_produced_energy
+
+        # net energy added to the battery
+        delta_energy = produced_energy - consumed_energy
+
+        # ----- Array initialisation -----
+
+        # used to calculate the time the car was in motion
+        tick_array = np.full_like(timestamps, fill_value=self.tick, dtype='f4')
+        tick_array[0] = 0
+
+        # ----- Array calculations -----
+
+        cumulative_delta_energy = np.cumsum(delta_energy)
+        battery_variables_array = self.basic_battery.update_array(cumulative_delta_energy)
+
+        # stores the battery SOC at each time step
+        state_of_charge = battery_variables_array[0]
+        state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
+
+        # when the battery is empty the car will not move
+        # TODO: if the car cannot climb the slope, the car also does not move
+        speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
+        time_in_motion = np.logical_and(tick_array, state_of_charge) * self.tick
+
+        time_taken = np.sum(time_in_motion)
+        time_taken = str(datetime.timedelta(seconds=int(time_taken)))
+
+        final_soc = state_of_charge[-1] * 100 + 0.
+
+        # ----- Target value -----
+
+        distance = speed_kmh * (time_in_motion / 3600)
+
+        distance_travelled = np.sum(distance)
+
+        # TODO: package all the calculated arrays into a SimulationHistory class
+        # TODO: have some sort of standardised SimulationResult class
+
+        print(f"Simulation successful!\n"
+              f"Time taken: {time_taken}\n"
+              f"Maximum distance traversable: {distance_travelled:.2f}km\n"
+              f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
+              f"Final battery SOC: {final_soc:.2f}%\n")
+
+        # ----- Plotting -----
+
+        if plot_results:
+            arrays_to_plot = [speed_kmh, np.cumsum(distance), state_of_charge, delta_energy,
+                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
+                              cloud_covers]
+
+            compress_constant = int(timestamps.shape[0] / 5000)
+
+            for index, array in enumerate(arrays_to_plot):
+                arrays_to_plot[index] = array[::compress_constant]
+
+            y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
+            sns.set_style("whitegrid")
+            f, axes = plt.subplots(4, 2, figsize=(12, 8))
+            f.suptitle("Simulation results", fontsize=16, weight="bold")
+
+            with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
+                for index, axis in enumerate(axes.flatten()):
+                    df = pd.DataFrame(dict(time=timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
+                    g = sns.lineplot(x="time", y="value", data=df, ax=axis)
+                    g.set(xlabel="time (hrs)", ylabel=y_label[index])
+                    pbar.update(1)
+            print()
+
+            sns.despine()
+            plt.setp(axes)
+            plt.tight_layout()
+            plt.show()
+
+        self.local_times = local_times
+        self.time_zones = time_zones
+
+        return distance_travelled
+
+    def display_result(self, res):
+        print(f"{res.message} \n")
+        print(f"Optimal solution: {res.x.round(2)} \n")
+        print(f"Average speed: {np.mean(res.x).round(1)}km/h")
+
+        maximum_distance = np.abs(self.run_model(res.x))
+        print(f"Maximum distance: {maximum_distance:.2f}km\n")
+        
+    @helpers.timeit
     def optimize(self, *args, **kwargs):
-        raise NotImplementedError
+        initial_guess = np.repeat(0, 8)
+
+        optimal_solution = minimize(self.objective_function, x0=initial_guess, method='COBYLA',
+                                options={'disp': True})
+        self.display_result(optimal_solution)
+        return optimal_solution
+        # raise NotImplementedError
