@@ -54,3 +54,6 @@ def reshape_and_repeat(input_array, reshape_length):
 
         print(f"Reshaped input array from {input_array.shape} to {result.shape}\n")
         return result
+
+def hour_from_unix_timestamp(unix_timestamp):
+    return datetime.utcfromtimestamp(unix_timestamp).strftime('%H:%M:%S')
