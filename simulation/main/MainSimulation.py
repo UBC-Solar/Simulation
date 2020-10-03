@@ -7,7 +7,6 @@ import pandas as pd
 from simulation.common import helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from re import sub
 
 
 class Simulation:
@@ -30,7 +29,7 @@ class Simulation:
 
         # ----- Simulation constants -----
 
-        self.initial_battery_charge = 1.0
+        self.initial_battery_charge = 0.0
 
         # LVS power loss is pretty small so it is neglected
         self.lvs_power_loss = 0
@@ -114,7 +113,7 @@ class Simulation:
         # Array of cumulative distances obtained from the timestamps
         # TODO: there needs to be some kind of mechanism that stops the car travelling the max distance
         #   and past the last coordinate in the provided route
-        distances = tick_array * speed_kmh
+        distances = tick_array * speed_kmh / 3.6
         cumulative_distances = np.cumsum(distances)
 
         # ----- Weather and location calculations -----
@@ -145,15 +144,18 @@ class Simulation:
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
         # time_of_day based of UNIX timestamps
-        time_of_day = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
+        time_of_day = [helpers.hour_from_unix_timestamp(ti) for ti in local_times]
         
-
         # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm)
+        not_charge = np.zeros_like(local_times)
 
-        not_charge = np.array(list(map(lambda v: sub('\A18:|\A19:|\A20:|\A07:|\A08:|\A09:','00000', v), time_of_day)))
-        not_charge = np.array([i[2] for i in not_charge])
-        not_charge = (not_charge == '0')
+        charging_hours = [7, 8, 18, 19]
 
+        for index, time in enumerate(time_of_day):
+            if time.hour in charging_hours:
+                not_charge[index] = 0
+            else:
+                not_charge[index] = 1
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
