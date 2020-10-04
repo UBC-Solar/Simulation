@@ -143,19 +143,14 @@ class Simulation:
         # Local times in UNIX timestamps
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
-        # time_of_day based of UNIX timestamps
-        time_of_day = [helpers.hour_from_unix_timestamp(ti) for ti in local_times]
+        # time_of_day_hour based of UNIX timestamps
+        time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
         
         # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm)
-        not_charge = np.zeros_like(local_times)
+        #charging_hours = [7, 8, 18, 19]
 
-        charging_hours = [7, 8, 18, 19]
-
-        for index, time in enumerate(time_of_day):
-            if time.hour in charging_hours:
-                not_charge[index] = 0
-            else:
-                not_charge[index] = 1
+        bool_lis = [time_of_day_hour==7,time_of_day_hour==8,time_of_day_hour==18,time_of_day_hour==19]
+        not_charge = np.invert(np.logical_or.reduce(bool_lis))
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
