@@ -47,7 +47,7 @@ def main():
     dest_coord = np.array([43.6142, -116.2080])
 
     simulation_model = simulation.Simulation(google_api_key, weather_api_key, origin_coord, dest_coord, waypoints,
-                                             tick=1, simulation_duration=simulation_length)
+                                             tick=1, simulation_duration=simulation_length, race_type="ASC")
 
     for _ in range(1):
         distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
