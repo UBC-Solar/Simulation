@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 class Simulation:
 
-    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration):
+    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration, race_type):
         """
         Instantiates a simple model of the car.
 
@@ -24,7 +24,20 @@ class Simulation:
         :param simulation_duration: length of simulated time (in seconds)
 
         """
+        if race_type == "FSGP":
+            # ----- Route constants -----
 
+            self.origin_coord = origin_coord
+            self.dest_coord = dest_coord
+            self.waypoints = waypoints
+
+            self.simulation_duration = simulation_duration
+
+        elif race_type == "ASC":
+            pass
+
+        else:
+            pass
         # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
 
         # ----- Simulation constants -----
@@ -39,18 +52,11 @@ class Simulation:
         # ----- Time constants -----
 
         self.tick = tick
-        self.simulation_duration = simulation_duration
 
         # ----- API keys -----
 
         self.google_api_key = google_api_key
         self.weather_api_key = weather_api_key
-
-        # ----- Route constants -----
-
-        self.origin_coord = origin_coord
-        self.dest_coord = dest_coord
-        self.waypoints = waypoints
 
         # ----- Component initialisation -----
 
