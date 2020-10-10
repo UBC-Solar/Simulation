@@ -45,6 +45,9 @@ class Simulation:
         elif race_type == "ASC":
             pass
 
+        else:
+            pass
+
         # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
 
         # ----- Simulation Race Independent constants -----

@@ -11,7 +11,7 @@ before the battery runs out [speed -> distance].
 @helpers.timeit
 def main():
     # length of the simulation in seconds
-    simulation_length = 60 * 60 * 10
+    simulation_length = 60 * 60 * 10  # 10 hours -> seconds
 
     input_speed = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 
@@ -47,7 +47,7 @@ def main():
     dest_coord = np.array([43.6142, -116.2080])
 
     simulation_model = simulation.Simulation(google_api_key, weather_api_key, origin_coord, dest_coord, waypoints,
-                                             tick=1, simulation_duration=simulation_length)
+                                             tick=1, simulation_duration=simulation_length, race_type="FSGP")
 
     for _ in range(1):
         distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
