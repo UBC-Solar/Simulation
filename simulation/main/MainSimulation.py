@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 class Simulation:
 
-    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration, race_type):
+    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration):
         """
         Instantiates a simple model of the car.
 
@@ -22,11 +22,8 @@ class Simulation:
         :param waypoints: array containing latitude and longitude pairs of route waypoints
         :param tick: length of simulation's discrete time step (in seconds)
         :param simulation_duration: length of simulated time (in seconds)
-        :param race_type: string either "FSGP" or "ASC" specifying race
 
         """
-        # ----- Race Type -----
-        self.race_type = race_type
 
         # ----- Route constants -----
 
@@ -140,7 +137,7 @@ class Simulation:
         # Get array of path gradients
         gradients = self.gis.get_gradients(closest_gis_indices)
 
-        # Get the time zones of all the starting times
+        # Get the time zones of all the starting times // This will remain constant between days for FSGP
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
@@ -151,6 +148,13 @@ class Simulation:
         
         # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm)
         #charging_hours = [7, 8, 18, 19]
+
+        if self.race_type == "FSGP":
+            pass
+        elif self.race_type == "FSGP": # and some parameter tracking time:
+            pass
+        elif self.race_type == "ASC":
+            pass
 
         bool_lis = [time_of_day_hour==7,time_of_day_hour==8,time_of_day_hour==18,time_of_day_hour==19]
         not_charge = np.invert(np.logical_or.reduce(bool_lis))
