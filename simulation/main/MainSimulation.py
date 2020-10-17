@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 class Simulation:
 
-    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration):
+    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration, race_type):
         """
         Instantiates a simple model of the car.
 
@@ -24,6 +24,8 @@ class Simulation:
         :param simulation_duration: length of simulated time (in seconds)
 
         """
+        #------ Race type --------
+        self.race_type = race_type
 
         # ----- Route constants -----
 
