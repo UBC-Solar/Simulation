@@ -152,7 +152,7 @@ class Simulation:
         #charging_hours = [7, 8, 18, 19]
 
         if self.race_type == "FSGP":
-            pass
+            bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
         elif self.race_type == "FSGP": # and some parameter tracking time:
             pass
         elif self.race_type == "ASC":
