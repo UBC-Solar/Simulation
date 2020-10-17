@@ -156,9 +156,9 @@ class Simulation:
         elif self.race_type == "FSGP": # and some parameter tracking time:
             pass
         elif self.race_type == "ASC":
-            pass
+            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
 
-        bool_lis = [time_of_day_hour==7,time_of_day_hour==8,time_of_day_hour==18,time_of_day_hour==19]
+
         not_charge = np.invert(np.logical_or.reduce(bool_lis))
 
         # Get the weather at every location
