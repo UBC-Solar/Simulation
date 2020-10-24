@@ -36,7 +36,10 @@ class GIS:
         self.waypoints = waypoints
 
         # path to file storing the route and elevation NumPy arrays
-        route_file = route_directory / "route_data.npz"
+        if self.race == "FSGP":
+            route_file = route_directory / "route_data_FSGP.npz"
+        elif self.race == "ASC":
+            route_file = route_directory / "route_data.npz"
 
         api_call_required = True
 
