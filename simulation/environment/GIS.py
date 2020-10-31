@@ -13,7 +13,7 @@ from simulation.common import helpers
 
 
 class GIS:
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints, force_update=False):
+    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, force_update=False):
         """
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
         simulation's planned route from the Google Maps API and performing operations on the received data.
@@ -22,6 +22,7 @@ class GIS:
         :param origin_coord: NumPy array containing the start coordinate (lat, long) of the planned travel route
         :param dest_coord: NumPy array containing the end coordinate (lat, long) of the planned travel route
         :param waypoints: NumPy array containing the route waypoints to travel through during simulation
+        :param race_type: String ("FSGP" or "ASC") stating which race is simulated
         :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
 
         """
@@ -34,12 +35,17 @@ class GIS:
         self.origin_coord = origin_coord
         self.dest_coord = dest_coord
         self.waypoints = waypoints
+        self.race_type = race_type
 
         # path to file storing the route and elevation NumPy arrays
-        if self.race == "FSGP":
+        if self.race_type == "FSGP":
             route_file = route_directory / "route_data_FSGP.npz"
-        elif self.race == "ASC":
+        #elif self.race_type == "ASC":
+          #  route_file = route_directory / "route_data.npz"
+        else:
             route_file = route_directory / "route_data.npz"
+        # Is there a way to end the simulation here? Throw exception or something to signify the race
+        # type is not valid
 
         api_call_required = True
 

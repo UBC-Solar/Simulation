@@ -68,12 +68,12 @@ class Simulation:
 
         self.basic_motor = simulation.BasicMotor()
 
-        self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints)
+        self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints, self.race_type)
         self.route_coords = self.gis.get_path()
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
-                                                   self.simulation_duration / 3600,
+                                                   self.simulation_duration / 3600, self.race_type,
                                                    weather_data_frequency="daily")
 
         # Implementing starting times (ASC: 7am, FSGP: 8am)

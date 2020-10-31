@@ -33,7 +33,7 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, weather_data_frequency="daily", force_update=False):
+    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily", force_update=False):
         """
         Initializes the instance of a WeatherForecast class
 
@@ -44,18 +44,21 @@ class WeatherForecasts:
         :param duration: amount of time simulated (in hours)
         :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
         """
-
+        self.race_type = race_type
         self.api_key = api_key
         self.last_updated_time = -1
 
-        # dataset needs to be culled since getting the weather for all 40,000 points doesn't make sense
-        self.coords = self.cull_dataset(coords)
+        # dataset needs to be culled
+        # path to file storing the weather data
+        if self.race_type == "FSGP":
+            self.coords = self.cull_dataset(coords, reduction_factor=5)
+            weather_file = weather_directory / "weather_data_FSGP.npz"
+        else:
+            self.coords = self.cull_dataset(coords, reduction_factor=625)
+            weather_file = weather_directory / "weather_data.npz"
 
         self.origin_coord = coords[0]
         self.dest_coord = coords[-1]
-
-        # path to file storing the weather data
-        weather_file = weather_directory / "weather_data.npz"
 
         api_call_required = True
 
@@ -332,7 +335,7 @@ class WeatherForecasts:
         return result
 
     @staticmethod
-    def cull_dataset(coords):
+    def cull_dataset(coords, reduction_factor):
         """
         As we currently have a limited number of API calls(60) every minute with the
             current Weather API, we must shrink the dataset significantly. As the
@@ -341,10 +344,10 @@ class WeatherForecasts:
             1200 kilometres/25 = 48 API calls
 
         As the Google Maps API has a resolution of around 40m between points,
-            we must cull at 625:1 (because 25,000m / 40m = 625)
+            for ASC, we must cull at 625:1 (because 25,000m / 40m = 625)
         """
 
-        return coords[::625]
+        return coords[::reduction_factor]
 
     @staticmethod
     def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
