@@ -321,7 +321,6 @@ class WeatherForecasts:
         :returns path_distances: a NumPy array [n-1][distances],
         """
 
-        # TODO: can simplify this using np.diff()
         offset = np.roll(coords, (1, 1))
 
         # get the latitude and longitude differences, in radians

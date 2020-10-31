@@ -1,5 +1,6 @@
 from simulation.regen.base_regen import BaseRegen
 
+
 class BasicRegen(BaseRegen):
     def __init__(self):
         super().__init__()
