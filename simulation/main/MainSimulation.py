@@ -11,7 +11,8 @@ from tqdm import tqdm
 
 class Simulation:
 
-    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration, race_type):
+    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration,
+                 race_type):
         """
         Instantiates a simple model of the car.
 
@@ -24,7 +25,7 @@ class Simulation:
         :param simulation_duration: length of simulated time (in seconds)
 
         """
-        #------ Race type --------
+        # ------ Race type --------
         self.race_type = race_type
 
         # ----- Route constants -----
@@ -113,8 +114,7 @@ class Simulation:
         tick_array = np.insert(tick_array, 0, 0)
 
         # Array of cumulative distances obtained from the timestamps
-        # TODO: there needs to be some kind of mechanism that stops the car travelling the max distance
-        #   and past the last coordinate in the provided route
+
         distances = tick_array * speed_kmh / 3.6
         cumulative_distances = np.cumsum(distances)
 
@@ -128,6 +128,11 @@ class Simulation:
 
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
+
+        path_distances = self.gis.path_distances
+        cumulative_distances = np.cumsum(path_distances)
+
+        max_route_distance = cumulative_distances[-1]
 
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
@@ -147,17 +152,16 @@ class Simulation:
 
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
-        
+
         # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm)
-        #charging_hours = [7, 8, 18, 19]
+        # charging_hours = [7, 8, 18, 19]
 
         if self.race_type == "FSGP":
             bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-        elif self.race_type == "FSGP": # and some parameter tracking time:
+        elif self.race_type == "FSGP":  # and some parameter tracking time:
             pass
         elif self.race_type == "ASC":
             bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-
 
         not_charge = np.invert(np.logical_or.reduce(bool_lis))
 
@@ -188,7 +192,7 @@ class Simulation:
         array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
 
         motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
-        
+
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
         produced_energy = array_produced_energy
 
@@ -214,19 +218,26 @@ class Simulation:
         # TODO: if the car cannot climb the slope, the car also does not move
         # when the car is charging the car does not move
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
-        time_in_motion = np.logical_and(tick_array, state_of_charge) * self.tick
         speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
 
-        time_taken = np.sum(time_in_motion)
-        time_taken = str(datetime.timedelta(seconds=int(time_taken)))
+        time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
         final_soc = state_of_charge[-1] * 100 + 0.
 
-        # ----- Target value -----
-
         distance = speed_kmh * (time_in_motion / 3600)
+        distances = np.cumsum(distance)
 
+        # Car cannot exceed Max distance, and it is not in motion after exceeded
+        distances = distances.clip(0, max_route_distance/10000)
+
+        max_dist_index = np.where(distances == max_route_distance/10000)[0][0]
+        time_in_motion = np.array((list(time_in_motion[0:max_dist_index])) + list(time_in_motion[max_dist_index:0]))
+
+        # ----- Target values -----
         distance_travelled = np.sum(distance)
+
+        time_taken = np.sum(time_in_motion)
+        time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
         # TODO: package all the calculated arrays into a SimulationHistory class
         # TODO: have some sort of standardised SimulationResult class
@@ -240,7 +251,7 @@ class Simulation:
         # ----- Plotting -----
 
         if plot_results:
-            arrays_to_plot = [speed_kmh, np.cumsum(distance), state_of_charge, delta_energy,
+            arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
                               solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
                               cloud_covers]
 
