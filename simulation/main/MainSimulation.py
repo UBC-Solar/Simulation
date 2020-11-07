@@ -38,7 +38,7 @@ class Simulation:
 
         # ----- Simulation constants -----
 
-        self.initial_battery_charge = 0.0
+        self.initial_battery_charge = 1.0
 
         # LVS power loss is pretty small so it is neglected
         self.lvs_power_loss = 0
@@ -72,7 +72,10 @@ class Simulation:
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600,
                                                    weather_data_frequency="daily")
-        self.time_of_initialization = self.weather.last_updated_time
+        # Implementing starting times (ASC: 7am, FSGP: 8am)
+        if self.race_type == "ASC":
+            start_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
+            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 9 - start_hour)
 
         self.solar_calculations = simulation.SolarCalculations()
 
@@ -153,13 +156,10 @@ class Simulation:
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
 
-        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm)
-        # charging_hours = [7, 8, 18, 19]
-
+        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
+        # (Charge from 8am-9am and 6pm-8pm) for FSGP
         if self.race_type == "FSGP":
             bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-        elif self.race_type == "FSGP":  # and some parameter tracking time:
-            pass
         elif self.race_type == "ASC":
             bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
 
@@ -228,13 +228,17 @@ class Simulation:
         distances = np.cumsum(distance)
 
         # Car cannot exceed Max distance, and it is not in motion after exceeded
-        distances = distances.clip(0, max_route_distance/10000)
+        distances = distances.clip(0, max_route_distance/1000)
 
-        max_dist_index = np.where(distances == max_route_distance/10000)[0][0]
-        time_in_motion = np.array((list(time_in_motion[0:max_dist_index])) + list(time_in_motion[max_dist_index:0]))
+        try:
+            max_dist_index = np.where(distances == max_route_distance/1000)[0][0]
+        except IndexError:
+            max_dist_index = len(time_in_motion)
+
+        time_in_motion = np.array((list(time_in_motion[0:max_dist_index])) + list(np.zeros_like(time_in_motion[max_dist_index:])))
 
         # ----- Target values -----
-        distance_travelled = np.sum(distance)
+        distance_travelled = distances[-1]
 
         time_taken = np.sum(time_in_motion)
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
