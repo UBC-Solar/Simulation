@@ -55,40 +55,45 @@ def reshape_and_repeat(input_array, reshape_length):
         print(f"Reshaped input array from {input_array.shape} to {result.shape}\n")
         return result
 
-# add acceleration (for constant accleration)
-def add_accelereation(input_array, acceleration):
-    #change type int to float
+
+# add acceleration (for constant acceleration)
+def add_acceleration(input_array, acceleration):
+
+    # change type int to float
     input_array = input_array.astype(float)
-    #identify points where speed changes
+
+    # identify points where speed changes
     array_diff = np.diff(input_array)
-    #get a list of index at where speed changes
+
+    # get a list of index at where speed changes
     array_index = np.where(array_diff != 0)
 
-    #acceleration per second
-    acceleration = acceleration/3600
+    # acceleration per second
+    acceleration = acceleration / 3600
 
     for i in array_index[0]:
-        #check if accelerate or decelerate
-        if array_diff[i] > 0: 
-            while input_array[i]<input_array[i+1] and i+1<len(input_array)-1:
-                input_array[i+1] =input_array[i] + acceleration
-                i+=1
-        
-        else: 
-            while input_array[i]>input_array[i+1] and i+1<len(input_array)-1:
-                input_array[i+1] =input_array[i] - acceleration
-                i+=1
+        # check if accelerate or decelerate
+        if array_diff[i] > 0:
+            while input_array[i] < input_array[i + 1] and i + 1 < len(input_array) - 1:
+                input_array[i + 1] = input_array[i] + acceleration
+                i += 1
+
+        else:
+            while input_array[i] > input_array[i + 1] and i + 1 < len(input_array) - 1:
+                input_array[i + 1] = input_array[i] - acceleration
+                i += 1
 
     return input_array
     pass
 
-if __name__ =='__main__':
-    #speed_array input
-    speed_array= np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 
-    expanded_speed_array = reshape_and_repeat(speed_array,9*3600)
-    expanded_speed_array =np.insert(expanded_speed_array, 0, 0)
-    expanded_speed_array = add_accelereation(expanded_speed_array,20)
+if __name__ == '__main__':
+    # speed_array input
+    speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
+
+    expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
+    expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
+    expanded_speed_array = add_acceleration(expanded_speed_array, 20)
     print(expanded_speed_array)
 
-    pass 
+    pass
