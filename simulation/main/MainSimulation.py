@@ -102,6 +102,7 @@ class Simulation:
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
+        speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         # ----- Expected distance estimate -----
 
@@ -145,11 +146,11 @@ class Simulation:
 
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
-        
-        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm)
-        #charging_hours = [7, 8, 18, 19]
 
-        bool_lis = [time_of_day_hour==7,time_of_day_hour==8,time_of_day_hour==18,time_of_day_hour==19]
+        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm)
+        # charging_hours = [7, 8, 18, 19]
+
+        bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
         not_charge = np.invert(np.logical_or.reduce(bool_lis))
 
         # Get the weather at every location
@@ -179,7 +180,7 @@ class Simulation:
         array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
 
         motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
-        
+
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
         produced_energy = array_produced_energy
 
@@ -204,6 +205,7 @@ class Simulation:
         # when the battery is empty the car will not move
         # TODO: if the car cannot climb the slope, the car also does not move
         # when the car is charging the car does not move
+
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
         time_in_motion = np.logical_and(tick_array, state_of_charge) * self.tick
         speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
