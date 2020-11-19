@@ -26,6 +26,9 @@ class Simulation:
 
         """
         # ------ Race type --------
+
+        assert race_type == "FSGP" or race_type == "ASC", "race_type should be one of \"FSGP\" or \"ASC\""
+
         self.race_type = race_type
 
         # ----- Route constants -----
@@ -72,10 +75,11 @@ class Simulation:
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600,
                                                    weather_data_frequency="daily")
+
         # Implementing starting times (ASC: 7am, FSGP: 8am)
         if self.race_type == "ASC":
             start_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
-            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 9 - start_hour)
+            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 7 - start_hour)
 
         self.solar_calculations = simulation.SolarCalculations()
 
@@ -158,6 +162,9 @@ class Simulation:
 
         # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
         # (Charge from 8am-9am and 6pm-8pm) for FSGP
+
+        bool_lis = []
+
         if self.race_type == "FSGP":
             bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
         elif self.race_type == "ASC":
