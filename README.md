@@ -1,6 +1,8 @@
 # Simulation
 
-Welcome to UBC Solar's race strategy simulation environment!
+Welcome to UBC Solar's race strategy simulation environment! This document contains information on how to getting started with using the simulation framework. 
+
+For more detailed information on the inner workings of the simulation please refer to the [wiki](https://github.com/UBC-Solar/Simulation/wiki).
 
 ## Getting started
 

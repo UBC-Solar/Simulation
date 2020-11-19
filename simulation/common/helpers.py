@@ -55,7 +55,7 @@ def reshape_and_repeat(input_array, reshape_length):
         print(f"Reshaped input array from {input_array.shape} to {result.shape}\n")
         return result
 
-
+      
 # add acceleration (for constant acceleration)
 def add_acceleration(input_array, acceleration):
 
@@ -85,6 +85,11 @@ def add_acceleration(input_array, acceleration):
 
     return input_array
     pass
+  
+  
+def hour_from_unix_timestamp(unix_timestamp):
+    val = datetime.utcfromtimestamp(unix_timestamp)
+    return val.hour
 
 
 if __name__ == '__main__':
