@@ -8,6 +8,7 @@ from simulation.common import helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.optimize import minimize
+from bayes_opt import BayesianOptimization
 
 
 class Simulation:
@@ -251,7 +252,7 @@ class Simulation:
 
         return distance_travelled
 
-    def objective_function(self, speed, plot_results=False):
+    def objective_function(self, x0, x1, x2, x3, x4, x5, x6, x7):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an
@@ -266,11 +267,17 @@ class Simulation:
 
         Note 2: currently, the simulation can only be run for times during which weather data is available
 
+        This is an almost identical copy of run_model that is modified slightly to make it compatible
+        with our optimization methods
+
         :param speed: array that specifies the solar car's driving speed at each time step
-        :param plot_results: set to True to plot the results of the simulation (is True by default)
+        :param x0, x1, x2, x3, x4, x5, x6, x7: solar car's driving speed at each time step (non-array for
+        bayesian optimization)
         """
 
         # ----- Reshape speed array -----
+        # need to manually create the array for our optimization method
+        speed = np.array([x0, x1, x2, x3, x4, x5, x6, x7])
 
         print(f"Input speeds: {speed}\n")
 
@@ -388,37 +395,6 @@ class Simulation:
               f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
               f"Final battery SOC: {final_soc:.2f}%\n")
 
-        # ----- Plotting -----
-
-        if plot_results:
-            arrays_to_plot = [speed_kmh, np.cumsum(distance), state_of_charge, delta_energy,
-                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
-                              cloud_covers]
-
-            compress_constant = int(timestamps.shape[0] / 5000)
-
-            for index, array in enumerate(arrays_to_plot):
-                arrays_to_plot[index] = array[::compress_constant]
-
-            y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
-            sns.set_style("whitegrid")
-            f, axes = plt.subplots(4, 2, figsize=(12, 8))
-            f.suptitle("Simulation results", fontsize=16, weight="bold")
-
-            with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
-                for index, axis in enumerate(axes.flatten()):
-                    df = pd.DataFrame(dict(time=timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
-                    g = sns.lineplot(x="time", y="value", data=df, ax=axis)
-                    g.set(xlabel="time (hrs)", ylabel=y_label[index])
-                    pbar.update(1)
-            print()
-
-            sns.despine()
-            plt.setp(axes)
-            plt.tight_layout()
-            plt.show()
-
         self.local_times = local_times
         self.time_zones = time_zones
 
@@ -434,10 +410,25 @@ class Simulation:
         
     @helpers.timeit
     def optimize(self, *args, **kwargs):
-        initial_guess = np.repeat(0, 8)
+        bounds = {
+            'a': (20, 80),
+            'b': (20, 80),
+            'c': (20, 80),
+            'd': (20, 80),
+            'e': (20, 80),
+            'f': (20, 80),
+            'g': (20, 80),
+            'h': (20, 80),
+        }
+        
+        # https://github.com/fmfn/BayesianOptimization
+        optimizer = BayesianOptimization(f=self.objective_function,
+            pbounds=bounds
+        )
 
-        optimal_solution = minimize(self.objective_function, x0=initial_guess, method='COBYLA',
-                                options={'disp': True})
-        self.display_result(optimal_solution)
-        return optimal_solution
+        optimizer.maximize(init_points=10, n_iter=10, acq='poi', xi=1e-4)
+        
+        print(optimizer.max)
+        # self.display_result(optimizer.max)
+        return optimizer.max
         # raise NotImplementedError
