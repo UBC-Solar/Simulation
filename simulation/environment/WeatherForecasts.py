@@ -218,19 +218,20 @@ class WeatherForecasts:
 
         weather_coords = self.weather_forecast[:, 0, 0:2]
         path_distances = self.calculate_path_distances(weather_coords)
+        path_distances=np.insert(path_distances,0,0)
         cumulative_path_distances = np.cumsum(path_distances)
 
         cumulative_path_distances[::2] *= -1
         average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
 
         for distance in np.nditer(cumulative_distances):
-            if current_coordinate_index > len(average_distances) - 1:
-                current_coordinate_index = len(average_distances) - 1
-
             if distance > average_distances[current_coordinate_index]:
-                current_coordinate_index += 1
                 if current_coordinate_index > len(average_distances) - 1:
                     current_coordinate_index = len(average_distances) - 1
+                else:
+                    current_coordinate_index += 1
+                    if current_coordinate_index > len(average_distances) - 1:
+                        current_coordinate_index = len(average_distances) - 1
 
             result.append(current_coordinate_index)
 
