@@ -411,22 +411,23 @@ class Simulation:
     @helpers.timeit
     def optimize(self, *args, **kwargs):
         bounds = {
-            'a': (20, 80),
-            'b': (20, 80),
-            'c': (20, 80),
-            'd': (20, 80),
-            'e': (20, 80),
-            'f': (20, 80),
-            'g': (20, 80),
-            'h': (20, 80),
+            'x0': (20, 80),
+            'x1': (20, 80),
+            'x2': (20, 80),
+            'x3': (20, 80),
+            'x4': (20, 80),
+            'x5': (20, 80),
+            'x6': (20, 80),
+            'x7': (20, 80),
         }
-        
+
         # https://github.com/fmfn/BayesianOptimization
         optimizer = BayesianOptimization(f=self.objective_function,
             pbounds=bounds
         )
 
-        optimizer.maximize(init_points=10, n_iter=10, acq='poi', xi=1e-4)
+        # configure these parameters depending on whether optimizing for speed or precision
+        optimizer.maximize(init_points=25, n_iter=100, acq='ei', xi=1e-1)
         
         print(optimizer.max)
         # self.display_result(optimizer.max)
