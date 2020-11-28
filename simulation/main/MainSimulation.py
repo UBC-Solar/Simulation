@@ -168,7 +168,7 @@ class Simulation:
         bool_lis = []
 
         if self.race_type == "FSGP":
-            bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+            bool_lis = [time_of_day_hour == 8, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
         elif self.race_type == "ASC":
             bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
 
@@ -227,7 +227,8 @@ class Simulation:
         # TODO: if the car cannot climb the slope, the car also does not move
         # when the car is charging the car does not move
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
-        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh # TODO: Look into how not_charge is affecting speed
+        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 

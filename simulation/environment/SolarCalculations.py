@@ -166,8 +166,6 @@ class SolarCalculations:
         # "For example, at 10:30 AM local apparent time
         # the hour angle is −22.5° (15° per hour times 1.5 hours before noon)."
 
-        # TODO: Figure out why hour_angle is too large (10^5)
-
         term_1 = math.sin(math.radians(declination_angle)) * \
             math.sin(math.radians(latitude))
 
