@@ -45,7 +45,7 @@ def main():
         # Waypoints obtained from Google Maps
         waypoints = np.array([[38.9253374, -95.678453], [38.921052, -95.674689],
                               [38.9206115, -95.6784807], [38.9211163, -95.6777508],
-                              ])
+                              [38.9233953,-95.6783869]]) #Turn 2, Turn 4, Turn 7, Turn 8, Turn 13
 
         dest_coord = np.array([38.9219577, -95.6776967])
 

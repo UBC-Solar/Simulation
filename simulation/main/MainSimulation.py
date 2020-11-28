@@ -80,6 +80,9 @@ class Simulation:
         if self.race_type == "ASC":
             start_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
             self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 7 - start_hour)
+        else: # FSGP
+            start_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
+            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 9 - start_hour)
 
         self.solar_calculations = simulation.SolarCalculations()
 
