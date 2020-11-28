@@ -55,7 +55,7 @@ class WeatherForecasts:
             weather_file = weather_directory / "weather_data_FSGP.npz"
         else:
             self.coords = self.cull_dataset(coords, reduction_factor=625)
-            weather_file = weather_directory / "weather_data.npz"
+            weather_file = weather_directory / "weather_data.npz" #temp change
 
         self.origin_coord = coords[0]
         self.dest_coord = coords[-1]

@@ -77,12 +77,11 @@ class Simulation:
                                                    weather_data_frequency="daily")
 
         # Implementing starting times (ASC: 7am, FSGP: 8am)
+        start_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         if self.race_type == "ASC":
-            start_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
             self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 7 - start_hour)
         else: # FSGP
-            start_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
-            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 9 - start_hour)
+            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 8 - start_hour)
 
         self.solar_calculations = simulation.SolarCalculations()
 
@@ -228,7 +227,7 @@ class Simulation:
         # TODO: if the car cannot climb the slope, the car also does not move
         # when the car is charging the car does not move
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
-        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh # TODO: Look into how not_charge is affecting speed
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 

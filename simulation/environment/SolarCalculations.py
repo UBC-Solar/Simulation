@@ -31,6 +31,7 @@ class SolarCalculations:
         """
         Approximates and returns the correction factor between the apparent 
         solar time and the mean solar time
+        From: https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
 
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
@@ -39,9 +40,9 @@ class SolarCalculations:
             Apparent Solar Time = Mean Solar Time + EoT
         """
 
-        b = math.radians((float(360) / 364) * (day_of_year - 81))
+        b = math.radians((float(360) / 365) * (day_of_year - 81))
 
-        eot = 9.87 * math.sin(2 * b) - 7.83 * math.cos(b) - 1.5 * math.sin(b)
+        eot = 9.87 * math.sin(2 * b) - 7.53 * math.cos(b) - 1.5 * math.sin(b)
 
         return eot
 
@@ -76,7 +77,10 @@ class SolarCalculations:
 
         Returns: The Apparent Solar Time of a location, in hours from midnight
         """
-
+        #LSTM (Local Standard Time Meridian)
+        #LSTM: https://susdesign.com/popups/sunangle/time-basis.php#:~:text=LSTM%20%3D%20The%20local%20standard%20time,East%2C%20and%20negative%20%3D%20West.
+        #Postiive LSTM: East
+        #Negative LSTM: West
         lstm = self.calculate_LSTM(time_zone_utc)
         eot = self.calculate_eot_correction(day_of_year)
 
@@ -104,7 +108,7 @@ class SolarCalculations:
         Returns: The Hour Angle in degrees. 
         """
 
-        lst = self.local_time_to_apparent_solar_time(time_zone_utc, day_of_year,
+        lst = self.local_time_to_apparent_solar_time( time_zone_utc / 3600 , day_of_year,
                                                      local_time, longitude)
 
         hour_angle = 15 * (lst - 12)
@@ -148,10 +152,21 @@ class SolarCalculations:
 
         Returns: The elevation angle in degrees
         """
-
+        # Negative declination angles: Northern Hemisphere winter
+        # 0 declination angle : Equinoxes (March 22, Sept 22)
+        # Positive declination angle: Northern Hemisphere summer
         declination_angle = self.calculate_declination_angle(day_of_year)
+
+        # Negative hour angles: Morning
+        # 0 hour angle : Solar noon
+        # Positive hour angle: Afternoon
         hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year,
-                                               local_time, longitude)
+                                           local_time, longitude)
+        # From: https://en.wikipedia.org/wiki/Hour_angle#:~:text=At%20solar%20noon%20the%20hour,times%201.5%20hours%20before%20noon).
+        # "For example, at 10:30 AM local apparent time
+        # the hour angle is −22.5° (15° per hour times 1.5 hours before noon)."
+
+        # TODO: Figure out why hour_angle is too large (10^5)
 
         term_1 = math.sin(math.radians(declination_angle)) * \
             math.sin(math.radians(latitude))
@@ -186,7 +201,7 @@ class SolarCalculations:
         elevation_angle = self.calculate_elevation_angle(latitude, longitude,
                                                          time_zone_utc, day_of_year, local_time)
 
-        return 90 - elevation_angle
+        return 90 - elevation_angle #
 
     def calculate_azimuth_angle(self, latitude, longitude, time_zone_utc, day_of_year,
                                 local_time):
