@@ -410,37 +410,6 @@ class GIS:
         """
         return self.path_gradients[self.current_index]
 
-    def calculate_current_heading(self):
-        """
-        From the current and previous coordinate, calculate the current bearing of the vehicle.
-            This is also the azimuth angle of the vehicle
-        """
-
-        if self.current_index - 1 < 0:
-            coord_1 = self.path[self.current_index + 1]
-            coord_2 = self.path[self.current_index]
-        else:
-            coord_1 = self.path[self.current_index]
-            coord_2 = self.path[self.current_index - 1]
-
-        coord_1 = np.radians(coord_1)
-        coord_2 = np.radians(coord_2)
-
-        y = math.sin(coord_2[1] - coord_1[1]) \
-            * math.cos(coord_2[0])
-
-        x = math.cos(coord_1[0]) \
-            * math.sin(coord_2[0]) \
-            - math.sin(coord_1[0]) \
-            * math.cos(coord_2[0]) \
-            * math.cos(coord_2[1] - coord_1[1])
-
-        theta = math.atan2(y, x)
-
-        bearing = ((theta * 180) / math.pi + 360) % 360
-
-        return bearing
-
     def calculate_current_heading_array(self):
         """
         Calculates the bearing of the vehicle between consecutive points
@@ -468,31 +437,6 @@ class GIS:
         bearing_array[-1] = bearing_array[-2]
 
         return bearing_array
-
-    def update_vehicle_position(self, incremental_distance):
-        """
-        Returns the closest coordinate to the current coordinate
-
-        :param incremental_distance: distance in m covered in the latest tick
-
-        :returns: The new index of the vehicle
-        """
-
-        additional_distance = self.distance_remainder + incremental_distance
-
-        # while the index of position can still be advanced
-        while additional_distance > 0:
-            # subtract contributions from every new index
-            additional_distance = additional_distance - self.path_distances[self.current_index]
-
-            # advance the index
-            self.current_index = self.current_index + 1
-
-        # backtrack a bit
-        self.distance_remainder = additional_distance + self.path_distances[self.current_index - 1]
-        self.current_index = self.current_index - 1
-
-        return self.current_index
 
 
 if __name__ == "__main__":
