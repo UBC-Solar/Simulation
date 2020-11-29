@@ -199,7 +199,7 @@ class SolarCalculations:
         elevation_angle = self.calculate_elevation_angle(latitude, longitude,
                                                          time_zone_utc, day_of_year, local_time)
 
-        return 90 - elevation_angle #
+        return 90 - elevation_angle
 
     def calculate_azimuth_angle(self, latitude, longitude, time_zone_utc, day_of_year,
                                 local_time):
