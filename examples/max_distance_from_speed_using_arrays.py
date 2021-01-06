@@ -49,7 +49,6 @@ def main():
 
         dest_coord = np.array([38.9219577, -95.6776967])
             #[38.9219577, -95.6776967]) #original dest_coord
-            #Note: Setting origin_coord as dest_coord makes final SOC 1 but distance traversable 6.34 km
         # TODO: Determine method to repeatedly go over the track
     elif race_type == "ASC":
 
