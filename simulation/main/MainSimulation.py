@@ -8,6 +8,8 @@ from simulation.common import helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
+
 
 class Simulation:
 
@@ -142,7 +144,7 @@ class Simulation:
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
+        local_times = adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
@@ -160,7 +162,7 @@ class Simulation:
         cloud_covers = weather_forecasts[:, 7]
 
         # Get the wind speeds at every location
-        wind_speeds = self.weather.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
+        wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
                                                                     wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time

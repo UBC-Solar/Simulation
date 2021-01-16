@@ -10,9 +10,10 @@ import os
 import simulation
 import sys
 from data.weather.__init__ import weather_directory
-from simulation.common.constants import EARTH_RADIUS
 from simulation.common import helpers
 from tqdm import tqdm
+
+from simulation.common.helpers import cull_dataset, calculate_path_distances
 
 
 class WeatherForecasts:
@@ -32,7 +33,7 @@ class WeatherForecasts:
         self.api_key = api_key
         self.last_updated_time = -1
 
-        self.coords = self.cull_dataset(coords)
+        self.coords = cull_dataset(coords)
         self.origin_coord = coords[0]
         self.dest_coord = coords[-1]
 
@@ -217,7 +218,7 @@ class WeatherForecasts:
         result = []
 
         weather_coords = self.weather_forecast[:, 0, 0:2]
-        path_distances = self.calculate_path_distances(weather_coords)
+        path_distances = calculate_path_distances(weather_coords)
         path_distances=np.insert(path_distances,0,0)
         cumulative_path_distances = np.cumsum(path_distances)
 
@@ -271,121 +272,6 @@ class WeatherForecasts:
         result = full_weather_forecast_at_coords[tuple((temp_0, closest_time_stamp_indices))]
 
         return result
-
-    def get_closest_weather_forecast(self, coord):
-        """
-        Passes in a single coordinate, calculates the closest coordinate to that
-        coordinate, returns the forecast for the closest location
-
-        coord: A NumPy array of [latitude, longitude]
-
-        Returns:
-        - A NumPy array [24][7]
-        - [24]: hours from the self.last_updated_time
-        - [7]: (latitude, longitude, wind_speed, wind_direction, 
-                    cloud_cover, precipitation, description)
-        """
-
-        temp_1 = np.full((len(self.coords), 2), coord)
-        temp_2 = self.coords - temp_1
-        temp_3 = np.square(temp_2)
-        temp_4 = np.sum(temp_3, axis=1)
-        temp_5 = np.sqrt(temp_4)
-
-        return self.weather_forecast[temp_5.index(max(temp_5))]
-
-    @staticmethod
-    def cull_dataset(coords):
-        """
-        As we currently have a limited number of API calls(60) every minute with the
-            current Weather API, we must shrink the dataset significantly. As the
-            OpenWeatherAPI models have a resolution of between 2.5 - 70 km, we will
-            go for a resolution of 25km. Assuming we travel at 100km/h for 12 hours,
-            1200 kilometres/25 = 48 API calls
-
-        As the Google Maps API has a resolution of around 40m between points,
-            we must cull at 625:1 (because 25,000m / 40m = 625)
-        """
-
-        return coords[::625]
-
-    @staticmethod
-    def calculate_path_distances(coords):
-        """
-        The coordinates are spaced quite tightly together, and they capture the
-        features of the road. So, the lines between every pair of adjacent
-        coordinates can be treated like a straight line, and the distances can
-        thus be obtained.
-
-        :param coords: A NumPy array [n][latitude, longitude]
-
-        :returns path_distances: a NumPy array [n-1][distances],
-        """
-
-        offset = np.roll(coords, (1, 1))
-
-        # get the latitude and longitude differences, in radians
-        diff = (coords - offset)[1:] * np.pi / 180
-        diff_lat, diff_lng = np.split(diff, 2, axis=1)
-        diff_lat = np.squeeze(diff_lat)
-        diff_lng = np.squeeze(diff_lng)
-
-        # get the mean latitude for every latitude, in radians
-        mean_lat = ((coords + offset)[1:, 0] * np.pi / 180) / 2
-        cosine_mean_lat = np.cos(mean_lat)
-
-        # multiply the latitude difference with the cosine_mean_latitude
-        diff_lng_adjusted = cosine_mean_lat * diff_lng
-
-        # square, sum and square-root
-        square_lat = np.square(diff_lat)
-        square_lng = np.square(diff_lng_adjusted)
-        square_sum = square_lat + square_lng
-
-        path_distances = EARTH_RADIUS * np.sqrt(square_sum)
-
-        return path_distances
-
-    @staticmethod
-    def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
-        """
-        Returns the array of wind speed in m/s, in the direction opposite to the 
-            bearing of the vehicle
-
-        vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
-        wind_speeds: (float[N]) The absolute speeds in m/s
-        wind_directions: (float[N]) The wind direction in the meteorlogical convention. To convert from
-            meteorlogical convention to azimuth angle, use (x + 180) % 360
-
-        Returns: The wind speeds in the direction opposite to the bearing of the vehicle
-        """
-
-        # wind direction is 90 degrees meteorlogical, so it is 270 degrees azimuthal. car is 90 degrees
-        #   cos(90 - 90) = cos(0) = 1. Wind speed is moving opposite to the car,
-        # car is 270 degrees, cos(90-270) = -1. Wind speed is in direction of the car.
-        return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
-
-    @staticmethod
-    def get_weather_advisory(weather_id):
-        """
-        Returns a string indicating the type of weather to expect, from the standardized
-            weather code passed as a parameter
-
-        https://openweathermap.org/weather-conditions#Weather-Condition-Codes-2
-        """
-
-        if 200 <= weather_id < 300:
-            return "Thunderstorm"
-        elif 300 <= weather_id < 500:
-            return "Drizzle"
-        elif 500 <= weather_id < 600:
-            return "Rain"
-        elif 600 <= weather_id < 700:
-            return "Snow"
-        elif weather_id == 800:
-            return "Clear"
-        else:
-            return "Unknown"
 
 
 if __name__ == "__main__":

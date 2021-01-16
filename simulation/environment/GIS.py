@@ -9,7 +9,7 @@ import requests
 from tqdm import tqdm
 
 from data.route.__init__ import route_directory
-from simulation.common import constants
+from simulation.common.helpers import calculate_path_distances, calculate_path_gradients
 
 
 class GIS:
@@ -72,8 +72,8 @@ class GIS:
                          origin_coord=self.origin_coord,
                          dest_coord=self.dest_coord, waypoints=self.waypoints)
 
-        self.path_distances = self.calculate_path_distances(self.path)
-        self.path_gradients = self.calculate_path_gradients(self.path_elevations,
+        self.path_distances = calculate_path_distances(self.path)
+        self.path_gradients = calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
 
     def calculate_closest_gis_indices(self, cumulative_distances):
@@ -148,19 +148,6 @@ class GIS:
         """
 
         return self.path_time_zones[gis_indices]
-
-    @staticmethod
-    def adjust_timestamps_to_local_times(timestamps, starting_drive_time, time_zones):
-        """
-        Takes in the timestamps of the vehicle's driving duration, starting drive time, and a list of time zones,
-            returns the local times at each point
-
-        :param timestamps: (int[N]) timestamps starting from 0, in seconds
-        :param starting_drive_time: (int[N]) local time that the car was start to be driven in UNIX time (Daylight Saving included)
-        :param time_zones: (int[N])
-        """
-
-        return np.array(timestamps + starting_drive_time - (time_zones[0] - time_zones), dtype=np.uint64)
 
     # ----- Getters -----
 
@@ -327,88 +314,6 @@ class GIS:
                 print("Error: No elevation was found")
 
         return elevations
-
-    @staticmethod
-    def calculate_path_distances(coords):
-        """
-        The coordinates are spaced quite tightly together, and they capture the
-        features of the road. So, the lines between every pair of adjacent
-        coordinates can be treated like a straight line, and the distances can
-        thus be obtained.
-
-        :param coords: a NumPy array of coordinates [n][latitude, longitude]
-
-        :returns path_distances: a NumPy array [n-1][distances],
-        """
-
-        offset = np.roll(coords, (1, 1))
-
-        # get the latitude and longitude differences, in radians
-        diff = (coords - offset)[1:] * np.pi / 180
-        diff_lat, diff_lng = np.split(diff, 2, axis=1)
-        diff_lat = np.squeeze(diff_lat)
-        diff_lng = np.squeeze(diff_lng)
-
-        # get the mean latitude for every latitude, in radians
-        mean_lat = ((coords + offset)[1:, 0] * np.pi / 180) / 2
-        cosine_mean_lat = np.cos(mean_lat)
-
-        # multiply the latitude difference with the cosine_mean_latitude
-        diff_lng_adjusted = cosine_mean_lat * diff_lng
-
-        # square, sum and square-root
-        square_lat = np.square(diff_lat)
-        square_lng = np.square(diff_lng_adjusted)
-        square_sum = square_lat + square_lng
-
-        path_distances = constants.EARTH_RADIUS * np.sqrt(square_sum)
-
-        return path_distances
-
-    @staticmethod
-    def calculate_path_gradients(elevations, distances):
-        """
-        Get the approximate gradients of every point on the path.
-
-        :param elevations: [N][elevations]
-        :param distances: [N-1][distances]
-
-        :returns gradients: [N-1][gradients]
-
-        Note:
-            - gradient > 0 corresponds to uphill
-            - gradient < 0 corresponds to downhill
-        """
-
-        # subtract every next elevation with the previous elevation to
-        # get the difference in elevation
-        # [1 2 3 4 5]
-        # [5 1 2 3 4] -
-        # -------------
-        #   [1 1 1 1]
-
-        offset = np.roll(elevations, 1)
-        delta_elevations = (elevations - offset)[1:]
-
-        # Divide the difference in elevation to get the gradient
-        # gradient > 0: uphill
-        # gradient < 0: downhill
-
-        gradients = delta_elevations / distances
-
-        return gradients
-
-    def get_current_elevation(self):
-        """
-        Get the elevation of the closest point to the current point
-        """
-        return self.path_elevations[self.current_index]
-
-    def get_current_gradient(self):
-        """
-        Get the gradient of the point closest to the current location
-        """
-        return self.path_gradients[self.current_index]
 
     def calculate_current_heading_array(self):
         """

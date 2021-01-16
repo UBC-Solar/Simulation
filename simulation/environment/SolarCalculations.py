@@ -9,9 +9,10 @@ A class to perform calculation and approximations for obtaining quantities
 import math
 import datetime
 import numpy as np
-from simulation.common import helpers
 from tqdm import tqdm
 import sys
+
+from simulation.common.helpers import get_day_of_year, calculate_declination_angle, local_time_to_apparent_solar_time
 
 
 class SolarCalculations:
@@ -23,67 +24,6 @@ class SolarCalculations:
 
         # Solar Constant in W/m2
         self.S_0 = 1353
-
-    # ----- Calculation of Apparent Solar Time -----
-
-    @staticmethod
-    def calculate_eot_correction(day_of_year):
-        """
-        Approximates and returns the correction factor between the apparent 
-        solar time and the mean solar time
-
-        day_of_year: The number of the day of the current year, with January 1
-            being the first day of the year.
-
-        Returns: The Equation of Time correction EoT in minutes, where
-            Apparent Solar Time = Mean Solar Time + EoT
-        """
-
-        b = math.radians((float(360) / 364) * (day_of_year - 81))
-
-        eot = 9.87 * math.sin(2 * b) - 7.83 * math.cos(b) - 1.5 * math.sin(b)
-
-        return eot
-
-    @staticmethod
-    def calculate_LSTM(time_zone_utc):
-        """
-        Calculates and returns the LSTM, or Local Solar Time Meridian.
-        https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
-
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
-
-        Returns: The Local Solar Time Meridian in degrees
-        """
-
-        return 15 * time_zone_utc
-
-    def local_time_to_apparent_solar_time(self, time_zone_utc, day_of_year, local_time,
-                                          longitude):
-        """
-        Converts between the local time to the apparent solar time and returns the apparent
-        solar time.
-        https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
-
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset. 
-        day_of_year: The number of the day of the current year, with January 1
-            being the first day of the year.
-        local_time: The local time in hours from midnight (Adjust for Daylight Savings)
-        longitude: The longitude of a location on Earth
-
-        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
-                calculation will end up just the same
-
-        Returns: The Apparent Solar Time of a location, in hours from midnight
-        """
-
-        lstm = self.calculate_LSTM(time_zone_utc)
-        eot = self.calculate_eot_correction(day_of_year)
-
-        # local solar time
-        lst = local_time + float(longitude - lstm) / 15 + float(eot) / 60
-
-        return lst
 
     # ----- Calculation of solar position in the sky -----
 
@@ -104,30 +44,12 @@ class SolarCalculations:
         Returns: The Hour Angle in degrees. 
         """
 
-        lst = self.local_time_to_apparent_solar_time(time_zone_utc, day_of_year,
+        lst = local_time_to_apparent_solar_time(time_zone_utc, day_of_year,
                                                      local_time, longitude)
 
         hour_angle = 15 * (lst - 12)
 
         return hour_angle
-
-    @staticmethod
-    def calculate_declination_angle(day_of_year):
-        """
-        Calculates the Declination Angle of the Earth at a given day
-        https://www.pveducation.org/pvcdrom/properties-of-sunlight/declination-angle
-        
-        day_of_year: The number of the day of the current year, with January 1
-            being the first day of the year.
-       
-        Returns: The declination angle of the Earth relative to the Sun, in 
-            degrees
-        """
-
-        declination_angle = -23.45 * math.cos(math.radians((float(360) / 365) *
-                                                           (day_of_year + 10)))
-
-        return declination_angle
 
     def calculate_elevation_angle(self, latitude, longitude, time_zone_utc, day_of_year,
                                   local_time):
@@ -149,7 +71,7 @@ class SolarCalculations:
         Returns: The elevation angle in degrees
         """
 
-        declination_angle = self.calculate_declination_angle(day_of_year)
+        declination_angle = calculate_declination_angle(day_of_year)
         hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year,
                                                local_time, longitude)
 
@@ -208,7 +130,7 @@ class SolarCalculations:
         Returns: The azimuth angle in degrees
         """
 
-        declination_angle = self.calculate_declination_angle(day_of_year)
+        declination_angle = calculate_declination_angle(day_of_year)
         hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year,
                                                local_time, longitude)
 
@@ -247,7 +169,7 @@ class SolarCalculations:
         Returns: The sunrise time in hours from midnight. (Not adjusted for Daylight Savings)
         """
 
-        declination_angle = self.calculate_declination_angle(day_of_year)
+        declination_angle = calculate_declination_angle(day_of_year)
 
         term_1 = -math.sin(math.radians(latitude)) * \
             math.sin(math.radians(declination_angle))
@@ -271,7 +193,7 @@ class SolarCalculations:
         Returns: The sunset time in hours from midnight. (Not adjusted for Daylight Savings)
         """
 
-        declination_angle = self.calculate_declination_angle(day_of_year)
+        declination_angle = calculate_declination_angle(day_of_year)
 
         term_1 = -math.sin(math.radians(latitude)) * \
             math.sin(math.radians(declination_angle))
@@ -422,7 +344,7 @@ class SolarCalculations:
             for i, _ in enumerate(coords):
                 date = datetime.datetime.utcfromtimestamp(local_times[i])
 
-                day_of_year = self.get_day_of_year(date.day, date.month, date.year)
+                day_of_year = get_day_of_year(date.day, date.month, date.year)
 
                 local_time = date.hour + (float(date.minute * 60 + date.second) / 3600)
 
@@ -433,16 +355,3 @@ class SolarCalculations:
         print()
 
         return ghi
-
-    # ----- Helper Functions -----
-
-    @staticmethod
-    def get_day_of_year(day, month, year):
-        """
-        Calculates the day of the year, given the day, month and year.
-
-        day, month, year: self explanatory
-        """
-
-        return (datetime.date(year, month, day) -
-                datetime.date(year, 1, 1)).days + 1
