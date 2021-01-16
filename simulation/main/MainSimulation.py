@@ -32,7 +32,6 @@ class Simulation:
         assert race_type == "FSGP" or race_type == "ASC", "race_type should be one of \"FSGP\" or \"ASC\""
 
         self.race_type = race_type
-        self.start_hour = start_hour
 
         # ----- Route constants -----
 
@@ -75,15 +74,18 @@ class Simulation:
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
-                                                   self.simulation_duration / 3600, self.race_type,
-                                                   weather_data_frequency="daily")
+                                                   self.simulation_duration / 3600,
+                                                   self.race_type,
+                                                   weather_data_frequency="daily",
+                                                   force_update=False)
+
 
         # Implementing starting times (ASC: 7am, FSGP: 8am)
-        start_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         if self.race_type == "ASC":
-            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 7 - start_hour)
-        else: # FSGP
-            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 8 - start_hour)
+            weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
+            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + start_hour - weather_hour)
+
+        self.start_hour = start_hour
 
         self.solar_calculations = simulation.SolarCalculations()  # Race-Independent
 
@@ -168,7 +170,7 @@ class Simulation:
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
         roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0,2]))
         # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)), 'constant', constant_values = (0))
-        weather_forecasts = np.roll(weather_forecasts, roll_by_tick, 0)
+        weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]

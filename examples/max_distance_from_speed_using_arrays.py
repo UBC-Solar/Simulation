@@ -15,7 +15,7 @@ def main():
 
     input_speed = np.array([35])
 
-    race_type = "FSGP"
+    race_type = "ASC"
 
     """
     Note: it no longer matters how many elements the input_speed array has, the simulation automatically
@@ -61,7 +61,7 @@ def main():
         dest_coord = np.array([43.6142, -116.2080])
 
     simulation_model = simulation.Simulation(google_api_key, weather_api_key, origin_coord, dest_coord, waypoints,
-                                             tick=1, simulation_duration=simulation_length, race_type=race_type, start_hour=8)
+                                             tick=1, simulation_duration=simulation_length, race_type=race_type, start_hour=10)
 
 
     distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
