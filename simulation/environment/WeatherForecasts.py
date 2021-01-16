@@ -324,6 +324,7 @@ class WeatherForecasts:
             minimum_index = np.argmin(differences)
             closest_time_stamp_indices.append(minimum_index)
 
+        #start_time_shift = np.where(full_weather_forecast_at_coords[:, 4] == self.time_of_initialization)[0][0]
         closest_time_stamp_indices = np.asarray(closest_time_stamp_indices, dtype=np.int32)
 
         temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])

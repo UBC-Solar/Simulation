@@ -12,7 +12,7 @@ from tqdm import tqdm
 class Simulation:
 
     def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration,
-                 race_type):
+                 race_type, start_hour):
         """
         Instantiates a simple model of the car.
 
@@ -162,20 +162,11 @@ class Simulation:
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
 
-        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
-        # (Charge from 8am-9am and 6pm-8pm) for FSGP
-
-        bool_lis = []
-
-        if self.race_type == "FSGP":
-            bool_lis = [time_of_day_hour == 8, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-        elif self.race_type == "ASC":
-            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-
-        not_charge = np.invert(np.logical_or.reduce(bool_lis))
-
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
+        roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0,2]))
+        # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)), 'constant', constant_values = (0))
+        weather_forecasts = np.roll(weather_forecasts, roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
@@ -191,6 +182,23 @@ class Simulation:
                                                                         cloud_covers)
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
+
+        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
+        # (Charge from 8am-9am and 6pm-8pm) for FSGP
+        # Ensuring Card does not move at night
+        bool_lis = []
+        night_lis = []
+        if self.race_type == "FSGP":
+            bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+            for time in list(range(20, 24)) + list(range(0, 8)):
+                night_lis.append(time_of_day_hour == time)
+        elif self.race_type == "ASC":
+            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+            for time in list(range(20, 24)) + list(range(0, 8)):
+                night_lis.append(time_of_day_hour == time)
+
+        not_charge = np.invert(np.logical_or.reduce(bool_lis))
+        not_day = np.invert(np.logical_or.reduce(night_lis))
 
         # ----- Energy calculations -----
 
@@ -226,9 +234,10 @@ class Simulation:
         # when the battery is empty the car will not move
         # TODO: if the car cannot climb the slope, the car also does not move
         # when the car is charging the car does not move
+        # at night the car does not move
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
         speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
-
+        speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
