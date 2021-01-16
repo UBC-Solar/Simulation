@@ -53,8 +53,9 @@ def main():
         distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
         optimized = simulation_model.optimize()
 
-        print(distance_travelled)
-        print(optimized)
+        print(f'Distance travelled: {distance_travelled}')
+        print(f'Optimized results. Max traversable distance: {optimized["target"]}')
+        print(f'Speeds array: {optimized["params"]}')
 
 
 if __name__ == "__main__":

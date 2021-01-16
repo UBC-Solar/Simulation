@@ -411,14 +411,14 @@ class Simulation:
     @helpers.timeit
     def optimize(self, *args, **kwargs):
         bounds = {
-            'x0': (20, 80),
-            'x1': (20, 80),
-            'x2': (20, 80),
-            'x3': (20, 80),
-            'x4': (20, 80),
-            'x5': (20, 80),
-            'x6': (20, 80),
-            'x7': (20, 80),
+            'x0': (20, 70),
+            'x1': (20, 70),
+            'x2': (20, 70),
+            'x3': (20, 70),
+            'x4': (20, 70),
+            'x5': (20, 70),
+            'x6': (20, 70),
+            'x7': (20, 70),
         }
 
         # https://github.com/fmfn/BayesianOptimization
@@ -427,9 +427,9 @@ class Simulation:
         )
 
         # configure these parameters depending on whether optimizing for speed or precision
-        optimizer.maximize(init_points=25, n_iter=100, acq='ei', xi=1e-1)
-        
+        # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
+        # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
+        optimizer.maximize(init_points=25, n_iter=100, acq='ucb', xi=1e-1, kappa=10)
+
         print(optimizer.max)
-        # self.display_result(optimizer.max)
         return optimizer.max
-        # raise NotImplementedError
