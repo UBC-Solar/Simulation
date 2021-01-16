@@ -9,11 +9,11 @@ import requests
 from tqdm import tqdm
 
 from data.route.__init__ import route_directory
-from simulation.common import constants
+from simulation.common import helpers
 
 
 class GIS:
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints, force_update=False):
+    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, force_update=False):
         """
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
         simulation's planned route from the Google Maps API and performing operations on the received data.
@@ -22,6 +22,7 @@ class GIS:
         :param origin_coord: NumPy array containing the start coordinate (lat, long) of the planned travel route
         :param dest_coord: NumPy array containing the end coordinate (lat, long) of the planned travel route
         :param waypoints: NumPy array containing the route waypoints to travel through during simulation
+        :param race_type: String ("FSGP" or "ASC") stating which race is simulated
         :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
 
         """
@@ -34,9 +35,17 @@ class GIS:
         self.origin_coord = origin_coord
         self.dest_coord = dest_coord
         self.waypoints = waypoints
+        self.race_type = race_type
 
         # path to file storing the route and elevation NumPy arrays
-        route_file = route_directory / "route_data.npz"
+        if self.race_type == "FSGP":
+            route_file = route_directory / "route_data_FSGP.npz"
+        #elif self.race_type == "ASC":
+          #  route_file = route_directory / "route_data.npz"
+        else:
+            route_file = route_directory / "route_data.npz"
+        # Is there a way to end the simulation here? Throw exception or something to signify the race
+        # type is not valid
 
         api_call_required = True
 
@@ -72,7 +81,7 @@ class GIS:
                          origin_coord=self.origin_coord,
                          dest_coord=self.dest_coord, waypoints=self.waypoints)
 
-        self.path_distances = self.calculate_path_distances(self.path)
+        self.path_distances = helpers.calculate_path_distances(self.path)
         self.path_gradients = self.calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
 
@@ -327,43 +336,6 @@ class GIS:
                 print("Error: No elevation was found")
 
         return elevations
-
-    @staticmethod
-    def calculate_path_distances(coords):
-        """
-        The coordinates are spaced quite tightly together, and they capture the
-        features of the road. So, the lines between every pair of adjacent
-        coordinates can be treated like a straight line, and the distances can
-        thus be obtained.
-
-        :param coords: a NumPy array of coordinates [n][latitude, longitude]
-
-        :returns path_distances: a NumPy array [n-1][distances],
-        """
-
-        offset = np.roll(coords, (1, 1))
-
-        # get the latitude and longitude differences, in radians
-        diff = (coords - offset)[1:] * np.pi / 180
-        diff_lat, diff_lng = np.split(diff, 2, axis=1)
-        diff_lat = np.squeeze(diff_lat)
-        diff_lng = np.squeeze(diff_lng)
-
-        # get the mean latitude for every latitude, in radians
-        mean_lat = ((coords + offset)[1:, 0] * np.pi / 180) / 2
-        cosine_mean_lat = np.cos(mean_lat)
-
-        # multiply the latitude difference with the cosine_mean_latitude
-        diff_lng_adjusted = cosine_mean_lat * diff_lng
-
-        # square, sum and square-root
-        square_lat = np.square(diff_lat)
-        square_lng = np.square(diff_lng_adjusted)
-        square_sum = square_lat + square_lng
-
-        path_distances = constants.EARTH_RADIUS * np.sqrt(square_sum)
-
-        return path_distances
 
     @staticmethod
     def calculate_path_gradients(elevations, distances):

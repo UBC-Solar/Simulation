@@ -12,7 +12,8 @@ from tqdm import tqdm
 class Simulation:
 
     def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration,
-                 race_type):
+                 race_type, start_hour):
+
         """
         Instantiates a simple model of the car.
 
@@ -26,27 +27,19 @@ class Simulation:
         :param race_type: a string that describes the race type (ASC or FSGP)
 
         """
-        if race_type == "FSGP":
-            # ----- Race Dependent Variables -----
+        # ------ Race type --------
 
-            self.max_speed = 104 # Race-Dependent (max allowed speed may differ between races. Will have to look into FSGP and ASC regulations)
+        assert race_type == "FSGP" or race_type == "ASC", "race_type should be one of \"FSGP\" or \"ASC\""
 
-            # ----- Route constants -----
+        self.race_type = race_type
+        self.start_hour = start_hour
 
-            self.origin_coord = origin_coord  # Race-Dependent
-            self.dest_coord = dest_coord  # Race-Dependent
-            self.waypoints = waypoints  # Race-Dependent
+        # ----- Route constants -----
 
-            # ----- Time constants -----
+        self.origin_coord = origin_coord
+        self.dest_coord = dest_coord
+        self.waypoints = waypoints
 
-            self.simulation_duration = simulation_duration  # Race-Dependent
-            self.time_zones = 0
-
-        elif race_type == "ASC":
-            pass
-
-        else:
-            pass
 
         # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
 
@@ -76,13 +69,21 @@ class Simulation:
 
         self.basic_motor = simulation.BasicMotor()  # Race-independent
 
-        self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints)
-        self.route_coords = self.gis.get_path()  # Race-Dependent
+
+        self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints, self.race_type)
+        self.route_coords = self.gis.get_path()
+
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
-                                                   self.simulation_duration / 3600,
+                                                   self.simulation_duration / 3600, self.race_type,
                                                    weather_data_frequency="daily")
-        self.time_of_initialization = self.weather.last_updated_time
+
+        # Implementing starting times (ASC: 7am, FSGP: 8am)
+        start_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
+        if self.race_type == "ASC":
+            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 7 - start_hour)
+        else: # FSGP
+            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 8 - start_hour)
 
         self.solar_calculations = simulation.SolarCalculations()  # Race-Independent
 
@@ -124,9 +125,8 @@ class Simulation:
         tick_array = np.insert(tick_array, 0, 0)
 
         # Array of cumulative distances obtained from the timestamps
-        # TODO: there needs to be some kind of mechanism that stops the car travelling the max distance
-        #   and past the last coordinate in the provided route
-        distances = tick_array * speed_kmh
+
+        distances = tick_array * speed_kmh / 3.6
         cumulative_distances = np.cumsum(distances)
 
         # ----- Weather and location calculations -----
@@ -140,6 +140,11 @@ class Simulation:
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
+        path_distances = self.gis.path_distances
+        cumulative_distances = np.cumsum(path_distances)
+
+        max_route_distance = cumulative_distances[-1]
+
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
         gis_route_elevations_at_each_tick = gis_route_elevations[closest_gis_indices]
@@ -150,13 +155,20 @@ class Simulation:
         # Get array of path gradients
         gradients = self.gis.get_gradients(closest_gis_indices)
 
-        # Get the time zones of all the starting times
+        # Get the time zones of all the starting times // This will remain constant between days for FSGP
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
+        # Local times in UNIX timestamps
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
+
+        # time_of_day_hour based of UNIX timestamps
+        time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
+        roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0,2]))
+        # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)), 'constant', constant_values = (0))
+        weather_forecasts = np.roll(weather_forecasts, roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
@@ -173,6 +185,23 @@ class Simulation:
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
+        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
+        # (Charge from 8am-9am and 6pm-8pm) for FSGP
+        # Ensuring Card does not move at night
+        bool_lis = []
+        night_lis = []
+        if self.race_type == "FSGP":
+            bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+            for time in list(range(20, 24)) + list(range(0, 8)):
+                night_lis.append(time_of_day_hour == time)
+        elif self.race_type == "ASC":
+            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+            for time in list(range(20, 24)) + list(range(0, 8)):
+                night_lis.append(time_of_day_hour == time)
+
+        not_charge = np.invert(np.logical_or.reduce(bool_lis))
+        not_day = np.invert(np.logical_or.reduce(night_lis))
+
         # ----- Energy calculations -----
 
         self.basic_lvs.update(self.tick)
@@ -180,6 +209,8 @@ class Simulation:
         lvs_consumed_energy = self.basic_lvs.get_consumed_energy()
         motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
         array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
+
+        motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
 
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
         produced_energy = array_produced_energy
@@ -204,19 +235,34 @@ class Simulation:
 
         # when the battery is empty the car will not move
         # TODO: if the car cannot climb the slope, the car also does not move
+        # when the car is charging the car does not move
+        # at night the car does not move
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
-        time_in_motion = np.logical_and(tick_array, state_of_charge) * self.tick
+        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+        speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
 
-        time_taken = np.sum(time_in_motion)
-        time_taken = str(datetime.timedelta(seconds=int(time_taken)))
+        time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
         final_soc = state_of_charge[-1] * 100 + 0.
 
-        # ----- Target value -----
-
         distance = speed_kmh * (time_in_motion / 3600)
+        distances = np.cumsum(distance)
 
-        distance_travelled = np.sum(distance)
+        # Car cannot exceed Max distance, and it is not in motion after exceeded
+        distances = distances.clip(0, max_route_distance/1000)
+
+        try:
+            max_dist_index = np.where(distances == max_route_distance/1000)[0][0]
+        except IndexError:
+            max_dist_index = len(time_in_motion)
+
+        time_in_motion = np.array((list(time_in_motion[0:max_dist_index])) + list(np.zeros_like(time_in_motion[max_dist_index:])))
+
+        # ----- Target values -----
+        distance_travelled = distances[-1]
+
+        time_taken = np.sum(time_in_motion)
+        time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
         # TODO: package all the calculated arrays into a SimulationHistory class
         # TODO: have some sort of standardised SimulationResult class
@@ -230,7 +276,7 @@ class Simulation:
         # ----- Plotting -----
 
         if plot_results:
-            arrays_to_plot = [speed_kmh, np.cumsum(distance), state_of_charge, delta_energy,
+            arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
                               solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
                               cloud_covers]
 
