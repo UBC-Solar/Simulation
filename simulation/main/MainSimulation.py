@@ -13,6 +13,7 @@ class Simulation:
 
     def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration,
                  race_type, start_hour):
+
         """
         Instantiates a simple model of the car.
 
@@ -23,6 +24,7 @@ class Simulation:
         :param waypoints: array containing latitude and longitude pairs of route waypoints
         :param tick: length of simulation's discrete time step (in seconds)
         :param simulation_duration: length of simulated time (in seconds)
+        :param race_type: a string that describes the race type (ASC or FSGP)
 
         """
         # ------ Race type --------
@@ -38,41 +40,40 @@ class Simulation:
         self.dest_coord = dest_coord
         self.waypoints = waypoints
 
+
         # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
 
-        # ----- Simulation constants -----
+        # ----- Simulation Race Independent constants -----
 
-        self.initial_battery_charge = 1.0
+        self.initial_battery_charge = 1.0  # Race-independent
 
         # LVS power loss is pretty small so it is neglected
-        self.lvs_power_loss = 0
-
-        self.max_speed = 104
+        self.lvs_power_loss = 0  # Race-independent
 
         # ----- Time constants -----
 
-        self.tick = tick
-        self.simulation_duration = simulation_duration
+        self.tick = tick  # Race-independent
 
         # ----- API keys -----
 
-        self.google_api_key = google_api_key
-        self.weather_api_key = weather_api_key
+        self.google_api_key = google_api_key  # Race-Independent
+        self.weather_api_key = weather_api_key  # Race-Independent
 
         # ----- Component initialisation -----
 
-        self.basic_array = simulation.BasicArray()
+        self.basic_array = simulation.BasicArray()  # Race-independent
 
-        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)
+        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)  # Race-independent
 
-        self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)
+        self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)  # Race-independent
 
-        self.basic_motor = simulation.BasicMotor()
+        self.basic_motor = simulation.BasicMotor()  # Race-independent
+
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints, self.race_type)
         self.route_coords = self.gis.get_path()
-        self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
+        self.vehicle_bearings = self.gis.calculate_current_heading_array()
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600, self.race_type,
                                                    weather_data_frequency="daily")
@@ -84,10 +85,10 @@ class Simulation:
         else: # FSGP
             self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + 8 - start_hour)
 
-        self.solar_calculations = simulation.SolarCalculations()
+        self.solar_calculations = simulation.SolarCalculations()  # Race-Independent
 
         self.local_times = 0
-        self.time_zones = 0
+
 
     @helpers.timeit
     def run_model(self, speed, plot_results=True):
