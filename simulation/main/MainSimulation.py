@@ -30,6 +30,7 @@ class Simulation:
         assert race_type == "FSGP" or race_type == "ASC", "race_type should be one of \"FSGP\" or \"ASC\""
 
         self.race_type = race_type
+        self.start_hour = start_hour
 
         # ----- Route constants -----
 
