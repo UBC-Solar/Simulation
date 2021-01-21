@@ -49,7 +49,7 @@ def main():
 
         dest_coord = np.array([38.9219577, -95.6776967])
 
-        # TODO: Determine method to repeatedly go over the track
+    # TODO: Determine method to repeatedly go over the track
     elif race_type == "ASC":
 
         origin_coord = np.array([39.0918, -94.4172])
@@ -59,12 +59,14 @@ def main():
                               [42.3224, -111.2973], [42.5840, -114.4703]])
 
         dest_coord = np.array([43.6142, -116.2080])
+    else:
+        raise Exception("race_type argument must be one of \"FSGP\" or \"ASC\". ")
 
     simulation_model = simulation.Simulation(google_api_key, weather_api_key, origin_coord, dest_coord, waypoints,
                                              tick=1, simulation_duration=simulation_length, race_type=race_type,
                                              start_hour=9)
 
-    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
+    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=False)
 
 
 if __name__ == "__main__":
