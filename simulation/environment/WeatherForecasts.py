@@ -33,7 +33,7 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily", force_update=False):
+    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily", force_update=True):
         """
         Initializes the instance of a WeatherForecast class
 

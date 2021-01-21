@@ -39,7 +39,6 @@ class Simulation:
         self.dest_coord = dest_coord
         self.waypoints = waypoints
 
-
         # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
 
         # ----- Simulation Race Independent constants -----
@@ -52,6 +51,7 @@ class Simulation:
         # ----- Time constants -----
 
         self.tick = tick  # Race-independent
+        self.simulation_duration = simulation_duration
 
         # ----- API keys -----
 
@@ -68,8 +68,8 @@ class Simulation:
 
         self.basic_motor = simulation.BasicMotor()  # Race-independent
 
-
-        self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints, self.race_type)
+        self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
+                                  self.race_type)
         self.route_coords = self.gis.get_path()
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
@@ -79,18 +79,16 @@ class Simulation:
                                                    weather_data_frequency="daily",
                                                    force_update=False)
 
-
         # Implementing starting times (ASC: 7am, FSGP: 8am)
-        if self.race_type == "ASC":
-            weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
-            self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + start_hour - weather_hour)
+
+        weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
+        self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + start_hour - weather_hour)
 
         self.start_hour = start_hour
 
         self.solar_calculations = simulation.SolarCalculations()  # Race-Independent
 
         self.local_times = 0
-
 
     @helpers.timeit
     def run_model(self, speed, plot_results=True):
@@ -158,7 +156,10 @@ class Simulation:
         gradients = self.gis.get_gradients(closest_gis_indices)
 
         # Get the time zones of all the starting times // This will remain constant between days for FSGP
-        time_zones = self.gis.get_time_zones(closest_gis_indices)
+        if self.race_type == "FSGP":
+            time_zones = np.full_like(closest_gis_indices, -18000)
+        else:
+            time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
@@ -168,7 +169,7 @@ class Simulation:
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
-        roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0,2]))
+        roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
         # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)), 'constant', constant_values = (0))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
@@ -251,14 +252,15 @@ class Simulation:
         distances = np.cumsum(distance)
 
         # Car cannot exceed Max distance, and it is not in motion after exceeded
-        distances = distances.clip(0, max_route_distance/1000)
+        distances = distances.clip(0, max_route_distance / 1000)
 
         try:
-            max_dist_index = np.where(distances == max_route_distance/1000)[0][0]
+            max_dist_index = np.where(distances == max_route_distance / 1000)[0][0]
         except IndexError:
             max_dist_index = len(time_in_motion)
 
-        time_in_motion = np.array((list(time_in_motion[0:max_dist_index])) + list(np.zeros_like(time_in_motion[max_dist_index:])))
+        time_in_motion = np.array(
+            (list(time_in_motion[0:max_dist_index])) + list(np.zeros_like(time_in_motion[max_dist_index:])))
 
         # ----- Target values -----
         distance_travelled = distances[-1]
