@@ -157,7 +157,8 @@ class Simulation:
 
         # Get the time zones of all the starting times // This will remain constant between days for FSGP
         if self.race_type == "FSGP":
-            time_zones = np.full_like(closest_gis_indices, -18000)
+            utc_6 = -18000 # Constant for UTC-6 Time (Central Standard Time)
+            time_zones = np.full_like(closest_gis_indices, fill_value=utc_6)
         else:
             time_zones = self.gis.get_time_zones(closest_gis_indices)
 
@@ -190,7 +191,7 @@ class Simulation:
 
         # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
         # (Charge from 8am-9am and 6pm-8pm) for FSGP
-        # Ensuring Card does not move at night
+        # Ensuring Car does not move at night
         bool_lis = []
         night_lis = []
         if self.race_type == "FSGP":
