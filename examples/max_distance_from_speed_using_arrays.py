@@ -49,7 +49,8 @@ def main():
 
         dest_coord = np.array([38.9219577, -95.6776967])
 
-    # TODO: Determine method to repeatedly go over the track
+        # TODO: Determine method to repeatedly go over the track
+        # TODO: Determine boolean expression to stop car from moving after it's reached the end.
     elif race_type == "ASC":
 
         origin_coord = np.array([39.0918, -94.4172])
