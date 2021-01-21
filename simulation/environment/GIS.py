@@ -10,6 +10,10 @@ from tqdm import tqdm
 
 from data.route.__init__ import route_directory
 from simulation.common import helpers
+import datetime
+import pytz
+from timezonefinder import TimezoneFinder
+import logging
 
 
 class GIS:
@@ -40,8 +44,8 @@ class GIS:
         # path to file storing the route and elevation NumPy arrays
         if self.race_type == "FSGP":
             route_file = route_directory / "route_data_FSGP.npz"
-        #elif self.race_type == "ASC":
-          #  route_file = route_directory / "route_data.npz"
+        # elif self.race_type == "ASC":
+        #  route_file = route_directory / "route_data.npz"
         else:
             route_file = route_directory / "route_data.npz"
         # Is there a way to end the simulation here? Throw exception or something to signify the race
@@ -72,6 +76,9 @@ class GIS:
         if api_call_required or force_update:
             print("New route requested and/or route save file does not exist. "
                   "Calling Google API and creating new route save file...\n")
+            logging.warning(
+                "The GIS class is collecting data from a Google API. Set force_update to false to prevent this and "
+                "read data from disk instead. This should improve performance. \n")
             self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
             self.path_elevations = self.calculate_path_elevations(self.path)
             self.path_time_zones = self.calculate_time_zones(self.path)
@@ -132,20 +139,24 @@ class GIS:
         :returns time_diff: (float[N]) array of time differences in seconds
         """
 
-        time_diff_temp = np.zeros(int(len(coords) / 625 + 1))
+        timezones_return = np.zeros(len(coords))
 
-        for i in range(0, len(coords), 625):
-            dummy_time = 1593604800
-            url = f"https://maps.googleapis.com/maps/api/timezone/json?location={coords[i][0]},{coords[i][1]}&timestamp={dummy_time}&key={self.api_key}"
+        tf = TimezoneFinder()
 
-            r = requests.get(url)
-            response = json.loads(r.text)
+        if self.race_type == "FSGP":
+            # this is when FSGP 2021 starts
+            dt = datetime.datetime(2021, 7, 31)
+        else:
+            # this is when ASC 2021 starts
+            dt = datetime.datetime(2021, 8, 4)
 
-            time_diff_temp[int(i / 625)] = response['dstOffset'] + response['rawOffset']
+        for index, coord in enumerate(coords):
+            tz_string = tf.timezone_at(lat=coord[0], lng=coord[1])
+            timezone = pytz.timezone(tz_string)
 
-        time_diff = np.repeat(time_diff_temp, 625)[0:len(coords)]
+            timezones_return[index] = timezone.utcoffset(dt).total_seconds()
 
-        return np.array(time_diff, dtype=np.uint64)
+        return timezones_return
 
     def get_time_zones(self, gis_indices):
         """
@@ -254,7 +265,7 @@ class GIS:
 
         url = url_head + url_waypoints + url_end
 
-        print("url: {}".format(url))
+        # print("url: {}".format(url))
 
         # HTTP GET
         r = requests.get(url)
@@ -264,7 +275,7 @@ class GIS:
 
         # If a route is found...
         if response['status'] == "OK":
-            print("A route was found.\n")
+            # print("A route was found.\n")
 
             # Pick the first route in the list of available routes
             # A route consists of a series of legs
@@ -276,6 +287,8 @@ class GIS:
                     polyline_raw = step['polyline']['points']
                     polyline_coords = polyline.decode(polyline_raw)
                     path_points = path_points + polyline_coords
+
+            print("Route has been successfully retrieved!\n")
 
         else:
             print(f"No route was found: {response['status']}")
@@ -470,13 +483,20 @@ class GIS:
 if __name__ == "__main__":
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
 
-    origin_coord = np.array([39.0918, -94.4172])
+    origin_coord = np.array([38.9266274, -95.6781231])
 
-    waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
-                          [41.8392, -103.7115], [42.8663, -106.3372], [42.8408, -108.7452],
-                          [42.3224, -111.2973], [42.5840, -114.4703]])
+    waypoints = np.array([[38.9253374, -95.678453], [38.921052, -95.674689],
+                          [38.9206115, -95.6784807], [38.9211163, -95.6777508],
+                          [38.9233953, -95.6783869]])  # Turn 2, Turn 4, Turn 7, Turn 8, Turn 13
 
-    dest_coord = np.array([43.6142, -116.2080])
+    dest_coord = np.array([38.9219577, -95.6776967])
 
-    locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints)
-    print(locationSystem.path_elevations[0], locationSystem.path_elevations[-1])
+    locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints,
+                         race_type="FSGP", force_update=True)
+
+    path = locationSystem.get_path()
+    timezones = locationSystem.path_time_zones
+
+    print(timezones[0:10])
+
+    pass
