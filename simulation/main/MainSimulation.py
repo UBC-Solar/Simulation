@@ -155,12 +155,8 @@ class Simulation:
         # Get array of path gradients
         gradients = self.gis.get_gradients(closest_gis_indices)
 
-        # Get the time zones of all the starting times // This will remain constant between days for FSGP
-        if self.race_type == "FSGP":
-            utc_6 = -18000 # Constant for UTC-6 Time (Central Standard Time)
-            time_zones = np.full_like(closest_gis_indices, fill_value=utc_6)
-        else:
-            time_zones = self.gis.get_time_zones(closest_gis_indices)
+        # Get time zones at each point on the GIS path
+        time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
