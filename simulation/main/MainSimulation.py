@@ -2,6 +2,7 @@ import sys
 import simulation
 import numpy as np
 import datetime
+import json
 import seaborn as sns
 import pandas as pd
 from simulation.common import helpers
@@ -11,9 +12,11 @@ from tqdm import tqdm
 
 class Simulation:
 
-    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration):
+    def __init__(self, json_path):
         """
         Instantiates a simple model of the car.
+
+        :param json_path: file path to json file containing necessary data (below)
 
         :param google_api_key: API key to access GoogleMaps API
         :param weather_api_key: API key to access OpenWeather API
@@ -26,6 +29,10 @@ class Simulation:
         """
 
         # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
+        
+        # ----- Load arguments -----
+        with open(json_path) as f:
+            args = json.load(f)
 
         # ----- Simulation constants -----
 
@@ -38,19 +45,19 @@ class Simulation:
 
         # ----- Time constants -----
 
-        self.tick = tick
-        self.simulation_duration = simulation_duration
+        self.tick = args['tick']
+        self.simulation_duration = args['simulation_duration']
 
         # ----- API keys -----
 
-        self.google_api_key = google_api_key
-        self.weather_api_key = weather_api_key
+        self.google_api_key = args['google_api_key']
+        self.weather_api_key = args['weather_api_key']
 
         # ----- Route constants -----
 
-        self.origin_coord = origin_coord
-        self.dest_coord = dest_coord
-        self.waypoints = waypoints
+        self.origin_coord = args['origin_coord']
+        self.dest_coord = args['dest_coord']
+        self.waypoints = args['waypoints']
 
         # ----- Component initialisation -----
 
