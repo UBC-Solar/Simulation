@@ -69,7 +69,7 @@ class Simulation:
         self.basic_motor = simulation.BasicMotor()  # Race-independent
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type)
+                                  self.race_type, force_update=False)
         self.route_coords = self.gis.get_path()
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
@@ -141,7 +141,7 @@ class Simulation:
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
         path_distances = self.gis.path_distances
-        cumulative_distances = np.cumsum(path_distances)
+        cumulative_distances = np.cumsum(path_distances)  # [cumulative_distances] = meters
 
         max_route_distance = cumulative_distances[-1]
 

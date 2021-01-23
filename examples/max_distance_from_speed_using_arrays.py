@@ -13,8 +13,8 @@ def main():
     # length of the simulation in seconds
     simulation_length = 60 * 60 * 12  # 10 hours -> seconds
 
+    # Input Parameters
     input_speed = np.array([35] * 12)
-
     race_type = "FSGP"
 
     """
@@ -67,7 +67,7 @@ def main():
                                              tick=1, simulation_duration=simulation_length, race_type=race_type,
                                              start_hour=9)
 
-    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=False)
+    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
 
 
 if __name__ == "__main__":
