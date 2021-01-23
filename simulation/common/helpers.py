@@ -274,7 +274,7 @@ def calculate_declination_angle(day_of_year):
         degrees
     """
 
-    declination_angle = -23.45 * math.cos(math.radians((float(360) / 365) *
+    declination_angle = -23.45 * np.cos(np.radians((np.float_(360) / 365) *
                                                        (day_of_year + 10)))
 
     return declination_angle
@@ -293,9 +293,9 @@ def calculate_eot_correction(day_of_year):
         Apparent Solar Time = Mean Solar Time + EoT
     """
 
-    b = math.radians((float(360) / 364) * (day_of_year - 81))
+    b = np.radians((np.float_(360) / 364) * (day_of_year - 81))
 
-    eot = 9.87 * math.sin(2 * b) - 7.83 * math.cos(b) - 1.5 * math.sin(b)
+    eot = 9.87 * np.sin(2 * b) - 7.83 * np.cos(b) - 1.5 * np.sin(b)
 
     return eot
 
@@ -336,7 +336,7 @@ def local_time_to_apparent_solar_time(time_zone_utc, day_of_year, local_time,
     eot = calculate_eot_correction(day_of_year)
 
     # local solar time
-    lst = local_time + float(longitude - lstm) / 15 + float(eot) / 60
+    lst = local_time + np.float_(longitude - lstm) / 15 + np.float_(eot) / 60
 
     return lst
 
