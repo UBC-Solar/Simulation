@@ -6,16 +6,14 @@ from simulation.common import helpers
 
 class BaseSimulation(ABC):
     """
-    Parent Class of ASC and FSGP Simulations.
+    Parent Class of ASC and FSGP Simulation Classes
 
     Includes any simulation variables that are common between the ASC and FSGP races
     Ex: Daybreak properties, Daybreak components, or timing constants
 
-    Documentation on some fields:
     google_api_key: API key to access GoogleMaps API
     weather_api_key: API key to access OpenWeather API
     tick: length of simulation's discrete time step (in seconds)
-
     """
 
     def __init__(self):
@@ -47,9 +45,9 @@ class BaseSimulation(ABC):
 
     def configure_race(self, race_type):
         # ----- Route and GIS Definition -----
+        self.route_coords = self.gis.get_path()
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   race_type, force_update=False)
-        self.route_coords = self.gis.get_path()
 
         # ----- Environment and Weather Calculations -----
         self.vehicle_bearings = self.gis.calculate_current_heading_array()

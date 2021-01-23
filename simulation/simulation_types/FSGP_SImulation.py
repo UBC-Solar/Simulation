@@ -5,6 +5,14 @@ import numpy as np
 
 
 class FSGP_Simulation(BaseSimulation):
+
+    """
+    Instantiates an FSGP_Simulation object that models the 2021 FSGP Race
+
+    :param input_speed:
+    :param:
+
+    """
     def __init__(self, input_speed, start_hour, simulation_duration):
         super().__init__()
         # ----- Route Definition -----
@@ -24,7 +32,6 @@ class FSGP_Simulation(BaseSimulation):
         self.start_hour = start_hour
 
         self.configure_race("FSGP")
-
 
     def run_model(self):
         pass
