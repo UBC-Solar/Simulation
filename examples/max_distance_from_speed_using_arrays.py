@@ -50,7 +50,7 @@ def main():
                                              tick=1, simulation_duration=simulation_length)
 
     for _ in range(1):
-        distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
+        distance_travelled = simulation_model.run_model(speed=input_speed)
         optimized = simulation_model.optimize()
 
         print(f'Distance travelled: {distance_travelled}')
