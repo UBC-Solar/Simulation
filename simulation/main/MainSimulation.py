@@ -313,7 +313,7 @@ class Simulation:
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
             sns.set_style("whitegrid")
             f, axes = plt.subplots(4, 2, figsize=(12, 8))
-            f.suptitle("Simulation results", fontsize=16, weight="bold")
+            f.suptitle(f"Simulation results ({self.race_type})", fontsize=16, weight="bold")
 
             with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
                 for index, axis in enumerate(axes.flatten()):
