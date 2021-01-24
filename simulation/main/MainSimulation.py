@@ -116,6 +116,7 @@ class Simulation:
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
+        speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         # ----- Expected distance estimate -----
 
@@ -240,6 +241,7 @@ class Simulation:
         # TODO: if the car cannot climb the slope, the car also does not move
         # when the car is charging the car does not move
         # at night the car does not move
+
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
         speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
         speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
