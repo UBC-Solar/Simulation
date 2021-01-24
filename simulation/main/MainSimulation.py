@@ -75,6 +75,11 @@ class Simulation:
         
         self.race_type = race_type
 
+        # ----- Force update flags -----
+
+        gis_force_update = args['gis_force_update']
+        weather_force_update = args['weather_force_update']
+
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()  # Race-independent
@@ -86,7 +91,7 @@ class Simulation:
         self.basic_motor = simulation.BasicMotor()  # Race-independent
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=False)
+                                  self.race_type, force_update=gis_force_update)
         self.route_coords = self.gis.get_path()
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
@@ -94,10 +99,9 @@ class Simulation:
                                                    self.simulation_duration / 3600,
                                                    self.race_type,
                                                    weather_data_frequency="daily",
-                                                   force_update=False)
+                                                   force_update=weather_force_update)
 
         # Implementing starting times (ASC: 7am, FSGP: 8am)
-
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
