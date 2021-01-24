@@ -8,44 +8,57 @@ import pandas as pd
 from simulation.common import helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from simulation.config import settings_directory
 
 
 class Simulation:
 
-    def __init__(self, json_path):
+    def __init__(self, race_type):
         """
         Instantiates a simple model of the car.
 
-        :param json_path: file path to json file containing necessary data (below)
+        :param race_type: a string that describes the race type to simulate (ASC or FSGP)
 
-        :param google_api_key: API key to access GoogleMaps API
-        :param weather_api_key: API key to access OpenWeather API
-        :param origin_coord: array containing latitude and longitude of route start point
-        :param dest_coord: array containing latitude and longitude of route end point
-        :param waypoints: array containing latitude and longitude pairs of route waypoints
-        :param tick: length of simulation's discrete time step (in seconds)
-        :param simulation_duration: length of simulated time (in seconds)
-        :param race_type: a string that describes the race type (ASC or FSGP)
+        Depending on the race type, the following initialisation parameters are read from the corresponding
+        settings json file located in the config folder.
 
+        google_api_key: API key to access GoogleMaps API
+        weather_api_key: API key to access OpenWeather API
+        origin_coord: array containing latitude and longitude of route start point
+        dest_coord: array containing latitude and longitude of route end point
+        waypoints: array containing latitude and longitude pairs of route waypoints
+        tick: length of simulation's discrete time step (in seconds)
+        simulation_duration: length of simulated time (in seconds)
+        start_hour: describes the hour to start the simulation (typically either 7 or 9, these
+        represent 7am and 9am respectively)
         """
 
         # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
+
+        assert race_type in ["ASC", "FSGP"]
+
+        # chooses the appropriate settings file to read from
+        if race_type == "ASC":
+            settings_path = settings_directory / "settings_ASC.json"
+        else:
+            settings_path = settings_directory / "settings_FSGP.json"
         
         # ----- Load arguments -----
-        with open(json_path) as f:
+        with open(settings_path) as f:
             args = json.load(f)
 
         # ----- Simulation Race Independent constants -----
 
-        self.initial_battery_charge = 1.0  # Race-independent
+        self.initial_battery_charge = args['initial_battery_charge']
 
         # LVS power loss is pretty small so it is neglected
-        self.lvs_power_loss = 0  # Race-independent
+        self.lvs_power_loss = args['lvs_power_loss']  # Race-independent
 
         # ----- Time constants -----
 
         self.tick = args['tick']
         self.simulation_duration = args['simulation_duration']
+        self.start_hour = args['start_hour']
 
         # ----- API keys -----
 
@@ -60,7 +73,7 @@ class Simulation:
         
         # ----- Race type -----
         
-        self.race_type = args['race_type']
+        self.race_type = race_type
 
         # ----- Component initialisation -----
 
@@ -86,9 +99,7 @@ class Simulation:
         # Implementing starting times (ASC: 7am, FSGP: 8am)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
-        self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + start_hour - weather_hour)
-
-        self.start_hour = start_hour
+        self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
         self.solar_calculations = simulation.SolarCalculations()  # Race-Independent
 
@@ -180,6 +191,9 @@ class Simulation:
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
+
+        # TODO: remove after done with testing
+        cloud_covers = np.zeros_like(cloud_covers)
 
         # Get the wind speeds at every location
         wind_speeds = self.weather.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
@@ -299,7 +313,7 @@ class Simulation:
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
             sns.set_style("whitegrid")
             f, axes = plt.subplots(4, 2, figsize=(12, 8))
-            f.suptitle("Simulation results", fontsize=16, weight="bold")
+            f.suptitle(f"Simulation results ({self.race_type})", fontsize=16, weight="bold")
 
             with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
                 for index, axis in enumerate(axes.flatten()):

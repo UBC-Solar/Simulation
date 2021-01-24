@@ -10,10 +10,6 @@ before the battery runs out [speed -> distance].
 
 @helpers.timeit
 def main():
-    # length of the simulation in seconds
-    simulation_length = 60 * 60 * 12  # 10 hours -> seconds
-
-    # Input Parameters
     input_speed = np.array([35] * 12)
 
     """
@@ -36,8 +32,10 @@ def main():
       Keep in mind, however, that the condition len(input_speed) <= simulation_length must be true
     """
 
-    simulation_model = simulation.Simulation("./simulation/main/settings_ASC.json")
+    simulation_model = simulation.Simulation(race_type="ASC")
     distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
+
+    return distance_travelled
 
 
 if __name__ == "__main__":
