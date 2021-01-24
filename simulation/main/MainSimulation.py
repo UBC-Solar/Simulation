@@ -2,6 +2,7 @@ import sys
 import simulation
 import numpy as np
 import datetime
+import json
 import seaborn as sns
 import pandas as pd
 from simulation.common import helpers
@@ -11,11 +12,11 @@ from tqdm import tqdm
 
 class Simulation:
 
-    def __init__(self, google_api_key, weather_api_key, origin_coord, dest_coord, waypoints, tick, simulation_duration,
-                 race_type, start_hour):
-
+    def __init__(self, json_path):
         """
         Instantiates a simple model of the car.
+
+        :param json_path: file path to json file containing necessary data (below)
 
         :param google_api_key: API key to access GoogleMaps API
         :param weather_api_key: API key to access OpenWeather API
@@ -27,19 +28,12 @@ class Simulation:
         :param race_type: a string that describes the race type (ASC or FSGP)
 
         """
-        # ------ Race type --------
-
-        assert race_type == "FSGP" or race_type == "ASC", "race_type should be one of \"FSGP\" or \"ASC\""
-
-        self.race_type = race_type
-
-        # ----- Route constants -----
-
-        self.origin_coord = origin_coord
-        self.dest_coord = dest_coord
-        self.waypoints = waypoints
 
         # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
+        
+        # ----- Load arguments -----
+        with open(json_path) as f:
+            args = json.load(f)
 
         # ----- Simulation Race Independent constants -----
 
@@ -50,13 +44,23 @@ class Simulation:
 
         # ----- Time constants -----
 
-        self.tick = tick  # Race-independent
-        self.simulation_duration = simulation_duration
+        self.tick = args['tick']
+        self.simulation_duration = args['simulation_duration']
 
         # ----- API keys -----
 
-        self.google_api_key = google_api_key  # Race-Independent
-        self.weather_api_key = weather_api_key  # Race-Independent
+        self.google_api_key = args['google_api_key']
+        self.weather_api_key = args['weather_api_key']
+
+        # ----- Route constants -----
+
+        self.origin_coord = args['origin_coord']
+        self.dest_coord = args['dest_coord']
+        self.waypoints = args['waypoints']
+        
+        # ----- Race type -----
+        
+        self.race_type = args['race_type']
 
         # ----- Component initialisation -----
 
