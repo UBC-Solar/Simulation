@@ -6,13 +6,14 @@ import sys
 import numpy as np
 import polyline
 import requests
+import datetime
+import pytz
+from timezonefinder import TimezoneFinder
 from tqdm import tqdm
 
 from data.route.__init__ import route_directory
 from simulation.common import helpers
-import datetime
-import pytz
-from timezonefinder import TimezoneFinder
+
 import logging
 
 
@@ -44,12 +45,8 @@ class GIS:
         # path to file storing the route and elevation NumPy arrays
         if self.race_type == "FSGP":
             route_file = route_directory / "route_data_FSGP.npz"
-        # elif self.race_type == "ASC":
-        #  route_file = route_directory / "route_data.npz"
         else:
             route_file = route_directory / "route_data.npz"
-        # Is there a way to end the simulation here? Throw exception or something to signify the race
-        # type is not valid
 
         api_call_required = True
 
@@ -74,7 +71,7 @@ class GIS:
                     self.path_time_zones = route_data['time_zones']
 
         if api_call_required or force_update:
-            print("New route requested and/or route save file does not exist. "
+            logging.warning("New route requested and/or route save file does not exist. "
                   "Calling Google API and creating new route save file...\n")
             logging.warning(
                 "The GIS class is collecting data from a Google API. Set force_update to false to prevent this and "
