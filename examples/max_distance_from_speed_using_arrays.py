@@ -11,9 +11,10 @@ before the battery runs out [speed -> distance].
 @helpers.timeit
 def main():
     # length of the simulation in seconds
-    simulation_length = 60 * 60 * 10
+    simulation_length = 60 * 60 * 12  # 10 hours -> seconds
 
-    input_speed = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
+    # Input Parameters
+    input_speed = np.array([35] * 12)
 
     """
     Note: it no longer matters how many elements the input_speed array has, the simulation automatically
@@ -34,11 +35,9 @@ def main():
       
       Keep in mind, however, that the condition len(input_speed) <= simulation_length must be true
     """
-    simulation_model = simulation.Simulation("./simulation/main/settings_ASC.json")
 
-    for _ in range(1):
-        distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
-        print(distance_travelled)
+    simulation_model = simulation.Simulation("./simulation/main/settings_ASC.json")
+    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
 
 
 if __name__ == "__main__":
