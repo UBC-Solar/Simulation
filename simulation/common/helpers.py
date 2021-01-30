@@ -97,3 +97,33 @@ def calculate_path_distances(coords):
     path_distances = constants.EARTH_RADIUS * np.sqrt(square_sum)
 
     return path_distances
+
+# add acceleration (for constant acceleration)
+def add_acceleration(input_array, acceleration):
+
+    # change type int to float
+    input_array = input_array.astype(float)
+
+    # identify points where speed changes
+    array_diff = np.diff(input_array)
+
+    # get a list of index at where speed changes
+    array_index = np.where(array_diff != 0)
+
+    # acceleration per second
+    acceleration = acceleration / 3600
+
+    for i in array_index[0]:
+        # check if accelerate or decelerate
+        if array_diff[i] > 0:
+            while input_array[i] < input_array[i + 1] and i + 1 < len(input_array) - 1:
+                input_array[i + 1] = input_array[i] + acceleration
+                i += 1
+
+        else:
+            while input_array[i] > input_array[i + 1] and i + 1 < len(input_array) - 1:
+                input_array[i + 1] = input_array[i] - acceleration
+                i += 1
+
+    return input_array
+    pass

@@ -11,11 +11,11 @@ before the battery runs out [speed -> distance].
 @helpers.timeit
 def main():
     # length of the simulation in seconds
-    simulation_length = 60 * 60 * 12  # 10 hours -> seconds
+    simulation_length = 60 * 60 * 4 # 10 hours -> seconds
 
-    input_speed = np.array([35] * 12)
+    input_speed = np.array([35,12,6,18])
 
-    race_type = "FSGP"
+    race_type = "ASC"
 
     """
     Note: it no longer matters how many elements the input_speed array has, the simulation automatically
@@ -64,9 +64,9 @@ def main():
 
     simulation_model = simulation.Simulation(google_api_key, weather_api_key, origin_coord, dest_coord, waypoints,
                                              tick=1, simulation_duration=simulation_length, race_type=race_type,
-                                             start_hour=9)
+                                             start_hour=12)
 
-    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=False)
+    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
 
 
 if __name__ == "__main__":

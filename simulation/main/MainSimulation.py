@@ -79,7 +79,7 @@ class Simulation:
                                                    weather_data_frequency="daily",
                                                    force_update=False)
 
-        # Implementing starting times (ASC: 7am, FSGP: 8am)
+        # Implementing day starting times (ASC: 7am, FSGP: 8am)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + start_hour - weather_hour)
@@ -116,6 +116,7 @@ class Simulation:
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
+        speed_kmh = helpers.add_acceleration(speed_kmh, 200)
 
         # ----- Expected distance estimate -----
 
@@ -240,6 +241,7 @@ class Simulation:
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
         speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
         speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
+        speed_kmh = helpers.add_acceleration(speed_kmh, 200)
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
