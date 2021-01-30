@@ -305,7 +305,7 @@ class Simulation:
         # configure these parameters depending on whether optimizing for speed or precision
         # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
         # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
-        optimizer.maximize(init_points=10, n_iter=50, acq='ucb', xi=1e-4, kappa=0.1)
+        optimizer.maximize(init_points=10, n_iter=100, acq='ucb', xi=1e-1, kappa=10)
 
         print(optimizer.max)
         return optimizer.max
