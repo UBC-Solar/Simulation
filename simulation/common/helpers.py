@@ -56,10 +56,9 @@ def reshape_and_repeat(input_array, reshape_length):
         print(f"Reshaped input array from {input_array.shape} to {result.shape}\n")
         return result
 
-      
+
 # add acceleration (for constant acceleration)
 def add_acceleration(input_array, acceleration):
-
     # change type int to float
     input_array = input_array.astype(float)
 
@@ -86,8 +85,8 @@ def add_acceleration(input_array, acceleration):
 
     return input_array
     pass
-  
-  
+
+
 def hour_from_unix_timestamp(unix_timestamp):
     val = datetime.utcfromtimestamp(unix_timestamp)
     return val.hour
@@ -130,6 +129,43 @@ def calculate_path_distances(coords):
     return path_distances
 
 
+def find_runs(x):
+    """
+    Method to identify runs of consecutive items in NumPy array
+    Based on code from: user alimanfoo on https://gist.github.com/alimanfoo/c5977e87111abe8127453b21204c1065
+
+    :returns a tuple of 3 NumPy arrays for (run_values, run_starts, run_lengths)
+    Args:
+        x: a 1D NumPy array3
+    Throws: ValueError if array dimension is greater than 1
+
+    Returns: a tuple of 3 NumPy arrays for (run_values, run_starts, run_lengths)
+    """
+    x = np.asanyarray(x)
+    if x.ndim != 1:
+        raise ValueError('only 1D array supported')
+    n = x.shape[0]
+
+    # handle empty array
+    if n == 0:
+        return np.array([]), np.array([]), np.array([])
+
+    else:
+        # find run starts
+        loc_run_start = np.empty(n, dtype=bool)
+        loc_run_start[0] = True
+        np.not_equal(x[:-1], x[1:], out=loc_run_start[1:])
+        run_starts = np.nonzero(loc_run_start)[0]
+
+        # find run values
+        run_values = x[loc_run_start]
+
+        # find run lengths
+        run_lengths = np.diff(np.append(run_starts, n))
+
+        return run_values, run_starts, run_lengths
+
+
 if __name__ == '__main__':
     # speed_array input
     speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
@@ -140,4 +176,3 @@ if __name__ == '__main__':
     print(expanded_speed_array)
 
     pass
-  
