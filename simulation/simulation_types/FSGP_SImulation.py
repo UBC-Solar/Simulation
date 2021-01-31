@@ -10,6 +10,7 @@ from simulation.common import helpers
 from simulation.config import settings_directory
 from simulation.simulation_types import *
 import numpy as np
+import math
 
 
 class FSGP_Simulation(BaseSimulation):
@@ -31,7 +32,7 @@ class FSGP_Simulation(BaseSimulation):
         # Route coords, elevations is the the same through each lap
 
         # Get weather data from the current_time - until end of simulation for the route coords
-            # This will change the weather data we get since the current_time will keep getting updated as we simulate laps
+        # This will change the weather data we get since the current_time will keep getting updated as we simulate laps
 
         # Determine when the car reaches the end of the lap
         # Return UNIX timestamp of when final destination is reached
@@ -75,18 +76,29 @@ class FSGP_Simulation(BaseSimulation):
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
-        runs = helpers.find_runs(closest_gis_indices)
-        lap_end_index = np.amax(runs[1]) # This takes the last run of elements
+        # Prototype code to tile dataset
+        initial_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
+        runs = helpers.find_runs(initial_gis_indices)
+        lap_end_index = np.amax(runs[1])
+        # This takes the index of the last run of elements (signifies the end of the route) and uses it to cull the
+        # dataset
+        initial_gis_indices = np.tile(initial_gis_indices[0:lap_end_index], math.ceil(
+            timestamps.size / lap_end_index))  # This gets you an array that is larger than the indicated size
+        # Alternatively can adjust simulation duration to fit this. For now i'm going to adjust the indices array
 
         initial_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
-        closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
-        # np.split( , np.where(np.diff(data) != ))
+        runs = helpers.find_runs(initial_weather_indices)
+        lap_end_index = np.amax(runs[1])
+        initial_weather_indices = np.tile(initial_weather_indices[0:lap_end_index], math.ceil(
+            timestamps.size / lap_end_index))
+
+        closest_weather_indices = initial_weather_indices[0:timestamps.size]
+        closest_gis_indices = initial_gis_indices[0:timestamps.size]
 
         path_distances = self.gis.path_distances
         cumulative_distances = np.cumsum(path_distances)  # [cumulative_distances] = meters
 
-        max_route_distance = cumulative_distances[-1] * num_laps
+        max_route_distance = cumulative_distances[-1]
 
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
@@ -114,7 +126,8 @@ class FSGP_Simulation(BaseSimulation):
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
         roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
-        # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)), 'constant', constant_values = (0))
+        # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)),
+        # 'constant', constant_values = (0))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
@@ -210,5 +223,43 @@ class FSGP_Simulation(BaseSimulation):
         time_taken = np.sum(time_in_motion)
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
-        return distance_travelled
+        print(f"Simulation successful!\n"
+              f"Time taken: {time_taken}\n"
+              f"Maximum distance traversable: {distance_travelled:.2f}km\n"
+              f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
+              f"Final battery SOC: {final_soc:.2f}%\n")
 
+        # ----- Plotting -----
+
+        if plot_results:
+            arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
+                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
+                              cloud_covers]
+
+            compress_constant = int(timestamps.shape[0] / 5000)
+
+            for index, array in enumerate(arrays_to_plot):
+                arrays_to_plot[index] = array[::compress_constant]
+
+            y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
+            sns.set_style("whitegrid")
+            f, axes = plt.subplots(4, 2, figsize=(12, 8))
+            f.suptitle(f"Simulation results ({self.race_type})", fontsize=16, weight="bold")
+
+            with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
+                for index, axis in enumerate(axes.flatten()):
+                    df = pd.DataFrame(dict(time=timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
+                    g = sns.lineplot(x="time", y="value", data=df, ax=axis)
+                    g.set(xlabel="time (hrs)", ylabel=y_label[index])
+                    pbar.update(1)
+            print()
+
+            sns.despine()
+            plt.setp(axes)
+            plt.tight_layout()
+            plt.show()
+
+        self.local_times = local_times
+        self.time_zones = time_zones
+        return distance_travelled
