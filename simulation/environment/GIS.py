@@ -476,6 +476,13 @@ class GIS:
 
         return self.current_index
 
+    # ----- Route Tiling Function -----
+    def tile_route(self, num_laps):
+        self.path_elevations
+
+
+        pass
+
 
 if __name__ == "__main__":
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
