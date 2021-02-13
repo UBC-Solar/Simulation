@@ -11,8 +11,8 @@ import datetime
 import numpy as np
 from simulation.common import helpers
 from tqdm import tqdm
+from numba import jit, njit
 import sys
-
 
 class SolarCalculations:
 
@@ -27,6 +27,7 @@ class SolarCalculations:
     # ----- Calculation of Apparent Solar Time -----
 
     @staticmethod
+    @jit
     def calculate_eot_correction(day_of_year):
         """
         Approximates and returns the correction factor between the apparent 
@@ -116,6 +117,7 @@ class SolarCalculations:
         return hour_angle
 
     @staticmethod
+    @jit
     def calculate_declination_angle(day_of_year):
         """
         Calculates the Declination Angle of the Earth at a given day
@@ -166,16 +168,8 @@ class SolarCalculations:
         # "For example, at 10:30 AM local apparent time
         # the hour angle is −22.5° (15° per hour times 1.5 hours before noon)."
 
-        term_1 = math.sin(math.radians(declination_angle)) * \
-            math.sin(math.radians(latitude))
-
-        term_2 = math.cos(math.radians(declination_angle)) * \
-            math.cos(math.radians(latitude)) * \
-            math.cos(math.radians(hour_angle))
-
-        elevation_angle = math.asin(term_1 + term_2)
-
-        return math.degrees(elevation_angle)
+        # mathy part is delegated to a helper function to optimize for numba compilation
+        return self.compute_elevation_angle_math(declination_angle, hour_angle, latitude)
 
     def calculate_zenith_angle(self, latitude, longitude, time_zone_utc, day_of_year,
                                local_time):
@@ -407,7 +401,7 @@ class SolarCalculations:
         return GHI
 
     # ----- Calculation of modes of solar irradiance, but returning numpy arrays -----
-
+    @helpers.timeit
     def calculate_array_GHI(self, coords, time_zones, local_times,
                             elevations, cloud_covers):
 
@@ -459,3 +453,28 @@ class SolarCalculations:
 
         return (datetime.date(year, month, day) -
                 datetime.date(year, 1, 1)).days + 1
+
+    @staticmethod
+    @njit
+    def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
+        """
+        Gets the two terms to calculate and return elevation angle, given the
+        declination angle, hour angle, and latitude.
+
+        This method separates the math part of the calculation from its caller
+        method to optimize for numba compilation.
+
+        declination_angle: The declination angle of the Earth relative to the Sun
+        hour_angle: The hour angle of the sun in the sky
+
+        Returns: The elevation angle in degrees
+        """
+        term_1 = math.sin(math.radians(declination_angle)) * \
+            math.sin(math.radians(latitude))
+
+        term_2 = math.cos(math.radians(declination_angle)) * \
+            math.cos(math.radians(latitude)) * \
+            math.cos(math.radians(hour_angle))
+
+        elevation_angle = math.asin(term_1 + term_2)
+        return math.degrees(elevation_angle)

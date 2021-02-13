@@ -8,6 +8,8 @@ import pandas as pd
 from simulation.common import helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from scipy.optimize import minimize
+from bayes_opt import BayesianOptimization
 from simulation.config import settings_directory
 
 
@@ -110,7 +112,7 @@ class Simulation:
         self.local_times = 0
 
     @helpers.timeit
-    def run_model(self, speed, plot_results=True):
+    def run_model(self, speed=np.array([20,20,20,20,20,20,20,20]), plot_results=True, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an
@@ -127,7 +129,17 @@ class Simulation:
 
         :param speed: array that specifies the solar car's driving speed at each time step
         :param plot_results: set to True to plot the results of the simulation (is True by default)
+        :param args: variable list of arguments that specify the car's driving speed at each time step. Overrides the speed parameter.
         """
+
+        # This is mainly used by the optimization function since it passes values as keyword arguments instead of a numpy array
+        if kwargs:
+            speed = np.empty(len(kwargs))
+
+            # Don't plot results since this code is run by the optimizer
+            plot_results = False
+            for val in kwargs.values():
+                speed = np.append(speed, [val])
 
         # ----- Reshape speed array -----
 
@@ -337,5 +349,34 @@ class Simulation:
 
         return distance_travelled
 
+    def display_result(self, res):
+        print(f"{res.message} \n")
+        print(f"Optimal solution: {res.x.round(2)} \n")
+        print(f"Average speed: {np.mean(res.x).round(1)}km/h")
+
+        maximum_distance = np.abs(self.run_model(res.x))
+        print(f"Maximum distance: {maximum_distance:.2f}km\n")
+        
+    @helpers.timeit
     def optimize(self, *args, **kwargs):
-        raise NotImplementedError
+        bounds = {
+            'x0': (20, 70),
+            'x1': (20, 70),
+            'x2': (20, 70),
+            'x3': (20, 70),
+            'x4': (20, 70),
+            'x5': (20, 70),
+            'x6': (20, 70),
+            'x7': (20, 70),
+        }
+
+        # https://github.com/fmfn/BayesianOptimization
+        optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds)
+
+        # configure these parameters depending on whether optimizing for speed or precision
+        # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
+        # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
+        optimizer.maximize(init_points=10, n_iter=100, acq='ucb', xi=1e-1, kappa=10)
+
+        print(optimizer.max)
+        return optimizer.max
