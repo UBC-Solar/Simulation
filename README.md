@@ -1,6 +1,8 @@
 # Simulation
 
-Welcome to UBC Solar's race strategy simulation environment! This document contains information on how to getting started with using the simulation framework. 
+Welcome to UBC Solar's race strategy simulation environment! The objectve of this simulation is to guide UBC Solar's race strategy by creating a model to predict the performance of the UBC Solar cars in the American Solar Challenge (ASC) and Formula Sun Grand Prix (FSGP). 
+
+This document contains information on how to getting started with using the simulation framework. 
 
 For more detailed information on the inner workings of the simulation please refer to the [wiki](https://github.com/UBC-Solar/Simulation/wiki).
 
