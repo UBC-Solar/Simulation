@@ -22,7 +22,7 @@ setup(name='simulation',
           'simulation': ['py.typed'],
       },
       install_requires=[
-          'numpy', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn'
+          'numpy', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn', 'numba', 'bayesian_optimization', 'timezonefinder'
       ],
       extras_require={
         'mpi': [

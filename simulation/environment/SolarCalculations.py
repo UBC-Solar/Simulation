@@ -9,9 +9,10 @@ A class to perform calculation and approximations for obtaining quantities
 import math
 import datetime
 from typing import List, Any, Union
-
 import numpy as np
+from simulation.common import helpers
 from tqdm import tqdm
+from numba import jit, njit
 import sys
 
 from simulation.common import helpers
@@ -244,7 +245,7 @@ class SolarCalculations:
         note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
 
-        Returns: The Global Horizontal Irradiance in W/m2
+        Returns: The Global Horizontal Irradiance in W/m2 
         """
 
         DHI = self.calculate_DHI(latitude, longitude, time_zone_utc, day_of_year,
@@ -259,6 +260,7 @@ class SolarCalculations:
         cloud_cover_correction_factor = 1 - (cloud_cover / 100)
         GHI = DNI * np.cos(np.radians(zenith_angle)) + DHI
         GHI = cloud_cover_correction_factor * GHI
+
         return GHI
 
     # ----- Calculation of modes of solar irradiance, but returning numpy arrays -----
@@ -273,12 +275,12 @@ class SolarCalculations:
 
         coords: (float[N][lat, lng]) array of latitudes and longitudes
         time_zones: (int[N]) time zones at different locations in seconds relative to UTC
-        local_times: (int[N]) unix time that the vehicle will be at each location.
+        local_times: (int[N]) unix time that the vehicle will be at each location. 
                         (Adjusted for Daylight Savings)
         elevations: (float[N]) elevation from sea level in m
-        cloud_covers: (float[N]) percentage cloud cover in range of 0 to 1
+        cloud_covers: (float[N]) percentage cloud cover in range of 0 to 1 
 
-        note: If local_times and time_zones are both unadjusted for Daylight Savings, the
+        note: If local_times and time_zones are both unadjusted for Daylight Savings, the 
                 calculation will end up just the same
 
         Returns: (float[N]) Global Horizontal Irradiance in W/m2

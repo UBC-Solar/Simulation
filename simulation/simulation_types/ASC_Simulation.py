@@ -1,120 +1,50 @@
 import sys
-import simulation
-import numpy as np
 import datetime
-import json
 import seaborn as sns
 import pandas as pd
-from simulation.common import helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from scipy.optimize import minimize
-from bayes_opt import BayesianOptimization
-from simulation.config import settings_directory
-
-from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
+from simulation.common import helpers
+from simulation.simulation_types import *
+import numpy as np
 
 
-class Simulation:
+class ASC_Simulation(BaseSimulation):
+    """
+    Instantiates a simple model of the car.
 
-    def __init__(self, race_type):
-        """
-        Instantiates a simple model of the car.
+    Fields
+    :origin_coord: array containing latitude and longitude of route start point
+    :waypoints: array containing latitude and longitude pairs of route waypoints
+    :dest_coord: array containing latitude and longitude of route end point
+    :param simulation_duration: length of simulated time (in seconds)
+    :param input_speed:
+    :param start_hour:
 
-        :param race_type: a string that describes the race type to simulate (ASC or FSGP)
+    """
+    def __init__(self, input_speed, start_hour, simulation_duration):
+        super().__init__()
 
-        Depending on the race type, the following initialisation parameters are read from the corresponding
-        settings json file located in the config folder.
+        # ----- Route Definition -----
+        self.origin_coord = np.array([39.0918, -94.4172])
 
-        google_api_key: API key to access GoogleMaps API
-        weather_api_key: API key to access OpenWeather API
-        origin_coord: array containing latitude and longitude of route start point
-        dest_coord: array containing latitude and longitude of route end point
-        waypoints: array containing latitude and longitude pairs of route waypoints
-        tick: length of simulation's discrete time step (in seconds)
-        simulation_duration: length of simulated time (in seconds)
-        start_hour: describes the hour to start the simulation (typically either 7 or 9, these
-        represent 7am and 9am respectively)
-        """
+        self.waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
+                                   [41.8392, -103.7115], [42.8663, -106.3372], [42.8408, -108.7452],
+                                   [42.3224, -111.2973], [42.5840, -114.4703]])
 
-        # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
+        self.dest_coord = np.array([43.6142, -116.2080])
 
-        assert race_type in ["ASC", "FSGP"]
+        self.input_speed = input_speed
 
-        # chooses the appropriate settings file to read from
-        if race_type == "ASC":
-            settings_path = settings_directory / "settings_ASC.json"
-        else:
-            settings_path = settings_directory / "settings_FSGP.json"
-        
-        # ----- Load arguments -----
-        with open(settings_path) as f:
-            args = json.load(f)
+        # ----- Race-Specific Timing Constants -----
 
-        # ----- Simulation Race Independent constants -----
+        self.simulation_duration = simulation_duration
+        self.start_hour = start_hour
 
-        self.initial_battery_charge = args['initial_battery_charge']
+        # ----- Configure
+        self.configure_race("ASC")
 
-        # LVS power loss is pretty small so it is neglected
-        self.lvs_power_loss = args['lvs_power_loss']  # Race-independent
-
-        # ----- Time constants -----
-
-        self.tick = args['tick']
-        self.simulation_duration = args['simulation_duration']
-        self.start_hour = args['start_hour']
-
-        # ----- API keys -----
-
-        self.google_api_key = args['google_api_key']
-        self.weather_api_key = args['weather_api_key']
-
-        # ----- Route constants -----
-
-        self.origin_coord = args['origin_coord']
-        self.dest_coord = args['dest_coord']
-        self.waypoints = args['waypoints']
-        
-        # ----- Race type -----
-        
-        self.race_type = race_type
-
-        # ----- Force update flags -----
-
-        gis_force_update = args['gis_force_update']
-        weather_force_update = args['weather_force_update']
-
-        # ----- Component initialisation -----
-
-        self.basic_array = simulation.BasicArray()  # Race-independent
-
-        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)  # Race-independent
-
-        self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)  # Race-independent
-
-        self.basic_motor = simulation.BasicMotor()  # Race-independent
-
-        self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update)
-        self.route_coords = self.gis.get_path()
-
-        self.vehicle_bearings = self.gis.calculate_current_heading_array()
-        self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
-                                                   self.simulation_duration / 3600,
-                                                   self.race_type,
-                                                   weather_data_frequency="daily",
-                                                   force_update=weather_force_update)
-
-        # Implementing starting times (ASC: 7am, FSGP: 8am)
-        weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
-        self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
-
-        self.solar_calculations = simulation.SolarCalculations()  # Race-Independent
-
-        self.local_times = 0
-
-    @helpers.timeit
-    def run_model(self, speed=np.array([20,20,20,20,20,20,20,20]), plot_results=True, **kwargs):
+    def run_model(self, plot_results=True):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an
@@ -127,29 +57,17 @@ class Simulation:
             of the vehicle at every tick, the gradients at every tick, the weather at every
             tick, the GHI at every tick, is known.
 
-        Note 2: currently, the simulation can only be run for times during which weather data is available
+        note 2: currently, the simulation can only be run for times during which weather data is available
 
-        :param speed: array that specifies the solar car's driving speed at each time step
         :param plot_results: set to True to plot the results of the simulation (is True by default)
-        :param args: variable list of arguments that specify the car's driving speed at each time step. Overrides the speed parameter.
         """
-
-        # This is mainly used by the optimization function since it passes values as keyword arguments instead of a numpy array
-        if kwargs:
-            speed = np.empty(len(kwargs))
-
-            # Don't plot results since this code is run by the optimizer
-            plot_results = False
-            for val in kwargs.values():
-                speed = np.append(speed, [val])
 
         # ----- Reshape speed array -----
 
-        print(f"Input speeds: {speed}\n")
+        print(f"Input speeds: {self.input_speed}\n")
 
-        speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
+        speed_kmh = helpers.reshape_and_repeat(self.input_speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
-        speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         # ----- Expected distance estimate -----
 
@@ -193,10 +111,7 @@ class Simulation:
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
-
-        # only for reference (may be used in the future)
-        local_times_datetime = np.array([datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
+        local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
@@ -210,11 +125,8 @@ class Simulation:
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
 
-        # TODO: remove after done with testing
-        cloud_covers = np.zeros_like(cloud_covers)
-
         # Get the wind speeds at every location
-        wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
+        wind_speeds = self.weather.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
                                                                     wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time
@@ -230,14 +142,14 @@ class Simulation:
         # Ensuring Car does not move at night
         bool_lis = []
         night_lis = []
-        if self.race_type == "FSGP":
-            bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-            for time in list(range(20, 24)) + list(range(0, 8)):
-                night_lis.append(time_of_day_hour == time)
-        elif self.race_type == "ASC":
-            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-            for time in list(range(20, 24)) + list(range(0, 8)):
-                night_lis.append(time_of_day_hour == time)
+        # if self.race_type == "FSGP":
+        #     bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+        #     for time in list(range(20, 24)) + list(range(0, 8)):
+        #         night_lis.append(time_of_day_hour == time)
+        # elif self.race_type == "ASC":
+        bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+        for time in list(range(20, 24)) + list(range(0, 8)):
+            night_lis.append(time_of_day_hour == time)
 
         not_charge = np.invert(np.logical_or.reduce(bool_lis))
         not_day = np.invert(np.logical_or.reduce(night_lis))
@@ -277,7 +189,6 @@ class Simulation:
         # TODO: if the car cannot climb the slope, the car also does not move
         # when the car is charging the car does not move
         # at night the car does not move
-
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
         speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
         speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
@@ -331,7 +242,7 @@ class Simulation:
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
             sns.set_style("whitegrid")
             f, axes = plt.subplots(4, 2, figsize=(12, 8))
-            f.suptitle(f"Simulation results ({self.race_type})", fontsize=16, weight="bold")
+            f.suptitle("Simulation results", fontsize=16, weight="bold")
 
             with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
                 for index, axis in enumerate(axes.flatten()):
@@ -351,34 +262,5 @@ class Simulation:
 
         return distance_travelled
 
-    def display_result(self, res):
-        print(f"{res.message} \n")
-        print(f"Optimal solution: {res.x.round(2)} \n")
-        print(f"Average speed: {np.mean(res.x).round(1)}km/h")
-
-        maximum_distance = np.abs(self.run_model(res.x))
-        print(f"Maximum distance: {maximum_distance:.2f}km\n")
-        
-    @helpers.timeit
-    def optimize(self, *args, **kwargs):
-        bounds = {
-            'x0': (20, 70),
-            'x1': (20, 70),
-            'x2': (20, 70),
-            'x3': (20, 70),
-            'x4': (20, 70),
-            'x5': (20, 70),
-            'x6': (20, 70),
-            'x7': (20, 70),
-        }
-
-        # https://github.com/fmfn/BayesianOptimization
-        optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds)
-
-        # configure these parameters depending on whether optimizing for speed or precision
-        # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
-        # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
-        optimizer.maximize(init_points=10, n_iter=100, acq='ucb', xi=1e-1, kappa=10)
-
-        print(optimizer.max)
-        return optimizer.max
+    def __str__(self):
+        return "ASC"
