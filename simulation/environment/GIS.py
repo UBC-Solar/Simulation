@@ -86,7 +86,7 @@ class GIS:
                          dest_coord=self.dest_coord, waypoints=self.waypoints)
 
         self.path_distances = helpers.calculate_path_distances(self.path)
-        self.path_gradients = self.calculate_path_gradients(self.path_elevations,
+        self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
 
     def calculate_closest_gis_indices(self, cumulative_distances):

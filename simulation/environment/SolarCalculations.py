@@ -6,17 +6,12 @@ A class to perform calculation and approximations for obtaining quantities
     such as solar time, solar position, and the various types of solar irradiance.
 """
 
-import math
 import datetime
-from typing import List, Any, Union
 import numpy as np
 from simulation.common import helpers
 from tqdm import tqdm
 from numba import jit, njit
 import sys
-
-from simulation.common import helpers
-from simulation.common.helpers import get_day_of_year, calculate_declination_angle, local_time_to_apparent_solar_time
 
 
 class SolarCalculations:
@@ -48,7 +43,7 @@ class SolarCalculations:
         Returns: The Hour Angle in degrees. 
         """
 
-        lst = local_time_to_apparent_solar_time(time_zone_utc, day_of_year,
+        lst = helpers.local_time_to_apparent_solar_time(time_zone_utc, day_of_year,
                                                      local_time, longitude)
 
         hour_angle = 15 * (lst - 12)
@@ -75,7 +70,7 @@ class SolarCalculations:
         Returns: The elevation angle in degrees
         """
 
-        declination_angle = calculate_declination_angle(day_of_year)
+        declination_angle = helpers.calculate_declination_angle(day_of_year)
         hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year,
                                                local_time, longitude)
 
@@ -134,7 +129,7 @@ class SolarCalculations:
         Returns: The azimuth angle in degrees
         """
 
-        declination_angle = calculate_declination_angle(day_of_year)
+        declination_angle = helpers.calculate_declination_angle(day_of_year)
         hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year,
                                                local_time, longitude)
 
@@ -292,7 +287,7 @@ class SolarCalculations:
             for i, _ in enumerate(coords):
                 date = datetime.datetime.utcfromtimestamp(local_times[i])
 
-                day_of_year[i] = get_day_of_year(date.day, date.month, date.year)
+                day_of_year[i] = helpers.get_day_of_year(date.day, date.month, date.year)
 
                 local_time[i] = date.hour + (float(date.minute * 60 + date.second) / 3600)
 
