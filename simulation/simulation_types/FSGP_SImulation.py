@@ -27,9 +27,7 @@ class FSGP_Simulation(BaseSimulation):
         super().__init__(settings_path)
         self.input_speed = input_speed
 
-
     def run_model(self, plot_results=True):
-        num_laps = 3
         # ----- Reshape speed array -----
 
         print(f"Input speeds: {self.input_speed}\n")
@@ -51,7 +49,7 @@ class FSGP_Simulation(BaseSimulation):
         cumulative_distances = np.cumsum(distances)
 
         # ----- Tiling of FSGP Route -----
-        self.gis.tile_route()
+        self.route_coords = self.gis.tile_route(270, self.simulation_duration)
 
         # ----- Weather and location calculations -----
 
@@ -62,30 +60,42 @@ class FSGP_Simulation(BaseSimulation):
         """
 
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
-        runs = helpers.find_runs(closest_gis_indices)
-        lap_end_index = np.amax(runs[1]) # This takes the last run of elements
+        gis_runs = helpers.find_runs(closest_gis_indices)
+        lap_end_index = np.amax(gis_runs[1])  # This identifies the last run of elements
 
-        initial_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
+        # Prototype code for tiling
+        closest_gis_indices = np.resize(np.tile(closest_gis_indices[:lap_end_index],
+                                      np.math.ceil(len(closest_gis_indices) / len(closest_gis_indices[:lap_end_index]))), len(timestamps))
+
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
         # np.split( , np.where(np.diff(data) != ))
+
+        weather_runs = helpers.find_runs(closest_weather_indices)
+        lap_end_index = np.amax(weather_runs[1])  # This identifies the last run of elements
+
+        closest_weather_indices = np.resize(np.tile(closest_weather_indices[:lap_end_index],
+                                          np.math.ceil(len(closest_weather_indices) / len(
+                                              closest_weather_indices[:lap_end_index]))), len(timestamps))
 
         path_distances = self.gis.path_distances
         cumulative_distances = np.cumsum(path_distances)  # [cumulative_distances] = meters
 
-        max_route_distance = cumulative_distances[-1] * num_laps
+        max_route_distance = cumulative_distances[-1]
 
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
         gis_route_elevations_at_each_tick = gis_route_elevations[closest_gis_indices]
 
         # Get the azimuth angle of the vehicle at every location
+        # Update vehicle bearings
+        self.vehicle_bearings = self.gis.calculate_current_heading_array()
         gis_vehicle_bearings = self.vehicle_bearings[closest_gis_indices]
 
         # Get array of path gradients
         gradients = self.gis.get_gradients(closest_gis_indices)
 
-        # Get time zones at each point on the GIS path
-        time_zones = self.gis.get_time_zones(closest_gis_indices)
+        # Get time zones at each point on the GIS path, Resize to satisfy computations
+        time_zones = np.resize(self.gis.get_time_zones(closest_gis_indices), len(timestamps))
 
         # Local times in UNIX timestamps - this contains UNIX timestamps for every second for the simulation
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
@@ -196,5 +206,47 @@ class FSGP_Simulation(BaseSimulation):
         time_taken = np.sum(time_in_motion)
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
-        return distance_travelled
+        # TODO: package all the calculated arrays into a SimulationHistory class
+        # TODO: have some sort of standardised SimulationResult class
 
+        print(f"Simulation successful!\n"
+              f"Time taken: {time_taken}\n"
+              f"Maximum distance traversable: {distance_travelled:.2f}km\n"
+              f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
+              f"Final battery SOC: {final_soc:.2f}%\n")
+
+        # ----- Plotting -----
+
+        if plot_results:
+            arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
+                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
+                              cloud_covers]
+
+            compress_constant = int(timestamps.shape[0] / 5000)
+
+            for index, array in enumerate(arrays_to_plot):
+                arrays_to_plot[index] = array[::compress_constant]
+
+            y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
+            sns.set_style("whitegrid")
+            f, axes = plt.subplots(4, 2, figsize=(12, 8))
+            f.suptitle(f"Simulation results ({self.race_type})", fontsize=16, weight="bold")
+
+            with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
+                for index, axis in enumerate(axes.flatten()):
+                    df = pd.DataFrame(dict(time=timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
+                    g = sns.lineplot(x="time", y="value", data=df, ax=axis)
+                    g.set(xlabel="time (hrs)", ylabel=y_label[index])
+                    pbar.update(1)
+            print()
+
+            sns.despine()
+            plt.setp(axes)
+            plt.tight_layout()
+            plt.show()
+
+        self.local_times = local_times
+        self.time_zones = time_zones
+
+        return distance_travelled

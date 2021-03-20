@@ -476,13 +476,17 @@ class GIS:
 
         return self.current_index
 
-    # ----- Route Tiling Function -----
-    def tile_route(self, num_laps):
-        self.path_elevations
+    def tile_route(self, num_laps, simulation_duration):
+        self.path = np.tile(self.path, (num_laps,1)) # 2 is how many times it is tiled.
 
+        # Update any variables that depend on the path
+        self.path_distances = helpers.calculate_path_distances(self.path)
+        self.path_elevations = self.calculate_path_elevations(self.path)
+        self.path_gradients = self.calculate_path_gradients(self.path_elevations,
+                                                            self.path_distances)
+        self.path_time_zones = self.calculate_time_zones(self.path)
 
-        pass
-
+        return self.path
 
 if __name__ == "__main__":
     google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
@@ -496,9 +500,13 @@ if __name__ == "__main__":
     dest_coord = np.array([38.9219577, -95.6776967])
 
     locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints,
-                         race_type="FSGP", force_update=True)
+                         race_type="FSGP", force_update=False)
+
+    locationSystem.tile_route()
 
     path = locationSystem.get_path()
+    print(path)
+
     timezones = locationSystem.path_time_zones
 
     print(timezones[0:10])
