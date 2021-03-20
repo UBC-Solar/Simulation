@@ -5,7 +5,7 @@ import datetime
 from _datetime import datetime
 from _datetime import date
 
-from numba import jit
+from numba import jit, njit
 
 from simulation.common import constants
 
@@ -177,7 +177,7 @@ def get_day_of_year(day, month, year):
             date(year, 1, 1)).days + 1
 
 
-@jit
+# @jit
 def calculate_declination_angle(day_of_year):
     """
     Calculates the Declination Angle of the Earth at a given day
@@ -197,7 +197,7 @@ def calculate_declination_angle(day_of_year):
 
 
 # ----- Calculation of Apparent Solar Time -----
-@jit
+# @jit
 def calculate_eot_correction(day_of_year):
     """
     Approximates and returns the correction factor between the apparent
@@ -304,6 +304,30 @@ def cull_dataset(coords):
     """
 
     return coords[::625]
+
+# @njit
+def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
+    """
+    Gets the two terms to calculate and return elevation angle, given the
+    declination angle, hour angle, and latitude.
+
+    This method separates the math part of the calculation from its caller
+    method to optimize for numba compilation.
+
+    declination_angle: The declination angle of the Earth relative to the Sun
+    hour_angle: The hour angle of the sun in the sky
+
+    Returns: The elevation angle in degrees
+    """
+    term_1 = np.sin(np.radians(declination_angle)) * \
+        np.sin(np.radians(latitude))
+
+    term_2 = np.cos(np.radians(declination_angle)) * \
+        np.cos(np.radians(latitude)) * \
+        np.cos(np.radians(hour_angle))
+
+    elevation_angle = np.arcsin(term_1 + term_2)
+    return np.degrees(elevation_angle)
 
 
 if __name__ == '__main__':

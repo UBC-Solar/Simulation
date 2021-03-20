@@ -10,7 +10,6 @@ import datetime
 import numpy as np
 from simulation.common import helpers
 from tqdm import tqdm
-from numba import jit, njit
 import sys
 
 
@@ -69,21 +68,22 @@ class SolarCalculations:
 
         Returns: The elevation angle in degrees
         """
-
+        # Negative declination angles: Northern Hemisphere winter
+        # 0 declination angle : Equinoxes (March 22, Sept 22)
+        # Positive declination angle: Northern Hemisphere summer
         declination_angle = helpers.calculate_declination_angle(day_of_year)
+
+        # Negative hour angles: Morning
+        # 0 hour angle : Solar noon
+        # Positive hour angle: Afternoon
         hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year,
                                                local_time, longitude)
+        # From: https://en.wikipedia.org/wiki/Hour_angle#:~:text=At%20solar%20noon%20the%20hour,times%201.5%20hours%20before%20noon).
+        # "For example, at 10:30 AM local apparent time
+        # the hour angle is −22.5° (15° per hour times 1.5 hours before noon)."
 
-        term_1 = np.sin(np.radians(declination_angle)) * \
-            np.sin(np.radians(latitude))
-
-        term_2 = np.cos(np.radians(declination_angle)) * \
-            np.cos(np.radians(latitude)) * \
-            np.cos(np.radians(hour_angle))
-
-        elevation_angle = np.arcsin(term_1 + term_2)
-
-        return np.degrees(elevation_angle)
+        # mathy part is delegated to a helper function to optimize for numba compilation
+        return helpers.compute_elevation_angle_math(declination_angle, hour_angle, latitude)
 
     def calculate_zenith_angle(self, latitude, longitude, time_zone_utc, day_of_year,
                                local_time):
