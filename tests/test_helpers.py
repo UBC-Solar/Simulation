@@ -10,3 +10,7 @@ def test_checkForNonConsecutiveZeros():
         (helpers.checkForNonConsecutiveZeros(test_array_true), helpers.checkForNonConsecutiveZeros(test_array_false)))
 
     assert result == (True, False)
+
+
+if __name__ == "__main__":
+    test_checkForNonConsecutiveZeros()

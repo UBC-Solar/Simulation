@@ -37,7 +37,7 @@ def test_calculate_closest_gis_indices(gis):
 
 
 def test_calculate_time_zones1(gis):
-    expected_time_zone = np.array(np.append(np.repeat(-18000., 625 * 2), np.repeat(-21600., 625 * 3)) , dtype=np.uint64)
+    expected_time_zone = np.array(np.append(np.repeat(-18000., 625 * 2), np.repeat(-21600., 625 * 3)), dtype=np.uint64)
     test_coord = np.append(np.tile([39.0918, -94.4172], 625 * 2), np.tile([43.6142, -116.2080], 625 * 3)).reshape(
         625 * 5, 2)
     result = gis.calculate_time_zones(test_coord)
@@ -46,9 +46,9 @@ def test_calculate_time_zones1(gis):
 
 def test_calculate_time_zones2(gis):
     expected_time_zone = np.array(np.append(np.append(np.repeat(-25200., 625 * 2),
-                                             np.repeat(-21600., 625 * 4)),
-                                   np.append(np.repeat(-18000., 625 * 3),
-                                             np.repeat(-14400., 625 * 1))), dtype=np.uint64)
+                                                      np.repeat(-21600., 625 * 4)),
+                                            np.append(np.repeat(-18000., 625 * 3),
+                                                      np.repeat(-14400., 625 * 1))), dtype=np.uint64)
     test_coord = np.append(np.append(np.tile([47.123, -122.749], 625 * 2),
                                      np.tile([43.6142, -116.2080], 625 * 4)),
                            np.append(np.tile([39.0379, -95.6764], 625 * 3),
@@ -143,5 +143,13 @@ def test_calculate_path_gradients2(gis):
     result = gis.calculate_path_gradients(test_elevations, test_distances)
     assert np.all(result == expected_gradients)
 
+
 if __name__ == "__main__":
-    test_calculate_time_zones1(gis)
+    # test_calculate_time_zones1(gis)
+    # test_calculate_time_zones2(gis)
+    # test_calculate_closest_gis_indices(gis)
+    test_calculate_path_distances(gis)
+    test_calculate_path_distances(gis)
+    test_calculate_path_distances(gis)
+    test_calculate_path_distances(gis)
+    test_calculate_path_distances(gis)
