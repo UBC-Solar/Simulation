@@ -4,6 +4,9 @@ import time as timer
 import datetime
 from _datetime import datetime
 from _datetime import date
+
+from numba import jit
+
 from simulation.common import constants
 
 
@@ -174,6 +177,7 @@ def get_day_of_year(day, month, year):
             date(year, 1, 1)).days + 1
 
 
+@jit
 def calculate_declination_angle(day_of_year):
     """
     Calculates the Declination Angle of the Earth at a given day
@@ -193,6 +197,7 @@ def calculate_declination_angle(day_of_year):
 
 
 # ----- Calculation of Apparent Solar Time -----
+@jit
 def calculate_eot_correction(day_of_year):
     """
     Approximates and returns the correction factor between the apparent
