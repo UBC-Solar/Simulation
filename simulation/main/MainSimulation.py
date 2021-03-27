@@ -43,7 +43,7 @@ class Simulation:
 
         # ----- Simulation Race Independent constants -----
 
-        self.initial_battery_charge = 1.0  # Race-independent
+        self.initial_battery_charge = 0.5  # Race-independent
 
         # LVS power loss is pretty small so it is neglected
         self.lvs_power_loss = 0  # Race-independent
@@ -83,7 +83,7 @@ class Simulation:
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + start_hour - weather_hour)
-
+        #self.time_of_initialization = self.weather.last_updated_time
         self.start_hour = start_hour
 
         self.solar_calculations = simulation.SolarCalculations()  # Race-Independent
@@ -116,7 +116,6 @@ class Simulation:
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
-        speed_kmh = helpers.add_acceleration(speed_kmh, 200)
 
         # ----- Expected distance estimate -----
 
@@ -124,6 +123,28 @@ class Simulation:
         timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
         tick_array = np.diff(timestamps)
         tick_array = np.insert(tick_array, 0, 0)
+
+        time_of_day_hour = np.array(timestamps / (3600*self.tick), dtype=np.int64) + self.start_hour
+
+        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
+        # (Charge from 8am-9am and 6pm-8pm) for FSGP
+        # Ensuring Car does not move at night
+        bool_lis = []
+        night_lis = []
+        if self.race_type == "FSGP":
+            for time in list(range(8, 20)):
+                bool_lis.append(time_of_day_hour == time)
+        elif self.race_type == "ASC":
+            for time in list(range(7, 20)):
+                bool_lis.append(time_of_day_hour == time)
+        for time in list(range(9, 17)):
+            night_lis.append(time_of_day_hour == time)
+
+        do_charge = np.logical_or.reduce(bool_lis)
+        do_move = np.logical_or.reduce(night_lis)
+
+        speed_kmh = np.logical_and(speed_kmh, do_move) * speed_kmh
+        speed_kmh = helpers.add_acceleration(speed_kmh, 200)
 
         # Array of cumulative distances obtained from the timestamps
 
@@ -163,13 +184,13 @@ class Simulation:
         local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
         # time_of_day_hour based of UNIX timestamps
-        time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
+        #time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
-        roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
+        #roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
         # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)), 'constant', constant_values = (0))
-        weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
+        #weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
@@ -186,22 +207,6 @@ class Simulation:
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
-        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
-        # (Charge from 8am-9am and 6pm-8pm) for FSGP
-        # Ensuring Car does not move at night
-        bool_lis = []
-        night_lis = []
-        if self.race_type == "FSGP":
-            bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-            for time in list(range(20, 24)) + list(range(0, 8)):
-                night_lis.append(time_of_day_hour == time)
-        elif self.race_type == "ASC":
-            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-            for time in list(range(20, 24)) + list(range(0, 8)):
-                night_lis.append(time_of_day_hour == time)
-
-        not_charge = np.invert(np.logical_or.reduce(bool_lis))
-        not_day = np.invert(np.logical_or.reduce(night_lis))
 
         # ----- Energy calculations -----
 
@@ -211,7 +216,8 @@ class Simulation:
         motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
         array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
 
-        motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
+        motor_consumed_energy = np.logical_and(motor_consumed_energy, do_move) * motor_consumed_energy
+        array_produced_energy = np.logical_and(array_produced_energy, do_charge) * array_produced_energy
 
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
         produced_energy = array_produced_energy
@@ -239,9 +245,6 @@ class Simulation:
         # when the car is charging the car does not move
         # at night the car does not move
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
-        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
-        speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
-        speed_kmh = helpers.add_acceleration(speed_kmh, 200)
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
