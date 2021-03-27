@@ -86,7 +86,7 @@ class GIS:
                          dest_coord=self.dest_coord, waypoints=self.waypoints)
 
         self.path_distances = helpers.calculate_path_distances(self.path)
-        self.path_gradients = self.calculate_path_gradients(self.path_elevations,
+        self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
 
     def calculate_closest_gis_indices(self, cumulative_distances):
@@ -165,19 +165,6 @@ class GIS:
         """
 
         return self.path_time_zones[gis_indices]
-
-    @staticmethod
-    def adjust_timestamps_to_local_times(timestamps, starting_drive_time, time_zones):
-        """
-        Takes in the timestamps of the vehicle's driving duration, starting drive time, and a list of time zones,
-            returns the local times at each point
-
-        :param timestamps: (int[N]) timestamps starting from 0, in seconds
-        :param starting_drive_time: (int[N]) local time that the car was start to be driven in UNIX time (Daylight Saving included)
-        :param time_zones: (int[N])
-        """
-
-        return np.array(timestamps + starting_drive_time - (time_zones[0] - time_zones), dtype=np.uint64)
 
     # ----- Getters -----
 
@@ -347,82 +334,6 @@ class GIS:
 
         return elevations
 
-    @staticmethod
-    def calculate_path_gradients(elevations, distances):
-        """
-        Get the approximate gradients of every point on the path.
-
-        :param elevations: [N][elevations]
-        :param distances: [N-1][distances]
-
-        :returns gradients: [N-1][gradients]
-
-        Note:
-            - gradient > 0 corresponds to uphill
-            - gradient < 0 corresponds to downhill
-        """
-
-        # subtract every next elevation with the previous elevation to
-        # get the difference in elevation
-        # [1 2 3 4 5]
-        # [5 1 2 3 4] -
-        # -------------
-        #   [1 1 1 1]
-
-        offset = np.roll(elevations, 1)
-        delta_elevations = (elevations - offset)[1:]
-
-        # Divide the difference in elevation to get the gradient
-        # gradient > 0: uphill
-        # gradient < 0: downhill
-
-        gradients = delta_elevations / distances
-
-        return gradients
-
-    def get_current_elevation(self):
-        """
-        Get the elevation of the closest point to the current point
-        """
-        return self.path_elevations[self.current_index]
-
-    def get_current_gradient(self):
-        """
-        Get the gradient of the point closest to the current location
-        """
-        return self.path_gradients[self.current_index]
-
-    def calculate_current_heading(self):
-        """
-        From the current and previous coordinate, calculate the current bearing of the vehicle.
-            This is also the azimuth angle of the vehicle
-        """
-
-        if self.current_index - 1 < 0:
-            coord_1 = self.path[self.current_index + 1]
-            coord_2 = self.path[self.current_index]
-        else:
-            coord_1 = self.path[self.current_index]
-            coord_2 = self.path[self.current_index - 1]
-
-        coord_1 = np.radians(coord_1)
-        coord_2 = np.radians(coord_2)
-
-        y = math.sin(coord_2[1] - coord_1[1]) \
-            * math.cos(coord_2[0])
-
-        x = math.cos(coord_1[0]) \
-            * math.sin(coord_2[0]) \
-            - math.sin(coord_1[0]) \
-            * math.cos(coord_2[0]) \
-            * math.cos(coord_2[1] - coord_1[1])
-
-        theta = math.atan2(y, x)
-
-        bearing = ((theta * 180) / math.pi + 360) % 360
-
-        return bearing
-
     def calculate_current_heading_array(self):
         """
         Calculates the bearing of the vehicle between consecutive points
@@ -450,31 +361,6 @@ class GIS:
         bearing_array[-1] = bearing_array[-2]
 
         return bearing_array
-
-    def update_vehicle_position(self, incremental_distance):
-        """
-        Returns the closest coordinate to the current coordinate
-
-        :param incremental_distance: distance in m covered in the latest tick
-
-        :returns: The new index of the vehicle
-        """
-
-        additional_distance = self.distance_remainder + incremental_distance
-
-        # while the index of position can still be advanced
-        while additional_distance > 0:
-            # subtract contributions from every new index
-            additional_distance = additional_distance - self.path_distances[self.current_index]
-
-            # advance the index
-            self.current_index = self.current_index + 1
-
-        # backtrack a bit
-        self.distance_remainder = additional_distance + self.path_distances[self.current_index - 1]
-        self.current_index = self.current_index - 1
-
-        return self.current_index
 
 
 if __name__ == "__main__":
