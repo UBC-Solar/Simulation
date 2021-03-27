@@ -221,7 +221,7 @@ class Simulation:
         # configure these parameters depending on whether optimizing for speed or precision
         # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
         # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
-        optimizer.maximize(init_points=10, n_iter=10, acq='ucb', xi=1e-1, kappa=10)
+        optimizer.maximize(init_points=20, n_iter=200, acq='ucb', xi=1e-1, kappa=10)
 
         result = optimizer.max
         result_params = list(result["params"].values())
@@ -312,11 +312,7 @@ class Simulation:
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
-<<<<<<< HEAD
-        local_times = self.gis.adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization, time_zones)
-=======
-        local_times = adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
->>>>>>> master
+        local_times = adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization, time_zones)
 
         # only for reference (may be used in the future)
         local_times_datetime = np.array([datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
