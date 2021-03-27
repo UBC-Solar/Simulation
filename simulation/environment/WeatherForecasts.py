@@ -13,6 +13,8 @@ from data.weather.__init__ import weather_directory
 from simulation.common import helpers
 from tqdm import tqdm
 
+from simulation.common.helpers import cull_dataset, calculate_path_distances
+
 
 class WeatherForecasts:
     """
@@ -311,7 +313,6 @@ class WeatherForecasts:
 
         # each element is the weather forecast for all available times at that coordinate
         full_weather_forecast_at_coords = self.weather_forecast[indices]
-
         dt_local_array = full_weather_forecast_at_coords[0, :, 4]
 
         closest_time_stamp_indices = []
