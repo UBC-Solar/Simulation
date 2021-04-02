@@ -137,7 +137,7 @@ class Simulation:
         elif self.race_type == "ASC":
             for time in list(range(7, 20)):
                 bool_lis.append(time_of_day_hour == time)
-        for time in list(range(9, 17)):
+        for time in list(range(9, 18)):
             night_lis.append(time_of_day_hour == time)
 
         do_charge = np.logical_or.reduce(bool_lis)
@@ -194,6 +194,7 @@ class Simulation:
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
+        cloud_covers = np.zeros_like(cloud_covers) # testing purposes only.
 
         # Get the wind speeds at every location
         wind_speeds = self.weather.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,

@@ -11,9 +11,9 @@ before the battery runs out [speed -> distance].
 @helpers.timeit
 def main():
     # length of the simulation in seconds
-    simulation_length = 60 * 60 * 8 # 10 hours -> seconds
+    simulation_length = 60 * 60 * 8 # 15 hours -> seconds
 
-    input_speed = np.array([35])
+    input_speed = np.array([10])
 
     race_type = "ASC"
 
