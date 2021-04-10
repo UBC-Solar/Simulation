@@ -13,7 +13,7 @@ def main():
     # length of the simulation in seconds
     simulation_length = 60 * 60 * 8 # 15 hours -> seconds
 
-    input_speed = np.array([10])
+    input_speed = np.array([10,20,30,40])
 
     race_type = "ASC"
 
@@ -64,7 +64,7 @@ def main():
 
     simulation_model = simulation.Simulation(google_api_key, weather_api_key, origin_coord, dest_coord, waypoints,
                                              tick=1, simulation_duration=simulation_length, race_type=race_type,
-                                             start_hour=7)
+                                             start_hour=8)
 
     distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
 
