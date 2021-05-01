@@ -11,6 +11,7 @@ from tqdm import tqdm
 from scipy.optimize import minimize
 from bayes_opt import BayesianOptimization
 from simulation.config import settings_directory
+from simulation.main.SimulationResult import SimulationResult
 
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 
@@ -113,6 +114,8 @@ class Simulation:
 
         self.local_times = 0
 
+        self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
+
     @helpers.timeit
     def run_model(self, speed=np.array([20,20,20,20,20,20,20,20]), plot_results=True, **kwargs):
         """
@@ -151,11 +154,127 @@ class Simulation:
         speed_kmh = np.insert(speed_kmh, 0, 0)
         speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
+        # ------ Run calculations and get result -------
+
+        result = self.__run_simulation_calculations(speed_kmh)
+
+        # ------- Parse results ---------
+        simulation_arrays = result.arrays
+        distances = simulation_arrays[0] 
+        state_of_charge = simulation_arrays[1]
+        delta_energy = simulation_arrays[2]
+        solar_irradiances = simulation_arrays[3]
+        wind_speeds = simulation_arrays[4]
+        gis_route_elevations_at_each_tick = simulation_arrays[5]
+        cloud_covers = simulation_arrays[6]
+
+        distance_travelled = result.distance_travelled
+        time_taken = result.time_taken
+        final_soc = result.final_soc
+
+        # TODO: package all the calculated arrays into a SimulationHistory class
+        # TODO: have some sort of standardised SimulationResult class
+
+        print(f"Simulation successful!\n"
+              f"Time taken: {time_taken}\n"
+              f"Maximum distance traversable: {distance_travelled:.2f}km\n"
+              f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
+              f"Final battery SOC: {final_soc:.2f}%\n")
+
+        # ----- Plotting -----
+
+        if plot_results:
+            arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
+                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
+                              cloud_covers]
+            y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
+            
+            self.__plot_graph(arrays_to_plot, y_label)
+
+        return distance_travelled
+
+    def display_result(self, res):
+        print(f"{res.message} \n")
+        print(f"Optimal solution: {res.x.round(2)} \n")
+        print(f"Average speed: {np.mean(res.x).round(1)}km/h")
+
+        maximum_distance = np.abs(self.run_model(res.x))
+        print(f"Maximum distance: {maximum_distance:.2f}km\n")
+        
+    @helpers.timeit
+    def optimize(self, *args, **kwargs):
+        bounds = {
+            'x0': (20, 100),
+            'x1': (20, 100),
+            'x2': (20, 100),
+            'x3': (20, 100),
+            'x4': (20, 100),
+            'x5': (20, 100),
+            'x6': (20, 100),
+            'x7': (20, 100),
+        }
+
+        # https://github.com/fmfn/BayesianOptimization
+        optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds)
+
+        # configure these parameters depending on whether optimizing for speed or precision
+        # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
+        # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
+        optimizer.maximize(init_points=20, n_iter=200, acq='ucb', xi=1e-1, kappa=10)
+
+        result = optimizer.max
+        result_params = list(result["params"].values())
+
+        speed_result = np.empty(len(result_params))
+        for i in range(len(speed_result)):
+            speed_result[i] = result_params[i]
+        
+        speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
+        speed_result = np.insert(speed_result, 0, 0)
+
+        arrays_to_plot = self.__run_simulation_calculations(speed_result).arrays
+        
+        self.__plot_graph([speed_result] + arrays_to_plot, ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]) 
+
+        return optimizer.max
+
+    def __plot_graph(self, arrays_to_plot, array_labels):
+        compress_constant = int(self.timestamps.shape[0] / 5000)
+        for index, array in enumerate(arrays_to_plot):
+            arrays_to_plot[index] = array[::compress_constant]
+
+        sns.set_style("whitegrid")
+        f, axes = plt.subplots(4, 2, figsize=(12, 8))
+        f.suptitle(f"Simulation results ({self.race_type})", fontsize=16, weight="bold")
+
+        with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
+            for index, axis in enumerate(axes.flatten()):
+                print(index)
+                df = pd.DataFrame(dict(time=self.timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
+                g = sns.lineplot(x="time", y="value", data=df, ax=axis)
+                g.set(xlabel="time (hrs)", ylabel=array_labels[index])
+        pbar.update(1)
+        print()
+
+        sns.despine()
+        plt.setp(axes)
+        plt.tight_layout()
+        plt.show()
+
+    def __run_simulation_calculations(self, speed_kmh):
+        """
+        Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
+        containing members that specify total distance travelled and time taken at the end of the simulation
+        and final battery state of charge. This is where most of the main simulation logic happens.
+
+        :param speed_kmh: array that specifies the solar car's driving speed (in km/h) at each time step
+        """
         # ----- Expected distance estimate -----
 
         # Array of cumulative distances hopefully travelled in this round
-        timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
-        tick_array = np.diff(timestamps)
+        tick_array = np.diff(self.timestamps)
         tick_array = np.insert(tick_array, 0, 0)
 
         # Array of cumulative distances obtained from the timestamps
@@ -193,7 +312,7 @@ class Simulation:
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
+        local_times = adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization, time_zones)
 
         # only for reference (may be used in the future)
         local_times_datetime = np.array([datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
@@ -253,7 +372,7 @@ class Simulation:
         motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
 
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
-        produced_energy = array_produced_energy
+        produced_energy = array_produced_energy 
 
         # net energy added to the battery
         delta_energy = produced_energy - consumed_energy
@@ -261,7 +380,7 @@ class Simulation:
         # ----- Array initialisation -----
 
         # used to calculate the time the car was in motion
-        tick_array = np.full_like(timestamps, fill_value=self.tick, dtype='f4')
+        tick_array = np.full_like(self.timestamps, fill_value=self.tick, dtype='f4')
         tick_array[0] = 0
 
         # ----- Array calculations -----
@@ -300,85 +419,24 @@ class Simulation:
         time_in_motion = np.array(
             (list(time_in_motion[0:max_dist_index])) + list(np.zeros_like(time_in_motion[max_dist_index:])))
 
-        # ----- Target values -----
-        distance_travelled = distances[-1]
-
         time_taken = np.sum(time_in_motion)
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
-        # TODO: package all the calculated arrays into a SimulationHistory class
-        # TODO: have some sort of standardised SimulationResult class
+        results = SimulationResult()
+        results.arrays = [
+            distances, 
+            state_of_charge, 
+            delta_energy, 
+            solar_irradiances, 
+            wind_speeds, 
+            gis_route_elevations_at_each_tick,
+            cloud_covers
+        ]
+        results.distance_travelled = distances[-1]
+        results.time_taken = time_taken
+        results.final_soc = final_soc
 
-        print(f"Simulation successful!\n"
-              f"Time taken: {time_taken}\n"
-              f"Maximum distance traversable: {distance_travelled:.2f}km\n"
-              f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
-              f"Final battery SOC: {final_soc:.2f}%\n")
-
-        # ----- Plotting -----
-
-        if plot_results:
-            arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
-                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
-                              cloud_covers]
-
-            compress_constant = int(timestamps.shape[0] / 5000)
-
-            for index, array in enumerate(arrays_to_plot):
-                arrays_to_plot[index] = array[::compress_constant]
-
-            y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
-            sns.set_style("whitegrid")
-            f, axes = plt.subplots(4, 2, figsize=(12, 8))
-            f.suptitle(f"Simulation results ({self.race_type})", fontsize=16, weight="bold")
-
-            with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
-                for index, axis in enumerate(axes.flatten()):
-                    df = pd.DataFrame(dict(time=timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
-                    g = sns.lineplot(x="time", y="value", data=df, ax=axis)
-                    g.set(xlabel="time (hrs)", ylabel=y_label[index])
-                    pbar.update(1)
-            print()
-
-            sns.despine()
-            plt.setp(axes)
-            plt.tight_layout()
-            plt.show()
-
-        self.local_times = local_times
         self.time_zones = time_zones
+        self.local_times = local_times
 
-        return distance_travelled
-
-    def display_result(self, res):
-        print(f"{res.message} \n")
-        print(f"Optimal solution: {res.x.round(2)} \n")
-        print(f"Average speed: {np.mean(res.x).round(1)}km/h")
-
-        maximum_distance = np.abs(self.run_model(res.x))
-        print(f"Maximum distance: {maximum_distance:.2f}km\n")
-        
-    @helpers.timeit
-    def optimize(self, *args, **kwargs):
-        bounds = {
-            'x0': (20, 70),
-            'x1': (20, 70),
-            'x2': (20, 70),
-            'x3': (20, 70),
-            'x4': (20, 70),
-            'x5': (20, 70),
-            'x6': (20, 70),
-            'x7': (20, 70),
-        }
-
-        # https://github.com/fmfn/BayesianOptimization
-        optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds)
-
-        # configure these parameters depending on whether optimizing for speed or precision
-        # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
-        # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
-        optimizer.maximize(init_points=10, n_iter=100, acq='ucb', xi=1e-1, kappa=10)
-
-        print(optimizer.max)
-        return optimizer.max
+        return results

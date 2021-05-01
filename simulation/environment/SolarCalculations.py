@@ -42,7 +42,7 @@ class SolarCalculations:
         Returns: The Hour Angle in degrees. 
         """
 
-        lst = helpers.local_time_to_apparent_solar_time(time_zone_utc, day_of_year,
+        lst = helpers.local_time_to_apparent_solar_time(time_zone_utc / 3600, day_of_year,
                                                      local_time, longitude)
 
         hour_angle = 15 * (lst - 12)
