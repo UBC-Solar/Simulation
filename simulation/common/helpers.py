@@ -63,6 +63,7 @@ def reshape_and_repeat(input_array, reshape_length):
         return result
 
 
+
 def add_acceleration(input_array, acceleration):
     """
     Takes in the speed array with sudden speed changes and an acceleration scalar,
@@ -91,8 +92,7 @@ def add_acceleration(input_array, acceleration):
                 i += 1
 
     return input_array
-  
-  
+ 
 def hour_from_unix_timestamp(unix_timestamp):
     val = datetime.utcfromtimestamp(unix_timestamp)
     return val.hour
@@ -328,6 +328,43 @@ def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
 
     elevation_angle = np.arcsin(term_1 + term_2)
     return np.degrees(elevation_angle)
+
+
+def find_runs(x):
+    """
+    Method to identify runs of consecutive items in NumPy array
+    Based on code from: user alimanfoo on https://gist.github.com/alimanfoo/c5977e87111abe8127453b21204c1065
+
+    :returns a tuple of 3 NumPy arrays for (run_values, run_starts, run_lengths)
+    Args:
+        x: a 1D NumPy array3
+    Throws: ValueError if array dimension is greater than 1
+
+    Returns: a tuple of 3 NumPy arrays for (run_values, run_starts, run_lengths)
+    """
+    x = np.asanyarray(x)
+    if x.ndim != 1:
+        raise ValueError('only 1D array supported')
+    n = x.shape[0]
+
+    # handle empty array
+    if n == 0:
+        return np.array([]), np.array([]), np.array([])
+
+    else:
+        # find run starts
+        loc_run_start = np.empty(n, dtype=bool)
+        loc_run_start[0] = True
+        np.not_equal(x[:-1], x[1:], out=loc_run_start[1:])
+        run_starts = np.nonzero(loc_run_start)[0]
+
+        # find run values
+        run_values = x[loc_run_start]
+
+        # find run lengths
+        run_lengths = np.diff(np.append(run_starts, n))
+
+        return run_values, run_starts, run_lengths
 
 
 if __name__ == '__main__':
