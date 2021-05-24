@@ -259,7 +259,6 @@ class SolarCalculations:
         return GHI
 
     # ----- Calculation of modes of solar irradiance, but returning numpy arrays -----
-    @helpers.timeit
     def calculate_array_GHI(self, coords, time_zones, local_times,
                             elevations, cloud_covers):
 
