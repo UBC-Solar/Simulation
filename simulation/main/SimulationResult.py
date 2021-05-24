@@ -14,3 +14,11 @@ class SimulationResult:
         self.distance_travelled = distance_travelled
         self.average_speed = average_speed
         self.final_soc = final_soc
+
+    def __str__(self):
+        return (f"Simulation successful!\n"
+                f"Array dict keys: {list(self.array_dict.keys())}\n"
+                f"Time taken: {self.time_taken}\n"
+                f"Maximum distance traversable: {self.distance_travelled:.2f}km\n"
+                f"Average speed: {self.average_speed:.2f}km/h\n"
+                f"Final battery SOC: {self.final_soc:.2f}%\n")
