@@ -16,7 +16,8 @@ class SimulationResult:
         self.final_soc = final_soc
 
     def __str__(self):
-        return(f"Array dict keys: {list(self.array_dict.keys())}\n"
+        return(f"<----- Simulation result ----->\n"
+               f"Array dict keys: {list(self.array_dict.keys())}\n"
                f"Time taken: {self.time_taken}\n"
                f"Maximum distance traversable: {self.distance_travelled:.2f}km\n"
                f"Average speed: {self.average_speed:.2f}km/h\n"
