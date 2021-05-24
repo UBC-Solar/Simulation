@@ -37,12 +37,10 @@ class Simulation:
         represent 7am and 9am respectively)
         """
 
-        # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
-
-        assert race_type in ["ASC", "FSGP"]
+        assert race_type in ["ASC", "FSGP", "asc", "fsgp"]
 
         # chooses the appropriate settings file to read from
-        if race_type == "ASC":
+        if race_type == "ASC" or race_type == "asc":
             settings_path = settings_directory / "settings_ASC.json"
         else:
             settings_path = settings_directory / "settings_FSGP.json"
@@ -340,11 +338,11 @@ class Simulation:
         # (charge from 8am-9am and 6pm-8pm) for FSGP
         bool_lis = []
         night_lis = []
-        if self.race_type == "FSGP":
+        if self.race_type == "FSGP" or self.race_type == "fsgp":
             bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
             for time in list(range(20, 24)) + list(range(0, 8)):
                 night_lis.append(time_of_day_hour == time)
-        elif self.race_type == "ASC":
+        elif self.race_type == "ASC" or self.race_type == "asc":
             bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
             for time in list(range(20, 24)) + list(range(0, 8)):
                 night_lis.append(time_of_day_hour == time)
