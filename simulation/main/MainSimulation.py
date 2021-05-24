@@ -10,9 +10,19 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.optimize import minimize
 from bayes_opt import BayesianOptimization
+
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
+
+from collections import OrderedDict
+
+from bokeh.plotting import figure, show
+from bokeh.layouts import gridplot
+from bokeh.models import HoverTool
+
+from bokeh.palettes import Bokeh8
+from simulation.common.helpers import extract_distance_travelled
 
 
 class Simulation:
@@ -149,50 +159,17 @@ class Simulation:
 
         result = self.__run_simulation_calculations(speed_kmh)
 
-        # ------- Parse results ---------
-        simulation_arrays = result.arrays
-        distances = simulation_arrays[0] 
-        state_of_charge = simulation_arrays[1]
-        delta_energy = simulation_arrays[2]
-        solar_irradiances = simulation_arrays[3]
-        wind_speeds = simulation_arrays[4]
-        gis_route_elevations_at_each_tick = simulation_arrays[5]
-        cloud_covers = simulation_arrays[6]
-
-        distance_travelled = result.distance_travelled
-        time_taken = result.time_taken
-        final_soc = result.final_soc
-
-        # TODO: package all the calculated arrays into a SimulationHistory class
-        # TODO: have some sort of standardised SimulationResult class
-
-        print(f"Simulation successful!\n"
-              f"Time taken: {time_taken}\n"
-              f"Maximum distance traversable: {distance_travelled:.2f}km\n"
-              f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
-              f"Final battery SOC: {final_soc:.2f}%\n")
-
         # ----- Plotting -----
 
         if plot_results:
-            arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
-                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
-                              cloud_covers]
+            array_dict = result.array_dict
             y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
-            
-            self.__plot_graph(arrays_to_plot, y_label)
 
-        return distance_travelled
+            self.__plot_graph(array_dict, y_label)
 
-    def display_result(self, res):
-        print(f"{res.message} \n")
-        print(f"Optimal solution: {res.x.round(2)} \n")
-        print(f"Average speed: {np.mean(res.x).round(1)}km/h")
+        return result
 
-        maximum_distance = np.abs(self.run_model(res.x))
-        print(f"Maximum distance: {maximum_distance:.2f}km\n")
-        
     @helpers.timeit
     def optimize(self):
         bounds = {
@@ -207,7 +184,7 @@ class Simulation:
         }
 
         # https://github.com/fmfn/BayesianOptimization
-        optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds)
+        optimizer = BayesianOptimization(f=extract_distance_travelled(self.run_model), pbounds=bounds)
 
         # configure these parameters depending on whether optimizing for speed or precision
         # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
@@ -224,35 +201,13 @@ class Simulation:
         speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
         speed_result = np.insert(speed_result, 0, 0)
 
-        arrays_to_plot = self.__run_simulation_calculations(speed_result).arrays
-        
-        self.__plot_graph([speed_result] + arrays_to_plot, ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]) 
+        arrays_to_plot = self.__run_simulation_calculations(speed_result).array_dict
+
+        self.__plot_graph(arrays_to_plot,
+                          ["Optimized speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                           "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"])
 
         return optimizer.max
-
-    def __plot_graph(self, arrays_to_plot, array_labels):
-        compress_constant = int(self.timestamps.shape[0] / 5000)
-        for index, array in enumerate(arrays_to_plot):
-            arrays_to_plot[index] = array[::compress_constant]
-
-        sns.set_style("whitegrid")
-        f, axes = plt.subplots(4, 2, figsize=(12, 8))
-        f.suptitle(f"Simulation results ({self.race_type})", fontsize=16, weight="bold")
-
-        with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
-            for index, axis in enumerate(axes.flatten()):
-                print(index)
-                df = pd.DataFrame(dict(time=self.timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
-                g = sns.lineplot(x="time", y="value", data=df, ax=axis)
-                g.set(xlabel="time (hrs)", ylabel=array_labels[index])
-        pbar.update(1)
-        print()
-
-        sns.despine()
-        plt.setp(axes)
-        plt.tight_layout()
-        plt.show()
 
     def __run_simulation_calculations(self, speed_kmh):
         """
@@ -410,21 +365,73 @@ class Simulation:
         time_taken = np.sum(time_in_motion)
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
-        results = SimulationResult()
-        results.arrays = [
-            distances, 
-            state_of_charge, 
-            delta_energy, 
-            solar_irradiances, 
-            wind_speeds, 
-            gis_route_elevations_at_each_tick,
-            cloud_covers
-        ]
-        results.distance_travelled = distances[-1]
-        results.time_taken = time_taken
-        results.final_soc = final_soc
+        # <----- Packing results in SimulationResult object ----->
+
+        array_dict = OrderedDict(
+            {
+                "speed": speed_kmh,
+                "distance": distances,
+                "state_of_charge": state_of_charge,
+                "delta_energy": delta_energy,
+                "solar_irradiance": solar_irradiances,
+                "wind_speed": wind_speeds,
+                "route_elevation": gis_route_elevations_at_each_tick,
+                "cloud_cover": cloud_covers
+            }
+        )
+
+        average_speed = np.average(speed_kmh)
+        distance_travelled = distances[-1]
+
+        results = SimulationResult(array_dict=array_dict, time_taken=time_taken, distance_travelled=distance_travelled,
+                                   average_speed=average_speed, final_soc=final_soc)
 
         self.time_zones = time_zones
         self.local_times = local_times
+        self.local_times_datetime = local_times_datetime
 
         return results
+
+    def display_result(self, res):
+        print(f"{res.message} \n")
+        print(f"Optimal solution: {res.x.round(2)} \n")
+        print(f"Average speed: {np.mean(res.x).round(1)}km/h")
+
+        optimal_result = self.run_model(res.x)
+        maximum_distance = np.abs(optimal_result.distance_travelled)
+        print(f"Maximum distance: {maximum_distance:.2f}km\n")
+
+    def __plot_graph(self, array_dict, array_labels):
+        compress_constant = int(self.timestamps.shape[0] / 5000)
+
+        compressed_arrays = list()
+
+        for (index, dict_item) in enumerate(array_dict.items()):
+            array = dict_item[1]
+            compressed_arrays.append(array[::compress_constant])
+
+        datetime_array = self.local_times_datetime[::compress_constant]
+
+        figures = list()
+
+        hover_tool = HoverTool()
+        hover_tool.formatters = {"x": "datetime"}
+        hover_tool.tooltips = [
+            ("time", "$x"),
+            ("data", "$y")
+        ]
+
+        for (index, data_array) in enumerate(compressed_arrays):
+            # create figures and put them in list
+            figures.append(figure(title=array_labels[index], x_axis_label="Time (s)",
+                                  y_axis_label=array_labels[index], x_axis_type="datetime"))
+
+            # add line renderers to each figure
+            figures[index].line(datetime_array, data_array, line_color=Bokeh8[index], line_width=2)
+
+            figures[index].add_tools(hover_tool)
+
+        # creates grid with all plots in it
+        grid = gridplot(figures, sizing_mode="scale_both", ncols=3, plot_height=200, plot_width=300)
+
+        show(grid)
