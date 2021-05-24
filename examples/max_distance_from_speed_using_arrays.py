@@ -32,15 +32,20 @@ def main():
       Keep in mind, however, that the condition len(input_speed) <= simulation_length must be true
     """
 
-    simulation_model = simulation.Simulation(race_type="ASC")
-    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
-    
-    optimized = simulation_model.optimize()
-    print(f'Distance travelled: {distance_travelled}')
-    print(f'Optimized results. Max traversable distance: {optimized["target"]}')
-    print(f'Speeds array: {optimized["params"]}')
+    model = simulation.Simulation(race_type="ASC")
 
-    return distance_travelled
+    try:
+        result = model.run_model(speed=input_speed, plot_results=True)
+    except Exception:
+        print("Simulation failed. \n")
+    else:
+        print("Simulation successful! \n")
+        print(result)
+    
+    optimized = model.optimize()
+    print(f"<----- Optimized results ----->\n")
+    print(f'Max traversable distance: {optimized["target"]:.2f}km')
+    print(f'Speeds array: {optimized["params"]}')
 
 
 if __name__ == "__main__":
