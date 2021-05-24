@@ -5,8 +5,6 @@ import datetime
 from _datetime import datetime
 from _datetime import date
 
-from numba import jit, njit
-
 from simulation.common import constants
 
 
@@ -330,6 +328,14 @@ def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     return np.degrees(elevation_angle)
 
 
+def extract_distance_travelled(func):
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        return result.distance_travelled
+
+    return wrapper
+
+
 if __name__ == '__main__':
     # speed_array input
     speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
@@ -338,5 +344,3 @@ if __name__ == '__main__':
     expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
     expanded_speed_array = add_acceleration(expanded_speed_array, 20)
     print(expanded_speed_array)
-
-    pass
