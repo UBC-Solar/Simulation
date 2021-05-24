@@ -12,7 +12,6 @@ from scipy.optimize import minimize
 from bayes_opt import BayesianOptimization
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
-
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 
 
@@ -47,17 +46,16 @@ class Simulation:
             settings_path = settings_directory / "settings_ASC.json"
         else:
             settings_path = settings_directory / "settings_FSGP.json"
-        
+
         # ----- Load arguments -----
+
         with open(settings_path) as f:
             args = json.load(f)
 
         # ----- Simulation Race Independent constants -----
 
         self.initial_battery_charge = args['initial_battery_charge']
-
-        # LVS power loss is pretty small so it is neglected
-        self.lvs_power_loss = args['lvs_power_loss']  # Race-independent
+        self.lvs_power_loss = args['lvs_power_loss']
 
         # ----- Time constants -----
 
@@ -75,9 +73,9 @@ class Simulation:
         self.origin_coord = args['origin_coord']
         self.dest_coord = args['dest_coord']
         self.waypoints = args['waypoints']
-        
+
         # ----- Race type -----
-        
+
         self.race_type = race_type
 
         # ----- Force update flags -----
@@ -87,13 +85,10 @@ class Simulation:
 
         # ----- Component initialisation -----
 
-        self.basic_array = simulation.BasicArray()  # Race-independent
-
-        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)  # Race-independent
-
-        self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)  # Race-independent
-
-        self.basic_motor = simulation.BasicMotor()  # Race-independent
+        self.basic_array = simulation.BasicArray()
+        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)
+        self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)
+        self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, force_update=gis_force_update)
@@ -110,10 +105,8 @@ class Simulation:
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations()  # Race-Independent
-
+        self.solar_calculations = simulation.SolarCalculations()
         self.local_times = 0
-
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
     @helpers.timeit
@@ -137,7 +130,8 @@ class Simulation:
         :param args: variable list of arguments that specify the car's driving speed at each time step. Overrides the speed parameter.
         """
 
-        # This is mainly used by the optimization function since it passes values as keyword arguments instead of a numpy array
+        # This is mainly used by the optimization function since it passes values as keyword arguments instead of a
+        # NumPy array
         if kwargs:
             speed = np.empty(len(kwargs))
 
@@ -203,7 +197,7 @@ class Simulation:
         print(f"Maximum distance: {maximum_distance:.2f}km\n")
         
     @helpers.timeit
-    def optimize(self, *args, **kwargs):
+    def optimize(self):
         bounds = {
             'x0': (20, 100),
             'x1': (20, 100),
@@ -229,7 +223,7 @@ class Simulation:
         speed_result = np.empty(len(result_params))
         for i in range(len(speed_result)):
             speed_result[i] = result_params[i]
-        
+
         speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
         speed_result = np.insert(speed_result, 0, 0)
 
@@ -273,11 +267,8 @@ class Simulation:
         """
         # ----- Expected distance estimate -----
 
-        # Array of cumulative distances hopefully travelled in this round
         tick_array = np.diff(self.timestamps)
         tick_array = np.insert(tick_array, 0, 0)
-
-        # Array of cumulative distances obtained from the timestamps
 
         distances = tick_array * speed_kmh / 3.6
         cumulative_distances = np.cumsum(distances)
@@ -315,7 +306,8 @@ class Simulation:
         local_times = adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization, time_zones)
 
         # only for reference (may be used in the future)
-        local_times_datetime = np.array([datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
+        local_times_datetime = np.array(
+            [datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
 
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
@@ -334,7 +326,7 @@ class Simulation:
 
         # Get the wind speeds at every location
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
-                                                                    wind_directions)
+                                                       wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
@@ -344,9 +336,8 @@ class Simulation:
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
-        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
-        # (Charge from 8am-9am and 6pm-8pm) for FSGP
-        # Ensuring Car does not move at night
+        # Implementing day start/end charging (charge from 7am-9am and 6pm-8pm) for ASC and
+        # (charge from 8am-9am and 6pm-8pm) for FSGP
         bool_lis = []
         night_lis = []
         if self.race_type == "FSGP":
@@ -372,7 +363,7 @@ class Simulation:
         motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
 
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
-        produced_energy = array_produced_energy 
+        produced_energy = array_produced_energy
 
         # net energy added to the battery
         delta_energy = produced_energy - consumed_energy
