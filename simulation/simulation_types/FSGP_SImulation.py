@@ -59,13 +59,19 @@ class FSGP_Simulation(BaseSimulation):
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
+        """ 
+            The idea of creating an FSGP model is to do some "post-processing" on the closet_gis_indices of a single lap. 
+        
+            This post-processing involves "tiling" the indices we get out of  
+        """
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
         gis_runs = helpers.find_runs(closest_gis_indices)
         lap_end_index = np.amax(gis_runs[1])  # This identifies the last run of elements
 
         # Prototype code for tiling
         closest_gis_indices = np.resize(np.tile(closest_gis_indices[:lap_end_index],
-                                      np.math.ceil(len(closest_gis_indices) / len(closest_gis_indices[:lap_end_index]))), len(timestamps))
+                                                np.math.ceil(len(closest_gis_indices) / len(
+                                                    closest_gis_indices[:lap_end_index]))), len(timestamps))
 
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
         # np.split( , np.where(np.diff(data) != ))
@@ -74,8 +80,8 @@ class FSGP_Simulation(BaseSimulation):
         lap_end_index = np.amax(weather_runs[1])  # This identifies the last run of elements
 
         closest_weather_indices = np.resize(np.tile(closest_weather_indices[:lap_end_index],
-                                          np.math.ceil(len(closest_weather_indices) / len(
-                                              closest_weather_indices[:lap_end_index]))), len(timestamps))
+                                                    np.math.ceil(len(closest_weather_indices) / len(
+                                                        closest_weather_indices[:lap_end_index]))), len(timestamps))
 
         path_distances = self.gis.path_distances
         cumulative_distances = np.cumsum(path_distances)  # [cumulative_distances] = meters
@@ -98,7 +104,7 @@ class FSGP_Simulation(BaseSimulation):
         time_zones = np.resize(self.gis.get_time_zones(closest_gis_indices), len(timestamps))
 
         # Local times in UNIX timestamps - this contains UNIX timestamps for every second for the simulation
-        local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
+        local_times = helpers.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
         # only for reference (may be used in the future)
         local_times_datetime = np.array(
@@ -110,7 +116,8 @@ class FSGP_Simulation(BaseSimulation):
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
         roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
-        # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)), 'constant', constant_values = (0))
+        # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)),
+        # 'constant', constant_values = (0))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
