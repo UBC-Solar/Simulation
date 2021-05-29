@@ -97,7 +97,7 @@ class ASC_Simulation(BaseSimulation):
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
+        local_times = helpers.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
 
         # only for reference (may be used in the future)
         local_times_datetime = np.array(

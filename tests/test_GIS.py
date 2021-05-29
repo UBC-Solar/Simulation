@@ -43,6 +43,10 @@ def test_calculate_time_zones1(gis):
     test_coord = np.append(np.tile([39.0918, -94.4172], 625 * 2), np.tile([43.6142, -116.2080], 625 * 3)).reshape(
         625 * 5, 2)
     result = gis.calculate_time_zones(test_coord)
+    print("test_calculate_time_zones1 result: ")
+    print(result)
+    print("test_calculate_time_zones1 expected: ")
+    print(expected_time_zone)
     assert np.all(result == expected_time_zone)
 
 
@@ -145,19 +149,19 @@ def test_calculate_path_gradients2(gis):
     result = helpers.calculate_path_gradients(test_elevations, test_distances)
     assert np.all(result == expected_gradients)
 
-def test_calculate_path_elevations_FSGP(gis):
-    start_coord = np.array([[38.9266274, -95.6781231]])
-    end_coord = np.array([[38.9219577, -95.6776967]])
-    waypoints = np.array([
-        [38.9253374, -95.678453], [38.921052, -95.674689],
-        [38.9206115, -95.6784807], [38.9211163, -95.6777508],
-        [38.9233953, -95.6783869]])
-    path = np.concatenate([start_coord, waypoints, end_coord])
-    print(gis.calculate_path_elevations(path))
-
-    # Expected results of elevations in meters calculated from: https://www.freemaptools.com/elevation-finder.htm
-    expected_results = np.array(326 , 326, 322 , 326, 323, 328, 326)
-    print(expected_results)
+# def test_calculate_path_elevations_FSGP(gis):
+#     start_coord = np.array([[38.9266274, -95.6781231]])
+#     end_coord = np.array([[38.9219577, -95.6776967]])
+#     waypoints = np.array([
+#         [38.9253374, -95.678453], [38.921052, -95.674689],
+#         [38.9206115, -95.6784807], [38.9211163, -95.6777508],
+#         [38.9233953, -95.6783869]])
+#     path = np.concatenate([start_coord, waypoints, end_coord])
+#     print(gis.calculate_path_elevations(path))
+#
+#     # Expected results of elevations in meters calculated from: https://www.freemaptools.com/elevation-finder.htm
+#     expected_results = np.array(326 , 326, 322 , 326, 323, 328, 326)
+#     print(expected_results)
 
 if __name__ == "__main__":
     pass
