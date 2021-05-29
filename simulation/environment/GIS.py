@@ -72,7 +72,7 @@ class GIS:
 
         if api_call_required or force_update:
             logging.warning("New route requested and/or route save file does not exist. "
-                  "Calling Google API and creating new route save file...\n")
+                            "Calling Google API and creating new route save file...\n")
             logging.warning(
                 "The GIS class is collecting data from a Google API. Set force_update to false to prevent this and "
                 "read data from disk instead. This should improve performance. \n")
@@ -87,7 +87,7 @@ class GIS:
 
         self.path_distances = helpers.calculate_path_distances(self.path)
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
-                                                            self.path_distances)
+                                                               self.path_distances)
 
     def calculate_closest_gis_indices(self, cumulative_distances):
         """
@@ -291,6 +291,8 @@ class GIS:
         """
         Returns the elevations of every coordinate in the array of coordinates passed in as a coordinate
 
+        See Error Message Interpretations: https://developers.google.com/maps/documentation/elevation/overview
+
         :param coords: A NumPy array [n][latitude, longitude]
         :returns: A NumPy array [n][elevation] in metres
         """
@@ -319,18 +321,29 @@ class GIS:
 
         i = 0
         for location_string in location_strings:
-
             url = url_head + location_string + url_tail
 
             r = requests.get(url)
             response = json.loads(r.text)
+        if response['status'] == "OK":
+            for result in response['results']:
+                elevations[i] = result['elevation']
+                i = i + 1
+        else:
+            # sys.stderr.write("Error: No elevation was found\n")
+            if response['status'] == "INVALID_REQUEST":
+                sys.stderr.write("Error: Request was invalid\n")
 
-            if response['status'] == "OK":
-                for result in response['results']:
-                    elevations[i] = result['elevation']
-                    i = i + 1
-            else:
-                print("Error: No elevation was found")
+            elif response['status'] == "OVER_DAILY_LIMIT":
+                sys.stderr.write(
+                    "Error: Possible causes - API key is missing or invalid, billing has not been enabled,"
+                    " a self-imposed usage cap has been exceeded, or the provided payment method is no longer valid\n")
+
+            elif response['status'] == "OVER_QUERY_LIMIT":
+                sys.stderr.write("Error: Requester has exceeded quota\n")
+
+            elif response['status'] == "REQUEST_DENIED":
+                sys.stderr.write("Error: API could not complete the request\n")
 
         return elevations
 
@@ -362,7 +375,6 @@ class GIS:
 
         return bearing_array
 
-
     def update_vehicle_position(self, incremental_distance):
         """
         Returns the closest coordinate to the current coordinate
@@ -389,12 +401,12 @@ class GIS:
         return self.current_index
 
     def tile_route(self, num_laps, simulation_duration):
-        self.path = np.tile(self.path, (num_laps,1)) # 2 is how many times it is tiled.
+        self.path = np.tile(self.path, (num_laps, 1))  # 2 is how many times it is tiled.
 
         # Update any variables that depend on the path
         self.path_distances = helpers.calculate_path_distances(self.path)
         self.path_elevations = self.calculate_path_elevations(self.path)
-        self.path_gradients = self.calculate_path_gradients(self.path_elevations,
+        self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
                                                             self.path_distances)
         self.path_time_zones = self.calculate_time_zones(self.path)
 
