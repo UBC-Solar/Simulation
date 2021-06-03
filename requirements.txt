@@ -11,3 +11,4 @@ setuptools~=41.2.0
 numba>=0.50.1
 pytz~=2020.5
 timezonefinder~=5.1.0
+bokeh>=2.3.2
