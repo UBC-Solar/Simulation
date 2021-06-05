@@ -47,7 +47,7 @@ class Simulation:
             settings_path = settings_directory / "settings_ASC.json"
         else:
             settings_path = settings_directory / "settings_FSGP.json"
-
+        
         # ----- Load arguments -----
         with open(settings_path) as f:
             args = json.load(f)
@@ -209,15 +209,18 @@ class Simulation:
 
     @helpers.timeit
     def optimize(self, *args, **kwargs):
+        guess_lower_bound = 20
+        guess_upper_bound = 80
+
         bounds = {
-            'x0': (20, 80),
-            'x1': (20, 80),
-            'x2': (20, 80),
-            'x3': (20, 80),
-            'x4': (20, 80),
-            'x5': (20, 80),
-            'x6': (20, 80),
-            'x7': (20, 80),
+            'x0': (guess_lower_bound, guess_upper_bound),
+            'x1': (guess_lower_bound, guess_upper_bound),
+            'x2': (guess_lower_bound, guess_upper_bound),
+            'x3': (guess_lower_bound, guess_upper_bound),
+            'x4': (guess_lower_bound, guess_upper_bound),
+            'x5': (guess_lower_bound, guess_upper_bound),
+            'x6': (guess_lower_bound, guess_upper_bound),
+            'x7': (guess_lower_bound, guess_upper_bound),
         }
 
         # https://github.com/fmfn/BayesianOptimization
@@ -235,7 +238,7 @@ class Simulation:
         speed_result = np.empty(len(result_params))
         for i in range(len(speed_result)):
             speed_result[i] = result_params[i]
-
+        
         speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
         speed_result = np.insert(speed_result, 0, 0)
 
@@ -344,7 +347,7 @@ class Simulation:
 
         # Get the wind speeds at every location
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
-                                                       wind_directions)
+                                                                    wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
@@ -356,6 +359,8 @@ class Simulation:
 
         # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
         # (Charge from 8am-9am and 6pm-8pm) for FSGP
+        # ASC: 13 Hours of Race Day, 9 Hours of Driving
+
         # Ensuring Car does not move at night
         bool_lis = []
         night_lis = []
