@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from simulation.common import helpers
+from simulation.config import settings_directory
 from simulation.simulation_types import *
 import numpy as np
 
@@ -22,45 +23,29 @@ class ASC_Simulation(BaseSimulation):
     :param start_hour:
 
     """
-    def __init__(self, input_speed, start_hour, simulation_duration):
-        super().__init__()
-
-        # ----- Route Definition -----
-        self.origin_coord = np.array([39.0918, -94.4172])
-
-        self.waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
-                                   [41.8392, -103.7115], [42.8663, -106.3372], [42.8408, -108.7452],
-                                   [42.3224, -111.2973], [42.5840, -114.4703]])
-
-        self.dest_coord = np.array([43.6142, -116.2080])
-
+    def __init__(self, input_speed):
+        settings_path = settings_directory / "settings_ASC.json"
+        super().__init__(settings_path)
         self.input_speed = input_speed
-
-        # ----- Race-Specific Timing Constants -----
-
-        self.simulation_duration = simulation_duration
-        self.start_hour = start_hour
-
-        # ----- Configure
-        self.configure_race("ASC")
 
     def run_model(self, plot_results=True):
         """
-        Updates the model in tick increments for the entire simulation duration. Returns
-        a final battery charge and a distance travelled for this duration, given an
-        initial charge, and a target speed. Also requires the current time and location.
-        This is where the magic happens.
+                Updates the model in tick increments for the entire simulation duration. Returns
+                a final battery charge and a distance travelled for this duration, given an
+                initial charge, and a target speed. Also requires the current time and location.
+                This is where the magic happens.
 
-        Note: if the speed remains constant throughout this update, and knowing the starting
-            time, the cumulative distance at every time can be known. From the cumulative
-            distance, the GIS class updates the new location of the vehicle. From the location
-            of the vehicle at every tick, the gradients at every tick, the weather at every
-            tick, the GHI at every tick, is known.
+                Note: if the speed remains constant throughout this update, and knowing the starting
+                    time, the cumulative distance at every time can be known. From the cumulative
+                    distance, the GIS class updates the new location of the vehicle. From the location
+                    of the vehicle at every tick, the gradients at every tick, the weather at every
+                    tick, the GHI at every tick, is known.
 
-        note 2: currently, the simulation can only be run for times during which weather data is available
+                Note 2: currently, the simulation can only be run for times during which weather data is available
 
-        :param plot_results: set to True to plot the results of the simulation (is True by default)
-        """
+                :param speed: array that specifies the solar car's driving speed at each time step
+                :param plot_results: set to True to plot the results of the simulation (is True by default)
+                """
 
         # ----- Reshape speed array -----
 
@@ -68,6 +53,7 @@ class ASC_Simulation(BaseSimulation):
 
         speed_kmh = helpers.reshape_and_repeat(self.input_speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
+        speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         # ----- Expected distance estimate -----
 
@@ -111,7 +97,11 @@ class ASC_Simulation(BaseSimulation):
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = self.gis.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
+        local_times = helpers.adjust_timestamps_to_local_times(timestamps, self.time_of_initialization, time_zones)
+
+        # only for reference (may be used in the future)
+        local_times_datetime = np.array(
+            [datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
 
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
@@ -124,6 +114,9 @@ class ASC_Simulation(BaseSimulation):
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
+
+        # TODO: remove after done with testing
+        cloud_covers = np.zeros_like(cloud_covers)
 
         # Get the wind speeds at every location
         wind_speeds = self.weather.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
@@ -142,14 +135,14 @@ class ASC_Simulation(BaseSimulation):
         # Ensuring Car does not move at night
         bool_lis = []
         night_lis = []
-        # if self.race_type == "FSGP":
-        #     bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-        #     for time in list(range(20, 24)) + list(range(0, 8)):
-        #         night_lis.append(time_of_day_hour == time)
-        # elif self.race_type == "ASC":
-        bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-        for time in list(range(20, 24)) + list(range(0, 8)):
-            night_lis.append(time_of_day_hour == time)
+        if self.race_type == "FSGP":
+            bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+            for time in list(range(20, 24)) + list(range(0, 8)):
+                night_lis.append(time_of_day_hour == time)
+        elif self.race_type == "ASC":
+            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+            for time in list(range(20, 24)) + list(range(0, 8)):
+                night_lis.append(time_of_day_hour == time)
 
         not_charge = np.invert(np.logical_or.reduce(bool_lis))
         not_day = np.invert(np.logical_or.reduce(night_lis))
@@ -189,6 +182,7 @@ class ASC_Simulation(BaseSimulation):
         # TODO: if the car cannot climb the slope, the car also does not move
         # when the car is charging the car does not move
         # at night the car does not move
+
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
         speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
         speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
@@ -242,7 +236,7 @@ class ASC_Simulation(BaseSimulation):
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
             sns.set_style("whitegrid")
             f, axes = plt.subplots(4, 2, figsize=(12, 8))
-            f.suptitle("Simulation results", fontsize=16, weight="bold")
+            f.suptitle(f"Simulation results ({self.race_type})", fontsize=16, weight="bold")
 
             with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
                 for index, axis in enumerate(axes.flatten()):

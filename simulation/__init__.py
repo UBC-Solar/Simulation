@@ -21,7 +21,7 @@ from simulation.environment.WeatherForecasts import WeatherForecasts
 
 from simulation.main import Simulation
 
-__version__ = "0.0.1"
+__version__ = "0.3a1"
 
 print(f"Package 'simulation' imported. Version: {__version__}\n")
 
