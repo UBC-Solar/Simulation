@@ -47,7 +47,7 @@ class Simulation:
             settings_path = settings_directory / "settings_ASC.json"
         else:
             settings_path = settings_directory / "settings_FSGP.json"
-        
+
         # ----- Load arguments -----
         with open(settings_path) as f:
             args = json.load(f)
@@ -75,9 +75,13 @@ class Simulation:
         self.origin_coord = args['origin_coord']
         self.dest_coord = args['dest_coord']
         self.waypoints = args['waypoints']
-        
+
+        # ----- Route Length -----
+
+        self.route_length = 0  # Tentatively set to 0
+
         # ----- Race type -----
-        
+
         self.race_type = race_type
 
         # ----- Force update flags -----
@@ -117,7 +121,7 @@ class Simulation:
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
     @helpers.timeit
-    def run_model(self, speed=np.array([20,20,20,20,20,20,20,20]), plot_results=True, **kwargs):
+    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an
@@ -160,7 +164,7 @@ class Simulation:
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
-        distances = simulation_arrays[0] 
+        distances = simulation_arrays[0]
         state_of_charge = simulation_arrays[1]
         delta_energy = simulation_arrays[2]
         solar_irradiances = simulation_arrays[3]
@@ -177,6 +181,7 @@ class Simulation:
 
         print(f"Simulation successful!\n"
               f"Time taken: {time_taken}\n"
+              f"Route length: {self.route_length:.2f}km\n"
               f"Maximum distance traversable: {distance_travelled:.2f}km\n"
               f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
               f"Final battery SOC: {final_soc:.2f}%\n")
@@ -189,7 +194,7 @@ class Simulation:
                               cloud_covers]
             y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
-            
+
             self.__plot_graph(arrays_to_plot, y_label)
 
         return distance_travelled
@@ -201,22 +206,23 @@ class Simulation:
 
         maximum_distance = np.abs(self.run_model(res.x))
         print(f"Maximum distance: {maximum_distance:.2f}km\n")
-        
+
     @helpers.timeit
     def optimize(self, *args, **kwargs):
         bounds = {
-            'x0': (20, 100),
-            'x1': (20, 100),
-            'x2': (20, 100),
-            'x3': (20, 100),
-            'x4': (20, 100),
-            'x5': (20, 100),
-            'x6': (20, 100),
-            'x7': (20, 100),
+            'x0': (20, 80),
+            'x1': (20, 80),
+            'x2': (20, 80),
+            'x3': (20, 80),
+            'x4': (20, 80),
+            'x5': (20, 80),
+            'x6': (20, 80),
+            'x7': (20, 80),
         }
 
         # https://github.com/fmfn/BayesianOptimization
-        optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds)
+        optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds,
+                                         verbose=1)  # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
 
         # configure these parameters depending on whether optimizing for speed or precision
         # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
@@ -229,14 +235,15 @@ class Simulation:
         speed_result = np.empty(len(result_params))
         for i in range(len(speed_result)):
             speed_result[i] = result_params[i]
-        
+
         speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
         speed_result = np.insert(speed_result, 0, 0)
 
         arrays_to_plot = self.__run_simulation_calculations(speed_result).arrays
-        
-        self.__plot_graph([speed_result] + arrays_to_plot, ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]) 
+
+        self.__plot_graph([speed_result] + arrays_to_plot,
+                          ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                           "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"])
 
         return optimizer.max
 
@@ -298,6 +305,8 @@ class Simulation:
 
         max_route_distance = cumulative_distances[-1]
 
+        self.route_length = max_route_distance / 1000.0  # store the route length in kilometers
+
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
         gis_route_elevations_at_each_tick = gis_route_elevations[closest_gis_indices]
@@ -315,7 +324,8 @@ class Simulation:
         local_times = adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization, time_zones)
 
         # only for reference (may be used in the future)
-        local_times_datetime = np.array([datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
+        local_times_datetime = np.array(
+            [datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
 
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
@@ -334,7 +344,7 @@ class Simulation:
 
         # Get the wind speeds at every location
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
-                                                                    wind_directions)
+                                                       wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
@@ -349,6 +359,7 @@ class Simulation:
         # Ensuring Car does not move at night
         bool_lis = []
         night_lis = []
+
         if self.race_type == "FSGP":
             bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
             for time in list(range(20, 24)) + list(range(0, 8)):
@@ -372,7 +383,7 @@ class Simulation:
         motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
 
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
-        produced_energy = array_produced_energy 
+        produced_energy = array_produced_energy
 
         # net energy added to the battery
         delta_energy = produced_energy - consumed_energy
@@ -424,11 +435,11 @@ class Simulation:
 
         results = SimulationResult()
         results.arrays = [
-            distances, 
-            state_of_charge, 
-            delta_energy, 
-            solar_irradiances, 
-            wind_speeds, 
+            distances,
+            state_of_charge,
+            delta_energy,
+            solar_irradiances,
+            wind_speeds,
             gis_route_elevations_at_each_tick,
             cloud_covers
         ]
