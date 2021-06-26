@@ -47,7 +47,7 @@ class Simulation:
             settings_path = settings_directory / "settings_ASC.json"
         else:
             settings_path = settings_directory / "settings_FSGP.json"
-        
+
         # ----- Load arguments -----
         with open(settings_path) as f:
             args = json.load(f)
@@ -209,6 +209,7 @@ class Simulation:
 
     @helpers.timeit
     def optimize(self, *args, **kwargs):
+
         guess_lower_bound = 20
         guess_upper_bound = 80
 
@@ -238,7 +239,7 @@ class Simulation:
         speed_result = np.empty(len(result_params))
         for i in range(len(speed_result)):
             speed_result[i] = result_params[i]
-        
+
         speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
         speed_result = np.insert(speed_result, 0, 0)
 
@@ -312,6 +313,7 @@ class Simulation:
 
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
+
         gis_route_elevations_at_each_tick = gis_route_elevations[closest_gis_indices]
 
         # Get the azimuth angle of the vehicle at every location
@@ -347,15 +349,7 @@ class Simulation:
 
         # Get the wind speeds at every location
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
-                                                                    wind_directions)
-
-        # Get an array of solar irradiance at every coordinate and time
-        solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
-                                                                        time_zones, local_times,
-                                                                        gis_route_elevations[closest_gis_indices],
-                                                                        cloud_covers)
-
-        # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
+                                                       wind_directions)
 
         # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
         # (Charge from 8am-9am and 6pm-8pm) for FSGP
@@ -364,7 +358,6 @@ class Simulation:
         # Ensuring Car does not move at night
         bool_lis = []
         night_lis = []
-
         if self.race_type == "FSGP":
             bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
             for time in list(range(20, 24)) + list(range(0, 8)):
@@ -376,6 +369,19 @@ class Simulation:
 
         not_charge = np.invert(np.logical_or.reduce(bool_lis))
         not_day = np.invert(np.logical_or.reduce(night_lis))
+
+        # Performing Post-procsesing on Elevations array based on when car is not moving
+
+        # TODO: Plot elevations, not_charge and not_day
+        self.elevation_bumping_plots(not_charge=not_charge, not_day=not_day, elevations=gis_route_elevations_at_each_tick)
+
+        # Get an array of solar irradiance at every coordinate and time
+        solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
+                                                                        time_zones, local_times,
+                                                                        gis_route_elevations[closest_gis_indices],
+                                                                        cloud_covers)
+
+        # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
         # ----- Energy calculations -----
 
@@ -406,6 +412,7 @@ class Simulation:
 
         # stores the battery SOC at each time step
         state_of_charge = battery_variables_array[0]
+        print("State of Charge: ", state_of_charge)
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
 
         # when the battery is empty the car will not move
@@ -456,3 +463,45 @@ class Simulation:
         self.local_times = local_times
 
         return results
+
+    def elevation_bumping_plots(self, not_charge, not_day, elevations):
+
+        x1 = np.arange(0.0, len(not_charge), 1)
+        y1 = np.array(not_charge)
+
+        x2 = np.arange(0.0, len(not_day), 1)
+        y2 = np.array(not_day)
+
+        stop_array_y3 = np.logical_and(not_day, not_charge)
+        x3 = np.arange(0.0, len(stop_array_y3), 1)
+
+        x4 = np.arange(0.0, len(elevations), 1)
+
+
+
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(12,8))
+        fig.suptitle('Elevation bumping plots')
+
+        ax1.plot(x1, y1)
+        ax1.set_xlabel('index')
+        ax1.set_ylabel('Racing?')
+        ax1.grid()
+
+        ax2.plot(x2, y2)
+        ax2.set_xlabel('index')
+        ax2.set_ylabel('Daytime?')
+        ax2.grid()
+
+        # Either stop due to charging or nighttime
+
+        ax3.plot(x3, stop_array_y3)
+        ax3.set_xlabel('index')
+        ax3.set_ylabel('In Motion?')
+        ax3.grid()
+
+        ax4.plot(x4, elevations)
+        ax4.set_xlabel('index')
+        ax4.set_ylabel('Elevations')
+        ax4.grid()
+
+        plt.show()

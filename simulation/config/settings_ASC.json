@@ -13,7 +13,7 @@
     ],
 
     "tick": 1,
-    "simulation_duration": 36000,
+    "simulation_duration": 43200,
     "start_hour": 7,
 
     "initial_battery_charge": 0.65,

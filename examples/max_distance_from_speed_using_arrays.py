@@ -42,6 +42,5 @@ def main():
 
     return distance_travelled
 
-
 if __name__ == "__main__":
     main()
