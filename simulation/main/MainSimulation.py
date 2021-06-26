@@ -5,15 +5,15 @@ import datetime
 import json
 import seaborn as sns
 import pandas as pd
-from simulation.common import helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from scipy.optimize import minimize
 from bayes_opt import BayesianOptimization
+
+from simulation.common import helpers
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 
-from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
+from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed, find_runs
 
 
 class Simulation:
@@ -138,7 +138,8 @@ class Simulation:
 
         :param speed: array that specifies the solar car's driving speed at each time step
         :param plot_results: set to True to plot the results of the simulation (is True by default)
-        :param args: variable list of arguments that specify the car's driving speed at each time step. Overrides the speed parameter.
+        :param args: variable list of arguments that specify the car's driving speed at each time step.
+            Overrides the speed parameter.
         """
 
         # This is mainly used by the optimization function since it passes values as keyword arguments instead of a numpy array
@@ -226,7 +227,8 @@ class Simulation:
 
         # https://github.com/fmfn/BayesianOptimization
         optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds,
-                                         verbose=1)  # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
+                                         verbose=1)
+        # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
 
         # configure these parameters depending on whether optimizing for speed or precision
         # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
@@ -373,12 +375,13 @@ class Simulation:
         # Performing Post-procsesing on Elevations array based on when car is not moving
 
         # TODO: Plot elevations, not_charge and not_day
-        self.elevation_bumping_plots(not_charge=not_charge, not_day=not_day, elevations=gis_route_elevations_at_each_tick)
+        modified_elevations = self.elevation_bumping_plots(not_charge=not_charge, not_day=not_day,
+                                     elevations=gis_route_elevations_at_each_tick)
 
         # Get an array of solar irradiance at every coordinate and time
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
                                                                         time_zones, local_times,
-                                                                        gis_route_elevations[closest_gis_indices],
+                                                                        modified_elevations,
                                                                         cloud_covers)
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
@@ -452,7 +455,7 @@ class Simulation:
             delta_energy,
             solar_irradiances,
             wind_speeds,
-            gis_route_elevations_at_each_tick,
+            modified_elevations,
             cloud_covers
         ]
         results.distance_travelled = distances[-1]
@@ -477,9 +480,7 @@ class Simulation:
 
         x4 = np.arange(0.0, len(elevations), 1)
 
-
-
-        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(12,8))
+        fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(12, 10))
         fig.suptitle('Elevation bumping plots')
 
         ax1.plot(x1, y1)
@@ -504,4 +505,51 @@ class Simulation:
         ax4.set_ylabel('Elevations')
         ax4.grid()
 
+        modified_elevations = self.bump_elevations(stop_array=stop_array_y3, elevations=elevations)
+
+        x5 = np.arange(0.0, len(modified_elevations), 1)
+        y5 = np.array(modified_elevations)
+        ax5.plot(x5, y5)
+        ax5.set_xlabel('index')
+        ax5.set_ylabel('Elevations')
+        ax5.grid()
+
         plt.show()
+
+        return modified_elevations
+
+    @staticmethod
+    def bump_elevations(stop_array, elevations):
+        """
+
+        Args:
+            stop_array: An array describing the time in motion and the time stopping.
+                This is obtained by performing a logical AND operator on the boolean arrays describing day/night time
+                and charging hours. The ANDed result describes the car in motion for the following reason:
+                    - the day/night time array (called "not_day") uses 1 as day and 0 as night
+                    - the charging array (called "not_charge") uses 1 as in motion and 0 as charging
+                Thus the ANDed result describes the time tha car is not charging during the daytime. This is the time in motion.
+            elevations: An array of elevations based on closest_gis_indicies.
+
+        Returns: A "bumped" array of elevations that is adjusted for the time that the car does not move.
+
+        """
+
+        run_values, run_starts, run_lengths = helpers.find_runs(stop_array)
+
+        array_slices = []
+        working_index = 0
+
+        for i in range(0, len(run_values)):
+            print(
+                f"There is a {run_values[i]} run from index {run_starts[i]} to index {run_lengths[i] + run_starts[i]}."
+                f" The length is {run_lengths[i]}")
+            if not run_values[i]:
+                elevation_slice = np.array([elevations[working_index]] * run_lengths[i])
+                working_index += 1
+            else:
+                elevation_slice = elevations[working_index:run_lengths[i] + working_index]
+            array_slices.append(elevation_slice)
+
+        modified_elevations = np.concatenate(array_slices)
+        return modified_elevations[0:len(elevations)]
