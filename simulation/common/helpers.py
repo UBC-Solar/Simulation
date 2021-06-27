@@ -33,20 +33,23 @@ def date_from_unix_timestamp(unix_timestamp):
     return datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def checkForNonConsecutiveZeros(array):
+def checkForNonConsecutiveZeros(array, verbose=False):
     zeroed_indices = np.where(array == 0)[0]
 
     if len(zeroed_indices) == 0:
-        print("No zeroes found in the array!")
+        if verbose:
+            print("No zeroes found in the array!")
         return -1
 
     zeroed_indices_diff = np.diff(zeroed_indices)
 
     if np.max(zeroed_indices_diff) == 1 and np.min(zeroed_indices_diff) == 1:
-        print("Only consecutive zeroes found!")
+        if verbose:
+            print("Only consecutive zeroes found!")
         return False
     else:
-        print("Non-consecutive zeroes found!")
+        if verbose:
+            print("Non-consecutive zeroes found!")
         return True
 
 
