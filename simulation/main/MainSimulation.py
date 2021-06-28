@@ -233,7 +233,7 @@ class Simulation:
         # configure these parameters depending on whether optimizing for speed or precision
         # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
         # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
-        optimizer.maximize(init_points=20, n_iter=200, acq='ucb', xi=1e-1, kappa=10)
+        optimizer.maximize(init_points=20, n_iter=30, acq='ucb', xi=1e-1, kappa=10)
 
         result = optimizer.max
         result_params = list(result["params"].values())
@@ -324,6 +324,8 @@ class Simulation:
         # Get array of path gradients
         gradients = self.gis.get_gradients(closest_gis_indices)
 
+        # ----- Timing Calculations -----
+
         # Get time zones at each point on the GIS path
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
@@ -336,6 +338,25 @@ class Simulation:
 
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
+
+        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
+        # (Charge from 8am-9am and 6pm-8pm) for FSGP
+        # ASC: 13 Hours of Race Day, 9 Hours of Driving
+
+        # Ensuring Car does not move at night
+        bool_lis = []
+        night_lis = []
+        if self.race_type == "FSGP":
+            bool_lis = [time_of_day_hour == 8, time_of_day_hour == 10, time_of_day_hour == 18, time_of_day_hour == 19]
+            for time in list(range(20, 24)) + list(range(0, 8)):
+                night_lis.append(time_of_day_hour == time)
+        elif self.race_type == "ASC":
+            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+            for time in list(range(20, 24)) + list(range(0, 8)):
+                night_lis.append(time_of_day_hour == time)
+
+        not_charge = np.invert(np.logical_or.reduce(bool_lis))
+        not_day = np.invert(np.logical_or.reduce(night_lis))
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
@@ -353,29 +374,10 @@ class Simulation:
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
                                                        wind_directions)
 
-        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
-        # (Charge from 8am-9am and 6pm-8pm) for FSGP
-        # ASC: 13 Hours of Race Day, 9 Hours of Driving
-
-        # Ensuring Car does not move at night
-        bool_lis = []
-        night_lis = []
-        if self.race_type == "FSGP":
-            bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-            for time in list(range(20, 24)) + list(range(0, 8)):
-                night_lis.append(time_of_day_hour == time)
-        elif self.race_type == "ASC":
-            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-            for time in list(range(20, 24)) + list(range(0, 8)):
-                night_lis.append(time_of_day_hour == time)
-
-        not_charge = np.invert(np.logical_or.reduce(bool_lis))
-        not_day = np.invert(np.logical_or.reduce(night_lis))
-
         # Performing some processing on Elevations array based on when car is not moving
 
         # TODO: Plot elevations, not_charge and not_day
-        modified_elevations = self.elevation_bumping_plots(not_charge=not_charge, not_day=not_day,
+        modified_elevations = self.gis.elevation_bumping_plots(not_charge=not_charge, not_day=not_day,
                                      elevations=gis_route_elevations_at_each_tick)
 
         # Get an array of solar irradiance at every coordinate and time
@@ -383,8 +385,6 @@ class Simulation:
                                                                         time_zones, local_times,
                                                                         modified_elevations,
                                                                         cloud_covers)
-
-
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
@@ -425,9 +425,54 @@ class Simulation:
         # when the car is charging the car does not move
         # at night the car does not move
 
+        fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(12, 20))
+
+        # Plot speed array before it is changed,
+        y1 = np.array(speed_kmh)
+        x1 = np.arange(0.0, len(speed_kmh), 1)
+        ax1.plot(x1, y1)
+        ax1.set_xlabel('time (s)')
+        ax1.set_ylabel('Speed (km/h)')
+        ax1.grid()
+
         speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
+
+        # Plot state of charge and speed array after ANDed with state of charge
+
+        y2 = np.array(state_of_charge)
+        x2 = np.arange(0.0, len(state_of_charge), 1)
+        ax2.plot(x2, y2)
+        ax2.set_xlabel('time (s)')
+        ax2.set_ylabel('SOC')
+        ax2.grid()
+
+        y3 = np.array(speed_kmh)
+        x3 = np.arange(0.0, len(speed_kmh), 1)
+        ax3.plot(x3, y3)
+        ax3.set_xlabel('time (s)')
+        ax3.set_ylabel('Speed (km/h) AND SOC')
+        ax3.grid()
+
         speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+
+        y4 = np.logical_and(not_charge, not_day)
+        x4 = np.arange(0.0, len(y4), 1)
+        ax4.plot(x4,y4)
+        ax4.set_xlabel('time (s)')
+        ax4.set_ylabel('not_charge AND not_day')
+        ax4.grid()
+
         speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
+
+        y5 = np.array(speed_kmh)
+        x5 = np.arange(0.0, len(speed_kmh), 1)
+        ax5.plot(x5, y5)
+        ax5.set_xlabel('time (s)')
+        ax5.set_ylabel('Speed (km/h) AND not_charge, not_day ')
+        ax5.grid()
+
+        plt.suptitle("Speed Boolean Operations")
+        plt.show()
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
@@ -452,6 +497,7 @@ class Simulation:
 
         results = SimulationResult()
         results.arrays = [
+            speed_kmh,
             distances,
             state_of_charge,
             delta_energy,
@@ -469,107 +515,5 @@ class Simulation:
 
         return results
 
-    def elevation_bumping_plots(self, not_charge, not_day, elevations, show_plot=True):
 
-        # Boolean array to describe charging time vs driving time (0 - charging, 1 - charging)
-        x1 = np.arange(0.0, len(not_charge), 1)
-        y1 = np.array(not_charge)
 
-        # Boolean array to describe day vs night (0 - night, 1 - day)
-
-        x2 = np.arange(0.0, len(not_day), 1)
-        y2 = np.array(not_day)
-
-        # Create a stop array to describe motion when the car is not charging and day time
-
-        stop_array_y3 = np.logical_and(not_day, not_charge)
-        x3 = np.arange(0.0, len(stop_array_y3), 1)
-
-        x4 = np.arange(0.0, len(elevations), 1)
-
-        fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(12, 12))
-        fig.suptitle('Elevation bumping plots')
-
-        # Plot to describe time driving
-
-        ax1.plot(x1, y1)
-        ax1.set_xlabel('time (s)')
-        ax1.set_ylabel('Driving?')
-        ax1.grid()
-
-        # Plot to describe daytime
-
-        ax2.plot(x2, y2)
-        ax2.set_xlabel('time (s)')
-        ax2.set_ylabel('Daytime?')
-        ax2.grid()
-
-        # Plot to describe time in motion
-
-        ax3.plot(x3, stop_array_y3)
-        ax3.set_xlabel('time (s)')
-        ax3.set_ylabel('In Motion?')
-        ax3.grid()
-
-        # Plot to describe elevations without adjustment for race hours
-
-        ax4.plot(x4, elevations)
-        ax4.set_xlabel('time (s)')
-        ax4.set_ylabel('Elevations (not adjusted)')
-        ax4.grid()
-
-        # Perform elevation "bumping" operation
-
-        modified_elevations = self.bump_elevations(stop_array=stop_array_y3, elevations=elevations)
-
-        # Plot to describe new "bumped" elevations
-
-        x5 = np.arange(0.0, len(modified_elevations), 1)
-        y5 = np.array(modified_elevations)
-        ax5.plot(x5, y5)
-        ax5.set_xlabel('time (s)')
-        ax5.set_ylabel('Elevations (adjusted)')
-        ax5.grid()
-
-        if show_plot:
-            plt.show()
-
-        return modified_elevations
-
-    @staticmethod
-    def bump_elevations(stop_array, elevations, verbose=False):
-        """
-
-        Args:
-            stop_array: An array describing the time in motion and the time stopping.
-                This is obtained by performing a logical AND operator on the boolean arrays describing day/night time
-                and charging hours. The ANDed result describes the car in motion for the following reason:
-                    - the day/night time array (called "not_day") uses 1 as day and 0 as night
-                    - the charging array (called "not_charge") uses 1 as in motion and 0 as charging
-                Thus the ANDed result describes the time tha car is not charging during the daytime. This is the time in motion.
-            elevations: An array of elevations based on closest_gis_indicies that has not been adjusted based on race timings (charging and daytime).
-
-        Returns: A "bumped" array of elevations that is adjusted for the time that the car does not move.
-
-        """
-
-        run_values, run_starts, run_lengths = helpers.find_runs(stop_array)
-
-        array_slices = []
-        working_index = 0
-
-        for i in range(0, len(run_values)):
-            if verbose:
-                print(
-                    f"There is a {run_values[i]} run from index {run_starts[i]} to index {run_lengths[i] + run_starts[i]}."
-                    f" The length is {run_lengths[i]}")
-            if not run_values[i]:
-                elevation_slice = np.array([elevations[working_index]] * run_lengths[i])
-                working_index += 1
-            else:
-                elevation_slice = elevations[working_index:run_lengths[i] + working_index]
-            array_slices.append(elevation_slice)
-
-        modified_elevations = np.concatenate(array_slices)
-
-        return modified_elevations[0:len(elevations)]

@@ -5,6 +5,7 @@ import datetime
 from _datetime import datetime
 from _datetime import date
 
+from matplotlib import pyplot as plt
 from numba import jit, njit
 
 from simulation.common import constants
@@ -369,6 +370,28 @@ def find_runs(x):
 
         return run_values, run_starts, run_lengths
 
+def plot_array(array, title, x_title, y_title):
+    y1 = np.array(array)
+    x1 = np.arange(0.0, len(array), 1)
+
+    fig, ax = plt.subplots()
+    ax.plot(x1, y1)
+    ax.set(xlabel=x_title, ylabel=y_title, title=title)
+    ax.grid()
+
+    plt.show()
+
+def plot_array(array, title, x_title, y_title):
+    y1 = np.array(array)
+    x1 = np.arange(0.0, len(array), 1)
+
+    fig, ax = plt.subplots()
+    ax.plot(x1, y1)
+    ax.set(xlabel=x_title, ylabel=y_title, title=title)
+    ax.grid()
+
+    plt.show()
+
 
 if __name__ == '__main__':
     # speed_array input
@@ -380,3 +403,4 @@ if __name__ == '__main__':
     print(expanded_speed_array)
 
     pass
+
