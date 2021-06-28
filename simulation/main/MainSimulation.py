@@ -530,6 +530,7 @@ class Simulation:
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
         results = SimulationResult()
+        # TODO: Get speed array to be plotted somehow
         results.arrays = [
             distances,
             state_of_charge,
