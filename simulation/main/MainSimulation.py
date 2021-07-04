@@ -227,7 +227,7 @@ class Simulation:
 
         # https://github.com/fmfn/BayesianOptimization
         optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds,
-                                         verbose=1)
+                                         verbose=2)
         # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
 
         # configure these parameters depending on whether optimizing for speed or precision
@@ -276,7 +276,7 @@ class Simulation:
         plt.tight_layout()
         plt.show()
 
-    def __run_simulation_calculations(self, speed_kmh):
+    def __run_simulation_calculations(self, speed_kmh, verbose=False):
         """
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
         containing members that specify total distance travelled and time taken at the end of the simulation
@@ -378,7 +378,7 @@ class Simulation:
 
         # TODO: Plot elevations, not_charge and not_day
         modified_elevations = self.gis.elevation_bumping_plots(not_charge=not_charge, not_day=not_day,
-                                     elevations=gis_route_elevations_at_each_tick)
+                                                               elevations=gis_route_elevations_at_each_tick, show_plot=False)
 
         # Get an array of solar irradiance at every coordinate and time
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
@@ -425,54 +425,63 @@ class Simulation:
         # when the car is charging the car does not move
         # at night the car does not move
 
-        fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(12, 20))
+        if verbose:
+            # This segment of code gives visual representation to the time intervals representing:
+            # Graph 1: Driving?
+            # Graph 2: Daytime?
+            # Graph 3: (Graph 1 AND Graph 2) - Whether the car is allowed to be in motion
 
-        # Plot speed array before it is changed,
-        y1 = np.array(speed_kmh)
-        x1 = np.arange(0.0, len(speed_kmh), 1)
-        ax1.plot(x1, y1)
-        ax1.set_xlabel('time (s)')
-        ax1.set_ylabel('Speed (km/h)')
-        ax1.grid()
+            # The elevation array (Graph 4) is shifted to show the elevation at each point in time.
+            # When the car cannot be in motion, the elevation remains unchanged.
+            # When the car can be in motion, the elevation matches.
 
-        speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
+            fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(12, 20))
 
-        # Plot state of charge and speed array after ANDed with state of charge
+            y1 = np.array(speed_kmh)
+            x1 = np.arange(0.0, len(speed_kmh), 1)
+            ax1.plot(x1, y1)
+            ax1.set_xlabel('time (s)')
+            ax1.set_ylabel('Speed (km/h)')
+            ax1.grid()
 
-        y2 = np.array(state_of_charge)
-        x2 = np.arange(0.0, len(state_of_charge), 1)
-        ax2.plot(x2, y2)
-        ax2.set_xlabel('time (s)')
-        ax2.set_ylabel('SOC')
-        ax2.grid()
+            speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
 
-        y3 = np.array(speed_kmh)
-        x3 = np.arange(0.0, len(speed_kmh), 1)
-        ax3.plot(x3, y3)
-        ax3.set_xlabel('time (s)')
-        ax3.set_ylabel('Speed (km/h) AND SOC')
-        ax3.grid()
+            # Plot state of charge and speed array after ANDed with state of charge
 
-        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+            y2 = np.array(state_of_charge)
+            x2 = np.arange(0.0, len(state_of_charge), 1)
+            ax2.plot(x2, y2)
+            ax2.set_xlabel('time (s)')
+            ax2.set_ylabel('SOC')
+            ax2.grid()
 
-        y4 = np.logical_and(not_charge, not_day)
-        x4 = np.arange(0.0, len(y4), 1)
-        ax4.plot(x4,y4)
-        ax4.set_xlabel('time (s)')
-        ax4.set_ylabel('not_charge AND not_day')
-        ax4.grid()
+            y3 = np.array(speed_kmh)
+            x3 = np.arange(0.0, len(speed_kmh), 1)
+            ax3.plot(x3, y3)
+            ax3.set_xlabel('time (s)')
+            ax3.set_ylabel('Speed (km/h) AND SOC')
+            ax3.grid()
 
-        speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
+            speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
 
-        y5 = np.array(speed_kmh)
-        x5 = np.arange(0.0, len(speed_kmh), 1)
-        ax5.plot(x5, y5)
-        ax5.set_xlabel('time (s)')
-        ax5.set_ylabel('Speed (km/h) AND not_charge, not_day ')
-        ax5.grid()
+            y4 = np.logical_and(not_charge, not_day)
+            x4 = np.arange(0.0, len(y4), 1)
+            ax4.plot(x4, y4)
+            ax4.set_xlabel('time (s)')
+            ax4.set_ylabel('not_charge AND not_day')
+            ax4.grid()
 
-        plt.suptitle("Speed Boolean Operations")
-        plt.show()
+            speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
+
+            y5 = np.array(speed_kmh)
+            x5 = np.arange(0.0, len(speed_kmh), 1)
+            ax5.plot(x5, y5)
+            ax5.set_xlabel('time (s)')
+            ax5.set_ylabel('Speed (km/h) AND not_charge, not_day ')
+            ax5.grid()
+
+            plt.suptitle("Speed Boolean Operations")
+            plt.show()
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
@@ -480,6 +489,31 @@ class Simulation:
 
         distance = speed_kmh * (time_in_motion / 3600)
         distances = np.cumsum(distance)
+
+        if verbose:
+            # This section of code plots speed and distances
+            # Graph 1 plots speed
+            # Graph 2 plots speed
+
+            # THe speed and distance should both be 0 at the same time along the x-axis.
+            # This corresponds to the intervals of time that the car cannot move
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+
+            y1 = np.array(speed_kmh)
+            x1 = np.arange(0.0, len(speed_kmh), 1)
+            ax1.plot(x1, y1)
+            ax1.set_xlabel('time (s)')
+            ax1.set_ylabel('Speed (km/h)')
+            ax1.grid()
+
+            x2 = np.arange(0.0, len(distances), 1)
+            ax2.plot(x2, distances)
+            ax2.set_xlabel('time (s)')
+            ax2.set_ylabel('Distances (km)')
+            ax2.grid()
+
+            plt.suptitle("Speed and Distances")
+            plt.show()
 
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         distances = distances.clip(0, max_route_distance / 1000)
@@ -497,7 +531,6 @@ class Simulation:
 
         results = SimulationResult()
         results.arrays = [
-            speed_kmh,
             distances,
             state_of_charge,
             delta_energy,
@@ -514,6 +547,3 @@ class Simulation:
         self.local_times = local_times
 
         return results
-
-
-

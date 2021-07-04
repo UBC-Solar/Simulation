@@ -413,69 +413,70 @@ class GIS:
 
         return self.path
 
-    def elevation_bumping_plots(self, not_charge, not_day, elevations, show_plot=True):
-
-        # Boolean array to describe charging time vs driving time (0 - charging, 1 - charging)
-        x1 = np.arange(0.0, len(not_charge), 1)
-        y1 = np.array(not_charge)
-
-        # Boolean array to describe day vs night (0 - night, 1 - day)
-
-        x2 = np.arange(0.0, len(not_day), 1)
-        y2 = np.array(not_day)
+    def elevation_bumping_plots(self, not_charge, not_day, elevations, show_plot=False):
 
         # Create a stop array to describe motion when the car is not charging and day time
-
         stop_array_y3 = np.logical_and(not_day, not_charge)
-        x3 = np.arange(0.0, len(stop_array_y3), 1)
 
-        x4 = np.arange(0.0, len(elevations), 1)
-
-        fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(12, 12))
-        fig.suptitle('Elevation bumping plots')
-
-        # Plot to describe time driving
-
-        ax1.plot(x1, y1)
-        ax1.set_xlabel('time (s)')
-        ax1.set_ylabel('Driving?')
-        ax1.grid()
-
-        # Plot to describe daytime
-
-        ax2.plot(x2, y2)
-        ax2.set_xlabel('time (s)')
-        ax2.set_ylabel('Daytime?')
-        ax2.grid()
-
-        # Plot to describe time in motion
-
-        ax3.plot(x3, stop_array_y3)
-        ax3.set_xlabel('time (s)')
-        ax3.set_ylabel('In Motion?')
-        ax3.grid()
-
-        # Plot to describe elevations without adjustment for race hours
-
-        ax4.plot(x4, elevations)
-        ax4.set_xlabel('time (s)')
-        ax4.set_ylabel('Elevations (not adjusted)')
-        ax4.grid()
 
         # Perform elevation "bumping" operation
 
         modified_elevations = self.bump_elevations(stop_array=stop_array_y3, elevations=elevations)
 
-        # Plot to describe new "bumped" elevations
-
-        x5 = np.arange(0.0, len(modified_elevations), 1)
-        y5 = np.array(modified_elevations)
-        ax5.plot(x5, y5)
-        ax5.set_xlabel('time (s)')
-        ax5.set_ylabel('Elevations (adjusted)')
-        ax5.grid()
-
         if show_plot:
+            # Boolean array to describe charging time vs driving time (0 - charging, 1 - charging)
+            x1 = np.arange(0.0, len(not_charge), 1)
+            y1 = np.array(not_charge)
+
+            # Boolean array to describe day vs night (0 - night, 1 - day)
+
+            x2 = np.arange(0.0, len(not_day), 1)
+            y2 = np.array(not_day)
+
+            x3 = np.arange(0.0, len(stop_array_y3), 1)
+
+            x4 = np.arange(0.0, len(elevations), 1)
+
+            fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(12, 12))
+            fig.suptitle('Elevation bumping plots')
+
+            # Plot to describe time driving
+
+            ax1.plot(x1, y1)
+            ax1.set_xlabel('time (s)')
+            ax1.set_ylabel('Driving?')
+            ax1.grid()
+
+            # Plot to describe daytime
+
+            ax2.plot(x2, y2)
+            ax2.set_xlabel('time (s)')
+            ax2.set_ylabel('Daytime?')
+            ax2.grid()
+
+            # Plot to describe time in motion
+
+            ax3.plot(x3, stop_array_y3)
+            ax3.set_xlabel('time (s)')
+            ax3.set_ylabel('In Motion?')
+            ax3.grid()
+
+            # Plot to describe elevations without adjustment for race hours
+
+            ax4.plot(x4, elevations)
+            ax4.set_xlabel('time (s)')
+            ax4.set_ylabel('Elevations (not adjusted)')
+            ax4.grid()
+
+            # Plot to describe new "bumped" elevations
+
+            x5 = np.arange(0.0, len(modified_elevations), 1)
+            y5 = np.array(modified_elevations)
+            ax5.plot(x5, y5)
+            ax5.set_xlabel('time (s)')
+            ax5.set_ylabel('Elevations (adjusted)')
+            ax5.grid()
+
             plt.show()
 
         return modified_elevations
