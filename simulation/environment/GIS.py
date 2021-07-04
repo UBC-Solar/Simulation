@@ -415,20 +415,29 @@ class GIS:
 
     def elevation_bumping_plots(self, not_charge, not_day, elevations, show_plot=False):
 
+        """
+        A wrapper function for the logic of bump_elevations()
+
+        Args:
+            not_charge: A NumPy array [Boolean] - describes charging vs driving (0 - charging, 1 - driving)
+            not_day: A NumPy array [Boolean] - describes day vs night (0 - night, 1 - day)
+            elevations: A NumPy array [elevation] in meters - unadjusted based on driving times
+            show_plot: A Boolean controlling whether plots are shown for debugging purposes
+
+        Returns: An array of elevations adjusted to driving times
+
+        """
+
         # Create a stop array to describe motion when the car is not charging and day time
         stop_array_y3 = np.logical_and(not_day, not_charge)
-
 
         # Perform elevation "bumping" operation
 
         modified_elevations = self.bump_elevations(stop_array=stop_array_y3, elevations=elevations)
 
         if show_plot:
-            # Boolean array to describe charging time vs driving time (0 - charging, 1 - charging)
             x1 = np.arange(0.0, len(not_charge), 1)
             y1 = np.array(not_charge)
-
-            # Boolean array to describe day vs night (0 - night, 1 - day)
 
             x2 = np.arange(0.0, len(not_day), 1)
             y2 = np.array(not_day)
