@@ -5,15 +5,15 @@ import datetime
 import json
 import seaborn as sns
 import pandas as pd
-from simulation.common import helpers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from scipy.optimize import minimize
 from bayes_opt import BayesianOptimization
+
+from simulation.common import helpers
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 
-from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
+from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed, find_runs
 
 
 class Simulation:
@@ -138,7 +138,8 @@ class Simulation:
 
         :param speed: array that specifies the solar car's driving speed at each time step
         :param plot_results: set to True to plot the results of the simulation (is True by default)
-        :param args: variable list of arguments that specify the car's driving speed at each time step. Overrides the speed parameter.
+        :param args: variable list of arguments that specify the car's driving speed at each time step.
+            Overrides the speed parameter.
         """
 
         # This is mainly used by the optimization function since it passes values as keyword arguments instead of a numpy array
@@ -209,25 +210,30 @@ class Simulation:
 
     @helpers.timeit
     def optimize(self, *args, **kwargs):
+
+        guess_lower_bound = 20
+        guess_upper_bound = 80
+
         bounds = {
-            'x0': (20, 80),
-            'x1': (20, 80),
-            'x2': (20, 80),
-            'x3': (20, 80),
-            'x4': (20, 80),
-            'x5': (20, 80),
-            'x6': (20, 80),
-            'x7': (20, 80),
+            'x0': (guess_lower_bound, guess_upper_bound),
+            'x1': (guess_lower_bound, guess_upper_bound),
+            'x2': (guess_lower_bound, guess_upper_bound),
+            'x3': (guess_lower_bound, guess_upper_bound),
+            'x4': (guess_lower_bound, guess_upper_bound),
+            'x5': (guess_lower_bound, guess_upper_bound),
+            'x6': (guess_lower_bound, guess_upper_bound),
+            'x7': (guess_lower_bound, guess_upper_bound),
         }
 
         # https://github.com/fmfn/BayesianOptimization
         optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds,
-                                         verbose=1)  # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
+                                         verbose=2)
+        # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
 
         # configure these parameters depending on whether optimizing for speed or precision
         # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
         # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
-        optimizer.maximize(init_points=20, n_iter=200, acq='ucb', xi=1e-1, kappa=10)
+        optimizer.maximize(init_points=20, n_iter=30, acq='ucb', xi=1e-1, kappa=10)
 
         result = optimizer.max
         result_params = list(result["params"].values())
@@ -270,7 +276,7 @@ class Simulation:
         plt.tight_layout()
         plt.show()
 
-    def __run_simulation_calculations(self, speed_kmh):
+    def __run_simulation_calculations(self, speed_kmh, verbose=False):
         """
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
         containing members that specify total distance travelled and time taken at the end of the simulation
@@ -309,6 +315,7 @@ class Simulation:
 
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
+
         gis_route_elevations_at_each_tick = gis_route_elevations[closest_gis_indices]
 
         # Get the azimuth angle of the vehicle at every location
@@ -316,6 +323,8 @@ class Simulation:
 
         # Get array of path gradients
         gradients = self.gis.get_gradients(closest_gis_indices)
+
+        # ----- Timing Calculations -----
 
         # Get time zones at each point on the GIS path
         time_zones = self.gis.get_time_zones(closest_gis_indices)
@@ -329,6 +338,25 @@ class Simulation:
 
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
+
+        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
+        # (Charge from 8am-9am and 6pm-8pm) for FSGP
+        # ASC: 13 Hours of Race Day, 9 Hours of Driving
+
+        # Ensuring Car does not move at night
+        bool_lis = []
+        night_lis = []
+        if self.race_type == "FSGP":
+            bool_lis = [time_of_day_hour == 8, time_of_day_hour == 10, time_of_day_hour == 18, time_of_day_hour == 19]
+            for time in list(range(20, 24)) + list(range(0, 8)):
+                night_lis.append(time_of_day_hour == time)
+        elif self.race_type == "ASC":
+            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
+            for time in list(range(20, 24)) + list(range(0, 8)):
+                night_lis.append(time_of_day_hour == time)
+
+        not_charge = np.invert(np.logical_or.reduce(bool_lis))
+        not_day = np.invert(np.logical_or.reduce(night_lis))
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
@@ -346,31 +374,19 @@ class Simulation:
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
                                                        wind_directions)
 
+        # Performing some processing on Elevations array based on when car is not moving
+
+        # TODO: Plot elevations, not_charge and not_day
+        modified_elevations = self.gis.elevation_bumping_plots(not_charge=not_charge, not_day=not_day,
+                                                               elevations=gis_route_elevations_at_each_tick, show_plot=False)
+
         # Get an array of solar irradiance at every coordinate and time
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
                                                                         time_zones, local_times,
-                                                                        gis_route_elevations[closest_gis_indices],
+                                                                        modified_elevations,
                                                                         cloud_covers)
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
-
-        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
-        # (Charge from 8am-9am and 6pm-8pm) for FSGP
-        # Ensuring Car does not move at night
-        bool_lis = []
-        night_lis = []
-
-        if self.race_type == "FSGP":
-            bool_lis = [time_of_day_hour == 10, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-            for time in list(range(20, 24)) + list(range(0, 8)):
-                night_lis.append(time_of_day_hour == time)
-        elif self.race_type == "ASC":
-            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-            for time in list(range(20, 24)) + list(range(0, 8)):
-                night_lis.append(time_of_day_hour == time)
-
-        not_charge = np.invert(np.logical_or.reduce(bool_lis))
-        not_day = np.invert(np.logical_or.reduce(night_lis))
 
         # ----- Energy calculations -----
 
@@ -401,6 +417,7 @@ class Simulation:
 
         # stores the battery SOC at each time step
         state_of_charge = battery_variables_array[0]
+        print("State of Charge: ", state_of_charge)
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
 
         # when the battery is empty the car will not move
@@ -408,9 +425,63 @@ class Simulation:
         # when the car is charging the car does not move
         # at night the car does not move
 
-        speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
-        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
-        speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
+        if verbose:
+            # This segment of code gives visual representation to the time intervals representing:
+            # Graph 1: Driving?
+            # Graph 2: Daytime?
+            # Graph 3: (Graph 1 AND Graph 2) - Whether the car is allowed to be in motion
+
+            # The elevation array (Graph 4) is shifted to show the elevation at each point in time.
+            # When the car cannot be in motion, the elevation remains unchanged.
+            # When the car can be in motion, the elevation matches.
+
+            fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(12, 20))
+
+            y1 = np.array(speed_kmh)
+            x1 = np.arange(0.0, len(speed_kmh), 1)
+            ax1.plot(x1, y1)
+            ax1.set_xlabel('time (s)')
+            ax1.set_ylabel('Speed (km/h)')
+            ax1.grid()
+
+            speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
+
+            # Plot state of charge and speed array after ANDed with state of charge
+
+            y2 = np.array(state_of_charge)
+            x2 = np.arange(0.0, len(state_of_charge), 1)
+            ax2.plot(x2, y2)
+            ax2.set_xlabel('time (s)')
+            ax2.set_ylabel('SOC')
+            ax2.grid()
+
+            y3 = np.array(speed_kmh)
+            x3 = np.arange(0.0, len(speed_kmh), 1)
+            ax3.plot(x3, y3)
+            ax3.set_xlabel('time (s)')
+            ax3.set_ylabel('Speed (km/h) AND SOC')
+            ax3.grid()
+
+            speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+
+            y4 = np.logical_and(not_charge, not_day)
+            x4 = np.arange(0.0, len(y4), 1)
+            ax4.plot(x4, y4)
+            ax4.set_xlabel('time (s)')
+            ax4.set_ylabel('not_charge AND not_day')
+            ax4.grid()
+
+            speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
+
+            y5 = np.array(speed_kmh)
+            x5 = np.arange(0.0, len(speed_kmh), 1)
+            ax5.plot(x5, y5)
+            ax5.set_xlabel('time (s)')
+            ax5.set_ylabel('Speed (km/h) AND not_charge, not_day ')
+            ax5.grid()
+
+            plt.suptitle("Speed Boolean Operations")
+            plt.show()
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
@@ -418,6 +489,31 @@ class Simulation:
 
         distance = speed_kmh * (time_in_motion / 3600)
         distances = np.cumsum(distance)
+
+        if verbose:
+            # This section of code plots speed and distances
+            # Graph 1 plots speed
+            # Graph 2 plots speed
+
+            # THe speed and distance should both be 0 at the same time along the x-axis.
+            # This corresponds to the intervals of time that the car cannot move
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+
+            y1 = np.array(speed_kmh)
+            x1 = np.arange(0.0, len(speed_kmh), 1)
+            ax1.plot(x1, y1)
+            ax1.set_xlabel('time (s)')
+            ax1.set_ylabel('Speed (km/h)')
+            ax1.grid()
+
+            x2 = np.arange(0.0, len(distances), 1)
+            ax2.plot(x2, distances)
+            ax2.set_xlabel('time (s)')
+            ax2.set_ylabel('Distances (km)')
+            ax2.grid()
+
+            plt.suptitle("Speed and Distances")
+            plt.show()
 
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         distances = distances.clip(0, max_route_distance / 1000)
@@ -440,7 +536,7 @@ class Simulation:
             delta_energy,
             solar_irradiances,
             wind_speeds,
-            gis_route_elevations_at_each_tick,
+            modified_elevations,
             cloud_covers
         ]
         results.distance_travelled = distances[-1]

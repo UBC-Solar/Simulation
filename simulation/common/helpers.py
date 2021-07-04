@@ -5,6 +5,7 @@ import datetime
 from _datetime import datetime
 from _datetime import date
 
+from matplotlib import pyplot as plt
 from numba import jit, njit
 
 from simulation.common import constants
@@ -33,20 +34,23 @@ def date_from_unix_timestamp(unix_timestamp):
     return datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def checkForNonConsecutiveZeros(array):
+def checkForNonConsecutiveZeros(array, verbose=False):
     zeroed_indices = np.where(array == 0)[0]
 
     if len(zeroed_indices) == 0:
-        print("No zeroes found in the array!")
+        if verbose:
+            print("No zeroes found in the array!")
         return -1
 
     zeroed_indices_diff = np.diff(zeroed_indices)
 
     if np.max(zeroed_indices_diff) == 1 and np.min(zeroed_indices_diff) == 1:
-        print("Only consecutive zeroes found!")
+        if verbose:
+            print("Only consecutive zeroes found!")
         return False
     else:
-        print("Non-consecutive zeroes found!")
+        if verbose:
+            print("Non-consecutive zeroes found!")
         return True
 
 
@@ -366,6 +370,28 @@ def find_runs(x):
 
         return run_values, run_starts, run_lengths
 
+def plot_array(array, title, x_title, y_title):
+    y1 = np.array(array)
+    x1 = np.arange(0.0, len(array), 1)
+
+    fig, ax = plt.subplots()
+    ax.plot(x1, y1)
+    ax.set(xlabel=x_title, ylabel=y_title, title=title)
+    ax.grid()
+
+    plt.show()
+
+def plot_array(array, title, x_title, y_title):
+    y1 = np.array(array)
+    x1 = np.arange(0.0, len(array), 1)
+
+    fig, ax = plt.subplots()
+    ax.plot(x1, y1)
+    ax.set(xlabel=x_title, ylabel=y_title, title=title)
+    ax.grid()
+
+    plt.show()
+
 
 if __name__ == '__main__':
     # speed_array input
@@ -377,3 +403,4 @@ if __name__ == '__main__':
     print(expanded_speed_array)
 
     pass
+
