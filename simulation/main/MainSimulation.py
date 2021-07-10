@@ -530,7 +530,7 @@ class Simulation:
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
         results = SimulationResult()
-        # TODO: Get speed array to be plotted somehow
+        # TODO: Get speed array to be plotted somehow. On the FIRST time, the BOOLed speed array
         results.arrays = [
             distances,
             state_of_charge,
@@ -548,3 +548,6 @@ class Simulation:
         self.local_times = local_times
 
         return results
+
+
+
