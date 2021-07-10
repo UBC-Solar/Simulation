@@ -290,10 +290,14 @@ class Simulation:
         tick_array = np.diff(self.timestamps)
         tick_array = np.insert(tick_array, 0, 0)
 
+        # ----- Setting up Timing Constraints -----
+
         # Array of cumulative distances obtained from the timestamps
 
         distances = tick_array * speed_kmh / 3.6
         cumulative_distances = np.cumsum(distances)
+
+        temp = cumulative_distances
 
         # ----- Weather and location calculations -----
 
@@ -308,6 +312,41 @@ class Simulation:
 
         path_distances = self.gis.path_distances
         cumulative_distances = np.cumsum(path_distances)  # [cumulative_distances] = meters
+
+        if verbose:
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, sharex=True, figsize=(12, 20))
+
+            y1 = np.array(temp)
+            x1 = np.arange(0.0, len(temp), 1)
+            ax1.plot(x1, y1)
+            ax1.set_xlabel('time (s)')
+            ax1.set_ylabel('speed dist (m)')
+            ax1.grid()
+
+            y2 = np.array(cumulative_distances)
+            x2 = np.arange(0.0, len(cumulative_distances), 1)
+            ax2.plot(x2, y2)
+            ax2.set_xlabel('time (s)')
+            ax2.set_ylabel('path dist (m)')
+            ax2.grid()
+
+            y3 = np.array(closest_gis_indices)
+            x3 = np.arange(0.0, len(closest_gis_indices), 1)
+            ax3.plot(x3, y3)
+            ax3.set_xlabel('time (s)')
+            ax3.set_ylabel('gis ind')
+            ax3.grid()
+
+            y4 = np.array(closest_weather_indices)
+            x4 = np.arange(0.0, len(closest_weather_indices), 1)
+            ax4.plot(x4, y4)
+            ax4.set_xlabel('time (s)')
+            ax4.set_ylabel('weather ind')
+            ax4.grid()
+
+            plt.suptitle("Distances, path distances, indices")
+
+            plt.show()
 
         max_route_distance = cumulative_distances[-1]
 
@@ -336,6 +375,34 @@ class Simulation:
         local_times_datetime = np.array(
             [datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
 
+        if verbose:
+            fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 20))
+
+            y1 = np.array(gradients)
+            x1 = np.arange(0.0, len(gradients), 1)
+            ax1.plot(x1, y1)
+            ax1.set_xlabel('time (s)')
+            ax1.set_ylabel('gradients (m)')
+            ax1.grid()
+
+            y2 = np.array(time_zones)
+            x2 = np.arange(0.0, len(time_zones), 1)
+            ax2.plot(x2, y2)
+            ax2.set_xlabel('time (s)')
+            ax2.set_ylabel('time zones')
+            ax2.grid()
+
+            y3 = np.array(gis_vehicle_bearings)
+            x3 = np.arange(0.0, len(gis_vehicle_bearings), 1)
+            ax3.plot(x3, y3)
+            ax3.set_xlabel('time (s)')
+            ax3.set_ylabel('vehicle bearings')
+            ax3.grid()
+
+            plt.suptitle("Environment variables")
+
+            plt.show()
+
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
 
@@ -361,7 +428,8 @@ class Simulation:
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
         roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
-        # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)), 'constant', constant_values = (0))
+        # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)),
+        # 'constant', constant_values = (0))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
@@ -374,9 +442,8 @@ class Simulation:
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
                                                        wind_directions)
 
-        # Performing some processing on Elevations array based on when car is not moving
+        # "Bump" elevations array based on when car is not moving and race timing constraints
 
-        # TODO: Plot elevations, not_charge and not_day
         modified_elevations = self.gis.elevation_bumping_plots(not_charge=not_charge, not_day=not_day,
                                                                elevations=gis_route_elevations_at_each_tick, show_plot=False)
 
@@ -459,7 +526,7 @@ class Simulation:
             x3 = np.arange(0.0, len(speed_kmh), 1)
             ax3.plot(x3, y3)
             ax3.set_xlabel('time (s)')
-            ax3.set_ylabel('Speed (km/h) AND SOC')
+            ax3.set_ylabel('Speed & SOC')
             ax3.grid()
 
             speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
@@ -468,7 +535,7 @@ class Simulation:
             x4 = np.arange(0.0, len(y4), 1)
             ax4.plot(x4, y4)
             ax4.set_xlabel('time (s)')
-            ax4.set_ylabel('not_charge AND not_day')
+            ax4.set_ylabel('not_driving')
             ax4.grid()
 
             speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
@@ -477,7 +544,7 @@ class Simulation:
             x5 = np.arange(0.0, len(speed_kmh), 1)
             ax5.plot(x5, y5)
             ax5.set_xlabel('time (s)')
-            ax5.set_ylabel('Speed (km/h) AND not_charge, not_day ')
+            ax5.set_ylabel('Speed & not_driving')
             ax5.grid()
 
             plt.suptitle("Speed Boolean Operations")
