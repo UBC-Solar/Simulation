@@ -414,21 +414,19 @@ class GIS:
         return self.path
 
     def elevation_bumping_plots(self, not_charge, not_day, elevations, show_plot=False):
-
         """
-        A wrapper function for the logic of bump_elevations()
 
         Args:
-            not_charge: A NumPy array [Boolean] - describes charging vs driving (0 - charging, 1 - driving)
-            not_day: A NumPy array [Boolean] - describes day vs night (0 - night, 1 - day)
-            elevations: A NumPy array [elevation] in meters - unadjusted based on driving times
-            show_plot: A Boolean controlling whether plots are shown for debugging purposes
+            not_charge: NumPy array [Boolean] to describe charging time and driving time (0 - charging, 1 - charging)
+            not_day:  NumPy array [Boolean] to describe day and night (0 - night, 1 - day)
+            elevations: A NumPy array [n][elevation] based on closest_gis_indicies unadjusted for race timings
+            show_plot: A verbosity variable to control when plot is shown
 
-        Returns: An array of elevations adjusted to driving times
+        Returns: A NumPy array [n][elevation] in metres adjusted to race constraints
 
         """
-
         # Create a stop array to describe motion when the car is not charging and day time
+
         stop_array_y3 = np.logical_and(not_day, not_charge)
 
         # Perform elevation "bumping" operation
@@ -474,7 +472,7 @@ class GIS:
 
             ax4.plot(x4, elevations)
             ax4.set_xlabel('time (s)')
-            ax4.set_ylabel('Elevations (not adjusted)')
+            ax4.set_ylabel('UnAdj. Elevations (m)')
             ax4.grid()
 
             # Plot to describe new "bumped" elevations
@@ -483,7 +481,7 @@ class GIS:
             y5 = np.array(modified_elevations)
             ax5.plot(x5, y5)
             ax5.set_xlabel('time (s)')
-            ax5.set_ylabel('Elevations (adjusted)')
+            ax5.set_ylabel('Adj. Elevation (m)')
             ax5.grid()
 
             plt.show()
