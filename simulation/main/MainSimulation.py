@@ -276,7 +276,7 @@ class Simulation:
         plt.tight_layout()
         plt.show()
 
-    def __run_simulation_calculations(self, speed_kmh, verbose=False):
+    def __run_simulation_calculations(self, speed_kmh, verbose=True):
         """
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
         containing members that specify total distance travelled and time taken at the end of the simulation
@@ -510,8 +510,6 @@ class Simulation:
             ax1.set_xlabel('time (s)')
             ax1.set_ylabel('Speed (km/h)')
             ax1.grid()
-
-            speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
 
             # Plot state of charge and speed array after ANDed with state of charge
 
