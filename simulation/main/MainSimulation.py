@@ -89,6 +89,10 @@ class Simulation:
         gis_force_update = args['gis_force_update']
         weather_force_update = args['weather_force_update']
 
+        # ----- day length in seconds -----
+
+        day_length_seconds = 12 * 60 * 60
+
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()  # Race-independent
@@ -110,7 +114,6 @@ class Simulation:
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update)
 
-        # Implementing starting times (ASC: 7am, FSGP: 8am)
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
@@ -159,9 +162,9 @@ class Simulation:
         speed_kmh = np.insert(speed_kmh, 0, 0)
         speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
-        # ------ Run calculations and get result -------
+        # ------ Run calculations and get result and modified speed array -------
 
-        result = self.__run_simulation_calculations(speed_kmh)
+        result, speed_kmh = self.__run_simulation_calculations(speed_kmh, verbose=False)
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
@@ -245,9 +248,9 @@ class Simulation:
         speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
         speed_result = np.insert(speed_result, 0, 0)
 
-        arrays_to_plot = self.__run_simulation_calculations(speed_result).arrays
+        arrays_to_plot, speed_result = self.__run_simulation_calculations(speed_result, verbose=False)
 
-        self.__plot_graph([speed_result] + arrays_to_plot,
+        self.__plot_graph([speed_result] + arrays_to_plot.arrays,
                           ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
                            "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"])
 
@@ -492,6 +495,8 @@ class Simulation:
         # when the car is charging the car does not move
         # at night the car does not move
 
+
+
         if verbose:
             # This segment of code gives visual representation to the time intervals representing:
             # Graph 1: Driving?
@@ -520,6 +525,8 @@ class Simulation:
             ax2.set_ylabel('SOC')
             ax2.grid()
 
+            speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
+
             y3 = np.array(speed_kmh)
             x3 = np.arange(0.0, len(speed_kmh), 1)
             ax3.plot(x3, y3)
@@ -547,6 +554,10 @@ class Simulation:
 
             plt.suptitle("Speed Boolean Operations")
             plt.show()
+        else:
+            not_driving = np.logical_and(not_charge, not_day)
+            speed_kmh = np.logical_and(not_driving, state_of_charge) * speed_kmh
+            speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
@@ -612,7 +623,7 @@ class Simulation:
         self.time_zones = time_zones
         self.local_times = local_times
 
-        return results
+        return results, speed_kmh
 
 
 
