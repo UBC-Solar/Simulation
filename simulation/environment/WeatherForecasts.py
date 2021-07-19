@@ -53,7 +53,7 @@ class WeatherForecasts:
         # dataset needs to be culled
         # path to file storing the weather data
         if self.race_type == "FSGP":
-            self.coords = self.cull_dataset(coords, reduction_factor=1)
+            self.coords = self.cull_dataset(coords, reduction_factor=3)
             weather_file = weather_directory / "weather_data_FSGP.npz"
         else:
             self.coords = self.cull_dataset(coords, reduction_factor=625)
