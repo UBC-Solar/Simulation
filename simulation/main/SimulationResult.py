@@ -22,3 +22,6 @@ class SimulationResult:
                f"Maximum distance traversable: {self.distance_travelled:.2f}km\n"
                f"Average speed: {self.average_speed:.2f}km/h\n"
                f"Final battery SOC: {self.final_soc:.2f}%\n")
+
+    def __getitem__(self, item):
+        return self.array_dict[item]
