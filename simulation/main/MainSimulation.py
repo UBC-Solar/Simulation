@@ -124,7 +124,7 @@ class Simulation:
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
     @helpers.timeit
-    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, **kwargs):
+    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an
@@ -164,7 +164,7 @@ class Simulation:
 
         # ------ Run calculations and get result and modified speed array -------
 
-        result, speed_kmh = self.__run_simulation_calculations(speed_kmh, verbose=False)
+        result, speed_kmh = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
@@ -624,6 +624,3 @@ class Simulation:
         self.local_times = local_times
 
         return results, speed_kmh
-
-
-
