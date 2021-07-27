@@ -13,7 +13,7 @@ from simulation.common import helpers
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 
-from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed, find_runs
+from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 
 
 class Simulation:
@@ -48,7 +48,6 @@ class Simulation:
         else:
             settings_path = settings_directory / "settings_FSGP.json"
 
-        # ----- Load arguments -----
         with open(settings_path) as f:
             args = json.load(f)
 
@@ -117,7 +116,7 @@ class Simulation:
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations()  # Race-Independent
+        self.solar_calculations = simulation.SolarCalculations()  # Race-independent
 
         self.local_times = 0
 
@@ -414,7 +413,7 @@ class Simulation:
         # (Charge from 8am-9am and 6pm-8pm) for FSGP
         # ASC: 13 Hours of Race Day, 9 Hours of Driving
 
-        # Ensuring Car does not move at night
+        # Ensuring car does not move at night
         bool_lis = []
         night_lis = []
         if self.race_type == "FSGP":
