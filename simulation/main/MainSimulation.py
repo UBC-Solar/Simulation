@@ -316,6 +316,7 @@ class Simulation:
         path_distances = self.gis.path_distances
         cumulative_distances = np.cumsum(path_distances)  # [cumulative_distances] = meters
 
+        # TODO: integrate verbose graphing behaviour into self.__plot_graph() method
         if verbose:
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, sharex=True, figsize=(12, 20))
 
