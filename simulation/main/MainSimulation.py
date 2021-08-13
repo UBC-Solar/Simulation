@@ -13,7 +13,7 @@ from simulation.common import helpers
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 
-from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed, find_runs
+from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 
 
 class Simulation:
@@ -48,7 +48,6 @@ class Simulation:
         else:
             settings_path = settings_directory / "settings_FSGP.json"
 
-        # ----- Load arguments -----
         with open(settings_path) as f:
             args = json.load(f)
 
@@ -89,6 +88,10 @@ class Simulation:
         gis_force_update = args['gis_force_update']
         weather_force_update = args['weather_force_update']
 
+        # ----- day length in seconds -----
+
+        day_length_seconds = 12 * 60 * 60
+
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()  # Race-independent
@@ -110,18 +113,17 @@ class Simulation:
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update)
 
-        # Implementing starting times (ASC: 7am, FSGP: 8am)
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations()  # Race-Independent
+        self.solar_calculations = simulation.SolarCalculations()  # Race-independent
 
         self.local_times = 0
 
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
     @helpers.timeit
-    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, **kwargs):
+    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an
@@ -159,9 +161,9 @@ class Simulation:
         speed_kmh = np.insert(speed_kmh, 0, 0)
         speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
-        # ------ Run calculations and get result -------
+        # ------ Run calculations and get result and modified speed array -------
 
-        result = self.__run_simulation_calculations(speed_kmh)
+        result, speed_kmh = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
@@ -245,9 +247,9 @@ class Simulation:
         speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
         speed_result = np.insert(speed_result, 0, 0)
 
-        arrays_to_plot = self.__run_simulation_calculations(speed_result).arrays
+        arrays_to_plot, speed_result = self.__run_simulation_calculations(speed_result, verbose=False)
 
-        self.__plot_graph([speed_result] + arrays_to_plot,
+        self.__plot_graph([speed_result] + arrays_to_plot.arrays,
                           ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
                            "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"])
 
@@ -276,7 +278,7 @@ class Simulation:
         plt.tight_layout()
         plt.show()
 
-    def __run_simulation_calculations(self, speed_kmh, verbose=False):
+    def __run_simulation_calculations(self, speed_kmh, verbose=True):
         """
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
         containing members that specify total distance travelled and time taken at the end of the simulation
@@ -313,6 +315,7 @@ class Simulation:
         path_distances = self.gis.path_distances
         cumulative_distances = np.cumsum(path_distances)  # [cumulative_distances] = meters
 
+        # TODO: integrate verbose graphing behaviour into self.__plot_graph() method
         if verbose:
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, sharex=True, figsize=(12, 20))
 
@@ -410,7 +413,7 @@ class Simulation:
         # (Charge from 8am-9am and 6pm-8pm) for FSGP
         # ASC: 13 Hours of Race Day, 9 Hours of Driving
 
-        # Ensuring Car does not move at night
+        # Ensuring car does not move at night
         bool_lis = []
         night_lis = []
         if self.race_type == "FSGP":
@@ -492,6 +495,8 @@ class Simulation:
         # when the car is charging the car does not move
         # at night the car does not move
 
+
+
         if verbose:
             # This segment of code gives visual representation to the time intervals representing:
             # Graph 1: Driving?
@@ -511,8 +516,6 @@ class Simulation:
             ax1.set_ylabel('Speed (km/h)')
             ax1.grid()
 
-            speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
-
             # Plot state of charge and speed array after ANDed with state of charge
 
             y2 = np.array(state_of_charge)
@@ -521,6 +524,8 @@ class Simulation:
             ax2.set_xlabel('time (s)')
             ax2.set_ylabel('SOC')
             ax2.grid()
+
+            speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
 
             y3 = np.array(speed_kmh)
             x3 = np.arange(0.0, len(speed_kmh), 1)
@@ -549,6 +554,10 @@ class Simulation:
 
             plt.suptitle("Speed Boolean Operations")
             plt.show()
+        else:
+            not_driving = np.logical_and(not_charge, not_day)
+            speed_kmh = np.logical_and(not_driving, state_of_charge) * speed_kmh
+            speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
@@ -614,7 +623,4 @@ class Simulation:
         self.time_zones = time_zones
         self.local_times = local_times
 
-        return results
-
-
-
+        return results, speed_kmh

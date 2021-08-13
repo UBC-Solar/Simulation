@@ -10,7 +10,9 @@ before the battery runs out [speed -> distance].
 
 @helpers.timeit
 def main():
-    input_speed = np.array([35] * 12)
+
+    # indicates a constant speed of 35km/h throughout the simulation
+    input_speed = np.array([35])
 
     """
     Note: it no longer matters how many elements the input_speed array has, the simulation automatically
@@ -41,6 +43,7 @@ def main():
     print(f'Speeds array: {optimized["params"]}')
 
     return distance_travelled
+
 
 if __name__ == "__main__":
     main()
