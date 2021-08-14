@@ -123,7 +123,7 @@ class Simulation:
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
     @helpers.timeit
-    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=True, **kwargs):
+    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an
@@ -163,17 +163,18 @@ class Simulation:
 
         # ------ Run calculations and get result and modified speed array -------
 
-        result, speed_kmh = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
+        result = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
-        distances = simulation_arrays[0]
-        state_of_charge = simulation_arrays[1]
-        delta_energy = simulation_arrays[2]
-        solar_irradiances = simulation_arrays[3]
-        wind_speeds = simulation_arrays[4]
-        gis_route_elevations_at_each_tick = simulation_arrays[5]
-        cloud_covers = simulation_arrays[6]
+        speed_kmh = simulation_arrays[0]
+        distances = simulation_arrays[1]
+        state_of_charge = simulation_arrays[2]
+        delta_energy = simulation_arrays[3]
+        solar_irradiances = simulation_arrays[4]
+        wind_speeds = simulation_arrays[5]
+        gis_route_elevations_at_each_tick = simulation_arrays[6]
+        cloud_covers = simulation_arrays[7]
 
         distance_travelled = result.distance_travelled
         time_taken = result.time_taken
@@ -235,7 +236,7 @@ class Simulation:
         # configure these parameters depending on whether optimizing for speed or precision
         # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
         # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
-        optimizer.maximize(init_points=20, n_iter=30, acq='ucb', xi=1e-1, kappa=10)
+        optimizer.maximize(init_points=20, n_iter=200, acq='ucb', xi=1e-1, kappa=10)
 
         result = optimizer.max
         result_params = list(result["params"].values())
@@ -247,9 +248,9 @@ class Simulation:
         speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
         speed_result = np.insert(speed_result, 0, 0)
 
-        arrays_to_plot, speed_result = self.__run_simulation_calculations(speed_result, verbose=False)
+        arrays_to_plot = self.__run_simulation_calculations(speed_result, verbose=False)
 
-        self.__plot_graph([speed_result] + arrays_to_plot.arrays,
+        self.__plot_graph(arrays_to_plot.arrays,
                           ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
                            "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"],
                           "Simulation Result")
@@ -269,7 +270,7 @@ class Simulation:
         else:
             f, axes = plt.subplots(len(arrays_to_plot), 1, figsize=(12, 8))
 
-        f.suptitle(f"{graph_title}({self.race_type})", fontsize=16, weight="bold")
+        f.suptitle(f"{graph_title} ({self.race_type})", fontsize=16, weight="bold")
 
         with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
             for index, axis in enumerate(axes.flatten()):
@@ -284,7 +285,7 @@ class Simulation:
         plt.tight_layout()
         plt.show()
 
-    def __run_simulation_calculations(self, speed_kmh, verbose=True):
+    def __run_simulation_calculations(self, speed_kmh, verbose=False):
         """
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
         containing members that specify total distance travelled and time taken at the end of the simulation
@@ -486,6 +487,7 @@ class Simulation:
         results = SimulationResult()
         # TODO: Get speed array to be plotted somehow. On the FIRST time, the BOOLed speed array
         results.arrays = [
+            speed_kmh,
             distances,
             state_of_charge,
             delta_energy,
@@ -501,4 +503,4 @@ class Simulation:
         self.time_zones = time_zones
         self.local_times = local_times
 
-        return results, speed_kmh
+        return results
