@@ -12,7 +12,9 @@ before the battery runs out [speed -> distance].
 def main():
 
     # indicates a constant speed of 35km/h throughout the simulation
-    input_speed = np.array([35])
+    # input_speed = np.array([35])
+
+    input_speed = np.array([35,20,30])
 
     """
     Note: it no longer matters how many elements the input_speed array has, the simulation automatically

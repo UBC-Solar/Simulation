@@ -1,19 +1,19 @@
-import sys
-import simulation
-import numpy as np
 import datetime
 import json
-import seaborn as sns
-import pandas as pd
-import matplotlib.pyplot as plt
-from tqdm import tqdm
-from bayes_opt import BayesianOptimization
+import sys
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from bayes_opt import BayesianOptimization
+from tqdm import tqdm
+
+import simulation
 from simulation.common import helpers
+from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
-
-from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 
 
 class Simulation:
@@ -163,17 +163,18 @@ class Simulation:
 
         # ------ Run calculations and get result and modified speed array -------
 
-        result, speed_kmh = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
+        result = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
-        distances = simulation_arrays[0]
-        state_of_charge = simulation_arrays[1]
-        delta_energy = simulation_arrays[2]
-        solar_irradiances = simulation_arrays[3]
-        wind_speeds = simulation_arrays[4]
-        gis_route_elevations_at_each_tick = simulation_arrays[5]
-        cloud_covers = simulation_arrays[6]
+        speed_kmh = simulation_arrays[0]
+        distances = simulation_arrays[1]
+        state_of_charge = simulation_arrays[2]
+        delta_energy = simulation_arrays[3]
+        solar_irradiances = simulation_arrays[4]
+        wind_speeds = simulation_arrays[5]
+        gis_route_elevations_at_each_tick = simulation_arrays[6]
+        cloud_covers = simulation_arrays[7]
 
         distance_travelled = result.distance_travelled
         time_taken = result.time_taken
@@ -198,7 +199,7 @@ class Simulation:
             y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
 
-            self.__plot_graph(arrays_to_plot, y_label)
+            self.__plot_graph(arrays_to_plot, y_label, "Simulation Result")
 
         return distance_travelled
 
@@ -235,7 +236,7 @@ class Simulation:
         # configure these parameters depending on whether optimizing for speed or precision
         # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
         # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
-        optimizer.maximize(init_points=20, n_iter=30, acq='ucb', xi=1e-1, kappa=10)
+        optimizer.maximize(init_points=20, n_iter=200, acq='ucb', xi=1e-1, kappa=10)
 
         result = optimizer.max
         result_params = list(result["params"].values())
@@ -247,26 +248,32 @@ class Simulation:
         speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
         speed_result = np.insert(speed_result, 0, 0)
 
-        arrays_to_plot, speed_result = self.__run_simulation_calculations(speed_result, verbose=False)
+        arrays_to_plot = self.__run_simulation_calculations(speed_result, verbose=False)
 
-        self.__plot_graph([speed_result] + arrays_to_plot.arrays,
+        self.__plot_graph(arrays_to_plot.arrays,
                           ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                           "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"])
+                           "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"],
+                          "Simulation Result")
 
         return optimizer.max
 
-    def __plot_graph(self, arrays_to_plot, array_labels):
+    def __plot_graph(self, arrays_to_plot, array_labels, graph_title):
         compress_constant = int(self.timestamps.shape[0] / 5000)
         for index, array in enumerate(arrays_to_plot):
             arrays_to_plot[index] = array[::compress_constant]
 
         sns.set_style("whitegrid")
-        f, axes = plt.subplots(4, 2, figsize=(12, 8))
-        f.suptitle(f"Simulation results ({self.race_type})", fontsize=16, weight="bold")
+
+        # Wow I used the walrus operator here
+        if (x := len(arrays_to_plot) / 2) % 2 == 0:
+            f, axes = plt.subplots(int(x), 2, figsize=(12, 8))
+        else:
+            f, axes = plt.subplots(len(arrays_to_plot), 1, figsize=(12, 8))
+
+        f.suptitle(f"{graph_title} ({self.race_type})", fontsize=16, weight="bold")
 
         with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
             for index, axis in enumerate(axes.flatten()):
-                print(index)
                 df = pd.DataFrame(dict(time=self.timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
                 g = sns.lineplot(x="time", y="value", data=df, ax=axis)
                 g.set(xlabel="time (hrs)", ylabel=array_labels[index])
@@ -278,7 +285,7 @@ class Simulation:
         plt.tight_layout()
         plt.show()
 
-    def __run_simulation_calculations(self, speed_kmh, verbose=True):
+    def __run_simulation_calculations(self, speed_kmh, verbose=False):
         """
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
         containing members that specify total distance travelled and time taken at the end of the simulation
@@ -315,42 +322,6 @@ class Simulation:
         path_distances = self.gis.path_distances
         cumulative_distances = np.cumsum(path_distances)  # [cumulative_distances] = meters
 
-        # TODO: integrate verbose graphing behaviour into self.__plot_graph() method
-        if verbose:
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, sharex=True, figsize=(12, 20))
-
-            y1 = np.array(temp)
-            x1 = np.arange(0.0, len(temp), 1)
-            ax1.plot(x1, y1)
-            ax1.set_xlabel('time (s)')
-            ax1.set_ylabel('speed dist (m)')
-            ax1.grid()
-
-            y2 = np.array(cumulative_distances)
-            x2 = np.arange(0.0, len(cumulative_distances), 1)
-            ax2.plot(x2, y2)
-            ax2.set_xlabel('time (s)')
-            ax2.set_ylabel('path dist (m)')
-            ax2.grid()
-
-            y3 = np.array(closest_gis_indices)
-            x3 = np.arange(0.0, len(closest_gis_indices), 1)
-            ax3.plot(x3, y3)
-            ax3.set_xlabel('time (s)')
-            ax3.set_ylabel('gis ind')
-            ax3.grid()
-
-            y4 = np.array(closest_weather_indices)
-            x4 = np.arange(0.0, len(closest_weather_indices), 1)
-            ax4.plot(x4, y4)
-            ax4.set_xlabel('time (s)')
-            ax4.set_ylabel('weather ind')
-            ax4.grid()
-
-            plt.suptitle("Distances, path distances, indices")
-
-            plt.show()
-
         max_route_distance = cumulative_distances[-1]
 
         self.route_length = max_route_distance / 1000.0  # store the route length in kilometers
@@ -377,34 +348,6 @@ class Simulation:
         # only for reference (may be used in the future)
         local_times_datetime = np.array(
             [datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
-
-        if verbose:
-            fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 20))
-
-            y1 = np.array(gradients)
-            x1 = np.arange(0.0, len(gradients), 1)
-            ax1.plot(x1, y1)
-            ax1.set_xlabel('time (s)')
-            ax1.set_ylabel('gradients (m)')
-            ax1.grid()
-
-            y2 = np.array(time_zones)
-            x2 = np.arange(0.0, len(time_zones), 1)
-            ax2.plot(x2, y2)
-            ax2.set_xlabel('time (s)')
-            ax2.set_ylabel('time zones')
-            ax2.grid()
-
-            y3 = np.array(gis_vehicle_bearings)
-            x3 = np.arange(0.0, len(gis_vehicle_bearings), 1)
-            ax3.plot(x3, y3)
-            ax3.set_xlabel('time (s)')
-            ax3.set_ylabel('vehicle bearings')
-            ax3.grid()
-
-            plt.suptitle("Environment variables")
-
-            plt.show()
 
         # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
@@ -448,7 +391,8 @@ class Simulation:
         # "Bump" elevations array based on when car is not moving and race timing constraints
 
         modified_elevations = self.gis.elevation_bumping_plots(not_charge=not_charge, not_day=not_day,
-                                                               elevations=gis_route_elevations_at_each_tick, show_plot=False)
+                                                               elevations=gis_route_elevations_at_each_tick,
+                                                               show_plot=False)
 
         # Get an array of solar irradiance at every coordinate and time
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
@@ -495,65 +439,25 @@ class Simulation:
         # when the car is charging the car does not move
         # at night the car does not move
 
-
-
         if verbose:
-            # This segment of code gives visual representation to the time intervals representing:
-            # Graph 1: Driving?
-            # Graph 2: Daytime?
-            # Graph 3: (Graph 1 AND Graph 2) - Whether the car is allowed to be in motion
+            self.__plot_graph([temp, closest_gis_indices, closest_weather_indices],
+                              ["speed dist (m)", "gis ind", "weather ind"], "Distances and indices")
+            self.__plot_graph([gradients, time_zones, gis_vehicle_bearings],
+                              ["gradients (m)", "time zones", "vehicle bearings"], "Environment variables")
+            arrays_to_plot = [speed_kmh, state_of_charge]
 
-            # The elevation array (Graph 4) is shifted to show the elevation at each point in time.
-            # When the car cannot be in motion, the elevation remains unchanged.
-            # When the car can be in motion, the elevation matches.
+            for arr in [state_of_charge, not_charge, not_day]:
+                speed_kmh = np.logical_and(speed_kmh, arr) * speed_kmh
+                arrays_to_plot.append(speed_kmh)
 
-            fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(12, 20))
+            speed_kmh = helpers.add_acceleration(speed_kmh, 500)
+            arrays_to_plot.append(speed_kmh)
 
-            y1 = np.array(speed_kmh)
-            x1 = np.arange(0.0, len(speed_kmh), 1)
-            ax1.plot(x1, y1)
-            ax1.set_xlabel('time (s)')
-            ax1.set_ylabel('Speed (km/h)')
-            ax1.grid()
-
-            # Plot state of charge and speed array after ANDed with state of charge
-
-            y2 = np.array(state_of_charge)
-            x2 = np.arange(0.0, len(state_of_charge), 1)
-            ax2.plot(x2, y2)
-            ax2.set_xlabel('time (s)')
-            ax2.set_ylabel('SOC')
-            ax2.grid()
-
-            speed_kmh = np.logical_and(speed_kmh, state_of_charge) * speed_kmh
-
-            y3 = np.array(speed_kmh)
-            x3 = np.arange(0.0, len(speed_kmh), 1)
-            ax3.plot(x3, y3)
-            ax3.set_xlabel('time (s)')
-            ax3.set_ylabel('Speed & SOC')
-            ax3.grid()
-
-            speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
-
-            y4 = np.logical_and(not_charge, not_day)
-            x4 = np.arange(0.0, len(y4), 1)
-            ax4.plot(x4, y4)
-            ax4.set_xlabel('time (s)')
-            ax4.set_ylabel('not_driving')
-            ax4.grid()
-
-            speed_kmh = np.logical_and(speed_kmh, not_day) * speed_kmh
-
-            y5 = np.array(speed_kmh)
-            x5 = np.arange(0.0, len(speed_kmh), 1)
-            ax5.plot(x5, y5)
-            ax5.set_xlabel('time (s)')
-            ax5.set_ylabel('Speed & not_driving')
-            ax5.grid()
-
-            plt.suptitle("Speed Boolean Operations")
-            plt.show()
+            self.__plot_graph(
+                arrays_to_plot,
+                ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge", "Speed & not_day",
+                 "final speed_kmh + accel"],
+                "Speed Boolean Operations")
         else:
             not_driving = np.logical_and(not_charge, not_day)
             speed_kmh = np.logical_and(not_driving, state_of_charge) * speed_kmh
@@ -565,31 +469,6 @@ class Simulation:
 
         distance = speed_kmh * (time_in_motion / 3600)
         distances = np.cumsum(distance)
-
-        if verbose:
-            # This section of code plots speed and distances
-            # Graph 1 plots speed
-            # Graph 2 plots speed
-
-            # THe speed and distance should both be 0 at the same time along the x-axis.
-            # This corresponds to the intervals of time that the car cannot move
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
-
-            y1 = np.array(speed_kmh)
-            x1 = np.arange(0.0, len(speed_kmh), 1)
-            ax1.plot(x1, y1)
-            ax1.set_xlabel('time (s)')
-            ax1.set_ylabel('Speed (km/h)')
-            ax1.grid()
-
-            x2 = np.arange(0.0, len(distances), 1)
-            ax2.plot(x2, distances)
-            ax2.set_xlabel('time (s)')
-            ax2.set_ylabel('Distances (km)')
-            ax2.grid()
-
-            plt.suptitle("Speed and Distances")
-            plt.show()
 
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         distances = distances.clip(0, max_route_distance / 1000)
@@ -608,6 +487,7 @@ class Simulation:
         results = SimulationResult()
         # TODO: Get speed array to be plotted somehow. On the FIRST time, the BOOLed speed array
         results.arrays = [
+            speed_kmh,
             distances,
             state_of_charge,
             delta_energy,
@@ -623,4 +503,4 @@ class Simulation:
         self.time_zones = time_zones
         self.local_times = local_times
 
-        return results, speed_kmh
+        return results
