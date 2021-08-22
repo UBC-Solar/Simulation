@@ -7,6 +7,9 @@ import requests
 import json
 import numpy as np
 import os
+
+from numba import njit, jit
+
 import simulation
 import sys
 from data.weather.__init__ import weather_directory

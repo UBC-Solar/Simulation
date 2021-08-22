@@ -112,7 +112,7 @@ class Simulation:
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations()  # Race-independent
+        self.solar_calculations = simulation.SolarCalculations()
 
         self.local_times = 0
 
@@ -258,6 +258,8 @@ class Simulation:
     def __plot_graph(self, arrays_to_plot, array_labels, graph_title):
         compress_constant = int(self.timestamps.shape[0] / 5000)
 
+        sns.set_style("whitegrid")
+
         # Wow I used the walrus operator here!
         if (num_arrays := len(arrays_to_plot)) == 1:
             f, axes = plt.subplots()
@@ -278,8 +280,6 @@ class Simulation:
         for index, array in enumerate(arrays_to_plot):
             arrays_to_plot[index] = array[::compress_constant]
 
-        sns.set_style("whitegrid")
-
         f.suptitle(f"{graph_title} ({self.race_type})", fontsize=16, weight="bold")
 
         with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
@@ -291,9 +291,9 @@ class Simulation:
         print()
 
         sns.despine()
-        plt.setp(axes)
-        plt.tight_layout()
-        plt.show()
+        _ = plt.setp(axes)
+        _ = plt.tight_layout()
+        _ = plt.show()
 
     def __run_simulation_calculations(self, speed_kmh, verbose=False):
         """
@@ -303,43 +303,35 @@ class Simulation:
 
         :param speed_kmh: array that specifies the solar car's driving speed (in km/h) at each time step
         """
-        # ----- Expected distance estimate -----
 
-        # Array of cumulative distances hopefully travelled in this round
         tick_array = np.diff(self.timestamps)
         tick_array = np.insert(tick_array, 0, 0)
 
         # ----- Setting up Timing Constraints -----
+
+        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
+        # (Charge from 8am-9am and 6pm-8pm) for FSGP
+        # ASC: 13 Hours of Race Day, 9 Hours of Driving
 
         simulation_hours = np.arange(self.start_hour, self.start_hour + self.simulation_duration / (60 * 60))
 
         simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
                                                self.start_hour + self.simulation_duration / (60 * 60)).astype(int)
 
-        driving_time_boolean = [simulation_hours_by_second == 7,
-                                simulation_hours_by_second == 8, simulation_hours_by_second == 18,
-                                simulation_hours_by_second == 19]
-
-        driving_time_boolean = [simulation_hours_by_second <= 8, simulation_hours_by_second >= 18]
+        driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
 
         not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
 
-        if verbose:
-            self.__plot_graph([not_charge], ["not charge"], "not charge")
+        # ----- Apply Timing Constraints to Speed Array -----
 
         speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
         speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
-        t = np.arange(0, len(speed_kmh))
+        if verbose:
+            self.__plot_graph([not_charge], ["not charge"], "not charge")
+            self.__plot_graph([speed_kmh], ["updated speed (km/h)"], "speed")
 
-        fig, ax = plt.subplots()
-        ax.plot(t, speed_kmh)
-
-        ax.set(xlabel='time (s)', ylabel='speed kmh new',
-               title='About as simple as it gets, folks')
-        ax.grid()
-
-        plt.show()
+        # ----- Expected distance estimate -----
 
         # Array of cumulative distances obtained from the timestamps
 
@@ -388,13 +380,7 @@ class Simulation:
         # only for reference (may be used in the future)
         local_times_datetime = np.array(
             [datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
-
-        # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
-
-        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
-        # (Charge from 8am-9am and 6pm-8pm) for FSGP
-        # ASC: 13 Hours of Race Day, 9 Hours of Driving
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
@@ -486,7 +472,6 @@ class Simulation:
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         distances = distances.clip(0, max_route_distance / 1000)
 
-        # TODO: "Bump" environmental data based on soc. You should have all the same environmental data given that your car isn't moving due to no charge
         try:
             max_dist_index = np.where(distances == max_route_distance / 1000)[0][0]
         except IndexError:
@@ -499,7 +484,7 @@ class Simulation:
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
         results = SimulationResult()
-        # TODO: Get speed array to be plotted somehow. On the FIRST time, the BOOLed speed array
+
         results.arrays = [
             speed_kmh,
             distances,
