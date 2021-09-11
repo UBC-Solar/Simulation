@@ -88,10 +88,6 @@ class Simulation:
         gis_force_update = args['gis_force_update']
         weather_force_update = args['weather_force_update']
 
-        # ----- day length in seconds -----
-
-        day_length_seconds = 12 * 60 * 60
-
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()  # Race-independent
@@ -116,7 +112,7 @@ class Simulation:
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations()  # Race-independent
+        self.solar_calculations = simulation.SolarCalculations()
 
         self.local_times = 0
 
@@ -140,11 +136,13 @@ class Simulation:
 
         :param speed: array that specifies the solar car's driving speed at each time step
         :param plot_results: set to True to plot the results of the simulation (is True by default)
-        :param args: variable list of arguments that specify the car's driving speed at each time step.
+        :param verbose: Boolean to control logging and debugging behaviour
+        :param **kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
+
         """
 
-        # This is mainly used by the optimization function since it passes values as keyword arguments instead of a numpy array
+        # Used by the optimization function as it passes values as keyword arguments instead of a numpy array
         if kwargs:
             speed = np.empty(len(kwargs))
 
@@ -234,8 +232,8 @@ class Simulation:
         # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
 
         # configure these parameters depending on whether optimizing for speed or precision
-        # see https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb for an explanation on some parameters
-        # see https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation on acquisition functions
+        # Parameter Explanations: https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb
+        # Acquisition Functions: https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation
         optimizer.maximize(init_points=20, n_iter=200, acq='ucb', xi=1e-1, kappa=10)
 
         result = optimizer.max
@@ -259,16 +257,28 @@ class Simulation:
 
     def __plot_graph(self, arrays_to_plot, array_labels, graph_title):
         compress_constant = int(self.timestamps.shape[0] / 5000)
-        for index, array in enumerate(arrays_to_plot):
-            arrays_to_plot[index] = array[::compress_constant]
 
         sns.set_style("whitegrid")
 
-        # Wow I used the walrus operator here
-        if (x := len(arrays_to_plot) / 2) % 2 == 0:
-            f, axes = plt.subplots(int(x), 2, figsize=(12, 8))
+        # Wow I used the walrus operator here!
+        if (num_arrays := len(arrays_to_plot)) == 1:
+            f, axes = plt.subplots()
+            t = np.arange(0, len(arrays_to_plot[0]))
+
+            axes.plot(t, arrays_to_plot[0])
+
+            axes.set(xlabel='time (s)', ylabel=array_labels[0],
+                     title=graph_title)
+            axes.grid()
+            plt.show()
+            return
+        elif (num_arrays / 2) % 2 == 0:
+            f, axes = plt.subplots(int(num_arrays / 2), 2, figsize=(12, 8))
         else:
-            f, axes = plt.subplots(len(arrays_to_plot), 1, figsize=(12, 8))
+            f, axes = plt.subplots(int(num_arrays), 1, figsize=(12, 8))
+
+        for index, array in enumerate(arrays_to_plot):
+            arrays_to_plot[index] = array[::compress_constant]
 
         f.suptitle(f"{graph_title} ({self.race_type})", fontsize=16, weight="bold")
 
@@ -277,13 +287,13 @@ class Simulation:
                 df = pd.DataFrame(dict(time=self.timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
                 g = sns.lineplot(x="time", y="value", data=df, ax=axis)
                 g.set(xlabel="time (hrs)", ylabel=array_labels[index])
-        pbar.update(1)
+                pbar.update(1)
         print()
 
         sns.despine()
-        plt.setp(axes)
-        plt.tight_layout()
-        plt.show()
+        _ = plt.setp(axes)
+        _ = plt.tight_layout()
+        _ = plt.show()
 
     def __run_simulation_calculations(self, speed_kmh, verbose=False):
         """
@@ -293,13 +303,35 @@ class Simulation:
 
         :param speed_kmh: array that specifies the solar car's driving speed (in km/h) at each time step
         """
-        # ----- Expected distance estimate -----
 
-        # Array of cumulative distances hopefully travelled in this round
         tick_array = np.diff(self.timestamps)
         tick_array = np.insert(tick_array, 0, 0)
 
         # ----- Setting up Timing Constraints -----
+
+        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
+        # (Charge from 8am-9am and 6pm-8pm) for FSGP
+        # ASC: 13 Hours of Race Day, 9 Hours of Driving
+
+        simulation_hours = np.arange(self.start_hour, self.start_hour + self.simulation_duration / (60 * 60))
+
+        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
+                                               self.start_hour + self.simulation_duration / (60 * 60)).astype(int)
+
+        driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
+
+        not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
+
+        # ----- Apply Timing Constraints to Speed Array -----
+
+        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+        speed_kmh = helpers.add_acceleration(speed_kmh, 500)
+
+        if verbose:
+            self.__plot_graph([not_charge], ["not charge"], "not charge")
+            self.__plot_graph([speed_kmh], ["updated speed (km/h)"], "speed")
+
+        # ----- Expected distance estimate -----
 
         # Array of cumulative distances obtained from the timestamps
 
@@ -348,28 +380,7 @@ class Simulation:
         # only for reference (may be used in the future)
         local_times_datetime = np.array(
             [datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
-
-        # time_of_day_hour based of UNIX timestamps
         time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
-
-        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
-        # (Charge from 8am-9am and 6pm-8pm) for FSGP
-        # ASC: 13 Hours of Race Day, 9 Hours of Driving
-
-        # Ensuring car does not move at night
-        bool_lis = []
-        night_lis = []
-        if self.race_type == "FSGP":
-            bool_lis = [time_of_day_hour == 8, time_of_day_hour == 10, time_of_day_hour == 18, time_of_day_hour == 19]
-            for time in list(range(20, 24)) + list(range(0, 8)):
-                night_lis.append(time_of_day_hour == time)
-        elif self.race_type == "ASC":
-            bool_lis = [time_of_day_hour == 7, time_of_day_hour == 8, time_of_day_hour == 18, time_of_day_hour == 19]
-            for time in list(range(20, 24)) + list(range(0, 8)):
-                night_lis.append(time_of_day_hour == time)
-
-        not_charge = np.invert(np.logical_or.reduce(bool_lis))
-        not_day = np.invert(np.logical_or.reduce(night_lis))
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
@@ -388,16 +399,10 @@ class Simulation:
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
                                                        wind_directions)
 
-        # "Bump" elevations array based on when car is not moving and race timing constraints
-
-        modified_elevations = self.gis.elevation_bumping_plots(not_charge=not_charge, not_day=not_day,
-                                                               elevations=gis_route_elevations_at_each_tick,
-                                                               show_plot=False)
-
         # Get an array of solar irradiance at every coordinate and time
         solar_irradiances = self.solar_calculations.calculate_array_GHI(self.route_coords[closest_gis_indices],
                                                                         time_zones, local_times,
-                                                                        modified_elevations,
+                                                                        gis_route_elevations_at_each_tick,
                                                                         cloud_covers)
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
@@ -446,22 +451,16 @@ class Simulation:
                               ["gradients (m)", "time zones", "vehicle bearings"], "Environment variables")
             arrays_to_plot = [speed_kmh, state_of_charge]
 
-            for arr in [state_of_charge, not_charge, not_day]:
+            for arr in [state_of_charge, not_charge]:
                 speed_kmh = np.logical_and(speed_kmh, arr) * speed_kmh
                 arrays_to_plot.append(speed_kmh)
 
-            speed_kmh = helpers.add_acceleration(speed_kmh, 500)
-            arrays_to_plot.append(speed_kmh)
-
             self.__plot_graph(
                 arrays_to_plot,
-                ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge", "Speed & not_day",
-                 "final speed_kmh + accel"],
+                ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
                 "Speed Boolean Operations")
         else:
-            not_driving = np.logical_and(not_charge, not_day)
-            speed_kmh = np.logical_and(not_driving, state_of_charge) * speed_kmh
-            speed_kmh = helpers.add_acceleration(speed_kmh, 500)
+            speed_kmh = np.logical_and(not_charge, state_of_charge) * speed_kmh
 
         time_in_motion = np.logical_and(tick_array, speed_kmh) * self.tick
 
@@ -485,7 +484,7 @@ class Simulation:
         time_taken = str(datetime.timedelta(seconds=int(time_taken)))
 
         results = SimulationResult()
-        # TODO: Get speed array to be plotted somehow. On the FIRST time, the BOOLed speed array
+
         results.arrays = [
             speed_kmh,
             distances,
@@ -493,7 +492,7 @@ class Simulation:
             delta_energy,
             solar_irradiances,
             wind_speeds,
-            modified_elevations,
+            gis_route_elevations_at_each_tick,
             cloud_covers
         ]
         results.distance_travelled = distances[-1]
