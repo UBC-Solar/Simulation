@@ -277,6 +277,7 @@ class GIS:
 
         else:
             print(f"No route was found: {response['status']}")
+            print(f"Error Message: {response['error_message']}")
 
         route = np.array(path_points)
 
@@ -330,21 +331,20 @@ class GIS:
             for result in response['results']:
                 elevations[i] = result['elevation']
                 i = i + 1
-        else:
-            # sys.stderr.write("Error: No elevation was found\n")
-            if response['status'] == "INVALID_REQUEST":
+
+        elif response['status'] == "INVALID_REQUEST":
                 sys.stderr.write("Error: Request was invalid\n")
 
-            elif response['status'] == "OVER_DAILY_LIMIT":
-                sys.stderr.write(
-                    "Error: Possible causes - API key is missing or invalid, billing has not been enabled,"
-                    " a self-imposed usage cap has been exceeded, or the provided payment method is no longer valid\n")
+        elif response['status'] == "OVER_DAILY_LIMIT":
+            sys.stderr.write(
+                "Error: Possible causes - API key is missing or invalid, billing has not been enabled,"
+                " a self-imposed usage cap has been exceeded, or the provided payment method is no longer valid\n")
 
-            elif response['status'] == "OVER_QUERY_LIMIT":
-                sys.stderr.write("Error: Requester has exceeded quota\n")
+        elif response['status'] == "OVER_QUERY_LIMIT":
+            sys.stderr.write("Error: Requester has exceeded quota\n")
 
-            elif response['status'] == "REQUEST_DENIED":
-                sys.stderr.write("Error: API could not complete the request\n")
+        elif response['status'] == "REQUEST_DENIED":
+            sys.stderr.write("Error: API could not complete the request\n")
 
         return elevations
 

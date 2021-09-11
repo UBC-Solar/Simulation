@@ -1,6 +1,8 @@
 import datetime
 import json
 import sys
+import os
+from dotenv import load_dotenv
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +16,8 @@ from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
+
+
 
 
 class Simulation:
@@ -66,8 +70,10 @@ class Simulation:
 
         # ----- API keys -----
 
-        self.google_api_key = args['google_api_key']
-        self.weather_api_key = args['weather_api_key']
+        load_dotenv()
+
+        self.weather_api_key = os.environ.get("OPENWEATHER_API_KEY")
+        self.google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
 
         # ----- Route constants -----
 

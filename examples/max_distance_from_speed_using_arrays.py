@@ -12,9 +12,8 @@ before the battery runs out [speed -> distance].
 def main():
 
     # indicates a constant speed of 35km/h throughout the simulation
-    # input_speed = np.array([35])
 
-    input_speed = np.array([35,20,30])
+    input_speed = np.array([35]*24)
 
     """
     Note: it no longer matters how many elements the input_speed array has, the simulation automatically
@@ -37,8 +36,8 @@ def main():
     """
 
     simulation_model = simulation.Simulation(race_type="ASC")
-    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True)
-    
+    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False)
+
     optimized = simulation_model.optimize()
     print(f'Distance travelled: {distance_travelled}')
     print(f'Optimized results. Max traversable distance: {optimized["target"]}')
@@ -48,4 +47,12 @@ def main():
 
 
 if __name__ == "__main__":
+    # import cProfile
+    # import pstats
+    #
+    # with cProfile.Profile() as pr:
     main()
+
+    # stats = pstats.Stats(pr)
+    # stats.sort_stats(pstats.SortKey.TIME)
+    # stats.print_stats()

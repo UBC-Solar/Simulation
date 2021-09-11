@@ -1,9 +1,6 @@
 {
     "race_type": "ASC",
 
-    "google_api_key": "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg",
-    "weather_api_key": "51bb626fa632bcac20ccb67a2809a73b",
-
     "origin_coord": [39.0918, -94.4172],
     "dest_coord": [43.6142, -116.2080],
     "waypoints": [
@@ -15,10 +12,9 @@
     "tick": 1,
     "simulation_duration": 43200,
     "start_hour": 7,
-
     "initial_battery_charge": 0.65,
     "lvs_power_loss": 0,
 
-    "gis_force_update": false,
+    "gis_force_update":  false,
     "weather_force_update": false
 }
