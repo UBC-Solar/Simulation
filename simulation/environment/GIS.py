@@ -260,7 +260,7 @@ class GIS:
 
         # If a route is found...
         if response['status'] == "OK":
-            # print("A route was found.\n")
+            print("A route was found.\n")
 
             # Pick the first route in the list of available routes
             # A route consists of a series of legs
@@ -401,18 +401,6 @@ class GIS:
 
         return self.current_index
 
-    def tile_route(self, num_laps, simulation_duration):
-        self.path = np.tile(self.path, (num_laps, 1))  # 2 is how many times it is tiled.
-
-        # Update any variables that depend on the path
-        self.path_distances = helpers.calculate_path_distances(self.path)
-        self.path_elevations = self.calculate_path_elevations(self.path)
-        self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
-                                                            self.path_distances)
-        self.path_time_zones = self.calculate_time_zones(self.path)
-
-        return self.path
-
     def elevation_bumping_plots(self, not_charge, not_day, elevations, show_plot=False):
         """
 
@@ -528,7 +516,7 @@ class GIS:
 
 
 if __name__ == "__main__":
-    google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
+    google_api_key = ""
 
     origin_coord = np.array([38.9266274, -95.6781231])
 

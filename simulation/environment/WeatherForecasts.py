@@ -397,7 +397,7 @@ class WeatherForecasts:
 
 
 if __name__ == "__main__":
-    google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
+    google_api_key = ""
 
     simulation_duration = 60 * 60 * 9
 
@@ -412,6 +412,6 @@ if __name__ == "__main__":
     gis = simulation.GIS(google_api_key, origin_coord, dest_coord, waypoints)
     route_coords = gis.get_path()
 
-    weather_api_key = "51bb626fa632bcac20ccb67a2809a73b"
+    weather_api_key = ""
 
     weather = simulation.WeatherForecasts(weather_api_key, route_coords, simulation_duration)
