@@ -31,8 +31,8 @@ class Simulation:
         Depending on the race type, the following initialisation parameters are read from the corresponding
         settings json file located in the config folder.
 
-        google_api_key: API key to access GoogleMaps API
-        weather_api_key: API key to access OpenWeather API
+        google_api_key: API key to access GoogleMaps API. Stored in a .env file. Please ask Chris for this!
+        weather_api_key: API key to access OpenWeather API. Stored in a .env file. Please ask Chris for this!
         origin_coord: array containing latitude and longitude of route start point
         dest_coord: array containing latitude and longitude of route end point
         waypoints: array containing latitude and longitude pairs of route waypoints
@@ -55,12 +55,11 @@ class Simulation:
         with open(settings_path) as f:
             args = json.load(f)
 
-        # ----- Simulation Race Independent constants -----
 
         self.initial_battery_charge = args['initial_battery_charge']
 
-        # LVS power loss is pretty small so it is neglected
-        self.lvs_power_loss = args['lvs_power_loss']  # Race-independent
+        # LVS power loss is pretty small so it is neglected, but we can change it in the future if needed.
+        self.lvs_power_loss = args['lvs_power_loss']
 
         # ----- Time constants -----
 
@@ -96,13 +95,13 @@ class Simulation:
 
         # ----- Component initialisation -----
 
-        self.basic_array = simulation.BasicArray()  # Race-independent
+        self.basic_array = simulation.BasicArray()
 
-        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)  # Race-independent
+        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)
 
-        self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)  # Race-independent
+        self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)
 
-        self.basic_motor = simulation.BasicMotor()  # Race-independent
+        self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, force_update=gis_force_update)
@@ -184,9 +183,6 @@ class Simulation:
         time_taken = result.time_taken
         final_soc = result.final_soc
 
-        # TODO: package all the calculated arrays into a SimulationHistory class
-        # TODO: have some sort of standardised SimulationResult class
-
         print(f"Simulation successful!\n"
               f"Time taken: {time_taken}\n"
               f"Route length: {self.route_length:.2f}km\n"
@@ -207,16 +203,17 @@ class Simulation:
 
         return distance_travelled
 
-    def display_result(self, res):
-        print(f"{res.message} \n")
-        print(f"Optimal solution: {res.x.round(2)} \n")
-        print(f"Average speed: {np.mean(res.x).round(1)}km/h")
-
-        maximum_distance = np.abs(self.run_model(res.x))
-        print(f"Maximum distance: {maximum_distance:.2f}km\n")
-
     @helpers.timeit
     def optimize(self, *args, **kwargs):
+        """
+
+        Args:
+            *args: Do not serve any function.
+            **kwargs: variable list of arguments that specify the car's driving speed at each time step.
+
+        Returns: A local maximium for distance found through optimization
+
+        """
 
         guess_lower_bound = 20
         guess_upper_bound = 80
@@ -232,10 +229,9 @@ class Simulation:
             'x7': (guess_lower_bound, guess_upper_bound),
         }
 
-        # https://github.com/fmfn/BayesianOptimization
+        # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
         optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds,
                                          verbose=2)
-        # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
 
         # configure these parameters depending on whether optimizing for speed or precision
         # Parameter Explanations: https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb
@@ -262,6 +258,27 @@ class Simulation:
         return optimizer.max
 
     def __plot_graph(self, arrays_to_plot, array_labels, graph_title):
+        """
+
+        This is a utility function to plot out any set of NumPy arrays you pass into it.
+        The precondition of this function is that the length of arrays_to_plot and array_labels are equal.
+
+        This is because there be a 1:1 mapping of each entry of arrays_to_plot to array_labels such that:
+            arrays_to_plot[n] has label array_labels[n]
+
+        Another precondition of this function is that each of the arrays within arrays_to_plot also have the
+        same length. This is each of them will share the same time axis.
+
+        Args:
+            arrays_to_plot: An array of NumPy arrays to plot
+            array_labels: An array of strings for the individual plot titles
+            graph_title: A string that serves as the plot's main title
+
+        Result:
+            If number of plots is even, produces a 2 x (len(arrays_to_plot) / 2) plot
+            If number of plots is odd, produces a 1 x len(arrays_to_plot) plot
+
+        """
         compress_constant = int(self.timestamps.shape[0] / 5000)
 
         sns.set_style("whitegrid")
@@ -331,9 +348,12 @@ class Simulation:
         # ----- Apply Timing Constraints to Speed Array -----
 
         speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
-        speed_kmh = helpers.add_acceleration(speed_kmh, 500)
+
+        # Acceleration currently is broken and I'm not sure why. Have to take another look at this soon.
+        # speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         if verbose:
+            print("no way i'm in  here right")
             self.__plot_graph([not_charge], ["not charge"], "not charge")
             self.__plot_graph([speed_kmh], ["updated speed (km/h)"], "speed")
 
@@ -391,8 +411,6 @@ class Simulation:
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
         roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
-        # weather_forecasts = np.lib.pad(weather_forecasts[roll_by_tick:, :], ((0, roll_by_tick), (0, 0)),
-        # 'constant', constant_values = (0))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
@@ -442,7 +460,6 @@ class Simulation:
 
         # stores the battery SOC at each time step
         state_of_charge = battery_variables_array[0]
-        print("State of Charge: ", state_of_charge)
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
 
         # when the battery is empty the car will not move

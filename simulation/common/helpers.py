@@ -87,11 +87,13 @@ def add_acceleration(input_array, acceleration):
         # check if accelerate or decelerate
         if array_diff[i] > 0:
             while input_array[i] < input_array[i + 1] and i + 1 < len(input_array) - 1:
+                #print("i'm stuck in this if while loop")
                 input_array[i + 1] = input_array[i] + acceleration
                 i += 1
 
         else:
             while input_array[i] > input_array[i + 1] and i + 1 < len(input_array) - 1:
+                #print("i'm stuck in this else while loop")
                 input_array[i + 1] = input_array[i] - acceleration
                 i += 1
 
@@ -181,7 +183,6 @@ def get_day_of_year(day, month, year):
             date(year, 1, 1)).days + 1
 
 
-# @jit
 def calculate_declination_angle(day_of_year):
     """
     Calculates the Declination Angle of the Earth at a given day
@@ -201,7 +202,7 @@ def calculate_declination_angle(day_of_year):
 
 
 # ----- Calculation of Apparent Solar Time -----
-# @jit
+
 def calculate_eot_correction(day_of_year):
     """
     Approximates and returns the correction factor between the apparent
@@ -309,7 +310,6 @@ def cull_dataset(coords):
 
     return coords[::625]
 
-# @njit
 def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     """
     Gets the two terms to calculate and return elevation angle, given the
@@ -354,43 +354,17 @@ def find_runs(x):
     # handle empty array
     if n == 0:
         return np.array([]), np.array([]), np.array([])
-
     else:
-        # find run starts
         loc_run_start = np.empty(n, dtype=bool)
         loc_run_start[0] = True
         np.not_equal(x[:-1], x[1:], out=loc_run_start[1:])
         run_starts = np.nonzero(loc_run_start)[0]
 
-        # find run values
         run_values = x[loc_run_start]
 
-        # find run lengths
         run_lengths = np.diff(np.append(run_starts, n))
 
         return run_values, run_starts, run_lengths
-
-def plot_array(array, title, x_title, y_title):
-    y1 = np.array(array)
-    x1 = np.arange(0.0, len(array), 1)
-
-    fig, ax = plt.subplots()
-    ax.plot(x1, y1)
-    ax.set(xlabel=x_title, ylabel=y_title, title=title)
-    ax.grid()
-
-    plt.show()
-
-def plot_array(array, title, x_title, y_title):
-    y1 = np.array(array)
-    x1 = np.arange(0.0, len(array), 1)
-
-    fig, ax = plt.subplots()
-    ax.plot(x1, y1)
-    ax.set(xlabel=x_title, ylabel=y_title, title=title)
-    ax.grid()
-
-    plt.show()
 
 
 if __name__ == '__main__':
