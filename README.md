@@ -74,7 +74,7 @@ NOTE: Python 2.7 is not supported so please make sure that your Python version i
 To run an example simulation, you can either run the main Python script directly from your IDE or you can run it from your terminal. 
 The following instructions are for running it from your terminal.
 
-Before running the following commands make sure you have navigated to the "Simulation" folder on your terminal or the commands will not work.
+Before running the following commands make sure you have navigated to the "Simulation" folder on your terminal or the commands will not work. Please note support those in `examples/archive` has discontinued.
 
 #### Ubuntu/MacOS
 
