@@ -149,12 +149,10 @@ class Simulation:
 
         # Used by the optimization function as it passes values as keyword arguments instead of a numpy array
         if kwargs:
-            speed = np.empty(len(kwargs))
+            speed = np.fromiter(kwargs.values(), dtype=float)
 
             # Don't plot results since this code is run by the optimizer
             plot_results = False
-            for val in kwargs.values():
-                speed = np.append(speed, [val])
 
         # ----- Reshape speed array -----
 
@@ -236,7 +234,7 @@ class Simulation:
         # configure these parameters depending on whether optimizing for speed or precision
         # Parameter Explanations: https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb
         # Acquisition Functions: https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation
-        optimizer.maximize(init_points=20, n_iter=200, acq='ucb', xi=1e-1, kappa=10)
+        optimizer.maximize(init_points=200, n_iter=20, acq='ucb', xi=1e-1, kappa=10)
 
         result = optimizer.max
         result_params = list(result["params"].values())
