@@ -17,6 +17,11 @@ from simulation.common.helpers import adjust_timestamps_to_local_times, get_arra
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 
+from bokeh.plotting import figure, show
+from bokeh.layouts import gridplot
+from bokeh.models import HoverTool
+
+from bokeh.palettes import Bokeh8
 
 
 
@@ -279,42 +284,31 @@ class Simulation:
         """
         compress_constant = int(self.timestamps.shape[0] / 5000)
 
-        sns.set_style("whitegrid")
-
-        # Wow I used the walrus operator here!
-        if (num_arrays := len(arrays_to_plot)) == 1:
-            f, axes = plt.subplots()
-            t = np.arange(0, len(arrays_to_plot[0]))
-
-            axes.plot(t, arrays_to_plot[0])
-
-            axes.set(xlabel='time (s)', ylabel=array_labels[0],
-                     title=graph_title)
-            axes.grid()
-            plt.show()
-            return
-        elif (num_arrays / 2) % 2 == 0:
-            f, axes = plt.subplots(int(num_arrays / 2), 2, figsize=(12, 8))
-        else:
-            f, axes = plt.subplots(int(num_arrays), 1, figsize=(12, 8))
-
         for index, array in enumerate(arrays_to_plot):
             arrays_to_plot[index] = array[::compress_constant]
+        
+        figures = list()
 
-        f.suptitle(f"{graph_title} ({self.race_type})", fontsize=16, weight="bold")
+        hover_tool = HoverTool()
+        hover_tool.formatters = {"x": "datetime"}
+        hover_tool.tooltips = [
+            ("time", "$x"),
+            ("data", "$y")
+        ]
 
-        with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
-            for index, axis in enumerate(axes.flatten()):
-                df = pd.DataFrame(dict(time=self.timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
-                g = sns.lineplot(x="time", y="value", data=df, ax=axis)
-                g.set(xlabel="time (hrs)", ylabel=array_labels[index])
-                pbar.update(1)
-        print()
+        for (index, data_array) in enumerate(arrays_to_plot):
+            # create figures and put them in list
+            figures.append(figure(title=array_labels[index], x_axis_label="Time (hr)",
+                                  y_axis_label=array_labels[index], x_axis_type="datetime"))
 
-        sns.despine()
-        _ = plt.setp(axes)
-        _ = plt.tight_layout()
-        _ = plt.show()
+            # add line renderers to each figure
+            figures[index].line(self.timestamps[::compress_constant], data_array, line_color=Bokeh8[index], line_width=2)
+
+            figures[index].add_tools(hover_tool)
+
+        grid = gridplot(figures, sizing_mode="scale_both", ncols=3, plot_height=200, plot_width=300)
+
+        show(grid)
 
     def __run_simulation_calculations(self, speed_kmh, verbose=False):
         """
