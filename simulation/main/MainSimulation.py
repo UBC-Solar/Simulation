@@ -353,7 +353,6 @@ class Simulation:
         # speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         if verbose:
-            print("no way i'm in  here right")
             self.__plot_graph([not_charge], ["not charge"], "not charge")
             self.__plot_graph([speed_kmh], ["updated speed (km/h)"], "speed")
 
