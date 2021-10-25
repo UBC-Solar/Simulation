@@ -2,6 +2,7 @@ import datetime
 import json
 import sys
 import os
+from bokeh.io.doc import curdoc
 from dotenv import load_dotenv
 
 import matplotlib.pyplot as plt
@@ -17,7 +18,7 @@ from simulation.common.helpers import adjust_timestamps_to_local_times, get_arra
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 
-from bokeh.plotting import figure, show
+from bokeh.plotting import figure, show, output_file
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 
@@ -256,7 +257,7 @@ class Simulation:
         self.__plot_graph(arrays_to_plot.arrays,
                           ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
                            "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"],
-                          "Simulation Result")
+                          "Optimized Result")
 
         return optimizer.max
 
@@ -307,6 +308,10 @@ class Simulation:
             figures[index].add_tools(hover_tool)
 
         grid = gridplot(figures, sizing_mode="scale_both", ncols=3, plot_height=200, plot_width=300)
+
+        output_file(filename=graph_title + '.html', title=graph_title)
+        curdoc().add_root
+        curdoc().title = graph_title
 
         show(grid)
 
