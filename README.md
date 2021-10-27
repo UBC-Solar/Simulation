@@ -1,5 +1,7 @@
 # Simulation
 
+[![Build Status](https://app.travis-ci.com/UBC-Solar/Simulation.svg?branch=master)](https://app.travis-ci.com/UBC-Solar/Simulation)
+
 Welcome to UBC Solar's race strategy simulation environment! The objectve of this simulation is to guide UBC Solar's race strategy by creating a model to predict the performance of the UBC Solar cars in the American Solar Challenge (ASC) and Formula Sun Grand Prix (FSGP). 
 
 This document contains information on how to getting started with using the simulation framework. 
