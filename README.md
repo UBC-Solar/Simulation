@@ -30,7 +30,7 @@ The above command should return a version number if you have Git installed.
 python --version
 ```
 
-NOTE: Python 2.7 is not supported so please make sure that your Python version is in the format 3.x.x.
+NOTE: Any Python version before 3.8 is not supported so please make sure that your Python version is in the format 3.8.x or above.
 
 ### Installing the simulation package
 
