@@ -1,4 +1,4 @@
-# Simulation
+# UBC Solar's ASC Simulation
 
 [![Build Status](https://app.travis-ci.com/UBC-Solar/Simulation.svg?branch=master)](https://app.travis-ci.com/UBC-Solar/Simulation)
 
