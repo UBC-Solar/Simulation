@@ -95,6 +95,12 @@ To run the pre-written tests and ensure the simulation package is functioning co
 pytest
 ```
 
+To run the tests and show the test coverage, do 
+```
+pip install pytest-cov
+pytest --cov=simulation tests/
+```
+
 If your terminal returns something like "pytest is not recognized as an internal or external command...", install PyTest by executing the following:
 
 ``` bash
