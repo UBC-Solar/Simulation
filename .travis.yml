@@ -1,8 +1,13 @@
 language: python
 python:
+        - "3.9"
         - "3.8"
+        - "3.7"
+before_install:
+        - python -m pip install --upgrade pip
 # install dependencies
 install: 
         - pip install -r requirements.txt
         - pip install -e .
-script: pytest tests/
+        - pip install pytest-cov
+script: pytest --cov=simulation tests/
