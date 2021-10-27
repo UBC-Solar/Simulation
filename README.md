@@ -12,7 +12,7 @@ For more detailed information on the inner workings of the simulation please ref
 
 ### Prerequisites
 
-- Python 3 (https://www.python.org/downloads/)
+- Python 3.8 or above (https://www.python.org/downloads/)
 - Git version control (https://git-scm.com/downloads)
 - pip Python package installer (should come with your Python installation)
 
