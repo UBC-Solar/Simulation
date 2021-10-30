@@ -16,6 +16,7 @@ from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
+from simulation.utils.InputBounds import InputBounds
 
 
 
@@ -190,6 +191,8 @@ class Simulation:
 
         # ----- Plotting -----
 
+        # We want to save the input speed array and the output distance if we are maximizing distance from speed using array
+
         if plot_results:
             arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
                               solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
@@ -200,60 +203,6 @@ class Simulation:
             self.__plot_graph(arrays_to_plot, y_label, "Simulation Result")
 
         return distance_travelled
-
-    @helpers.timeit
-    def optimize(self, *args, **kwargs):
-        """
-
-        Args:
-            *args: Do not serve any function.
-            **kwargs: variable list of arguments that specify the car's driving speed at each time step.
-
-        Returns: A local maximium for distance found through optimization
-
-        """
-
-        guess_lower_bound = 20
-        guess_upper_bound = 80
-
-        bounds = {
-            'x0': (guess_lower_bound, guess_upper_bound),
-            'x1': (guess_lower_bound, guess_upper_bound),
-            'x2': (guess_lower_bound, guess_upper_bound),
-            'x3': (guess_lower_bound, guess_upper_bound),
-            'x4': (guess_lower_bound, guess_upper_bound),
-            'x5': (guess_lower_bound, guess_upper_bound),
-            'x6': (guess_lower_bound, guess_upper_bound),
-            'x7': (guess_lower_bound, guess_upper_bound),
-        }
-
-        # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
-        optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds,
-                                         verbose=2)
-
-        # configure these parameters depending on whether optimizing for speed or precision
-        # Parameter Explanations: https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb
-        # Acquisition Functions: https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation
-        optimizer.maximize(init_points=200, n_iter=20, acq='ucb', xi=1e-1, kappa=10)
-
-        result = optimizer.max
-        result_params = list(result["params"].values())
-
-        speed_result = np.empty(len(result_params))
-        for i in range(len(speed_result)):
-            speed_result[i] = result_params[i]
-
-        speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
-        speed_result = np.insert(speed_result, 0, 0)
-
-        arrays_to_plot = self.__run_simulation_calculations(speed_result, verbose=False)
-
-        self.__plot_graph(arrays_to_plot.arrays,
-                          ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                           "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"],
-                          "Simulation Result")
-
-        return optimizer.max
 
     def __plot_graph(self, arrays_to_plot, array_labels, graph_title):
         """
