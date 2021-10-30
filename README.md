@@ -1,4 +1,6 @@
-# Simulation
+# UBC Solar's ASC Simulation
+
+[![Build Status](https://app.travis-ci.com/UBC-Solar/Simulation.svg?branch=master)](https://app.travis-ci.com/UBC-Solar/Simulation)
 
 Welcome to UBC Solar's race strategy simulation environment! The objectve of this simulation is to guide UBC Solar's race strategy by creating a model to predict the performance of the UBC Solar cars in the American Solar Challenge (ASC) and Formula Sun Grand Prix (FSGP). 
 
@@ -10,7 +12,7 @@ For more detailed information on the inner workings of the simulation please ref
 
 ### Prerequisites
 
-- Python 3 (https://www.python.org/downloads/)
+- Python 3.8 or above (https://www.python.org/downloads/)
 - Git version control (https://git-scm.com/downloads)
 - pip Python package installer (should come with your Python installation)
 
