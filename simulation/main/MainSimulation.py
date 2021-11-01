@@ -279,8 +279,7 @@ class Simulation:
             graph_title: A string that serves as the plot's main title
 
         Result:
-            If number of plots is even, produces a 2 x (len(arrays_to_plot) / 2) plot
-            If number of plots is odd, produces a 1 x len(arrays_to_plot) plot
+            Produces a 3 x ceil(len(arrays_to_plot) / 3) plot
 
         """
         compress_constant = int(self.timestamps.shape[0] / 5000)
@@ -303,15 +302,13 @@ class Simulation:
                                   y_axis_label=array_labels[index], x_axis_type="datetime"))
 
             # add line renderers to each figure
-            figures[index].line(self.timestamps[::compress_constant], data_array, line_color=Bokeh8[index], line_width=2)
+            figures[index].line(self.timestamps[::compress_constant] * 1000 , data_array, line_color=Bokeh8[index], line_width=2)
 
             figures[index].add_tools(hover_tool)
 
         grid = gridplot(figures, sizing_mode="scale_both", ncols=3, plot_height=200, plot_width=300)
 
         output_file(filename=graph_title + '.html', title=graph_title)
-        curdoc().add_root
-        curdoc().title = graph_title
 
         show(grid)
 
