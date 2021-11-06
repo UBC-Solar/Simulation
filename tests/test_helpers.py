@@ -1,15 +1,53 @@
 import numpy as np
 from simulation.common import helpers
+from simulation.common.helpers import *
 
 
-def test_checkForNonConsecutiveZeros():
+def test_check_for_non_consecutive_zeros():
     test_array_true = np.array([1, 2, 3, 0, 0, 1, 5, 0, 3, 0, 0, 0])
     test_array_false = np.array([1, 3, 4, 5, 0, 0, 0, 0, 0])
 
     result = tuple(
-        (helpers.checkForNonConsecutiveZeros(test_array_true), helpers.checkForNonConsecutiveZeros(test_array_false)))
+        (helpers.check_for_non_consecutive_zeros(test_array_true),
+         helpers.check_for_non_consecutive_zeros(test_array_false)))
 
     assert result == (True, False)
+
+
+def test_date_from_unix_timestamp():
+    expected_result_utc_result = "2021-10-30 19:39:27"
+    output = date_from_unix_timestamp(1635622767)
+    assert expected_result_utc_result == output
+
+
+def test_hour_from_unix_timestamp():
+    expected_hour = 19
+    output = hour_from_unix_timestamp(1635622767)
+    assert expected_hour == output
+
+
+def test_get_day_of_year1():
+    expected_day = 1
+    output = get_day_of_year(1, 1, 2021)
+    assert expected_day == output
+
+
+def test_get_day_of_year2():
+    expected_day = 303
+    output = get_day_of_year(30, 10, 2021)
+    assert expected_day == output
+
+
+def test_get_day_of_year3():
+    expected_day = 365
+    output = get_day_of_year(31, 12, 2021)
+    assert expected_day == output
+
+
+def test_get_day_of_year_leap():
+    expected_day = 366
+    output = get_day_of_year(31, 12, 2024)
+    assert expected_day == output
 
 
 def test_find_runs1():
@@ -30,4 +68,5 @@ def test_find_runs1():
 
 if __name__ == "__main__":
     test_find_runs1()
-    test_checkForNonConsecutiveZeros()
+    test_check_for_non_consecutive_zeros()
+    test_date_from_unix_timestamp()

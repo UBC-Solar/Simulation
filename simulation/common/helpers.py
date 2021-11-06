@@ -1,15 +1,15 @@
-import functools
-import numpy as np
-import time as timer
 import datetime
-from _datetime import datetime
-from _datetime import date
+import functools
+import time as timer
+from datetime import date
 
-from matplotlib import pyplot as plt
-from numba import jit, njit
+import numpy as np
+from bokeh.layouts import gridplot
+from bokeh.models import HoverTool
+from bokeh.palettes import Bokeh8
+from bokeh.plotting import figure, show, output_file
 
 from simulation.common import constants
-
 
 """
 Description: contains the simulation's helper functions.
@@ -31,10 +31,18 @@ def timeit(func):
 
 
 def date_from_unix_timestamp(unix_timestamp):
-    return datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    """
+
+    Args:
+        unix_timestamp: A unix timestamp
+
+    Returns: A string of the UTC representation of the UNIX timestamp in the format Y-m-d H:M:S
+
+    """
+    return datetime.datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def checkForNonConsecutiveZeros(array, verbose=False):
+def check_for_non_consecutive_zeros(array, verbose=False):
     zeroed_indices = np.where(array == 0)[0]
 
     if len(zeroed_indices) == 0:
@@ -67,7 +75,6 @@ def reshape_and_repeat(input_array, reshape_length):
         return result
 
 
-
 def add_acceleration(input_array, acceleration):
     """
     Takes in the speed array with sudden speed changes and an acceleration scalar,
@@ -87,20 +94,21 @@ def add_acceleration(input_array, acceleration):
         # check if accelerate or decelerate
         if array_diff[i] > 0:
             while input_array[i] < input_array[i + 1] and i + 1 < len(input_array) - 1:
-                #print("i'm stuck in this if while loop")
+                # print("i'm stuck in this if while loop")
                 input_array[i + 1] = input_array[i] + acceleration
                 i += 1
 
         else:
             while input_array[i] > input_array[i + 1] and i + 1 < len(input_array) - 1:
-                #print("i'm stuck in this else while loop")
+                # print("i'm stuck in this else while loop")
                 input_array[i + 1] = input_array[i] - acceleration
                 i += 1
 
     return input_array
- 
+
+
 def hour_from_unix_timestamp(unix_timestamp):
-    val = datetime.utcfromtimestamp(unix_timestamp)
+    val = datetime.datetime.utcfromtimestamp(unix_timestamp)
     return val.hour
 
 
@@ -153,6 +161,7 @@ def calculate_path_distances(coords):
 
     return path_distances
 
+
 def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
     """
     Returns the array of wind speed in m/s, in the direction opposite to the
@@ -177,6 +186,8 @@ def get_day_of_year(day, month, year):
         Calculates the day of the year, given the day, month and year.
 
         day, month, year: self explanatory
+
+        Day refers to a number representing the n'th day of the year. So, Jan 1st will be the 1st day of the year
         """
 
     return (date(year, month, day) -
@@ -196,7 +207,7 @@ def calculate_declination_angle(day_of_year):
     """
 
     declination_angle = -23.45 * np.cos(np.radians((np.float_(360) / 365) *
-                                                       (day_of_year + 10)))
+                                                   (day_of_year + 10)))
 
     return declination_angle
 
@@ -310,6 +321,7 @@ def cull_dataset(coords):
 
     return coords[::625]
 
+
 def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     """
     Gets the two terms to calculate and return elevation angle, given the
@@ -324,11 +336,11 @@ def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     Returns: The elevation angle in degrees
     """
     term_1 = np.sin(np.radians(declination_angle)) * \
-        np.sin(np.radians(latitude))
+             np.sin(np.radians(latitude))
 
     term_2 = np.cos(np.radians(declination_angle)) * \
-        np.cos(np.radians(latitude)) * \
-        np.cos(np.radians(hour_angle))
+             np.cos(np.radians(latitude)) * \
+             np.cos(np.radians(hour_angle))
 
     elevation_angle = np.arcsin(term_1 + term_2)
     return np.degrees(elevation_angle)
@@ -367,6 +379,115 @@ def find_runs(x):
         return run_values, run_starts, run_lengths
 
 
+def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, race_type, timestamps, verbose):
+    """
+
+    Args:
+        speed_kmh: A NumPy array representing the speed at each timestamp in km/h
+        start_hour: An integer representing the race's start hour
+        simulation_duration: An integer representing simulation duration in seconds
+        race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
+        timestamps: A NumPy array representing the timestamps for the simulated race
+        verbose: A flag to show speed array modifications for debugging purposes
+
+    Returns: constrained_speed_kmh, a speed array with race timing constraints applied to it, not_charge,
+    a boolean array representing when the car can charge and when it cannot (1 = charge, 0 = not_charge)
+
+    Raises: ValueError is race_type is not one of "ASC" or "FSGP"
+
+    """
+
+    # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
+    # (Charge from 8am-9am and 6pm-8pm) for FSGP
+
+    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
+
+    simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
+                                           start_hour + simulation_duration / (60 * 60)).astype(int)
+
+    if race_type == "ASC":
+        driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
+
+        not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
+    elif race_type == "FSGP":
+        driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
+
+        not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
+    else:
+        raise ValueError(f"Invalid race_type provided: \"{race_type}\". Must be one of \"ASC\" or \"FSGP\".")
+    # ----- Apply Timing Constraints to Speed Array -----
+
+    if verbose:
+        plot_graph(timestamps=timestamps,
+                   arrays_to_plot=[not_charge],
+                   array_labels=["not charge"],
+                   graph_title="not charge")
+        plot_graph(timestamps=timestamps,
+                   arrays_to_plot=[speed_kmh],
+                   array_labels=["updated speed (km/h)"],
+                   graph_title="speed")
+
+    constrained_speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+
+    return constrained_speed_kmh, not_charge
+
+
+def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
+    """
+
+        This is a utility function to plot out any set of NumPy arrays you pass into it.
+        The precondition of this function is that the length of arrays_to_plot and array_labels are equal.
+
+        This is because there be a 1:1 mapping of each entry of arrays_to_plot to array_labels such that:
+            arrays_to_plot[n] has label array_labels[n]
+
+        Another precondition of this function is that each of the arrays within arrays_to_plot also have the
+        same length. This is each of them will share the same time axis.
+
+        Args:
+            timestamps: An array of timestamps for the race
+            arrays_to_plot: An array of NumPy arrays to plot
+            array_labels: An array of strings for the individual plot titles
+            graph_title: A string that serves as the plot's main title
+
+        Result:
+            Produces a 3 x ceil(len(arrays_to_plot) / 3) plot
+
+        """
+    compress_constant = int(timestamps.shape[0] / 5000)
+
+    for index, array in enumerate(arrays_to_plot):
+        arrays_to_plot[index] = array[::compress_constant]
+
+    figures = list()
+
+    hover_tool = HoverTool()
+    hover_tool.formatters = {"x": "datetime"}
+    hover_tool.tooltips = [
+        ("time", "$x"),
+        ("data", "$y")
+    ]
+
+    for (index, data_array) in enumerate(arrays_to_plot):
+        # create figures and put them in list
+        figures.append(figure(title=array_labels[index], x_axis_label="Time (hr)",
+                              y_axis_label=array_labels[index], x_axis_type="datetime"))
+
+        # add line renderers to each figure
+        figures[index].line(timestamps[::compress_constant] * 1000, data_array, line_color=Bokeh8[index],
+                            line_width=2)
+
+        figures[index].add_tools(hover_tool)
+
+    grid = gridplot(figures, sizing_mode="scale_both", ncols=3, plot_height=200, plot_width=300)
+
+    output_file(filename=graph_title + '.html', title=graph_title)
+
+    show(grid)
+
+    return
+
+
 if __name__ == '__main__':
     # speed_array input
     speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
@@ -377,4 +498,3 @@ if __name__ == '__main__':
     print(expanded_speed_array)
 
     pass
-
