@@ -288,6 +288,11 @@ class GIS:
             route = np.delete(route, duplicate_coordinate_indices, axis=0)
 
         return route
+    
+    def calculate_path_min_max(self):
+      min_lat, min_long = self.path.min(axis=0)
+      max_lat, max_long = self.path.max(axis=0)
+      return [min_long, min_lat, max_long, max_lat]
 
     def calculate_path_elevations(self, coords):
         """

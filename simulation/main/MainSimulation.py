@@ -1,8 +1,14 @@
 import json
 import os
+import sys
 
 from bayes_opt import BayesianOptimization
 from dotenv import load_dotenv
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from tqdm import tqdm
 
 import simulation
 from simulation.common import helpers
@@ -180,6 +186,8 @@ class Simulation:
 
         # ----- Plotting -----
 
+        # We want to save the input speed array and the output distance if we are maximizing distance from speed using array
+
         if plot_results:
             arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
                               solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
@@ -248,6 +256,67 @@ class Simulation:
                            graph_title="Optimized Result")
 
         return optimizer.max
+
+    def __plot_graph(self, arrays_to_plot, array_labels, graph_title):
+        """
+
+        This is a utility function to plot out any set of NumPy arrays you pass into it.
+        The precondition of this function is that the length of arrays_to_plot and array_labels are equal.
+
+        This is because there be a 1:1 mapping of each entry of arrays_to_plot to array_labels such that:
+            arrays_to_plot[n] has label array_labels[n]
+
+        Another precondition of this function is that each of the arrays within arrays_to_plot also have the
+        same length. This is each of them will share the same time axis.
+
+        Args:
+            arrays_to_plot: An array of NumPy arrays to plot
+            array_labels: An array of strings for the individual plot titles
+            graph_title: A string that serves as the plot's main title
+
+        Result:
+            If number of plots is even, produces a 2 x (len(arrays_to_plot) / 2) plot
+            If number of plots is odd, produces a 1 x len(arrays_to_plot) plot
+
+        """
+        compress_constant = int(self.timestamps.shape[0] / 5000)
+
+        sns.set_style("whitegrid")
+
+        # Wow I used the walrus operator here!
+        if (num_arrays := len(arrays_to_plot)) == 1:
+            f, axes = plt.subplots()
+            t = np.arange(0, len(arrays_to_plot[0]))
+
+            axes.plot(t, arrays_to_plot[0])
+
+            axes.set(xlabel='time (s)', ylabel=array_labels[0],
+                     title=graph_title)
+            axes.grid()
+            plt.show()
+            return
+        elif (num_arrays / 2) % 2 == 0:
+            f, axes = plt.subplots(int(num_arrays / 2), 2, figsize=(12, 8))
+        else:
+            f, axes = plt.subplots(int(num_arrays), 1, figsize=(12, 8))
+
+        for index, array in enumerate(arrays_to_plot):
+            arrays_to_plot[index] = array[::compress_constant]
+
+        f.suptitle(f"{graph_title} ({self.race_type})", fontsize=16, weight="bold")
+
+        with tqdm(total=len(arrays_to_plot), file=sys.stdout, desc="Plotting data") as pbar:
+            for index, axis in enumerate(axes.flatten()):
+                df = pd.DataFrame(dict(time=self.timestamps[::compress_constant] / 3600, value=arrays_to_plot[index]))
+                g = sns.lineplot(x="time", y="value", data=df, ax=axis)
+                g.set(xlabel="time (hrs)", ylabel=array_labels[index])
+                pbar.update(1)
+        print()
+
+        sns.despine()
+        _ = plt.setp(axes)
+        _ = plt.tight_layout()
+        _ = plt.show()
 
     def __run_simulation_calculations(self, speed_kmh, verbose=False):
         """
