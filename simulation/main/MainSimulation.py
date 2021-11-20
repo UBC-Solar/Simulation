@@ -272,7 +272,7 @@ class Simulation:
 
         # ----- Expected distance estimate -----
 
-        # Array of cumulative distances obtained from the timestamps
+        # Array of cumulative distances theoretically achievable via the speed array
 
         distances = tick_array * speed_kmh / 3.6
         cumulative_distances = np.cumsum(distances)

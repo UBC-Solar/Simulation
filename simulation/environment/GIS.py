@@ -8,7 +8,7 @@ import polyline
 import requests
 import datetime
 import pytz
-from matplotlib import pyplot as plt
+from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 from tqdm import tqdm
 
@@ -401,122 +401,18 @@ class GIS:
 
         return self.current_index
 
-    def elevation_bumping_plots(self, not_charge, not_day, elevations, show_plot=False):
-        """
-
-        Args:
-            not_charge: NumPy array [Boolean] to describe charging time and driving time (0 - charging, 1 - charging)
-            not_day:  NumPy array [Boolean] to describe day and night (0 - night, 1 - day)
-            elevations: A NumPy array [n][elevation] based on closest_gis_indicies unadjusted for race timings
-            show_plot: A verbosity variable to control when plot is shown
-
-        Returns: A NumPy array [n][elevation] in metres adjusted to race constraints
-
-        """
-        # Create a stop array to describe motion when the car is not charging and day time
-
-        stop_array_y3 = np.logical_and(not_day, not_charge)
-
-        # Perform elevation "bumping" operation
-
-        modified_elevations = self.bump_elevations(stop_array=stop_array_y3, elevations=elevations)
-
-        if show_plot:
-            x1 = np.arange(0.0, len(not_charge), 1)
-            y1 = np.array(not_charge)
-
-            x2 = np.arange(0.0, len(not_day), 1)
-            y2 = np.array(not_day)
-
-            x3 = np.arange(0.0, len(stop_array_y3), 1)
-
-            x4 = np.arange(0.0, len(elevations), 1)
-
-            fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(12, 12))
-            fig.suptitle('Elevation bumping plots')
-
-            # Plot to describe time driving
-
-            ax1.plot(x1, y1)
-            ax1.set_xlabel('time (s)')
-            ax1.set_ylabel('Driving?')
-            ax1.grid()
-
-            # Plot to describe daytime
-
-            ax2.plot(x2, y2)
-            ax2.set_xlabel('time (s)')
-            ax2.set_ylabel('Daytime?')
-            ax2.grid()
-
-            # Plot to describe time in motion
-
-            ax3.plot(x3, stop_array_y3)
-            ax3.set_xlabel('time (s)')
-            ax3.set_ylabel('In Motion?')
-            ax3.grid()
-
-            # Plot to describe elevations without adjustment for race hours
-
-            ax4.plot(x4, elevations)
-            ax4.set_xlabel('time (s)')
-            ax4.set_ylabel('UnAdj. Elevations (m)')
-            ax4.grid()
-
-            # Plot to describe new "bumped" elevations
-
-            x5 = np.arange(0.0, len(modified_elevations), 1)
-            y5 = np.array(modified_elevations)
-            ax5.plot(x5, y5)
-            ax5.set_xlabel('time (s)')
-            ax5.set_ylabel('Adj. Elevation (m)')
-            ax5.grid()
-
-            plt.show()
-
-        return modified_elevations
-
-    @staticmethod
-    def bump_elevations(stop_array, elevations, verbose=False):
-        """
-
-        Args:
-            stop_array: An array describing the time in motion and the time stopping.
-                This is obtained by performing a logical AND operator on the boolean arrays describing day/night time
-                and charging hours. The ANDed result describes the car in motion for the following reason:
-                    - the day/night time array (called "not_day") uses 1 as day and 0 as night
-                    - the charging array (called "not_charge") uses 1 as in motion and 0 as charging
-                Thus the ANDed result describes the time tha car is not charging during the daytime. This is the time in motion.
-            elevations: An array of elevations based on closest_gis_indicies that has not been adjusted based on race timings (charging and daytime).
-
-        Returns: A "bumped" array of elevations that is adjusted for the time that the car does not move.
-
-        """
-
-        run_values, run_starts, run_lengths = helpers.find_runs(stop_array)
-
-        array_slices = []
-        working_index = 0
-
-        for i in range(0, len(run_values)):
-            if verbose:
-                print(
-                    f"There is a {run_values[i]} run from index {run_starts[i]} to index {run_lengths[i] + run_starts[i]}."
-                    f" The length is {run_lengths[i]}")
-            if not run_values[i]:
-                elevation_slice = np.array([elevations[working_index]] * run_lengths[i])
-                working_index += 1
-            else:
-                elevation_slice = elevations[working_index:run_lengths[i] + working_index]
-            array_slices.append(elevation_slice)
-
-        modified_elevations = np.concatenate(array_slices)
-
-        return modified_elevations[0:len(elevations)]
+    def tile_route(self, simulation_duration):
+        print(self.path)
+        print(simulation_duration)
 
 
 if __name__ == "__main__":
-    google_api_key = ""
+
+    load_dotenv()
+
+    google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+
+    simulation_duration = 1 * 60 * 60
 
     origin_coord = np.array([38.9266274, -95.6781231])
 
@@ -529,13 +425,9 @@ if __name__ == "__main__":
     locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints,
                          race_type="FSGP", force_update=False)
 
-    locationSystem.tile_route()
+    locationSystem.tile_route(simulation_duration=simulation_duration)
 
-    path = locationSystem.get_path()
-    print(path)
-
-    timezones = locationSystem.path_time_zones
-
-    print(timezones[0:10])
+    # path = locationSystem.get_path()
+    # print(path)
 
     pass
