@@ -45,14 +45,15 @@ geo_df = gpd.GeoDataFrame(df[["Lat", "Long"]], geometry=geometry)
 part1 = shapely.geometry.LineString(geo_df.geometry)
 linegdf = gpd.GeoDataFrame({'geometry': [part1]})
 
-f, ax = plt.subplots()
+f, ax = plt.subplots(figsize=(10, 5))
 ax.set_axis_off()
 
 geo_df.plot(ax=ax, legend=True, color=colours)
 linegdf.plot(ax=ax, linewidth=1)
-map = folium.Map(location = [13.406,80.110], tiles='OpenStreetMap' , zoom_start = 9)
-
-#plt.show()
+#map = folium.Map(location = [13.406,80.110], tiles='OpenStreetMap' , zoom_start = 9)
+start_point = [waypoints[0][1], waypoints[0][0]]
+ax.annotate("Start", xy=start_point, xytext=(1,1), textcoords='offset points')
+plt.show()
 
 #todo:
 #add a folium map

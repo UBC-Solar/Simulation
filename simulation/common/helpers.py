@@ -2,6 +2,12 @@ import functools
 import numpy as np
 import time as timer
 import datetime
+import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import shapely
+import random
+
 from _datetime import datetime
 from _datetime import date
 
@@ -378,3 +384,50 @@ if __name__ == '__main__':
 
     pass
 
+def route_visualization(coords):
+    """
+    Takes in a list of coordinates and translates those points into a visualizable 
+    route using GeoPanada Library. It labels the starting point and draws a line
+    connecting all the coordinate points
+
+    :Param coords: A NumPy array [n][latitude, longitude]
+
+    Outputs a window that visualizes the route with given coordinates
+    """
+    points = []
+    colours = []
+    num = len(coords) + 1
+    i = 1
+    while(i < num):
+        points.append("Point " + str(i))
+        color = "%06x" % random.randint(0, 0xFFFFFF)
+        color = "#" + color
+        colours.append(color)
+        i += 1
+
+    #Setting the given data coords and points, separated by Lat and Long into a DataFrame
+    #DataFrame is a specific data structure the library panda uses
+    df = pd.DataFrame(coords, points, columns=["Lat", "Long"])
+
+    #Isolating just the Long and Lat points from df and turning them into geometry points
+    geometry = gpd.points_from_xy(df.Long, df.Lat)
+
+    #Turning the df and geometry into a GeoDataFrame
+    geo_df = gpd.GeoDataFrame(df[["Lat", "Long"]], geometry=geometry)
+
+    #Drawing a line using the GeoDataFrame, connecting all the different points
+    part1 = shapely.geometry.LineString(geo_df.geometry)
+    linegdf = gpd.GeoDataFrame({'geometry': [part1]})
+
+    #Plots the line and the different coordinates (points) using Matplotlib
+    f, ax = plt.subplots()
+    ax.set_axis_off()
+    geo_df.plot(ax=ax, legend=True, color=colours)
+    linegdf.plot(ax=ax, linewidth=1)
+
+    #Labels the starting point of the route
+    start_point = [coords[0][1], coords[0][0]]
+    ax.annotate("Start", xy=start_point, xytext=(1,1), textcoords='offset points')
+
+    #shows the plotted points and line
+    plt.show()
