@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from bayes_opt import BayesianOptimization
 from tqdm import tqdm
 
 import simulation
@@ -16,7 +15,6 @@ from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
-from simulation.utils.InputBounds import InputBounds
 
 
 

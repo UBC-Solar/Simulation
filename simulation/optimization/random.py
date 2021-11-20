@@ -1,5 +1,4 @@
 import random
-import numpy as np
 from simulation.optimization.base_optimization import BaseOptimization
 from simulation.utils.InputBounds import InputBounds
 

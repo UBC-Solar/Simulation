@@ -50,7 +50,7 @@ def main():
     # configure these parameters depending on whether optimizing for speed or precision
     # Parameter Explanations: https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb
     # Acquisition Functions: https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation
-    results = optimization.maximize(init_points=10, n_iter=5, kappa=10)
+    results = optimization.maximize(init_points=3, n_iter=1, kappa=10)
     optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True, verbose=False)
     results_random = random_optimization.maximize(iterations=15)
     optimized_random = simulation_model.run_model(speed=np.fromiter(results_random, dtype=float), plot_results=True, verbose=False)
