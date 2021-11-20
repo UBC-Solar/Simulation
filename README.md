@@ -1,4 +1,6 @@
-# Simulation
+# UBC Solar's ASC Simulation
+
+[![Build Status](https://app.travis-ci.com/UBC-Solar/Simulation.svg?branch=master)](https://app.travis-ci.com/UBC-Solar/Simulation)
 
 Welcome to UBC Solar's race strategy simulation environment! The objectve of this simulation is to guide UBC Solar's race strategy by creating a model to predict the performance of the UBC Solar cars in the American Solar Challenge (ASC) and Formula Sun Grand Prix (FSGP). 
 
@@ -10,7 +12,7 @@ For more detailed information on the inner workings of the simulation please ref
 
 ### Prerequisites
 
-- Python 3 (https://www.python.org/downloads/)
+- Python 3.8 or above (https://www.python.org/downloads/)
 - Git version control (https://git-scm.com/downloads)
 - pip Python package installer (should come with your Python installation)
 
@@ -30,7 +32,7 @@ The above command should return a version number if you have Git installed.
 python --version
 ```
 
-NOTE: Python 2.7 is not supported so please make sure that your Python version is in the format 3.x.x.
+NOTE: Any Python version before 3.8 is not supported so please make sure that your Python version is in the format 3.8.x or above.
 
 ### Installing the simulation package
 
@@ -93,6 +95,12 @@ To run the pre-written tests and ensure the simulation package is functioning co
 
 ``` bash
 pytest
+```
+
+To run the tests and show the test coverage, do 
+```
+pip install pytest-cov
+pytest --cov=simulation tests/
 ```
 
 If your terminal returns something like "pytest is not recognized as an internal or external command...", install PyTest by executing the following:

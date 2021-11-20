@@ -1,5 +1,9 @@
+import math
+
 import simulation
 import numpy as np
+import os
+from dotenv import load_dotenv
 
 from simulation.common import helpers
 from simulation.common.constants import EARTH_RADIUS
@@ -10,7 +14,9 @@ import pytest
 def gis():
     # Initialises the GIS object as a PyTest fixture so it can be used in all subsequent test functions
 
-    google_api_key = "AIzaSyCPgIT_5wtExgrIWN_Skl31yIg06XGtEHg"
+    load_dotenv()
+
+    google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
 
     origin_coord = np.array([39.0918, -94.4172])
 
@@ -44,36 +50,19 @@ def test_calculate_closest_gis_indices(gis):
     assert np.all(result == np.array([0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3]))
 
 
-def test_calculate_time_zones1(gis):
-    expected_time_zone = np.array(np.append(np.repeat(-18000., 625 * 2), np.repeat(-21600., 625 * 3)), dtype=np.uint64)
-    test_coord = np.append(np.tile([39.0918, -94.4172], 625 * 2), np.tile([43.6142, -116.2080], 625 * 3)).reshape(
-        625 * 5, 2)
-    result = gis.calculate_time_zones(test_coord)
-    print("test_calculate_time_zones1 result: ")
-    print(result)
-    print("test_calculate_time_zones1 expected: ")
-    print(expected_time_zone)
-    assert np.all(result == expected_time_zone)
+def test_get_time_zones(gis):
+    test_coord = np.tile([39.0918, -94.4172], 625 * 2)
+
+    # Expected time zone checked on https://timezonedb.com/
+    expected_time_zone = np.full(len(test_coord), -18000.)
+
+    test_coord_cumulative_distances = np.cumsum(test_coord)
+
+    test_coord_closest_gis_indices = gis.calculate_closest_gis_indices(cumulative_distances=test_coord_cumulative_distances)
+    result = gis.get_time_zones(test_coord_closest_gis_indices)
 
 
-def test_calculate_time_zones2(gis):
-    expected_time_zone = np.array(np.append(np.append(np.repeat(-25200., 625 * 2),
-                                                      np.repeat(-21600., 625 * 4)),
-                                            np.append(np.repeat(-18000., 625 * 3),
-                                                      np.repeat(-14400., 625 * 1))), dtype=np.uint64)
-    test_coord = np.append(np.append(np.tile([47.123, -122.749], 625 * 2),
-                                     np.tile([43.6142, -116.2080], 625 * 4)),
-                           np.append(np.tile([39.0379, -95.6764], 625 * 3),
-                                     np.tile([42.7292, -76.4512], 625 * 1))).reshape(625 * 10, 2)
-    result = gis.calculate_time_zones(test_coord)
-    assert np.all(result == expected_time_zone)
-
-
-def test_calculate_time_zones3(gis):
-    expected_time_zone = np.array(np.append(np.repeat(-18000, 625), np.repeat(-21600, 625 * 2)), dtype=np.uint64)
-    test_coord = np.append(np.array([39.0918, -94.4172]), np.tile([43.6142, -116.2080], 625 * 3 - 1)).reshape(625 * 3,
-                                                                                                              2)
-    result = gis.calculate_time_zones(test_coord)
+    assert len(test_coord) == len(expected_time_zone)
     assert np.all(result == expected_time_zone)
 
 
