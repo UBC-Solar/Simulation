@@ -2,6 +2,12 @@ import functools
 import numpy as np
 import time as timer
 import datetime
+import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import shapely
+import random
+
 from _datetime import datetime
 from _datetime import date
 
@@ -9,7 +15,6 @@ from matplotlib import pyplot as plt
 from numba import jit, njit
 
 from simulation.common import constants
-
 
 """
 Description: contains the simulation's helper functions.
@@ -67,7 +72,6 @@ def reshape_and_repeat(input_array, reshape_length):
         return result
 
 
-
 def add_acceleration(input_array, acceleration):
     """
     Takes in the speed array with sudden speed changes and an acceleration scalar,
@@ -87,18 +91,19 @@ def add_acceleration(input_array, acceleration):
         # check if accelerate or decelerate
         if array_diff[i] > 0:
             while input_array[i] < input_array[i + 1] and i + 1 < len(input_array) - 1:
-                #print("i'm stuck in this if while loop")
+                # print("i'm stuck in this if while loop")
                 input_array[i + 1] = input_array[i] + acceleration
                 i += 1
 
         else:
             while input_array[i] > input_array[i + 1] and i + 1 < len(input_array) - 1:
-                #print("i'm stuck in this else while loop")
+                # print("i'm stuck in this else while loop")
                 input_array[i + 1] = input_array[i] - acceleration
                 i += 1
 
     return input_array
- 
+
+
 def hour_from_unix_timestamp(unix_timestamp):
     val = datetime.utcfromtimestamp(unix_timestamp)
     return val.hour
@@ -153,6 +158,7 @@ def calculate_path_distances(coords):
 
     return path_distances
 
+
 def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
     """
     Returns the array of wind speed in m/s, in the direction opposite to the
@@ -196,7 +202,7 @@ def calculate_declination_angle(day_of_year):
     """
 
     declination_angle = -23.45 * np.cos(np.radians((np.float_(360) / 365) *
-                                                       (day_of_year + 10)))
+                                                   (day_of_year + 10)))
 
     return declination_angle
 
@@ -310,6 +316,7 @@ def cull_dataset(coords):
 
     return coords[::625]
 
+
 def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     """
     Gets the two terms to calculate and return elevation angle, given the
@@ -324,11 +331,11 @@ def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     Returns: The elevation angle in degrees
     """
     term_1 = np.sin(np.radians(declination_angle)) * \
-        np.sin(np.radians(latitude))
+             np.sin(np.radians(latitude))
 
     term_2 = np.cos(np.radians(declination_angle)) * \
-        np.cos(np.radians(latitude)) * \
-        np.cos(np.radians(hour_angle))
+             np.cos(np.radians(latitude)) * \
+             np.cos(np.radians(hour_angle))
 
     elevation_angle = np.arcsin(term_1 + term_2)
     return np.degrees(elevation_angle)
@@ -367,6 +374,55 @@ def find_runs(x):
         return run_values, run_starts, run_lengths
 
 
+def route_visualization(coords):
+    """
+    Takes in a list of coordinates and translates those points into a visualizable
+    route using GeoPanda Library. It labels the starting point and draws a line
+    connecting all the coordinate points
+
+    :Param coords: A NumPy array [n][latitude, longitude]
+
+    Outputs a window that visualizes the route with given coordinates
+    """
+    points = []
+    colours = []
+    num = len(coords) + 1
+    i = 1
+    while i < num:
+        points.append("Point " + str(i))
+        color = "%06x" % random.randint(0, 0xFFFFFF)
+        color = "#" + color
+        colours.append(color)
+        i += 1
+
+    # Setting the given data coords and points, separated by Lat and Long into a DataFrame
+    # DataFrame is a specific data structure the library panda uses
+    df = pd.DataFrame(coords, points, columns=["Lat", "Long"])
+
+    # Isolating just the Long and Lat points from df and turning them into geometry points
+    geometry = gpd.points_from_xy(df.Long, df.Lat)
+
+    # Turning the df and geometry into a GeoDataFrame
+    geo_df = gpd.GeoDataFrame(df[["Lat", "Long"]], geometry=geometry)
+
+    # Drawing a line using the GeoDataFrame, connecting all the different points
+    part1 = shapely.geometry.LineString(geo_df.geometry)
+    linegdf = gpd.GeoDataFrame({'geometry': [part1]})
+
+    # Plots the line and the different coordinates (points) using Matplotlib
+    f, ax = plt.subplots()
+    ax.set_axis_off()
+    geo_df.plot(ax=ax, legend=True, color=colours)
+    linegdf.plot(ax=ax, linewidth=1)
+
+    # Labels the starting point of the route
+    start_point = [coords[0][1], coords[0][0]]
+    ax.annotate("Start", xy=start_point, xytext=(1, 1), textcoords='offset points')
+
+    # shows the plotted points and line
+    plt.show()
+
+
 if __name__ == '__main__':
     # speed_array input
     speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
@@ -375,6 +431,3 @@ if __name__ == '__main__':
     expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
     expanded_speed_array = add_acceleration(expanded_speed_array, 20)
     print(expanded_speed_array)
-
-    pass
-
