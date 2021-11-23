@@ -61,7 +61,6 @@ class Simulation:
         with open(settings_path) as f:
             args = json.load(f)
 
-
         self.initial_battery_charge = args['initial_battery_charge']
 
         # LVS power loss is pretty small so it is neglected, but we can change it in the future if needed.
@@ -204,6 +203,8 @@ class Simulation:
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
 
             self.__plot_graph(arrays_to_plot, y_label, "Simulation Result")
+
+            helpers.route_visualization(self.gis.path)
 
         return distance_travelled
 
