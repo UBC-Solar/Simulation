@@ -62,7 +62,7 @@ NOTE: Any Python version before 3.8 is not supported so please make sure that yo
 
     If neither work, you either do not have pip installed or are not in the correct directory.
     
-- Because of the addition of Geopandas in our dependency list, ensure you also run the command to install all its dependnecies by running
+- Because of the recent usage Geopandas, ensure you also run the command to install all its dependencies by running
 
   ```bash
   pip install -r requirements.txt
