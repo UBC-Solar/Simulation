@@ -61,6 +61,12 @@ NOTE: Any Python version before 3.8 is not supported so please make sure that yo
     ```
 
     If neither work, you either do not have pip installed or are not in the correct directory.
+    
+- Because of the addition of Geopandas in our dependency list, ensure you also run the command to install all its dependnecies by running
+
+  ```bash
+  pip install -r requirements.txt
+  ```
 
 - If they did work, you should then be able to import the simulation module in your Python (.py) scripts and use the simulation objects as shown below:
 
