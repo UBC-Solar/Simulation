@@ -1,5 +1,3 @@
-import math
-
 import simulation
 import numpy as np
 import os

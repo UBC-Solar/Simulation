@@ -18,8 +18,8 @@ setup(name='simulation',
           'simulation': ['py.typed'],
       },
       install_requires=[
-          'numpy', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn', 'numba',
-          'bayesian_optimization', 'timezonefinder', "python-dotenv", "geopandas"
+          'numpy', 'bokeh', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn', 'numba',
+          'bayesian_optimization', 'timezonefinder', "python-dotenv", 'geopandas'
       ],
       extras_require={
           'mpi': [
