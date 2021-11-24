@@ -374,7 +374,7 @@ def find_runs(x):
         return run_values, run_starts, run_lengths
 
 
-def route_visualization(coords):
+def route_visualization(coords, visible=True):
     """
     Takes in a list of coordinates and translates those points into a visualizable
     route using GeoPanda Library. It labels the starting point and draws a line
@@ -420,7 +420,9 @@ def route_visualization(coords):
     ax.annotate("Start", xy=start_point, xytext=(1, 1), textcoords='offset points')
 
     # shows the plotted points and line
-    plt.show()
+    if visible:
+        plt.show()
+
 
 
 if __name__ == '__main__':

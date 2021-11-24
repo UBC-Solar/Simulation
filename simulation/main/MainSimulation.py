@@ -204,7 +204,7 @@ class Simulation:
 
             self.__plot_graph(arrays_to_plot, y_label, "Simulation Result")
 
-            helpers.route_visualization(self.gis.path)
+            helpers.route_visualization(self.gis.path, visible=True)
 
         return distance_travelled
 
