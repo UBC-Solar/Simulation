@@ -10,6 +10,5 @@ install:
   - pip install geopanda_requirements/GDAL-3.3.3-cp39-cp39-win_amd64.whl
   - pip install geopanda_requirements/Fiona-1.8.20-cp39-cp39-win_amd64.whl
   - pip install -e .
-  - pip install -r requirements.txt
   - pip install pytest-cov
 script: pytest --cov=simulation tests/
