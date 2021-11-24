@@ -1,13 +1,9 @@
-import os
 import sys
-import subprocess
 from setuptools import setup, find_packages
-from distutils.version import LooseVersion
 
 if sys.version_info.major != 3:
     print('This Python is only compatible with Python 3, but you are running '
           'Python {}. The installation will likely fail.'.format(sys.version_info.major))
-
 
 long_description = """
 CI Link
@@ -22,12 +18,13 @@ setup(name='simulation',
           'simulation': ['py.typed'],
       },
       install_requires=[
-          'numpy', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn', 'numba', 'bayesian_optimization', 'timezonefinder', "python-dotenv"
+          'numpy', 'bokeh', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn', 'numba',
+          'bayesian_optimization', 'timezonefinder', "python-dotenv", 'geopandas'
       ],
       extras_require={
-        'mpi': [
-            'mpi4py',
-        ]
+          'mpi': [
+              'mpi4py',
+          ]
       },
       description='UBC Solar\'s simulation environment',
       author='Fisher Xue',

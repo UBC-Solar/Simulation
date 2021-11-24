@@ -204,7 +204,7 @@ class Simulation:
 
             self.__plot_graph(arrays_to_plot, y_label, "Simulation Result")
 
-            helpers.route_visualization(self.gis.path)
+            helpers.route_visualization(self.gis.path, visible=True)
 
         return distance_travelled
 
@@ -303,7 +303,7 @@ class Simulation:
                                   y_axis_label=array_labels[index], x_axis_type="datetime"))
 
             # add line renderers to each figure
-            figures[index].line(self.timestamps[::compress_constant] * 1000 , data_array, line_color=Bokeh8[index], line_width=2)
+            figures[index].line(self.timestamps[::compress_constant] * 1000, data_array, line_color=Bokeh8[index], line_width=2)
 
             figures[index].add_tools(hover_tool)
 
