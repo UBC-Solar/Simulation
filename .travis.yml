@@ -1,14 +1,14 @@
-language: python
-python:
-        - "3.8"
-        - "3.9"
+name: "Python 3.9 on Windows"
+os: windows
+language: shell
 before_install:
-        - python -m pip install --upgrade pip
+  - choco install python --version 3.9.7
+  - python -m pip install --upgrade pip
 # install dependencies
 install:
-        - pip install geopanda_requirements/GDAL-3.3.3-cp39-cp39-win_amd64.whl
-        - pip install geopanda_requirements/Fiona-1.8.20-cp39-cp39-win_amd64.whl
-        - pip install -r requirements.txt
-        - pip install -e .
-        - pip install pytest-cov
+  - pip install geopanda_requirements/GDAL-3.3.3-cp39-cp39-win_amd64.whl
+  - pip install geopanda_requirements/Fiona-1.8.20-cp39-cp39-win_amd64.whl
+  - pip install -r requirements.txt
+  - pip install -e .
+  - pip install pytest-cov
 script: pytest --cov=simulation tests/
