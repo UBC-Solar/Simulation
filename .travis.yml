@@ -4,6 +4,7 @@ language: shell
 before_install:
   - choco install python3 --version 3.9.7
   - python3 -m pip install --upgrade pip
+env: PATH=/c/Python39:/c/Python39/Scripts:$PATH
 # install dependencies
 install:
   - pip install geopanda_requirements/GDAL-3.3.3-cp39-cp39-win_amd64.whl
