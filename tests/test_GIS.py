@@ -1,5 +1,3 @@
-import math
-
 import simulation
 import numpy as np
 import os
@@ -30,6 +28,13 @@ def gis():
                                                  waypoints=waypoints, dest_coord=dest_coord, race_type="ASC")
 
     return location_system
+
+def test_route_visualization(gis):
+    waypoints = np.array([[38.9253374, -95.678453], [38.921052, -95.674689],
+                          [38.9206115, -95.6784807], [38.9211163, -95.6777508],
+                          [38.9233953, -95.6783869]])
+    #The waypoints can be changed to visualize another path
+    helpers.route_visualization(waypoints, visible=False)
 
 
 def test_calculate_closest_gis_indices(gis):

@@ -1,15 +1,25 @@
-import datetime
 import functools
-import time as timer
-from datetime import date
-
 import numpy as np
+import time as timer
+from datetime import datetime
+import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import shapely
+import random
+
+# from _datetime import datetime
+from _datetime import date
+
+from matplotlib import pyplot as plt
+from numba import jit, njit
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
 
 from simulation.common import constants
+
 
 """
 Description: contains the simulation's helper functions.
@@ -94,13 +104,13 @@ def add_acceleration(input_array, acceleration):
         # check if accelerate or decelerate
         if array_diff[i] > 0:
             while input_array[i] < input_array[i + 1] and i + 1 < len(input_array) - 1:
-                # print("i'm stuck in this if while loop")
+                #print("i'm stuck in this if while loop")
                 input_array[i + 1] = input_array[i] + acceleration
                 i += 1
 
         else:
             while input_array[i] > input_array[i + 1] and i + 1 < len(input_array) - 1:
-                # print("i'm stuck in this else while loop")
+                #print("i'm stuck in this else while loop")
                 input_array[i + 1] = input_array[i] - acceleration
                 i += 1
 
@@ -496,5 +506,3 @@ if __name__ == '__main__':
     expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
     expanded_speed_array = add_acceleration(expanded_speed_array, 20)
     print(expanded_speed_array)
-
-    pass
