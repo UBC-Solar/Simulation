@@ -1,25 +1,20 @@
+import datetime
 import functools
-import numpy as np
-import time as timer
-from datetime import datetime
-import pandas as pd
-import geopandas as gpd
-import matplotlib.pyplot as plt
-import shapely
 import random
-
-# from _datetime import datetime
+import time as timer
 from _datetime import date
 
-from matplotlib import pyplot as plt
-from numba import jit, njit
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+import shapely
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
+from matplotlib import pyplot as plt
 
 from simulation.common import constants
-
 
 """
 Description: contains the simulation's helper functions.
@@ -104,13 +99,13 @@ def add_acceleration(input_array, acceleration):
         # check if accelerate or decelerate
         if array_diff[i] > 0:
             while input_array[i] < input_array[i + 1] and i + 1 < len(input_array) - 1:
-                #print("i'm stuck in this if while loop")
+                # print("i'm stuck in this if while loop")
                 input_array[i + 1] = input_array[i] + acceleration
                 i += 1
 
         else:
             while input_array[i] > input_array[i + 1] and i + 1 < len(input_array) - 1:
-                #print("i'm stuck in this else while loop")
+                # print("i'm stuck in this else while loop")
                 input_array[i + 1] = input_array[i] - acceleration
                 i += 1
 
@@ -389,6 +384,21 @@ def find_runs(x):
         return run_values, run_starts, run_lengths
 
 
+def find_multi_index_runs(x):
+    run_values, run_starts, run_lengths = find_runs(x)
+
+    # Find where the run_lengths is greater than one
+    multi_index_run_indices = np.where(run_lengths > 1)
+
+    # Use these new indices to index the existing run_values, run_tarts, run_lengths.
+    # This removes all the runs with length 1
+    multi_index_run_starts = run_starts[multi_index_run_indices]
+    multi_index_run_values = run_values[multi_index_run_indices]
+    multi_index_run_lengths = run_lengths[multi_index_run_indices]
+
+    return multi_index_run_values, multi_index_run_starts, multi_index_run_lengths
+
+
 def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, race_type, timestamps, verbose):
     """
 
@@ -429,13 +439,9 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
 
     if verbose:
         plot_graph(timestamps=timestamps,
-                   arrays_to_plot=[not_charge],
-                   array_labels=["not charge"],
-                   graph_title="not charge")
-        plot_graph(timestamps=timestamps,
-                   arrays_to_plot=[speed_kmh],
-                   array_labels=["updated speed (km/h)"],
-                   graph_title="speed")
+                   arrays_to_plot=[not_charge, speed_kmh],
+                   array_labels=["not charge", "updated speed (km/h)"],
+                   graph_title="not charge and speed")
 
     constrained_speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
 
@@ -445,7 +451,7 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
 def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
     """
 
-        This is a utility function to plot out any set of NumPy arrays you pass into it.
+        This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
         The precondition of this function is that the length of arrays_to_plot and array_labels are equal.
 
         This is because there be a 1:1 mapping of each entry of arrays_to_plot to array_labels such that:
@@ -496,6 +502,74 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
     show(grid)
 
     return
+
+
+def route_visualization(coords, visible=True):
+    """
+    Takes in a list of coordinates and translates those points into a visualizable
+    route using GeoPanda Library. It labels the starting point and draws a line
+    connecting all the coordinate points
+    :Param coords: A NumPy array [n][latitude, longitude]
+    Outputs a window that visualizes the route with given coordinates
+    """
+    points = []
+    colours = []
+    num = len(coords) + 1
+    i = 1
+
+    # TODO: this while loop takes a LONG given a long list of coordinates. Can we change this?
+    while i < num:
+        points.append("Point " + str(i))
+        color = "%06x" % random.randint(0, 0xFFFFFF)
+        color = "#" + color
+        colours.append(color)
+        i += 1
+
+    # Setting the given data coords and points, separated by Lat and Long into a DataFrame
+    # DataFrame is a specific data structure the library panda uses
+    df = pd.DataFrame(coords, points, columns=["Lat", "Long"])
+
+    # Isolating just the Long and Lat points from df and turning them into geometry points
+    geometry = gpd.points_from_xy(df.Long, df.Lat)
+
+    # Turning the df and geometry into a GeoDataFrame
+    geo_df = gpd.GeoDataFrame(df[["Lat", "Long"]], geometry=geometry)
+
+    # Drawing a line using the GeoDataFrame, connecting all the different points
+    part1 = shapely.geometry.LineString(geo_df.geometry)
+    linegdf = gpd.GeoDataFrame({'geometry': [part1]})
+
+    # Plots the line and the different coordinates (points) using Matplotlib
+    f, ax = plt.subplots()
+    ax.set_axis_off()
+    geo_df.plot(ax=ax, legend=True, color=colours)
+    linegdf.plot(ax=ax, linewidth=1)
+
+    # Labels the starting point of the route
+    start_point = [coords[0][1], coords[0][0]]
+    ax.annotate("Start", xy=start_point, xytext=(1, 1), textcoords='offset points')
+
+    # shows the plotted points and line
+    if visible:
+        plt.show()
+
+
+def simple_plot_graph(data, title, visible=True):
+    """
+
+    Args:
+        data: A NumPy[n] array of data to plot
+        title: The graph title
+
+    Result: Displays a graph of the data using Matplotlib
+
+    """
+    fig, ax = plt.subplots()
+    x = np.arange(0, len(data))
+    ax.plot(x, data)
+    plt.title(title)
+    if visible:
+        plt.show()
 
 
 if __name__ == '__main__':

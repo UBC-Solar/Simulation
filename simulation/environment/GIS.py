@@ -1,21 +1,20 @@
+import datetime
 import json
+import logging
 import math
 import os
 import sys
 
 import numpy as np
 import polyline
-import requests
-import datetime
 import pytz
+import requests
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 from tqdm import tqdm
 
 from data.route.__init__ import route_directory
 from simulation.common import helpers
-
-import logging
 
 
 class GIS:
@@ -85,6 +84,11 @@ class GIS:
                 np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
                          origin_coord=self.origin_coord,
                          dest_coord=self.dest_coord, waypoints=self.waypoints)
+        if race_type == "FSGP":
+            self.singlelap_path = self.path
+            self.path = np.tile(self.path, (60, 1))
+            self.path_elevations = np.tile(self.path_elevations, 60)
+            self.path_time_zones = self.calculate_time_zones(self.path)
 
         self.path_distances = helpers.calculate_path_distances(self.path)
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
@@ -250,8 +254,6 @@ class GIS:
 
         url = url_head + url_waypoints + url_end
 
-        # print("url: {}".format(url))
-
         # HTTP GET
         r = requests.get(url)
         response = json.loads(r.text)
@@ -288,11 +290,11 @@ class GIS:
             route = np.delete(route, duplicate_coordinate_indices, axis=0)
 
         return route
-    
+
     def calculate_path_min_max(self):
-      min_lat, min_long = self.path.min(axis=0)
-      max_lat, max_long = self.path.max(axis=0)
-      return [min_long, min_lat, max_long, max_lat]
+        min_lat, min_long = self.path.min(axis=0)
+        max_lat, max_long = self.path.max(axis=0)
+        return [min_long, min_lat, max_long, max_lat]
 
     def calculate_path_elevations(self, coords):
         """
@@ -338,7 +340,7 @@ class GIS:
                 i = i + 1
 
         elif response['status'] == "INVALID_REQUEST":
-                sys.stderr.write("Error: Request was invalid\n")
+            sys.stderr.write("Error: Request was invalid\n")
 
         elif response['status'] == "OVER_DAILY_LIMIT":
             sys.stderr.write(
@@ -406,26 +408,20 @@ class GIS:
 
         return self.current_index
 
-    def tile_route(self, simulation_duration):
-        print(self.path)
-        print(simulation_duration)
-
-
 if __name__ == "__main__":
-
     load_dotenv()
-
     google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
 
     simulation_duration = 1 * 60 * 60
 
-    origin_coord = np.array([38.9266274, -95.6781231])
-
-    waypoints = np.array([[38.9253374, -95.678453], [38.921052, -95.674689],
-                          [38.9206115, -95.6784807], [38.9211163, -95.6777508],
-                          [38.9233953, -95.6783869]])  # Turn 2, Turn 4, Turn 7, Turn 8, Turn 13
-
-    dest_coord = np.array([38.9219577, -95.6776967])
+    origin_coord = np.array([38.9281815, -95.6770217])
+    dest_coord = np.array([38.9282115, -95.6770268])
+    waypoints = np.array([
+        [38.9221906, -95.6762981],
+        [38.9217086, -95.6767896], [38.9189926, -95.6753145], [38.9196768, -95.6724799],
+        [38.9196768, -95.6724799], [38.9247448, -95.6714528], [38.9309102, -95.6749362],
+        [38.928188, -95.6770129]
+    ])
 
     locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints,
                          race_type="FSGP", force_update=False)
@@ -434,5 +430,3 @@ if __name__ == "__main__":
 
     # path = locationSystem.get_path()
     # print(path)
-
-    pass

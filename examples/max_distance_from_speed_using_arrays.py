@@ -1,6 +1,6 @@
-from scipy.sparse.construct import random
-import simulation
 import numpy as np
+
+import simulation
 from simulation.common import helpers
 from simulation.optimization.bayesian import BayesianOptimization
 from simulation.optimization.random import RandomOptimization
@@ -14,10 +14,9 @@ before the battery runs out [speed -> distance].
 
 @helpers.timeit
 def main():
-
     # indicates a constant speed of 35km/h throughout the simulation
 
-    input_speed = np.array([35]*24)
+    input_speed = np.array([50] * 24)
 
     """
     Note: it no longer matters how many elements the input_speed array has, the simulation automatically
@@ -39,7 +38,7 @@ def main():
       Keep in mind, however, that the condition len(input_speed) <= simulation_length must be true
     """
 
-    simulation_model = simulation.Simulation(race_type="ASC")
+    simulation_model = simulation.Simulation(race_type="FSGP")
     distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False)
 
     bounds = InputBounds()

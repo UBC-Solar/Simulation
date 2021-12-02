@@ -1,4 +1,3 @@
-import numpy as np
 from simulation.common import helpers
 from simulation.common.helpers import *
 
@@ -52,7 +51,7 @@ def test_get_day_of_year_leap():
 
 def test_find_runs1():
     """
-    Unit test for helpers.find_runs(x). Tests if it can identify small examples of runs in a small array
+    Unit test for helpers.find_runs(x). Tests if it can identify runs in a small array
     """
     input_array = np.array([1, 1, 3, 4, 4, 4, 4])
     expected_output_run_values = np.array([1, 3, 4])
@@ -64,6 +63,23 @@ def test_find_runs1():
     assert (expected_output_run_values == test_output_run_values).all()
     assert (expected_output_run_starts == test_output_run_starts).all()
     assert (expected_output_run_lengths == test_output_run_lengths).all()
+
+
+def test_multi_index_runs1():
+    """
+    Unit test for helpers.find_multi_index_runs(x). Tests if it can identify multi-index runs in a small array
+    """
+    test_input = np.array([0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 4, 5, 7, 7, 7, 7, 7, 7, 7])
+    expected_multi_index_run_values = np.array([0, 3, 7])
+    expected_multi_index_run_lengths = np.array([7, 3, 7])
+    expected_multi_index_run_starts = np.array([0, 9, 14])
+
+    actual_multi_index_run_values, actual_multi_index_run_starts, actual_multi_index_run_lengths = \
+        helpers.find_multi_index_runs(test_input)
+
+    assert (expected_multi_index_run_values == actual_multi_index_run_values).all()
+    assert (expected_multi_index_run_starts == actual_multi_index_run_starts).all()
+    assert (expected_multi_index_run_lengths == actual_multi_index_run_lengths).all()
 
 
 if __name__ == "__main__":

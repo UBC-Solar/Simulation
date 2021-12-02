@@ -1,29 +1,20 @@
 import datetime
 import json
-import sys
 import os
-from bokeh.io.doc import curdoc
-from dotenv import load_dotenv
 
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sns
 from bayes_opt import BayesianOptimization
-from tqdm import tqdm
+from bokeh.layouts import gridplot
+from bokeh.models import HoverTool
+from bokeh.palettes import Bokeh8
+from bokeh.plotting import figure, show, output_file
+from dotenv import load_dotenv
 
 import simulation
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
-
-from bokeh.plotting import figure, show, output_file
-from bokeh.layouts import gridplot
-from bokeh.models import HoverTool
-
-from bokeh.palettes import Bokeh8
-
 
 
 class Simulation:
@@ -60,7 +51,6 @@ class Simulation:
 
         with open(settings_path) as f:
             args = json.load(f)
-
 
         self.initial_battery_charge = args['initial_battery_charge']
 
@@ -159,6 +149,7 @@ class Simulation:
 
             # Don't plot results since this code is run by the optimizer
             plot_results = False
+            verbose=False
 
         # ----- Reshape speed array -----
 
@@ -207,8 +198,10 @@ class Simulation:
                                arrays_to_plot=arrays_to_plot,
                                array_labels=y_label,
                                graph_title="Simulation Result")
-
-            helpers.route_visualization(self.gis.path, visible=True)
+            if self.race_type == "FSGP":
+                helpers.route_visualization(self.gis.singlelap_path, visible=True)
+            elif self.race_type == "ASC":
+                helpers.route_visualization(self.gis.path, visible=True)
 
         return distance_travelled
 
@@ -293,7 +286,7 @@ class Simulation:
 
         for index, array in enumerate(arrays_to_plot):
             arrays_to_plot[index] = array[::compress_constant]
-        
+
         figures = list()
 
         hover_tool = HoverTool()
@@ -309,7 +302,8 @@ class Simulation:
                                   y_axis_label=array_labels[index], x_axis_type="datetime"))
 
             # add line renderers to each figure
-            figures[index].line(self.timestamps[::compress_constant] * 1000, data_array, line_color=Bokeh8[index], line_width=2)
+            figures[index].line(self.timestamps[::compress_constant] * 1000, data_array, line_color=Bokeh8[index],
+                                line_width=2)
 
             figures[index].add_tools(hover_tool)
 
@@ -358,6 +352,7 @@ class Simulation:
         """
 
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
+
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
         path_distances = self.gis.path_distances
@@ -453,13 +448,11 @@ class Simulation:
         if verbose:
 
             helpers.plot_graph(timestamps=self.timestamps,
-                               arrays_to_plot=[temp, closest_gis_indices, closest_weather_indices],
-                               array_labels=["speed dist (m)", "gis ind", "weather ind"],
-                               graph_title="Distances and ""indices")
-            helpers.plot_graph(timestamps=self.timestamps,
-                               arrays_to_plot=[gradients, time_zones, gis_vehicle_bearings],
-                               array_labels=["gradients (m)", "time zones", "vehicle bearings"],
-                               graph_title="Environment variables")
+                               arrays_to_plot=[temp, closest_gis_indices, closest_weather_indices, gradients,
+                                               time_zones, gis_vehicle_bearings],
+                               array_labels=["speed dist (m)", "gis ind", "weather ind", "gradients (m)", "time zones",
+                                             "vehicle bearings"],
+                               graph_title="Indices and Environment variables")
             arrays_to_plot = [speed_kmh, state_of_charge]
 
             for arr in [state_of_charge, not_charge]:
