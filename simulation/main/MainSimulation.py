@@ -199,9 +199,10 @@ class Simulation:
                                array_labels=y_label,
                                graph_title="Simulation Result")
             if self.race_type == "FSGP":
-                helpers.route_visualization(self.gis.singlelap_path, visible=True)
+                # Do this so I'm not plotting the entire 300 laps which will look the same as one lap anyway.
+                helpers.route_visualization(self.gis.singlelap_path, visible=verbose)
             elif self.race_type == "ASC":
-                helpers.route_visualization(self.gis.path, visible=True)
+                helpers.route_visualization(self.gis.path, visible=verbose)
 
         return distance_travelled
 

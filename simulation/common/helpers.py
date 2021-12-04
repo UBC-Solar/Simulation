@@ -426,17 +426,12 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
                                            start_hour + simulation_duration / (60 * 60)).astype(int)
 
     if race_type == "ASC":
-        driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
-
-        not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
+        driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 18]
     elif race_type == "FSGP":
         driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
-
-        not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
     else:
         raise ValueError(f"Invalid race_type provided: \"{race_type}\". Must be one of \"ASC\" or \"FSGP\".")
-    # ----- Apply Timing Constraints to Speed Array -----
-
+    not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
     if verbose:
         plot_graph(timestamps=timestamps,
                    arrays_to_plot=[not_charge, speed_kmh],

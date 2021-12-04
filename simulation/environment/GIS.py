@@ -86,8 +86,9 @@ class GIS:
                          dest_coord=self.dest_coord, waypoints=self.waypoints)
         if race_type == "FSGP":
             self.singlelap_path = self.path
-            self.path = np.tile(self.path, (60, 1))
-            self.path_elevations = np.tile(self.path_elevations, 60)
+            # TODO: Parameterize this (Do I need to?) Ask the team...
+            self.path = np.tile(self.path, (300, 1))
+            self.path_elevations = np.tile(self.path_elevations, 300)
             self.path_time_zones = self.calculate_time_zones(self.path)
 
         self.path_distances = helpers.calculate_path_distances(self.path)
