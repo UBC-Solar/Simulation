@@ -394,7 +394,7 @@ def route_visualization(coords, visible=True):
 
     fig = px.line_mapbox(points, lat=lat, lon=lon, hover_name=points, zoom=3, height=800)
 
-    fig.update_layout(mapbox_style="open-street-map", mapbox_zoom=5, mapbox_center_lat = 41,
+    fig.update_layout(mapbox_style="stamen-terrain", mapbox_zoom=5, mapbox_center_lat = 41,
     margin={"r":0,"t":0,"l":0,"b":0})
 
     # shows the plotted points and line
