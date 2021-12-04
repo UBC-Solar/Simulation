@@ -2,11 +2,8 @@ import functools
 import numpy as np
 import time as timer
 import datetime
-import pandas as pd
-import geopandas as gpd
 import matplotlib.pyplot as plt
-import shapely
-import random
+import plotly.express as px
 
 from _datetime import datetime
 from _datetime import date
@@ -385,43 +382,24 @@ def route_visualization(coords, visible=True):
     Outputs a window that visualizes the route with given coordinates
     """
     points = []
-    colours = []
-    num = len(coords) + 1
-    i = 1
+    lat = []
+    lon = []
+    num = len(coords)
+    i = 0
     while i < num:
         points.append("Point " + str(i))
-        color = "%06x" % random.randint(0, 0xFFFFFF)
-        color = "#" + color
-        colours.append(color)
+        lat.append(coords[i][0])
+        lon.append(coords[i][1])
         i += 1
 
-    # Setting the given data coords and points, separated by Lat and Long into a DataFrame
-    # DataFrame is a specific data structure the library panda uses
-    df = pd.DataFrame(coords, points, columns=["Lat", "Long"])
+    fig = px.line_mapbox(points, lat=lat, lon=lon, hover_name=points, zoom=3, height=800)
 
-    # Isolating just the Long and Lat points from df and turning them into geometry points
-    geometry = gpd.points_from_xy(df.Long, df.Lat)
-
-    # Turning the df and geometry into a GeoDataFrame
-    geo_df = gpd.GeoDataFrame(df[["Lat", "Long"]], geometry=geometry)
-
-    # Drawing a line using the GeoDataFrame, connecting all the different points
-    part1 = shapely.geometry.LineString(geo_df.geometry)
-    linegdf = gpd.GeoDataFrame({'geometry': [part1]})
-
-    # Plots the line and the different coordinates (points) using Matplotlib
-    f, ax = plt.subplots()
-    ax.set_axis_off()
-    geo_df.plot(ax=ax, legend=True, color=colours)
-    linegdf.plot(ax=ax, linewidth=1)
-
-    # Labels the starting point of the route
-    start_point = [coords[0][1], coords[0][0]]
-    ax.annotate("Start", xy=start_point, xytext=(1, 1), textcoords='offset points')
+    fig.update_layout(mapbox_style="open-street-map", mapbox_zoom=5, mapbox_center_lat = 41,
+    margin={"r":0,"t":0,"l":0,"b":0})
 
     # shows the plotted points and line
     if visible:
-        plt.show()
+        fig.show()
 
 
 
