@@ -1,29 +1,20 @@
 import datetime
 import json
-import sys
 import os
-from bokeh.io.doc import curdoc
-from dotenv import load_dotenv
 
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sns
 from bayes_opt import BayesianOptimization
-from tqdm import tqdm
+from bokeh.layouts import gridplot
+from bokeh.models import HoverTool
+from bokeh.palettes import Bokeh8
+from bokeh.plotting import figure, show, output_file
+from dotenv import load_dotenv
 
 import simulation
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
-
-from bokeh.plotting import figure, show, output_file
-from bokeh.layouts import gridplot
-from bokeh.models import HoverTool
-
-from bokeh.palettes import Bokeh8
-
 
 
 class Simulation:
@@ -158,6 +149,7 @@ class Simulation:
 
             # Don't plot results since this code is run by the optimizer
             plot_results = False
+            verbose=False
 
         # ----- Reshape speed array -----
 
@@ -202,9 +194,15 @@ class Simulation:
             y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
 
-            self.__plot_graph(arrays_to_plot, y_label, "Simulation Result")
-
-            helpers.route_visualization(self.gis.path, visible=True)
+            helpers.plot_graph(timestamps=self.timestamps,
+                               arrays_to_plot=arrays_to_plot,
+                               array_labels=y_label,
+                               graph_title="Simulation Result")
+            if self.race_type == "FSGP":
+                # Do this so I'm not plotting the entire 300 laps which will look the same as one lap anyway.
+                helpers.route_visualization(self.gis.singlelap_path, visible=verbose)
+            elif self.race_type == "ASC":
+                helpers.route_visualization(self.gis.path, visible=verbose)
 
         return distance_travelled
 
@@ -255,10 +253,11 @@ class Simulation:
 
         arrays_to_plot = self.__run_simulation_calculations(speed_result, verbose=False)
 
-        self.__plot_graph(arrays_to_plot.arrays,
-                          ["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                           "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"],
-                          "Optimized Result")
+        helpers.plot_graph(timestamps=self.timestamps, arrays_to_plot=arrays_to_plot.arrays,
+                           array_labels=["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                                         "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
+                                         "Cloud cover (%)"],
+                           graph_title="Optimized Result")
 
         return optimizer.max
 
@@ -280,14 +279,15 @@ class Simulation:
             graph_title: A string that serves as the plot's main title
 
         Result:
-            Produces a 3 x ceil(len(arrays_to_plot) / 3) plot
+            If number of plots is even, produces a 2 x (len(arrays_to_plot) / 2) plot
+            If number of plots is odd, produces a 1 x len(arrays_to_plot) plot
 
         """
         compress_constant = int(self.timestamps.shape[0] / 5000)
 
         for index, array in enumerate(arrays_to_plot):
             arrays_to_plot[index] = array[::compress_constant]
-        
+
         figures = list()
 
         hover_tool = HoverTool()
@@ -303,7 +303,8 @@ class Simulation:
                                   y_axis_label=array_labels[index], x_axis_type="datetime"))
 
             # add line renderers to each figure
-            figures[index].line(self.timestamps[::compress_constant] * 1000, data_array, line_color=Bokeh8[index], line_width=2)
+            figures[index].line(self.timestamps[::compress_constant] * 1000, data_array, line_color=Bokeh8[index],
+                                line_width=2)
 
             figures[index].add_tools(hover_tool)
 
@@ -325,35 +326,18 @@ class Simulation:
         tick_array = np.diff(self.timestamps)
         tick_array = np.insert(tick_array, 0, 0)
 
-        # ----- Setting up Timing Constraints -----
-
-        # Implementing day start/end charging (Charge from 7am-9am and 6pm-8pm) for ASC and
-        # (Charge from 8am-9am and 6pm-8pm) for FSGP
-        # ASC: 13 Hours of Race Day, 9 Hours of Driving
-
-        simulation_hours = np.arange(self.start_hour, self.start_hour + self.simulation_duration / (60 * 60))
-
-        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
-                                               self.start_hour + self.simulation_duration / (60 * 60)).astype(int)
-
-        driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
-
-        not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
-
-        # ----- Apply Timing Constraints to Speed Array -----
-
-        speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+        speed_kmh, not_charge = helpers.apply_race_timing_constraints(speed_kmh=speed_kmh, start_hour=self.start_hour,
+                                                                      simulation_duration=self.simulation_duration,
+                                                                      race_type=self.race_type,
+                                                                      timestamps=self.timestamps,
+                                                                      verbose=verbose)
 
         # Acceleration currently is broken and I'm not sure why. Have to take another look at this soon.
         # speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
-        if verbose:
-            self.__plot_graph([not_charge], ["not charge"], "not charge")
-            self.__plot_graph([speed_kmh], ["updated speed (km/h)"], "speed")
-
         # ----- Expected distance estimate -----
 
-        # Array of cumulative distances obtained from the timestamps
+        # Array of cumulative distances theoretically achievable via the speed array
 
         distances = tick_array * speed_kmh / 3.6
         cumulative_distances = np.cumsum(distances)
@@ -369,6 +353,7 @@ class Simulation:
         """
 
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
+
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
         path_distances = self.gis.path_distances
@@ -462,20 +447,23 @@ class Simulation:
         # at night the car does not move
 
         if verbose:
-            self.__plot_graph([temp, closest_gis_indices, closest_weather_indices],
-                              ["speed dist (m)", "gis ind", "weather ind"], "Distances and indices")
-            self.__plot_graph([gradients, time_zones, gis_vehicle_bearings],
-                              ["gradients (m)", "time zones", "vehicle bearings"], "Environment variables")
+
+            helpers.plot_graph(timestamps=self.timestamps,
+                               arrays_to_plot=[temp, closest_gis_indices, closest_weather_indices, gradients,
+                                               time_zones, gis_vehicle_bearings],
+                               array_labels=["speed dist (m)", "gis ind", "weather ind", "gradients (m)", "time zones",
+                                             "vehicle bearings"],
+                               graph_title="Indices and Environment variables")
             arrays_to_plot = [speed_kmh, state_of_charge]
 
             for arr in [state_of_charge, not_charge]:
                 speed_kmh = np.logical_and(speed_kmh, arr) * speed_kmh
                 arrays_to_plot.append(speed_kmh)
 
-            self.__plot_graph(
-                arrays_to_plot,
-                ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
-                "Speed Boolean Operations")
+            helpers.plot_graph(timestamps=self.timestamps,
+                               arrays_to_plot=arrays_to_plot,
+                               array_labels=["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
+                               graph_title="Speed Boolean Operations")
         else:
             speed_kmh = np.logical_and(not_charge, state_of_charge) * speed_kmh
 
