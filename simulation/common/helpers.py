@@ -4,6 +4,7 @@ import time as timer
 import datetime
 import matplotlib.pyplot as plt
 import plotly.express as px
+import pandas as pd
 
 from _datetime import datetime
 from _datetime import date
@@ -371,7 +372,8 @@ def find_runs(x):
         return run_values, run_starts, run_lengths
 
 
-def route_visualization(coords, visible=True):
+def route_visualization(coords, elevation, speed, distances, state_of_charge, solar_irradiances,
+                        cloud_cover, wind_speeds, visible=True):
     """
     Takes in a list of coordinates and translates those points into a visualizable
     route using GeoPanda Library. It labels the starting point and draws a line
@@ -392,7 +394,13 @@ def route_visualization(coords, visible=True):
         lon.append(coords[i][1])
         i += 1
 
-    fig = px.line_mapbox(points, lat=lat, lon=lon, hover_name=points, zoom=3, height=800)
+    
+    dataframe = pd.DataFrame(list(zip(points, lat, lon, elevation, speed, distances, state_of_charge, solar_irradiances, cloud_cover, wind_speeds)),
+                            columns=["Point", "Latitude", "Longitude", "Elevation", "Speed kmh", "Distance", 
+                            "State of Charge", "Solar Irradiance", "Cloud Coverage", "Wind Speeds"])
+
+    fig = px.line_mapbox(dataframe, lat="Latitude", lon="Longitude", hover_name=points, hover_data=["Elevation", "Speed kmh", "Distance", 
+                            "State of Charge", "Solar Irradiance", "Cloud Coverage", "Wind Speeds"], zoom=3, height=800)
 
     fig.update_layout(mapbox_style="stamen-terrain", mapbox_zoom=5, mapbox_center_lat = 41,
     margin={"r":0,"t":0,"l":0,"b":0})

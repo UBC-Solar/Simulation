@@ -204,7 +204,8 @@ class Simulation:
 
             self.__plot_graph(arrays_to_plot, y_label, "Simulation Result")
 
-            helpers.route_visualization(self.gis.path, visible=True)
+            helpers.route_visualization(self.gis.path, self.gis.path_elevations, speed_kmh, distances, state_of_charge,
+                                        solar_irradiances ,cloud_covers, wind_speeds, visible=True)
 
         return distance_travelled
 
