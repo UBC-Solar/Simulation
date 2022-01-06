@@ -14,5 +14,3 @@ class BayesianOptimization(BaseOptimization):
     self.bestinput = list(self.result["params"].values())
     self.target = self.result["target"]
     return self.bestinput
-
-    
