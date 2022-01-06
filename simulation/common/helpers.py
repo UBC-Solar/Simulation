@@ -553,6 +553,7 @@ def simple_plot_graph(data, title, visible=True):
     """
 
     Args:
+        visible: A control flag specifying if the plot should be shown
         data: A NumPy[n] array of data to plot
         title: The graph title
 
@@ -565,6 +566,63 @@ def simple_plot_graph(data, title, visible=True):
     plt.title(title)
     if visible:
         plt.show()
+
+
+def calculate_race_completion_time(path_length, cumulative_distances):
+    """
+    This function uses the maximum path distance and cumulative distances travelled
+    during the simulation to identify how long the car takes to finish travelling the route.
+
+    This problem, although framed in the context of the Simulation, is just to find the array position of the first
+    value that is greater or equal to a target value
+
+    Args:
+        path_length: The length of the path the vehicle travels on
+        cumulative_distances: A NumPy array representing the cumulative distanced travelled by the vehicle
+
+    Pre-Conditions:
+        path_length and cumulative_distances may be in any length unit, but they must share the same length unit
+        Each index of the cumulative_distances array represents one second of the Simulation
+
+    Returns: The number of seconds the vehicle requires to travel the full path length.
+    If vehicle does not travel the full path length, returns float('inf').
+
+    """
+    # Create a boolean array to encode whether the vehicle has completed or not completed the route at a given timestamp
+    # This is based on the assumption that each index represents a single timestamp of one second
+    crossed_finish_line = np.where(cumulative_distances >= path_length, 1, 0)
+
+    # Based on the boolean encoding, identify the first index which the vehicle has completed the route
+    completion_index = np.where(crossed_finish_line == 1)
+
+    if len(completion_index[0]) > 0:
+        return completion_index[0][0]
+    else:
+        return float('inf')
+
+
+def plot_longitudes(coordinates):
+    """
+    Plots the longitudes of a set of coordinates. Meant to support Simulation development and verification of route data.
+    Args:
+        coordinates: A NumPy array (float[N][longitude, latitude]) representing a path of coordinates
+
+    Returns: Nothing, but plots the longitudes
+
+    """
+    simple_plot_graph(coordinates[:, 0], "Longitudes")
+
+
+def plot_latitudes(coordinates):
+    """
+    Plots the latitudes of a set of coordinates. Meant to support Simulation development and verification of route data.
+    Args:
+        coordinates: A NumPy array (float[N][longitude, latitude]) representing a path of coordinates
+
+    Returns: Nothing, but plots the latitudes
+
+    """
+    simple_plot_graph(coordinates[:, 1], "Latitudes")
 
 
 if __name__ == '__main__':
