@@ -2,6 +2,50 @@ from simulation.common import helpers
 from simulation.common.helpers import *
 
 
+def test_calculate_race_completion_time1():
+    """
+    Tests the case of completing race at the final timestamp
+    """
+    test_path_length = 10
+    test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
+
+    result = helpers.calculate_race_completion_time(test_path_length, test_cumulative_distances)
+    assert result == 8
+
+
+def test_calculate_race_completion_time2():
+    """
+    Tests the case of not completing the race.
+    """
+    test_path_length = 100
+    test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
+
+    result = helpers.calculate_race_completion_time(test_path_length, test_cumulative_distances)
+    assert result == float("inf")
+
+
+def test_calculate_race_completion_time3():
+    """
+    Tests the case of completing the race immediately
+    """
+    test_path_length = 0
+    test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
+
+    result = helpers.calculate_race_completion_time(test_path_length, test_cumulative_distances)
+    assert result == 0
+
+
+def test_calculate_race_completion_time4():
+    """
+    Tests the case of completing the race at an arbitrary index in the simulation
+    """
+    test_path_length = 3
+    test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
+
+    result = helpers.calculate_race_completion_time(test_path_length, test_cumulative_distances)
+    assert result == 5
+
+
 def test_check_for_non_consecutive_zeros():
     test_array_true = np.array([1, 2, 3, 0, 0, 1, 5, 0, 3, 0, 0, 0])
     test_array_false = np.array([1, 3, 4, 5, 0, 0, 0, 0, 0])
