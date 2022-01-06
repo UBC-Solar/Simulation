@@ -86,7 +86,6 @@ class GIS:
                          dest_coord=self.dest_coord, waypoints=self.waypoints)
         if race_type == "FSGP":
             self.singlelap_path = self.path
-            # TODO: Parameterize this (Do I need to?) Ask the team...
             self.path = np.tile(self.path, (300, 1))
             self.path_elevations = np.tile(self.path_elevations, 300)
             self.path_time_zones = self.calculate_time_zones(self.path)
@@ -408,6 +407,7 @@ class GIS:
         self.current_index = self.current_index - 1
 
         return self.current_index
+
 
 if __name__ == "__main__":
     load_dotenv()
