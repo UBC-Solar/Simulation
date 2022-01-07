@@ -7,6 +7,8 @@ before_install:
 env: PATH=/c/Python39:/c/Python39/Scripts:$PATH
 # install dependencies
 install:
+  - pip install simulation/config/geopandas_requirements/gdal-3.3.3-cp39-cp39-win_amd64.whl
+  - pip install simulation/config/geopandas_requirements/Fiona-1.8.20-cp39-cp39-win_amd64.whl
   - pip install -e .
   - pip install pytest-cov
 script: pytest --cov=simulation tests/
