@@ -18,7 +18,7 @@ setup(name='simulation',
           'simulation': ['py.typed'],
       },
       install_requires=[
-          'numpy', 'bokeh', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn', 'numba',
+          'numpy', 'bokeh', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn',
           'bayesian_optimization', 'timezonefinder', "python-dotenv", "geopandas"
       ],
       extras_require={

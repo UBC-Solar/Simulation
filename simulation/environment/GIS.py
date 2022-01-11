@@ -87,6 +87,7 @@ class GIS:
         if race_type == "FSGP":
             self.singlelap_path = self.path
             self.path = np.tile(self.path, (300, 1))
+            self.singlelap_path_elevations = self.path_elevations
             self.path_elevations = np.tile(self.path_elevations, 300)
             self.path_time_zones = self.calculate_time_zones(self.path)
 
