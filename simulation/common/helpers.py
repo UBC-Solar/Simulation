@@ -423,7 +423,6 @@ def route_visualization(coords, elevation, speed, distances, state_of_charge, so
             wind_speeds[j] = round(wind_speeds[j], significant_number)
         j += 1
 
-    
     # Need to double check the units of measurement 
     dataframe = pd.DataFrame(list(zip(points, lat, lon, elevation, speed, distances, state_of_charge, solar_irradiances, cloud_cover, wind_speeds)),
                             columns=["Point", "Latitude ", "Longitude ", "Elevation (m) ", "Speed (km/h) ", "Distance (km) ", 
