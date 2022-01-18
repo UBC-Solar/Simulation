@@ -1,4 +1,6 @@
+from dis import dis
 import functools
+from turtle import distance
 import numpy as np
 import time as timer
 import datetime
@@ -383,24 +385,52 @@ def route_visualization(coords, elevation, speed, distances, state_of_charge, so
 
     Outputs a window that visualizes the route with given coordinates
     """
+    significant_number = 3
+    maxIndexElevation = len(elevation)
+    maxIndexDistance = len(distances)
+    maxIndexStateofCharge = len(state_of_charge)
+    maxIndexSolarIrrandiances = len(solar_irradiances)
+    maxIndexCloudCover = len(cloud_cover)
+    maxIndexWindSpeeds = len(wind_speeds)
     points = []
     lat = []
     lon = []
     num = len(coords)
     i = 0
+
+    # Sets up the coordinate points for long and lat
     while i < num:
         points.append("Point " + str(i))
         lat.append(coords[i][0])
         lon.append(coords[i][1])
         i += 1
 
-    
-    dataframe = pd.DataFrame(list(zip(points, lat, lon, elevation, speed, distances, state_of_charge, solar_irradiances, cloud_cover, wind_speeds)),
-                            columns=["Point", "Latitude", "Longitude", "Elevation", "Speed kmh", "Distance", 
-                            "State of Charge", "Solar Irradiance", "Cloud Coverage", "Wind Speeds"])
+    # Truncates the demical values to three significant digits
+    j = 0
+    while j < max(maxIndexElevation, maxIndexDistance, maxIndexStateofCharge, 
+                  maxIndexSolarIrrandiances, maxIndexCloudCover, maxIndexWindSpeeds):
+        if (j < maxIndexElevation):
+            elevation[j] = round(elevation[j], significant_number)
+        if (j < maxIndexDistance):
+            distances[j] = round(distances[j], significant_number)
+        if (j < maxIndexStateofCharge):
+            state_of_charge[j] = round(state_of_charge[j], significant_number)
+        if (j < maxIndexSolarIrrandiances):
+            solar_irradiances[j] = round(solar_irradiances[j], significant_number)
+        if (j < maxIndexCloudCover):
+            cloud_cover[j] = round(cloud_cover[j], significant_number)
+        if (j < maxIndexWindSpeeds):
+            wind_speeds[j] = round(wind_speeds[j], significant_number)
+        j += 1
 
-    fig = px.line_mapbox(dataframe, lat="Latitude", lon="Longitude", hover_name=points, hover_data=["Elevation", "Speed kmh", "Distance", 
-                            "State of Charge", "Solar Irradiance", "Cloud Coverage", "Wind Speeds"], zoom=3, height=800)
+    
+    # Need to double check the units of measurement 
+    dataframe = pd.DataFrame(list(zip(points, lat, lon, elevation, speed, distances, state_of_charge, solar_irradiances, cloud_cover, wind_speeds)),
+                            columns=["Point", "Latitude ", "Longitude ", "Elevation (m) ", "Speed (km/h) ", "Distance (km) ", 
+                            "State of Charge (%) ", "Solar Irradiance (W/m²) ", "Cloud Coverage (%) ", "Wind Speeds (km/h) "])
+
+    fig = px.line_mapbox(dataframe, lat="Latitude ", lon="Longitude ", hover_name=points, hover_data=["Elevation (m) ", "Speed (km/h) ", "Distance (km) ", 
+                            "State of Charge (%) ", "Solar Irradiance (W/m²) ", "Cloud Coverage (%) ", "Wind Speeds (km/h) "], zoom=3, height=800)
 
     fig.update_layout(mapbox_style="stamen-terrain", mapbox_zoom=5, mapbox_center_lat = 41,
     margin={"r":0,"t":0,"l":0,"b":0})
