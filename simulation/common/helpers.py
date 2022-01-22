@@ -374,8 +374,7 @@ def find_runs(x):
         return run_values, run_starts, run_lengths
 
 
-def route_visualization(coords, elevation, speed, distances, state_of_charge, solar_irradiances,
-                        cloud_cover, wind_speeds, visible=True):
+def route_visualization(coords, visible=True):
     """
     Takes in a list of coordinates and translates those points into a visualizable
     route using GeoPanda Library. It labels the starting point and draws a line
@@ -385,13 +384,14 @@ def route_visualization(coords, elevation, speed, distances, state_of_charge, so
 
     Outputs a window that visualizes the route with given coordinates
     """
-    significant_number = 3
-    maxIndexElevation = len(elevation)
-    maxIndexDistance = len(distances)
-    maxIndexStateofCharge = len(state_of_charge)
-    maxIndexSolarIrrandiances = len(solar_irradiances)
-    maxIndexCloudCover = len(cloud_cover)
-    maxIndexWindSpeeds = len(wind_speeds)
+    # significant_number = 3
+    # maxIndexElevation = len(elevation)
+    # maxIndexDistance = len(distances)
+    # maxIndexStateofCharge = len(state_of_charge)
+    # maxIndexSolarIrrandiances = len(solar_irradiances)
+    # maxIndexCloudCover = len(cloud_cover)
+    # maxIndexWindSpeeds = len(wind_speeds)
+
     points = []
     lat = []
     lon = []
@@ -406,30 +406,33 @@ def route_visualization(coords, elevation, speed, distances, state_of_charge, so
         i += 1
 
     # Truncates the demical values to three significant digits
-    j = 0
-    while j < max(maxIndexElevation, maxIndexDistance, maxIndexStateofCharge, 
-                  maxIndexSolarIrrandiances, maxIndexCloudCover, maxIndexWindSpeeds):
-        if (j < maxIndexElevation):
-            elevation[j] = round(elevation[j], significant_number)
-        if (j < maxIndexDistance):
-            distances[j] = round(distances[j], significant_number)
-        if (j < maxIndexStateofCharge):
-            state_of_charge[j] = round(state_of_charge[j], significant_number)
-        if (j < maxIndexSolarIrrandiances):
-            solar_irradiances[j] = round(solar_irradiances[j], significant_number)
-        if (j < maxIndexCloudCover):
-            cloud_cover[j] = round(cloud_cover[j], significant_number)
-        if (j < maxIndexWindSpeeds):
-            wind_speeds[j] = round(wind_speeds[j], significant_number)
-        j += 1
+    # j = 0
+    # while j < max(maxIndexElevation, maxIndexDistance, maxIndexStateofCharge, 
+    #               maxIndexSolarIrrandiances, maxIndexCloudCover, maxIndexWindSpeeds):
+    #     if (j < maxIndexElevation):
+    #         elevation[j] = round(elevation[j], significant_number)
+    #     if (j < maxIndexDistance):
+    #         distances[j] = round(distances[j], significant_number)
+    #     if (j < maxIndexStateofCharge):
+    #         state_of_charge[j] = round(state_of_charge[j], significant_number)
+    #     if (j < maxIndexSolarIrrandiances):
+    #         solar_irradiances[j] = round(solar_irradiances[j], significant_number)
+    #     if (j < maxIndexCloudCover):
+    #         cloud_cover[j] = round(cloud_cover[j], significant_number)
+    #     if (j < maxIndexWindSpeeds):
+    #         wind_speeds[j] = round(wind_speeds[j], significant_number)
+    #     j += 1
 
-    # Need to double check the units of measurement 
-    dataframe = pd.DataFrame(list(zip(points, lat, lon, elevation, speed, distances, state_of_charge, solar_irradiances, cloud_cover, wind_speeds)),
-                            columns=["Point", "Latitude ", "Longitude ", "Elevation (m) ", "Speed (km/h) ", "Distance (km) ", 
-                            "State of Charge (%) ", "Solar Irradiance (W/m²) ", "Cloud Coverage (%) ", "Wind Speeds (km/h) "])
+    # dataframe = pd.DataFrame(list(zip(points, lat, lon, elevation, speed, distances, state_of_charge, solar_irradiances, cloud_cover, wind_speeds)),
+    #                         columns=["Point", "Latitude ", "Longitude ", "Elevation (m) ", "Speed (km/h) ", "Distance (km) ", 
+    #                         "State of Charge (%) ", "Solar Irradiance (W/m²) ", "Cloud Coverage (%) ", "Wind Speeds (km/h) "])
 
-    fig = px.line_mapbox(dataframe, lat="Latitude ", lon="Longitude ", hover_name=points, hover_data=["Elevation (m) ", "Speed (km/h) ", "Distance (km) ", 
-                            "State of Charge (%) ", "Solar Irradiance (W/m²) ", "Cloud Coverage (%) ", "Wind Speeds (km/h) "], zoom=3, height=800)
+    # fig = px.line_mapbox(dataframe, lat="Latitude ", lon="Longitude ", hover_name=points, hover_data=["Elevation (m) ", "Speed (km/h) ", "Distance (km) ", 
+    #                         "State of Charge (%) ", "Solar Irradiance (W/m²) ", "Cloud Coverage (%) ", "Wind Speeds (km/h) "], zoom=3, height=800)
+
+    dataframe = pd.DataFrame(coords, points, columns=["Latitude", "Longitude"])
+
+    fig = px.line_mapbox(dataframe, lat="Latitude", lon="Longitude", hover_name=points, zoom=3, height=800)
 
     fig.update_layout(mapbox_style="stamen-terrain", mapbox_zoom=5, mapbox_center_lat = 41,
     margin={"r":0,"t":0,"l":0,"b":0})
