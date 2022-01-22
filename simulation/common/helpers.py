@@ -1,21 +1,10 @@
-from dis import dis
-import functools
-from turtle import distance
-import numpy as np
-import time as timer
 import datetime
-import matplotlib.pyplot as plt
-import plotly.express as px
-import pandas as pd
+import functools
+import time as timer
 
-from _datetime import datetime
-import random
-from _datetime import date
-
-import geopandas as gpd
 import numpy as np
 import pandas as pd
-import shapely
+import plotly.express as px
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
@@ -203,8 +192,8 @@ def get_day_of_year(day, month, year):
         Day refers to a number representing the n'th day of the year. So, Jan 1st will be the 1st day of the year
         """
 
-    return (date(year, month, day) -
-            date(year, 1, 1)).days + 1
+    return (datetime.date(year, month, day) -
+            datetime.date(year, 1, 1)).days + 1
 
 
 def calculate_declination_angle(day_of_year):
@@ -564,8 +553,8 @@ def route_visualization(coords, visible=True):
 
     fig = px.line_mapbox(dataframe, lat="Latitude", lon="Longitude", hover_name=points, zoom=3, height=800)
 
-    fig.update_layout(mapbox_style="stamen-terrain", mapbox_zoom=5, mapbox_center_lat = 41,
-    margin={"r":0,"t":0,"l":0,"b":0})
+    fig.update_layout(mapbox_style="stamen-terrain", mapbox_zoom=5, mapbox_center_lat=41,
+                      margin={"r": 0, "t": 0, "l": 0, "b": 0})
 
     # shows the plotted points and line
     if visible:
