@@ -1,13 +1,10 @@
 import datetime
 import functools
-import random
 import time as timer
-from _datetime import date
 
-import geopandas as gpd
 import numpy as np
 import pandas as pd
-import shapely
+import plotly.express as px
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
@@ -195,8 +192,8 @@ def get_day_of_year(day, month, year):
         Day refers to a number representing the n'th day of the year. So, Jan 1st will be the 1st day of the year
         """
 
-    return (date(year, month, day) -
-            date(year, 1, 1)).days + 1
+    return (datetime.date(year, month, day) -
+            datetime.date(year, 1, 1)).days + 1
 
 
 def calculate_declination_angle(day_of_year):
@@ -507,46 +504,61 @@ def route_visualization(coords, visible=True):
     :Param coords: A NumPy array [n][latitude, longitude]
     Outputs a window that visualizes the route with given coordinates
     """
-    points = []
-    colours = []
-    num = len(coords) + 1
-    i = 1
+    # significant_number = 3
+    # maxIndexElevation = len(elevation)
+    # maxIndexDistance = len(distances)
+    # maxIndexStateofCharge = len(state_of_charge)
+    # maxIndexSolarIrrandiances = len(solar_irradiances)
+    # maxIndexCloudCover = len(cloud_cover)
+    # maxIndexWindSpeeds = len(wind_speeds)
 
-    # TODO: this while loop takes a LONG given a long list of coordinates. Can we change this?
+    points = []
+    lat = []
+    lon = []
+    num = len(coords)
+    i = 0
+
     while i < num:
         points.append("Point " + str(i))
-        color = "%06x" % random.randint(0, 0xFFFFFF)
-        color = "#" + color
-        colours.append(color)
+        lat.append(coords[i][0])
+        lon.append(coords[i][1])
         i += 1
 
-    # Setting the given data coords and points, separated by Lat and Long into a DataFrame
-    # DataFrame is a specific data structure the library panda uses
-    df = pd.DataFrame(coords, points, columns=["Lat", "Long"])
+    # Truncates the demical values to three significant digits
+    # j = 0
+    # while j < max(maxIndexElevation, maxIndexDistance, maxIndexStateofCharge, 
+    #               maxIndexSolarIrrandiances, maxIndexCloudCover, maxIndexWindSpeeds):
+    #     if (j < maxIndexElevation):
+    #         elevation[j] = round(elevation[j], significant_number)
+    #     if (j < maxIndexDistance):
+    #         distances[j] = round(distances[j], significant_number)
+    #     if (j < maxIndexStateofCharge):
+    #         state_of_charge[j] = round(state_of_charge[j], significant_number)
+    #     if (j < maxIndexSolarIrrandiances):
+    #         solar_irradiances[j] = round(solar_irradiances[j], significant_number)
+    #     if (j < maxIndexCloudCover):
+    #         cloud_cover[j] = round(cloud_cover[j], significant_number)
+    #     if (j < maxIndexWindSpeeds):
+    #         wind_speeds[j] = round(wind_speeds[j], significant_number)
+    #     j += 1
 
-    # Isolating just the Long and Lat points from df and turning them into geometry points
-    geometry = gpd.points_from_xy(df.Long, df.Lat)
+    # dataframe = pd.DataFrame(list(zip(points, lat, lon, elevation, speed, distances, state_of_charge, solar_irradiances, cloud_cover, wind_speeds)),
+    #                         columns=["Point", "Latitude ", "Longitude ", "Elevation (m) ", "Speed (km/h) ", "Distance (km) ", 
+    #                         "State of Charge (%) ", "Solar Irradiance (W/m²) ", "Cloud Coverage (%) ", "Wind Speeds (km/h) "])
 
-    # Turning the df and geometry into a GeoDataFrame
-    geo_df = gpd.GeoDataFrame(df[["Lat", "Long"]], geometry=geometry)
+    # fig = px.line_mapbox(dataframe, lat="Latitude ", lon="Longitude ", hover_name=points, hover_data=["Elevation (m) ", "Speed (km/h) ", "Distance (km) ", 
+    #                         "State of Charge (%) ", "Solar Irradiance (W/m²) ", "Cloud Coverage (%) ", "Wind Speeds (km/h) "], zoom=3, height=800)
 
-    # Drawing a line using the GeoDataFrame, connecting all the different points
-    part1 = shapely.geometry.LineString(geo_df.geometry)
-    linegdf = gpd.GeoDataFrame({'geometry': [part1]})
+    dataframe = pd.DataFrame(coords, points, columns=["Latitude", "Longitude"])
 
-    # Plots the line and the different coordinates (points) using Matplotlib
-    f, ax = plt.subplots()
-    ax.set_axis_off()
-    geo_df.plot(ax=ax, legend=True, color=colours)
-    linegdf.plot(ax=ax, linewidth=1)
+    fig = px.line_mapbox(dataframe, lat="Latitude", lon="Longitude", hover_name=points, zoom=3, height=800)
 
-    # Labels the starting point of the route
-    start_point = [coords[0][1], coords[0][0]]
-    ax.annotate("Start", xy=start_point, xytext=(1, 1), textcoords='offset points')
+    fig.update_layout(mapbox_style="stamen-terrain", mapbox_zoom=5, mapbox_center_lat=41,
+                      margin={"r": 0, "t": 0, "l": 0, "b": 0})
 
     # shows the plotted points and line
     if visible:
-        plt.show()
+        fig.show()
 
 
 def simple_plot_graph(data, title, visible=True):
