@@ -3,11 +3,6 @@ import json
 import os
 
 import numpy as np
-from bayes_opt import BayesianOptimization
-from bokeh.layouts import gridplot
-from bokeh.models import HoverTool
-from bokeh.palettes import Bokeh8
-from bokeh.plotting import figure, show, output_file
 from dotenv import load_dotenv
 
 import simulation
@@ -17,10 +12,11 @@ from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 
 
-class Simulation:
+class TimeSimulation:
 
     def __init__(self, race_type):
         """
+
         Instantiates a simple model of the car.
 
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
@@ -49,6 +45,10 @@ class Simulation:
         else:
             settings_path = settings_directory / "settings_FSGP.json"
 
+        # ----- Race type -----
+
+        self.race_type = race_type
+
         with open(settings_path) as f:
             args = json.load(f)
 
@@ -60,7 +60,10 @@ class Simulation:
         # ----- Time constants -----
 
         self.tick = args['tick']
-        self.simulation_duration = args['simulation_duration']
+        if self.race_type == "ASC":
+            self.simulation_duration = 8 * 24 * 60 * 60
+        elif self.race_type == "FSGP":
+            self.simulation_duration = args['simulation_duration']
         self.start_hour = args['start_hour']
 
         # ----- API keys -----
@@ -79,10 +82,6 @@ class Simulation:
         # ----- Route Length -----
 
         self.route_length = 0  # Tentatively set to 0
-
-        # ----- Race type -----
-
-        self.race_type = race_type
 
         # ----- Force update flags -----
 
@@ -121,11 +120,11 @@ class Simulation:
 
     @helpers.timeit
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False, **kwargs):
+
         """
         Updates the model in tick increments for the entire simulation duration. Returns
-        a final battery charge and a distance travelled for this duration, given an
-        initial charge, and a target speed. Also requires the current time and location.
-        This is where the magic happens.
+        a Simulation results object, given an initial charge, and a target speed.
+        Also requires the current time and location. This is where the magic happens.
 
         Note: if the speed remains constant throughout this update, and knowing the starting
             time, the cumulative distance at every time can be known. From the cumulative
@@ -138,7 +137,7 @@ class Simulation:
         :param speed: array that specifies the solar car's driving speed at each time step
         :param plot_results: set to True to plot the results of the simulation (is True by default)
         :param verbose: Boolean to control logging and debugging behaviour
-        :param **kwargs: variable list of arguments that specify the car's driving speed at each time step.
+        :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
 
         """
@@ -149,7 +148,7 @@ class Simulation:
 
             # Don't plot results since this code is run by the optimizer
             plot_results = False
-            verbose=False
+            verbose = False
 
         # ----- Reshape speed array -----
 
@@ -164,6 +163,7 @@ class Simulation:
         result = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
 
         # ------- Parse results ---------
+        # TODO: Rewrite this to use a dictionary like Mihir changed in his bokeh commits...
         simulation_arrays = result.arrays
         speed_kmh = simulation_arrays[0]
         distances = simulation_arrays[1]
@@ -179,7 +179,7 @@ class Simulation:
         final_soc = result.final_soc
 
         print(f"Simulation successful!\n"
-              f"Time taken: {time_taken}\n"
+              f"Time taken: {str(datetime.timedelta(seconds=int(time_taken)))}\n"
               f"Route length: {self.route_length:.2f}km\n"
               f"Maximum distance traversable: {distance_travelled:.2f}km\n"
               f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
@@ -199,124 +199,15 @@ class Simulation:
                                array_labels=y_label,
                                graph_title="Simulation Result")
             if self.race_type == "FSGP":
-                # Do this so I'm not plotting the entire 300 laps which will look the same as one lap anyway.
                 helpers.route_visualization(self.gis.singlelap_path, visible=verbose)
             elif self.race_type == "ASC":
                 helpers.route_visualization(self.gis.path, visible=verbose)
 
-        return distance_travelled
-
-    @helpers.timeit
-    def optimize(self, *args, **kwargs):
-        """
-
-        Args:
-            *args: Do not serve any function.
-            **kwargs: variable list of arguments that specify the car's driving speed at each time step.
-
-        Returns: A local maximium for distance found through optimization
-
-        """
-
-        guess_lower_bound = 20
-        guess_upper_bound = 80
-
-        bounds = {
-            'x0': (guess_lower_bound, guess_upper_bound),
-            'x1': (guess_lower_bound, guess_upper_bound),
-            'x2': (guess_lower_bound, guess_upper_bound),
-            'x3': (guess_lower_bound, guess_upper_bound),
-            'x4': (guess_lower_bound, guess_upper_bound),
-            'x5': (guess_lower_bound, guess_upper_bound),
-            'x6': (guess_lower_bound, guess_upper_bound),
-            'x7': (guess_lower_bound, guess_upper_bound),
-        }
-
-        # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
-        optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds,
-                                         verbose=2)
-
-        # configure these parameters depending on whether optimizing for speed or precision
-        # Parameter Explanations: https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb
-        # Acquisition Functions: https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation
-        optimizer.maximize(init_points=200, n_iter=20, acq='ucb', xi=1e-1, kappa=10)
-
-        result = optimizer.max
-        result_params = list(result["params"].values())
-
-        speed_result = np.empty(len(result_params))
-        for i in range(len(speed_result)):
-            speed_result[i] = result_params[i]
-
-        speed_result = helpers.reshape_and_repeat(speed_result, self.simulation_duration)
-        speed_result = np.insert(speed_result, 0, 0)
-
-        arrays_to_plot = self.__run_simulation_calculations(speed_result, verbose=False)
-
-        helpers.plot_graph(timestamps=self.timestamps, arrays_to_plot=arrays_to_plot.arrays,
-                           array_labels=["Optimized speed array", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                                         "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
-                                         "Cloud cover (%)"],
-                           graph_title="Optimized Result")
-
-        return optimizer.max
-
-    def __plot_graph(self, arrays_to_plot, array_labels, graph_title):
-        """
-
-        This is a utility function to plot out any set of NumPy arrays you pass into it.
-        The precondition of this function is that the length of arrays_to_plot and array_labels are equal.
-
-        This is because there be a 1:1 mapping of each entry of arrays_to_plot to array_labels such that:
-            arrays_to_plot[n] has label array_labels[n]
-
-        Another precondition of this function is that each of the arrays within arrays_to_plot also have the
-        same length. This is each of them will share the same time axis.
-
-        Args:
-            arrays_to_plot: An array of NumPy arrays to plot
-            array_labels: An array of strings for the individual plot titles
-            graph_title: A string that serves as the plot's main title
-
-        Result:
-            If number of plots is even, produces a 2 x (len(arrays_to_plot) / 2) plot
-            If number of plots is odd, produces a 1 x len(arrays_to_plot) plot
-
-        """
-        compress_constant = int(self.timestamps.shape[0] / 5000)
-
-        for index, array in enumerate(arrays_to_plot):
-            arrays_to_plot[index] = array[::compress_constant]
-
-        figures = list()
-
-        hover_tool = HoverTool()
-        hover_tool.formatters = {"x": "datetime"}
-        hover_tool.tooltips = [
-            ("time", "$x"),
-            ("data", "$y")
-        ]
-
-        for (index, data_array) in enumerate(arrays_to_plot):
-            # create figures and put them in list
-            figures.append(figure(title=array_labels[index], x_axis_label="Time (hr)",
-                                  y_axis_label=array_labels[index], x_axis_type="datetime"))
-
-            # add line renderers to each figure
-            figures[index].line(self.timestamps[::compress_constant] * 1000, data_array, line_color=Bokeh8[index],
-                                line_width=2)
-
-            figures[index].add_tools(hover_tool)
-
-        grid = gridplot(figures, sizing_mode="scale_both", ncols=3, plot_height=200, plot_width=300)
-
-        output_file(filename=graph_title + '.html', title=graph_title)
-
-        show(grid)
+        return -1 * time_taken
 
     def __run_simulation_calculations(self, speed_kmh, verbose=False):
         """
-        Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
+        Helper method to perform all calculations used in run_model. Returns a SimulationResult object
         containing members that specify total distance travelled and time taken at the end of the simulation
         and final battery state of charge. This is where most of the main simulation logic happens.
 
@@ -365,6 +256,15 @@ class Simulation:
 
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
+
+        # https://stackoverflow.com/questions/45525984/how-to-plot-points-using-m-scatter-at-certain-longitudes-and-latitudes
+        # y = self.gis.get_path()
+        # helpers.simple_plot_graph(y[:,1], "lat")
+        # helpers.simple_plot_graph(y[:,0], "long")
+        # helpers.simple_plot_graph(gis_route_elevations, "Elevations")
+        # highest_pt = np.amax(gis_route_elevations)
+        # highest_pt_index = np.where(gis_route_elevations == highest_pt)
+        # print(self.gis.path[highest_pt_index])
 
         gis_route_elevations_at_each_tick = gis_route_elevations[closest_gis_indices]
 
@@ -482,12 +382,6 @@ class Simulation:
         except IndexError:
             max_dist_index = len(time_in_motion)
 
-        time_in_motion = np.array(
-            (list(time_in_motion[0:max_dist_index])) + list(np.zeros_like(time_in_motion[max_dist_index:])))
-
-        time_taken = np.sum(time_in_motion)
-        time_taken = str(datetime.timedelta(seconds=int(time_taken)))
-
         results = SimulationResult()
 
         results.arrays = [
@@ -501,7 +395,19 @@ class Simulation:
             cloud_covers
         ]
         results.distance_travelled = distances[-1]
-        results.time_taken = time_taken
+
+        if results.distance_travelled >= self.route_length:
+            results.time_taken = helpers.calculate_race_completion_time(self.route_length, distances)
+        else:
+            # I do not understand this code! I think this should be switched to the simulation duration.
+            # It's so unmaintainable and not useful.
+
+            # time_in_motion = np.array(
+            #     (list(time_in_motion[0:max_dist_index])) + list(np.zeros_like(time_in_motion[max_dist_index:])))
+            #
+            # time_taken = np.sum(time_in_motion)
+            results.time_taken = self.simulation_duration
+
         results.final_soc = final_soc
 
         self.time_zones = time_zones

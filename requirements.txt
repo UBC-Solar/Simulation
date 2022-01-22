@@ -11,8 +11,9 @@ cligj==0.7.2
 colorama==0.4.4
 coverage==6.1
 cycler==0.10.0
-./geopanda_requirements/Fiona-1.8.20-cp39-cp39-win_amd64.whl
-./geopanda_requirements/GDAL-3.3.3-cp39-cp39-win_amd64.whl
+folium==0.12.1
+./simulation/config/geopandas_requirements/Fiona-1.8.20-cp39-cp39-win_amd64.whl
+./simulation/config/geopandas_requirements/GDAL-3.3.3-cp39-cp39-win_amd64.whl
 folium==0.12.1
 geopandas==0.10.2
 idna==3.2
@@ -24,9 +25,9 @@ llvmlite==0.37.0
 MarkupSafe==2.0.1
 matplotlib==3.4.3
 munch==2.5.0
-numba==0.54.0
-numpy==1.20.3
+numpy==1.21
 packaging==21.0
+pyproj==3.3.0
 pandas==1.3.1
 Pillow==8.3.2
 plotly==5.5.0
@@ -34,9 +35,8 @@ plotly-express==0.4.1
 pluggy==1.0.0
 polyline==1.4.0
 py==1.10.0
-pyparsing==2.4.7
-pyproj==3.2.1
 pytest==6.2.5
+pyparsing==2.4.7
 pytest-cov==3.0.0
 python-dateutil==2.8.2
 python-dotenv==0.19.0

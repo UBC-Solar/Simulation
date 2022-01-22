@@ -9,10 +9,18 @@ import plotly.express as px
 import pandas as pd
 
 from _datetime import datetime
+import random
 from _datetime import date
 
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+import shapely
+from bokeh.layouts import gridplot
+from bokeh.models import HoverTool
+from bokeh.palettes import Bokeh8
+from bokeh.plotting import figure, show, output_file
 from matplotlib import pyplot as plt
-from numba import jit, njit
 
 from simulation.common import constants
 
@@ -36,10 +44,18 @@ def timeit(func):
 
 
 def date_from_unix_timestamp(unix_timestamp):
-    return datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    """
+
+    Args:
+        unix_timestamp: A unix timestamp
+
+    Returns: A string of the UTC representation of the UNIX timestamp in the format Y-m-d H:M:S
+
+    """
+    return datetime.datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def checkForNonConsecutiveZeros(array, verbose=False):
+def check_for_non_consecutive_zeros(array, verbose=False):
     zeroed_indices = np.where(array == 0)[0]
 
     if len(zeroed_indices) == 0:
@@ -105,7 +121,7 @@ def add_acceleration(input_array, acceleration):
 
 
 def hour_from_unix_timestamp(unix_timestamp):
-    val = datetime.utcfromtimestamp(unix_timestamp)
+    val = datetime.datetime.utcfromtimestamp(unix_timestamp)
     return val.hour
 
 
@@ -183,6 +199,8 @@ def get_day_of_year(day, month, year):
         Calculates the day of the year, given the day, month and year.
 
         day, month, year: self explanatory
+
+        Day refers to a number representing the n'th day of the year. So, Jan 1st will be the 1st day of the year
         """
 
     return (date(year, month, day) -
@@ -374,14 +392,127 @@ def find_runs(x):
         return run_values, run_starts, run_lengths
 
 
+def find_multi_index_runs(x):
+    run_values, run_starts, run_lengths = find_runs(x)
+
+    # Find where the run_lengths is greater than one
+    multi_index_run_indices = np.where(run_lengths > 1)
+
+    # Use these new indices to index the existing run_values, run_tarts, run_lengths.
+    # This removes all the runs with length 1
+    multi_index_run_starts = run_starts[multi_index_run_indices]
+    multi_index_run_values = run_values[multi_index_run_indices]
+    multi_index_run_lengths = run_lengths[multi_index_run_indices]
+
+    return multi_index_run_values, multi_index_run_starts, multi_index_run_lengths
+
+
+def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, race_type, timestamps, verbose):
+    """
+
+    Args:
+        speed_kmh: A NumPy array representing the speed at each timestamp in km/h
+        start_hour: An integer representing the race's start hour
+        simulation_duration: An integer representing simulation duration in seconds
+        race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
+        timestamps: A NumPy array representing the timestamps for the simulated race
+        verbose: A flag to show speed array modifications for debugging purposes
+
+    Returns: constrained_speed_kmh, a speed array with race timing constraints applied to it, not_charge,
+    a boolean array representing when the car can charge and when it cannot (1 = charge, 0 = not_charge)
+
+    Raises: ValueError is race_type is not one of "ASC" or "FSGP"
+
+    """
+
+    # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
+    # (Charge from 8am-9am and 6pm-8pm) for FSGP
+
+    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
+
+    simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
+                                           start_hour + simulation_duration / (60 * 60)).astype(int)
+
+    if race_type == "ASC":
+        driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 18]
+    elif race_type == "FSGP":
+        driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
+    else:
+        raise ValueError(f"Invalid race_type provided: \"{race_type}\". Must be one of \"ASC\" or \"FSGP\".")
+    not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
+    if verbose:
+        plot_graph(timestamps=timestamps,
+                   arrays_to_plot=[not_charge, speed_kmh],
+                   array_labels=["not charge", "updated speed (km/h)"],
+                   graph_title="not charge and speed")
+
+    constrained_speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+
+    return constrained_speed_kmh, not_charge
+
+
+def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
+    """
+
+        This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
+        The precondition of this function is that the length of arrays_to_plot and array_labels are equal.
+
+        This is because there be a 1:1 mapping of each entry of arrays_to_plot to array_labels such that:
+            arrays_to_plot[n] has label array_labels[n]
+
+        Another precondition of this function is that each of the arrays within arrays_to_plot also have the
+        same length. This is each of them will share the same time axis.
+
+        Args:
+            timestamps: An array of timestamps for the race
+            arrays_to_plot: An array of NumPy arrays to plot
+            array_labels: An array of strings for the individual plot titles
+            graph_title: A string that serves as the plot's main title
+
+        Result:
+            Produces a 3 x ceil(len(arrays_to_plot) / 3) plot
+
+        """
+    compress_constant = int(timestamps.shape[0] / 5000)
+
+    for index, array in enumerate(arrays_to_plot):
+        arrays_to_plot[index] = array[::compress_constant]
+
+    figures = list()
+
+    hover_tool = HoverTool()
+    hover_tool.formatters = {"x": "datetime"}
+    hover_tool.tooltips = [
+        ("time", "$x"),
+        ("data", "$y")
+    ]
+
+    for (index, data_array) in enumerate(arrays_to_plot):
+        # create figures and put them in list
+        figures.append(figure(title=array_labels[index], x_axis_label="Time (hr)",
+                              y_axis_label=array_labels[index], x_axis_type="datetime"))
+
+        # add line renderers to each figure
+        figures[index].line(timestamps[::compress_constant] * 1000, data_array, line_color=Bokeh8[index],
+                            line_width=2)
+
+        figures[index].add_tools(hover_tool)
+
+    grid = gridplot(figures, sizing_mode="scale_both", ncols=3, plot_height=200, plot_width=300)
+
+    output_file(filename=graph_title + '.html', title=graph_title)
+
+    show(grid)
+
+    return
+
+
 def route_visualization(coords, visible=True):
     """
     Takes in a list of coordinates and translates those points into a visualizable
     route using GeoPanda Library. It labels the starting point and draws a line
     connecting all the coordinate points
-
     :Param coords: A NumPy array [n][latitude, longitude]
-
     Outputs a window that visualizes the route with given coordinates
     """
     # significant_number = 3
@@ -398,7 +529,6 @@ def route_visualization(coords, visible=True):
     num = len(coords)
     i = 0
 
-    # Sets up the coordinate points for long and lat
     while i < num:
         points.append("Point " + str(i))
         lat.append(coords[i][0])
@@ -441,6 +571,81 @@ def route_visualization(coords, visible=True):
     if visible:
         fig.show()
 
+
+def simple_plot_graph(data, title, visible=True):
+    """
+
+    Args:
+        visible: A control flag specifying if the plot should be shown
+        data: A NumPy[n] array of data to plot
+        title: The graph title
+
+    Result: Displays a graph of the data using Matplotlib
+
+    """
+    fig, ax = plt.subplots()
+    x = np.arange(0, len(data))
+    ax.plot(x, data)
+    plt.title(title)
+    if visible:
+        plt.show()
+
+
+def calculate_race_completion_time(path_length, cumulative_distances):
+    """
+    This function uses the maximum path distance and cumulative distances travelled
+    during the simulation to identify how long the car takes to finish travelling the route.
+
+    This problem, although framed in the context of the Simulation, is just to find the array position of the first
+    value that is greater or equal to a target value
+
+    Args:
+        path_length: The length of the path the vehicle travels on
+        cumulative_distances: A NumPy array representing the cumulative distanced travelled by the vehicle
+
+    Pre-Conditions:
+        path_length and cumulative_distances may be in any length unit, but they must share the same length unit
+        Each index of the cumulative_distances array represents one second of the Simulation
+
+    Returns: The number of seconds the vehicle requires to travel the full path length.
+    If vehicle does not travel the full path length, returns float('inf').
+
+    """
+    # Create a boolean array to encode whether the vehicle has completed or not completed the route at a given timestamp
+    # This is based on the assumption that each index represents a single timestamp of one second
+    crossed_finish_line = np.where(cumulative_distances >= path_length, 1, 0)
+
+    # Based on the boolean encoding, identify the first index which the vehicle has completed the route
+    completion_index = np.where(crossed_finish_line == 1)
+
+    if len(completion_index[0]) > 0:
+        return completion_index[0][0]
+    else:
+        return float('inf')
+
+
+def plot_longitudes(coordinates):
+    """
+    Plots the longitudes of a set of coordinates. Meant to support Simulation development and verification of route data.
+    Args:
+        coordinates: A NumPy array (float[N][longitude, latitude]) representing a path of coordinates
+
+    Returns: Nothing, but plots the longitudes
+
+    """
+    simple_plot_graph(coordinates[:, 0], "Longitudes")
+
+
+def plot_latitudes(coordinates):
+    """
+    Plots the latitudes of a set of coordinates. Meant to support Simulation development and verification of route data.
+    Args:
+        coordinates: A NumPy array (float[N][longitude, latitude]) representing a path of coordinates
+
+    Returns: Nothing, but plots the latitudes
+
+    """
+    simple_plot_graph(coordinates[:, 1], "Latitudes")
 
 
 if __name__ == '__main__':

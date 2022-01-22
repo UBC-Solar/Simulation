@@ -1,21 +1,52 @@
 {
-    "race_type": "FSGP",
-
-    "origin_coord": [38.9266274, -95.6781231],
-    "dest_coord": [38.9219577, -95.6776967],
-    "waypoints": [
-        [38.9253374, -95.678453], [38.921052, -95.674689],
-        [38.9206115, -95.6784807], [38.9211163, -95.6777508],
-        [38.9233953, -95.6783869]
+  "race_type": "FSGP",
+  "origin_coord": [
+    38.9281815,
+    -95.677021
+  ],
+  "dest_coord": [
+    38.9282115,
+    -95.6770268
+  ],
+  "waypoints": [
+    [
+      38.9221906,
+      -95.6762981
     ],
-
-    "tick": 1,
-    "simulation_duration": 43200,
-    "start_hour": 8,
-
-    "initial_battery_charge": 1.0,
-    "lvs_power_loss": 0,
-
-    "gis_force_update": false,
-    "weather_force_update": false
+    [
+      38.9217086,
+      -95.6767896
+    ],
+    [
+      38.9189926,
+      -95.6753145
+    ],
+    [
+      38.9196768,
+      -95.6724799
+    ],
+    [
+      38.9196768,
+      -95.6724799
+    ],
+    [
+      38.9247448,
+      -95.6714528
+    ],
+    [
+      38.9309102,
+      -95.6749362
+    ],
+    [
+      38.928188,
+      -95.6770129
+    ]
+  ],
+  "tick": 1,
+  "simulation_duration": 259200,
+  "start_hour": 7,
+  "initial_battery_charge": 1.0,
+  "lvs_power_loss": 0,
+  "gis_force_update": false,
+  "weather_force_update": false
 }
