@@ -65,7 +65,8 @@ NOTE: Any Python version before 3.8 is not supported so please make sure that yo
 - Because of the recent inclusion of Geopandas, ensure you also run the command to install all its dependencies by running
 
   ```bash
-  pip install -r requirements.txt
+  pip install simulation/config/geopandas_requirements/GDAL-3.3.3-cp39-cp39-win_amd64.whl
+  pip install simulation/config/geopandas_requirements/Fiona-1.8.20-cp39-cp39-win_amd64.whl
   ```
 
 - If all the commands worked, you should then be able to import the simulation module in your Python (.py) scripts and use the simulation objects as shown below:
