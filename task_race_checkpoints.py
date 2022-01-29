@@ -4,7 +4,7 @@ from math import hypot
 from haversine import haversine
 from matplotlib import pyplot as plt
 
-# Some of this code is written by Chris
+# Most of this code is written by Chris
 
 test_speed_arr = np.array([1, 2, 1, 7, 3, 4]) # 6 seconds
 
@@ -49,4 +49,6 @@ def calculate_array_distances(path):
 
 test_distance_arr = calculate_array_distances(example_path_arr)
 
-print(test_distance_arr)
+# STEP 3:
+
+# All the contents on this file moved to the notebook file /coord_by_time.ipynb
