@@ -295,8 +295,6 @@ class TimeSimulation:
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
 
-        # TODO: remove after done with testing
-        cloud_covers = np.zeros_like(cloud_covers)
 
         # Get the wind speeds at every location
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
