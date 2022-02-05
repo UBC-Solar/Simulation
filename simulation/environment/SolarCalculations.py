@@ -256,7 +256,11 @@ class SolarCalculations:
                                                    time_zone_utc, day_of_year, local_time)
 
         GHI = DNI * np.cos(np.radians(zenith_angle)) + DHI
+
+        # Convert cloud cover from percentage out of 100 to number between 0-1
+        cloud_cover /= 100
         GHI = GHI * (1 - (0.75 * np.power(cloud_cover, 3.4)))
+
 
         return GHI
 
