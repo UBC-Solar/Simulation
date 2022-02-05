@@ -255,6 +255,7 @@ class SolarCalculations:
         zenith_angle = self.calculate_zenith_angle(latitude, longitude,
                                                    time_zone_utc, day_of_year, local_time)
 
+        cloud_cover = cloud_cover / 100
         GHI = DNI * np.cos(np.radians(zenith_angle)) + DHI
 
         # Convert cloud cover from percentage out of 100 to number between 0-1
