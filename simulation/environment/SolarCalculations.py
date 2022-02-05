@@ -255,6 +255,7 @@ class SolarCalculations:
         zenith_angle = self.calculate_zenith_angle(latitude, longitude,
                                                    time_zone_utc, day_of_year, local_time)
 
+        cloud_cover = cloud_cover / 100
         GHI = DNI * np.cos(np.radians(zenith_angle)) + DHI
         GHI = GHI * (1 - (0.75 * np.power(cloud_cover, 3.4)))
 
