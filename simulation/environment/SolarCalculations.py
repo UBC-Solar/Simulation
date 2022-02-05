@@ -227,6 +227,9 @@ class SolarCalculations:
         on the Earth
         https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
 
+        Cloud cover adjustment follows the equation laid out here:
+        http://www.shodor.org/os411/courses/_master/tools/calculators/solarrad/
+
         latitude: The latitude of a location on Earth
         longitude: The longitude of a location on Earth
         time_zone_utc: The UTC time zone of your area in hours of UTC offset, without
@@ -252,9 +255,8 @@ class SolarCalculations:
         zenith_angle = self.calculate_zenith_angle(latitude, longitude,
                                                    time_zone_utc, day_of_year, local_time)
 
-        cloud_cover_correction_factor = 1 - (cloud_cover / 100)
         GHI = DNI * np.cos(np.radians(zenith_angle)) + DHI
-        GHI = cloud_cover_correction_factor * GHI
+        GHI = GHI * (1 - (0.75 * np.power(cloud_cover, 3.4)))
 
         return GHI
 
