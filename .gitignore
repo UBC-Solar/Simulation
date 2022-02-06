@@ -146,3 +146,6 @@ docs/UBC Solar - Simulation.pdf
 
 # Config files
 simulation/config/*.json
+
+# Data Images
+data/images/*.png
