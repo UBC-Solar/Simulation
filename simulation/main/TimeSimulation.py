@@ -257,15 +257,6 @@ class TimeSimulation:
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
 
-        # https://stackoverflow.com/questions/45525984/how-to-plot-points-using-m-scatter-at-certain-longitudes-and-latitudes
-        # y = self.gis.get_path()
-        # helpers.simple_plot_graph(y[:,1], "lat")
-        # helpers.simple_plot_graph(y[:,0], "long")
-        # helpers.simple_plot_graph(gis_route_elevations, "Elevations")
-        # highest_pt = np.amax(gis_route_elevations)
-        # highest_pt_index = np.where(gis_route_elevations == highest_pt)
-        # print(self.gis.path[highest_pt_index])
-
         gis_route_elevations_at_each_tick = gis_route_elevations[closest_gis_indices]
 
         # Get the azimuth angle of the vehicle at every location
@@ -294,7 +285,6 @@ class TimeSimulation:
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
-
 
         # Get the wind speeds at every location
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
@@ -397,13 +387,6 @@ class TimeSimulation:
         if results.distance_travelled >= self.route_length:
             results.time_taken = helpers.calculate_race_completion_time(self.route_length, distances)
         else:
-            # I do not understand this code! I think this should be switched to the simulation duration.
-            # It's so unmaintainable and not useful.
-
-            # time_in_motion = np.array(
-            #     (list(time_in_motion[0:max_dist_index])) + list(np.zeros_like(time_in_motion[max_dist_index:])))
-            #
-            # time_taken = np.sum(time_in_motion)
             results.time_taken = self.simulation_duration
 
         results.final_soc = final_soc
