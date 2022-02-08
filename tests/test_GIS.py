@@ -29,14 +29,6 @@ def gis():
 
     return location_system
 
-#TODO, testing the route_visualization function with the additional arguments
-# def test_route_visualization(gis):
-#     waypoints = np.array([[38.9253374, -95.678453], [38.921052, -95.674689],
-#                           [38.9206115, -95.6784807], [38.9211163, -95.6777508],
-#                           [38.9233953, -95.6783869]])
-#     #The waypoints can be changed to visualize another path
-#     helpers.route_visualization(waypoints, visible=False)
-
 
 def test_calculate_closest_gis_indices(gis):
     test_cumulative_distances = np.array([0, 9, 18, 19, 27, 35, 38, 47, 48, 56, 63])
@@ -58,9 +50,9 @@ def test_get_time_zones(gis):
 
     test_coord_cumulative_distances = np.cumsum(test_coord)
 
-    test_coord_closest_gis_indices = gis.calculate_closest_gis_indices(cumulative_distances=test_coord_cumulative_distances)
+    test_coord_closest_gis_indices = gis.calculate_closest_gis_indices(
+        cumulative_distances=test_coord_cumulative_distances)
     result = gis.get_time_zones(test_coord_closest_gis_indices)
-
 
     assert len(test_coord) == len(expected_time_zone)
     assert np.all(result == expected_time_zone)
@@ -144,19 +136,6 @@ def test_calculate_path_gradients2(gis):
     result = helpers.calculate_path_gradients(test_elevations, test_distances)
     assert np.all(result == expected_gradients)
 
-# def test_calculate_path_elevations_FSGP(gis):
-#     start_coord = np.array([[38.9266274, -95.6781231]])
-#     end_coord = np.array([[38.9219577, -95.6776967]])
-#     waypoints = np.array([
-#         [38.9253374, -95.678453], [38.921052, -95.674689],
-#         [38.9206115, -95.6784807], [38.9211163, -95.6777508],
-#         [38.9233953, -95.6783869]])
-#     path = np.concatenate([start_coord, waypoints, end_coord])
-#     print(gis.calculate_path_elevations(path))
-#
-#     # Expected results of elevations in meters calculated from: https://www.freemaptools.com/elevation-finder.htm
-#     expected_results = np.array(326 , 326, 322 , 326, 323, 328, 326)
-#     print(expected_results)
 
 if __name__ == "__main__":
     pass
