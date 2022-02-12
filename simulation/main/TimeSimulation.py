@@ -199,9 +199,9 @@ class TimeSimulation:
                                array_labels=y_label,
                                graph_title="Simulation Result")
             if self.race_type == "FSGP":
-                helpers.route_visualization(self.gis.singlelap_path, visible=verbose)
+                helpers.route_visualization(self.gis.singlelap_path, self.waypoints,visible=verbose)
             elif self.race_type == "ASC":
-                helpers.route_visualization(self.gis.path, visible=verbose)
+                helpers.route_visualization(self.gis.path, self.waypoints, visible=True)
 
         return -1 * time_taken
 
