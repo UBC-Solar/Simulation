@@ -38,8 +38,10 @@ def main():
       Keep in mind, however, that the condition len(input_speed) <= simulation_length must be true
     """
 
-    simulation_model = simulation.Simulation(race_type="FSGP")
-    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False)
+    simulation_model = simulation.Simulation(race_type="ASC")
+    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True,
+                                                    verbose=False,
+                                                    route_visualization=False)
 
     bounds = InputBounds()
     bounds.add_bounds(8, 20, 60)
@@ -47,10 +49,14 @@ def main():
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
 
     results = optimization.maximize(init_points=3, n_iter=1, kappa=10)
-    optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True, verbose=False)
+    optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
+                                           verbose=False,
+                                           route_visualization=False)
+
     results_random = random_optimization.maximize(iterations=15)
     optimized_random = simulation_model.run_model(speed=np.fromiter(results_random, dtype=float), plot_results=True,
-                                                  verbose=False)
+                                                  verbose=False,
+                                                  route_visualization=False)
 
     print(f'Distance travelled: {distance_travelled}')
     print(f'Optimized results. Max traversable distance: {optimized}')
