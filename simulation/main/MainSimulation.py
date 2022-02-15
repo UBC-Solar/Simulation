@@ -120,8 +120,8 @@ class Simulation:
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
     @helpers.timeit
-    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False, route_visualization=False,
-                  **kwargs):
+    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
+                  route_visualization=False, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an
@@ -139,6 +139,7 @@ class Simulation:
         :param speed: array that specifies the solar car's driving speed at each time step
         :param plot_results: set to True to plot the results of the simulation (is True by default)
         :param verbose: Boolean to control logging and debugging behaviour
+        :param route_visualization: Flag to control route_visualization plot visibility
         :param **kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
 
