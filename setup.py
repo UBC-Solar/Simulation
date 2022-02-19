@@ -19,7 +19,7 @@ setup(name='simulation',
       },
       install_requires=[
           'numpy', 'bokeh', 'scipy', 'requests', 'polyline', 'tqdm', 'matplotlib', 'pandas', 'seaborn', 'numba',
-          'bayesian_optimization', 'timezonefinder', "python-dotenv", 'geopandas', 'plotly'
+          'bayesian_optimization', 'timezonefinder', "python-dotenv", 'plotly'
       ],
       extras_require={
           'mpi': [
