@@ -12,10 +12,7 @@ colorama==0.4.4
 coverage==6.1
 cycler==0.10.0
 folium==0.12.1
-./simulation/config/geopandas_requirements/Fiona-1.8.20-cp39-cp39-win_amd64.whl
-./simulation/config/geopandas_requirements/GDAL-3.3.3-cp39-cp39-win_amd64.whl
 folium==0.12.1
-geopandas==0.10.2
 idna==3.2
 iniconfig==1.1.1
 Jinja2==3.0.2
