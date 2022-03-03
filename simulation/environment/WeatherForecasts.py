@@ -258,9 +258,11 @@ class WeatherForecasts:
         """
 
         # if racing FSGP, there is no need for distance calculations. We will return only the origin coordinate
-        if (self.race_type == "FSGP"):
+        # This characterizes the weather at every point along the FSGP tracks
+        # with the weather at a single coordinate on the track, which is great for reducing the API calls and is a
+        # reasonable assumption to make for FSGP only.
+        if self.race_type == "FSGP":
             result = np.zeros_like(cumulative_distances, dtype=int)
-            print(result)
             return result
 
         # a list of all the coordinates that we have weather data for
