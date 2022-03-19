@@ -13,6 +13,9 @@ from matplotlib import pyplot as plt
 
 from simulation.common import constants
 
+from sklearn.neighbors import BallTree
+from math import radians
+
 """
 Description: contains the simulation's helper functions.
 """
@@ -654,3 +657,98 @@ if __name__ == '__main__':
     expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
     expanded_speed_array = add_acceleration(expanded_speed_array, 20)
     print(expanded_speed_array)
+
+def step5_match_coords(path, distances, speeds, waypoints, verbose = False):
+  # First we need to find the closest path coordinates for each waypoint/checkpoint
+  path_rad = np.array([[radians(p[0]), radians(p[1])] for p in path])
+  tree = BallTree(path_rad, metric='haversine')
+  gaps, wp = tree.query([[radians(w[0]), radians(w[1])] for w in waypoints])
+  # Make sure no waypoint is more than 50 m away from a path coord
+#   assert(max(gaps) <= 50)
+  if verbose: print(f"Waypoint indices in path array:\n{wp}\n")
+
+  delta                   = 0.05  # margin of error with double arithmetic
+  path_index              = 0     # current path coordinate
+  temp_distance_travelled = 0     # stores the interim distance travelled between two path coordinates
+
+#   for i, distance in enumerate(speeds):
+  i = 0
+  while i < len(speeds):
+    distance = speeds[i]
+    """
+    3 cases regarding the speed travelled:
+    First: speed + temp_distance_travelled < distance[path_distance_index]
+      We keep a result of how far we have travelled, and we calculate the fractional coordinate
+    Second: speed = distance[path_distance_index]
+      We plot the next point in coordinate per second, increment path_distance_index
+    Third: speed + temp_distance_travelled > distance[path_distance_index]
+      Decrement the speed distance, increment path_distance_index
+      getting the resulting speed to calculate the fractional cooridnate point.
+        # what happens if we pass our checkpoint in this case? Doing a check with helper function everytime we increment path_distance_index
+    """
+
+    total_distance_travelled  = 0 # total distance travelled this second
+    flag                      = 0 # flag used to indicate if we reached a waypoint
+
+    # if we can reach the next path coordinate
+    while distance + temp_distance_travelled > distances[path_index] - delta:
+      # update distance to be remainder of distance we can travel this second
+      distance = distance + temp_distance_travelled - distances[path_index]
+      # add the distance travelled to our total distance travelled this second
+      total_distance_travelled += distances[path_index] - temp_distance_travelled
+      # reset the temp_distance_travelled since we just reached a new path coordinate
+      temp_distance_travelled = 0
+      # increment values of path_index and path_index
+      path_index += 1
+
+      # If we reached the end of the coordinate list, exit
+      if path_index >= len(distances):
+        if verbose:
+          print(f"Travelled {total_distance_travelled} m at second {i}\n" \
+                f"New coordinates: {path[path_index]}\n"                  \
+                "Race complete!\n")
+        return np.array(speeds)
+
+      # If we have reached a waypoint/checkpoint, replace speeds with 0
+      if wp.size > 0 and path_index == wp[0]:
+        if verbose:
+          print(f"Travelled {total_distance_travelled} m at second {i}\n" \
+                f"New coordinates: {path[path_index]}\n"                  \
+                "Reached a waypoint!\n")
+        # delete the waypoint we just reached from the wp array
+        wp = np.delete(wp, 0)
+        # update the current speed to be only what we travelled this second
+        speeds[i] = total_distance_travelled
+        # replace the speeds with 0's
+        speeds[i + 1 : i + 1 + 45 * 60] = [0] * 45 * 60
+        i += 45 * 60 - 1
+        distance = 0  # shouldn't travel anymore in this second
+        flag = 1
+        break
+
+    if flag:
+      continue
+
+    # If I still have distance to travel but can't reach the next coordinate
+    if distance + temp_distance_travelled < distances[path_index] - delta:
+      # Update total distance travelled
+      total_distance_travelled += distance        
+
+      # Add onto the temperary distance between two coordinates
+      temp_distance_travelled += distance
+      frac_distance_travelled = temp_distance_travelled / distances[path_index]
+      dx = path[path_index + 1][0] - path[path_index][0]
+      dy = path[path_index + 1][1] - path[path_index][1]
+
+      # Calculate the new coordinates with the fraction of temporary distance travelled
+      new_coords = [frac_distance_travelled * dx + path[path_index][0],
+                    frac_distance_travelled * dy + path[path_index][1]]
+      if verbose:
+        print(f"Travelled {total_distance_travelled} m at second {i}\n" \
+              f"New coordinates: {new_coords}\n")
+
+    i += 1
+
+  if verbose:
+    print("Didn't have enough speed to complete race.")
+  return np.array(speeds)
