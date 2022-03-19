@@ -334,7 +334,7 @@ class Simulation:
 
         # If race type is ASC, calculate speed considering coordinates
         if (self.race_type == "ASC"):
-            speed_kmh = helpers.step5_match_coords(self.gis.path, self.gis.path_distances, np.divide(speed_kmh, 3.6), self.waypoints, verbose=False)[:self.simulation_duration+1]
+            speed_kmh = helpers.speeds_with_waypoints(self.gis.path, self.gis.path_distances, np.divide(speed_kmh, 3.6), self.waypoints, verbose=False)[:self.simulation_duration+1]
 
         # Acceleration currently is broken and I'm not sure why. Have to take another look at this soon.
         # speed_kmh = helpers.add_acceleration(speed_kmh, 500)
