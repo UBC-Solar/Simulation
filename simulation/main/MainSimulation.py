@@ -120,7 +120,8 @@ class Simulation:
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
     @helpers.timeit
-    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False, **kwargs):
+    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
+                  route_visualization=False, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an
@@ -138,6 +139,7 @@ class Simulation:
         :param speed: array that specifies the solar car's driving speed at each time step
         :param plot_results: set to True to plot the results of the simulation (is True by default)
         :param verbose: Boolean to control logging and debugging behaviour
+        :param route_visualization: Flag to control route_visualization plot visibility
         :param **kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
 
@@ -198,11 +200,12 @@ class Simulation:
                                arrays_to_plot=arrays_to_plot,
                                array_labels=y_label,
                                graph_title="Simulation Result")
-            if self.race_type == "FSGP":
-                # Do this so I'm not plotting the entire 300 laps which will look the same as one lap anyway.
-                helpers.route_visualization(self.gis.singlelap_path, self.waypoints, visible=verbose)
-            elif self.race_type == "ASC":
-                helpers.route_visualization(self.gis.path, self.waypoints, visible=verbose)
+
+        if self.race_type == "FSGP":
+            # Do this so I'm not plotting the entire 300 laps which will look the same as one lap anyway.
+            helpers.route_visualization(self.gis.singlelap_path, visible=route_visualization)
+        elif self.race_type == "ASC":
+            helpers.route_visualization(self.gis.path, visible=route_visualization)
 
         return distance_travelled
 
@@ -399,8 +402,6 @@ class Simulation:
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
 
-        # TODO: remove after done with testing
-        cloud_covers = np.zeros_like(cloud_covers)
 
         # Get the wind speeds at every location
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,

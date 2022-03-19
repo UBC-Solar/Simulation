@@ -43,7 +43,7 @@ class SolarCalculations:
         """
 
         lst = helpers.local_time_to_apparent_solar_time(time_zone_utc / 3600, day_of_year,
-                                                     local_time, longitude)
+                                                        local_time, longitude)
 
         hour_angle = 15 * (lst - 12)
 
@@ -134,11 +134,11 @@ class SolarCalculations:
                                                local_time, longitude)
 
         term_1 = np.sin(np.radians(declination_angle)) * \
-            np.sin(np.radians(latitude))
+                 np.sin(np.radians(latitude))
 
         term_2 = np.cos(np.radians(declination_angle)) * \
-            np.sin(np.radians(latitude)) * \
-            np.cos(np.radians(hour_angle))
+                 np.sin(np.radians(latitude)) * \
+                 np.cos(np.radians(hour_angle))
 
         elevation_angle = self.calculate_elevation_angle(latitude, longitude,
                                                          time_zone_utc, day_of_year, local_time)
@@ -189,7 +189,7 @@ class SolarCalculations:
         air_mass = np.float_(1) / np.float_(np.cos(np.radians(zenith_angle)))
         with np.errstate(over="ignore"):
             DNI = self.S_0 * ((1 - a * elevation * 0.001) * np.power(np.power(0.7, air_mass),
-                                                                 0.678) + a * elevation * 0.001)
+                                                                     0.678) + a * elevation * 0.001)
         return np.where(zenith_angle > 90, 0, DNI)
 
     def calculate_DHI(self, latitude, longitude, time_zone_utc, day_of_year,
@@ -236,11 +236,12 @@ class SolarCalculations:
             being the first day of the year.
         local_time: The local time in hours from midnight.
         elevation: The local elevation of a location in metres
+        cloud_cover: A NumPy array representing cloud cover as a percentage from 0 to 100
 
         note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
 
-        Returns: The Global Horizontal Irradiance in W/m2 
+        Returns: The Global Horizontal Irradiance in W/m^2
         """
 
         DHI = self.calculate_DHI(latitude, longitude, time_zone_utc, day_of_year,
@@ -252,11 +253,33 @@ class SolarCalculations:
         zenith_angle = self.calculate_zenith_angle(latitude, longitude,
                                                    time_zone_utc, day_of_year, local_time)
 
-        cloud_cover_correction_factor = 1 - (cloud_cover / 100)
         GHI = DNI * np.cos(np.radians(zenith_angle)) + DHI
-        GHI = cloud_cover_correction_factor * GHI
 
-        return GHI
+        return self.apply_cloud_cover(GHI=GHI, cloud_cover=cloud_cover)
+
+    @staticmethod
+    def apply_cloud_cover(GHI, cloud_cover):
+        """
+        Applies a cloud cover model to the GHI data.
+
+        Cloud cover adjustment follows the equation laid out here:
+        http://www.shodor.org/os411/courses/_master/tools/calculators/solarrad/
+
+        Args:
+            GHI: Global Horizontal Index in W/m^2
+            cloud_cover: A NumPy array representing cloud cover as a percentage from 0 to 100
+
+        Returns: GHI after considering cloud cover data
+
+        """
+
+        assert np.logical_and(cloud_cover >= 0, cloud_cover <= 100).all()
+
+        scaled_cloud_cover = cloud_cover / 100
+
+        assert np.logical_and(scaled_cloud_cover >= 0, scaled_cloud_cover <= 1).all()
+
+        return GHI * (1 - (0.75 * np.power(scaled_cloud_cover, 3.4)))
 
     # ----- Calculation of modes of solar irradiance, but returning numpy arrays -----
     @helpers.timeit

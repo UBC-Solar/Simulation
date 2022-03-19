@@ -53,7 +53,7 @@ class WeatherForecasts:
         # dataset needs to be culled
         # path to file storing the weather data
         if self.race_type == "FSGP":
-            self.coords = self.cull_dataset(coords, reduction_factor=3)
+            self.coords = np.array([coords[0], coords[-1]])
             weather_file = weather_directory / "weather_data_FSGP.npz"
         else:
             self.coords = self.cull_dataset(coords, reduction_factor=625)
@@ -257,6 +257,14 @@ class WeatherForecasts:
         `get_weather_forecast_in_time()` method.
         """
 
+        # if racing FSGP, there is no need for distance calculations. We will return only the origin coordinate
+        # This characterizes the weather at every point along the FSGP tracks
+        # with the weather at a single coordinate on the track, which is great for reducing the API calls and is a
+        # reasonable assumption to make for FSGP only.
+        if self.race_type == "FSGP":
+            result = np.zeros_like(cumulative_distances, dtype=int)
+            return result
+
         # a list of all the coordinates that we have weather data for
         weather_coords = self.weather_forecast[:, 0, 0:2]
 
@@ -394,21 +402,4 @@ class WeatherForecasts:
 
 
 if __name__ == "__main__":
-    google_api_key = ""
-
-    simulation_duration = 60 * 60 * 9
-
-    origin_coord = np.array([39.0918, -94.4172])
-
-    waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
-                          [41.8392, -103.7115], [42.8663, -106.3372], [42.8408, -108.7452],
-                          [42.3224, -111.2973], [42.5840, -114.4703]])
-
-    dest_coord = np.array([43.6142, -116.2080])
-
-    gis = simulation.GIS(google_api_key, origin_coord, dest_coord, waypoints)
-    route_coords = gis.get_path()
-
-    weather_api_key = ""
-
-    weather = simulation.WeatherForecasts(weather_api_key, route_coords, simulation_duration)
+    pass

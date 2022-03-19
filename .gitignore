@@ -135,11 +135,18 @@ dmypy.json
 data/route/*.npz
 data/weather/*.npz
 
-/examples/Distances and indices.html
-/examples/Environment variables.html
-/examples/not charge.html
-/examples/Optimized Result.html
-/examples/Simulation Result.html
-/examples/speed.html
-/examples/Speed Boolean Operations.html
-/docs/UBC Solar - Simulation.pdf
+# HTML Output files
+examples/*.html
+
+# Profiling Files
+examples/*.txt
+examples/cProfile
+
+# Docs
+docs/UBC Solar - Simulation.pdf
+
+# Config files
+simulation/config/*.json
+
+# Data Images
+data/images/*.png

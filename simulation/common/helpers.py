@@ -88,6 +88,7 @@ def add_acceleration(input_array, acceleration):
     :param acceleration: (int) acceleration (km/h^2)
     :return:speed array with acceleration (int[N])
     """
+
     input_array = input_array.astype(float)
     array_diff = np.diff(input_array)
     array_index = np.where(array_diff != 0)
@@ -507,63 +508,23 @@ def route_visualization(coords, waypoints, visible=True):
     :Param coords: A NumPy array [n][latitude, longitude]
     Outputs a window that visualizes the route with given coordinates
     """
-    # significant_number = 3
-    # maxIndexElevation = len(elevation)
-    # maxIndexDistance = len(distances)
-    # maxIndexStateofCharge = len(state_of_charge)
-    # maxIndexSolarIrrandiances = len(solar_irradiances)
-    # maxIndexCloudCover = len(cloud_cover)
-    # maxIndexWindSpeeds = len(wind_speeds)
 
-    points = []
-    lat = []
-    lon = []
-    colour = []
-    num = len(coords)
-    i = 0
-    j = 0
-    numWay = len(waypoints)
+    point_labels = [f"Point {str(i)}" for i in range(len(coords))]
+    colours = [0 for _ in coords]
+    sizes = [6 for _ in coords]
+    latitudes = [c[0] for c in coords]
+    longitudes = [c[1] for c in coords]
 
-    while i < num:
-        points.append("Point " + str(i))
-        colour.append("Blue")
-        lat.append(coords[i][0])
-        lon.append(coords[i][1])
-        i += 1
+    zipped_data = list(zip(point_labels, latitudes, longitudes, colours, sizes))
 
-    while j < numWay:
-        points.append("Checkpoint " + str(j))
-        colour.append("Red")
-        lat.append(waypoints[j][0])
-        lon.append(waypoints[j][1])
-        j += 1
+    colour_hex = "#002145"
+    solid_color_hex_continuous_scale = [colour_hex, colour_hex]
 
-    # Truncates the demical values to three significant digits
-    # j = 0
-    # while j < max(maxIndexElevation, maxIndexDistance, maxIndexStateofCharge, 
-    #               maxIndexSolarIrrandiances, maxIndexCloudCover, maxIndexWindSpeeds):
-    #     if (j < maxIndexElevation):
-    #         elevation[j] = round(elevation[j], significant_number)
-    #     if (j < maxIndexDistance):
-    #         distances[j] = round(distances[j], significant_number)
-    #     if (j < maxIndexStateofCharge):
-    #         state_of_charge[j] = round(state_of_charge[j], significant_number)
-    #     if (j < maxIndexSolarIrrandiances):
-    #         solar_irradiances[j] = round(solar_irradiances[j], significant_number)
-    #     if (j < maxIndexCloudCover):
-    #         cloud_cover[j] = round(cloud_cover[j], significant_number)
-    #     if (j < maxIndexWindSpeeds):
-    #         wind_speeds[j] = round(wind_speeds[j], significant_number)
-    #     j += 1
+    dataframe = pd.DataFrame(zipped_data, columns=["Point", "Latitude", "Longitude", "Colour", "Size"])
 
-    dataframe = pd.DataFrame(list(zip(points, lat, lon, colour)),
-                            columns=["Point", "Latitude ", "Longitude ", "Colour"])
-
-    fig = px.scatter_mapbox(dataframe, lat="Latitude ", lon="Longitude ", color="Colour", hover_name=points, zoom=3, height=800)
-
-    #dataframe = pd.DataFrame(coords, points, colour, columns=["Latitude", "Longitude", "Colour"])
-
-    #fig = px.line_mapbox(dataframe, lat="Latitude", lon="Longitude", color="Colour", hover_name=points, zoom=3, height=800)
+    fig = px.scatter_mapbox(dataframe, lat="Latitude", lon="Longitude", color="Colour",
+                            hover_name=point_labels, color_continuous_scale=solid_color_hex_continuous_scale,
+                            size="Size", size_max=6, zoom=3, height=800)
 
     fig.update_layout(mapbox_style="stamen-terrain", mapbox_zoom=5, mapbox_center_lat=41,
                       margin={"r": 0, "t": 0, "l": 0, "b": 0})
