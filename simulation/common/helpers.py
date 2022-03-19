@@ -500,7 +500,7 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
     return
 
 
-def route_visualization(coords, waypoints, visible=True):
+def route_visualization(coords, visible=True):
     """
     Takes in a list of coordinates and translates those points into a visualizable
     route using GeoPanda Library. It labels the starting point and draws a line
