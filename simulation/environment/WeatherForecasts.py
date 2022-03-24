@@ -2,7 +2,7 @@
 A class to extract local and path weather predictions such as wind_speed, 
     wind_direction, cloud_cover and weather type
 """
-
+import ctypes
 import json
 import os
 import sys
@@ -11,7 +11,6 @@ import numpy as np
 import requests
 from tqdm import tqdm
 
-import simulation
 from data.weather.__init__ import weather_directory
 from simulation.common import helpers
 
@@ -35,7 +34,7 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily", force_update=True):
+    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily", force_update=False):
         """
         Initializes the instance of a WeatherForecast class
 
@@ -50,17 +49,27 @@ class WeatherForecasts:
         self.api_key = api_key
         self.last_updated_time = -1
 
-        # dataset needs to be culled
-        # path to file storing the weather data
-        if self.race_type == "FSGP":
-            self.coords = np.array([coords[0], coords[-1]])
-            weather_file = weather_directory / "weather_data_FSGP.npz"
-        else:
-            self.coords = self.cull_dataset(coords, reduction_factor=625)
-            weather_file = weather_directory / "weather_data.npz" #temp change
+        # Setup for Golang use in get_weather_forecast_in_time()
+        self.lib = ctypes.cdll.LoadLibrary("../simulation/environment/weather_in_time_loop.so")
+        self.lib.weather_in_time_loop.argtypes = [
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.c_longlong,
+            ctypes.c_longlong
+        ]
 
         self.origin_coord = coords[0]
         self.dest_coord = coords[-1]
+
+        assert race_type in ["ASC", "FSGP"]
+
+        if self.race_type == "ASC":
+            self.coords = self.cull_dataset(coords, reduction_factor=625)
+            weather_file = weather_directory / "weather_data.npz"
+        else:
+            self.coords = np.array([coords[0], coords[-1]])
+            weather_file = weather_directory / "weather_data_FSGP.npz"
 
         api_call_required = True
 
@@ -83,7 +92,7 @@ class WeatherForecasts:
 
                     print("----- Weather save file information -----\n")
                     print(f"--- Data time range ---")
-                    print(f"Start time (UTC): {start_time} [{start_time_unix:.0f}]\n"
+                    print(f"Start time (UTC)f: {start_time} [{start_time_unix:.0f}]\n"
                           f"End time (UTC): {end_time} [{end_time_unix:.0f}]\n")
 
                     print("--- Array information ---")
@@ -236,6 +245,14 @@ class WeatherForecasts:
         return weather_forecast
 
     def calculate_closest_weather_indices(self, cumulative_distances):
+        """
+
+        Args:
+            cumulative_distances: NumPy Array representing cumulative distances theoretically achievable for a given input speed array
+
+        Returns:
+
+        """
         current_coordinate_index = 0
         result = []
 
@@ -294,53 +311,94 @@ class WeatherForecasts:
 
         return np.array(result)
 
-    def get_weather_forecast_in_time(self, indices, unix_timestamps):
+    def golang_calculate_closest_timestamp_indices(self, unix_timestamps, dt_local_array):
         """
-        Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
-        what the weather forecast is at each time step being simulated.
+        GoLang implementation to find the indices of the closest timestamps in dt_local_array and package them into a NumPy Array
 
-        :param indices: (int[N]) coordinate indices of self.weather_forecast
-        :param unix_timestamps: (int[N]) unix timestamps of the vehicle's journey
+        Args:
+            unix_timestamps: NumPy Array (float[N]) unix timestamps of the vehicle's journey
+            dt_local_array: NumPy Array (float[N]) local times, represented as unix timestamps
 
-        :returns
-        - A numpy array of size [N][9]
-        - [9]: (latitude, longitude, unix_time, timezone_offset, unix_time_corrected, wind_speed, wind_direction,
-                    cloud_cover, precipitation, description)
-        """
+        Returns: NumPy Array (int[N]) containing closest timestamp indices used by get_weather_forecast_in_time
 
         """
-        IMPORTANT: we only have weather at discrete timestamps. The car however can be in any timestamp in
-        between. Therefore we must be able to choose the weather timestamp that is closest to the one that the car is in
-        so that we can more accurately determine the weather experienced by the car at that timestamp. 
+        unix_timestamps_pointer, closest_time_stamp_indices_pointer, \
+        closest_time_stamp_indices = helpers.generate_golang_io_pointers(unix_timestamps)
 
-        For example, imagine the car is at some coordinate (x,y) at timestamp 100. Imagine we know the weather forecast
-        at (x,y) for five different timestamps: 0, 30, 60, 90, and 120. Which weather forecast should we 
-        choose? Clearly, we should choose the weather forecast at 90 since it is the closest to 100. That's what the
-        below code is accomplishing.
+        dt_local_arr_pointer, _, _ = helpers.generate_golang_io_pointers(dt_local_array)
+
+        self.lib.weather_in_time_loop(
+            unix_timestamps_pointer,
+            closest_time_stamp_indices_pointer,
+            dt_local_arr_pointer,
+            len(dt_local_array),
+            len(unix_timestamps))
+
+        return np.array(closest_time_stamp_indices, 'i')
+
+    @staticmethod
+    def python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array):
         """
 
-        # each element is the weather forecast for all available times at that coordinate
-        full_weather_forecast_at_coords = self.weather_forecast[indices]
-        dt_local_array = full_weather_forecast_at_coords[0, :, 4]
+        Python implementation to find the indices of the closest timestamps in dt_local_array and package them into a NumPy Array
 
+        Args:
+            unix_timestamps: NumPy Array (float[N]) of unix timestamps of the vehicle's journey
+            dt_local_array: NumPy Array (float[N]) of local times, represented as unix timestamps
+
+        Returns: NumPy Array of (int[N]) containing closest timestamp indices used by get_weather_forecast_in_time
+
+        """
         closest_time_stamp_indices = []
-
-        # this for loop figures out the index of the closest time stamp in the dt_local_array and packages them in an
-        # array
         for unix_timestamp in unix_timestamps:
             unix_timestamp_array = np.full_like(dt_local_array, fill_value=unix_timestamp)
             differences = np.abs(unix_timestamp_array - dt_local_array)
             minimum_index = np.argmin(differences)
             closest_time_stamp_indices.append(minimum_index)
 
-        #start_time_shift = np.where(full_weather_forecast_at_coords[:, 4] == self.time_of_initialization)[0][0]
-        closest_time_stamp_indices = np.asarray(closest_time_stamp_indices, dtype=np.int32)
+        return np.asarray(closest_time_stamp_indices, dtype=np.int32)
+
+    @helpers.timeit
+    def get_weather_forecast_in_time(self, indices, unix_timestamps, golang=True):
+        """
+        Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
+        what the weather forecast is at each time step being simulated.
+
+        we only have weather at discrete timestamps. The car however can be in any timestamp in
+        between. Therefore, we must be able to choose the weather timestamp that is closest to the one that the car is in
+        so that we can more accurately determine the weather experienced by the car at that timestamp.
+
+        For example, imagine the car is at some coordinate (x,y) at timestamp 100. Imagine we know the weather forecast
+        at (x,y) for five different timestamps: 0, 30, 60, 90, and 120. Which weather forecast should we
+        choose? Clearly, we should choose the weather forecast at 90 since it is the closest to 100. That's what the
+        below code is accomplishing.
+
+        :param indices: (int[N]) coordinate indices of self.weather_forecast
+        :param unix_timestamps: (int[N]) unix timestamps of the vehicle's journey
+        :param golang: Boolean specifying whether a GoLang implementation of get_weather_forecast_in_time should be used
+                   If false, a slower Python implementation is used.
+
+        :returns
+        - A NumPy array of size [N][9]
+        - [9]: (latitude, longitude, unix_time, timezone_offset, unix_time_corrected, wind_speed, wind_direction,
+                    cloud_cover, precipitation, description):
+
+        """
+
+        # each element is the weather forecast for all available times at that coordinate
+        full_weather_forecast_at_coords = self.weather_forecast[indices]
+        dt_local_array = full_weather_forecast_at_coords[0, :, 4]
+
+        if golang:
+            closest_timestamp_indices = self.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
+        else:
+            closest_timestamp_indices = self.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
 
         temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
 
         # if you're wondering why or how this works, don't ask because I don't know, it just does
         # this is what duct-taping looks like in software engineering
-        result = full_weather_forecast_at_coords[tuple((temp_0, closest_time_stamp_indices))]
+        result = full_weather_forecast_at_coords[tuple((temp_0, closest_timestamp_indices))]
 
         return result
 
@@ -364,6 +422,7 @@ class WeatherForecasts:
         """
         Returns the array of wind speed in m/s, in the direction opposite to the 
             bearing of the vehicle
+
 
         vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
         wind_speeds: (float[N]) The absolute speeds in m/s

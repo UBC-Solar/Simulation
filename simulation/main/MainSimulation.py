@@ -398,7 +398,6 @@ class Simulation:
         wind_directions = weather_forecasts[:, 6]
         cloud_covers = weather_forecasts[:, 7]
 
-
         # Get the wind speeds at every location
         wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
                                                        wind_directions)
