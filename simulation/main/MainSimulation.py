@@ -151,7 +151,7 @@ class Simulation:
 
             # Don't plot results since this code is run by the optimizer
             plot_results = False
-            verbose=False
+            verbose = False
 
         # ----- Reshape speed array -----
 
@@ -335,10 +335,14 @@ class Simulation:
                                                                       timestamps=self.timestamps,
                                                                       verbose=verbose)
 
-        # If race type is ASC, calculate speed considering coordinates
-        if (self.race_type == "ASC"):
-            speed_kmh = helpers.speeds_with_waypoints(self.gis.path, self.gis.path_distances, np.divide(speed_kmh, 3.6), self.waypoints, verbose=False)[:self.simulation_duration+1]
-
+        if self.race_type == "ASC":
+            speed_kmh_without_checkpoints = speed_kmh
+            speed_kmh = helpers.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
+                                                      self.waypoints, verbose=False)[:self.simulation_duration + 1]
+            if verbose:
+                helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
+                                   ["Speed before waypoints", " Speed after waypoints"],
+                                   "Before and After waypoints")
         # Acceleration currently is broken and I'm not sure why. Have to take another look at this soon.
         # speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 

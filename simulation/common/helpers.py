@@ -1,8 +1,9 @@
-import array as arr
 import ctypes
 import datetime
 import functools
 import time as timer
+from math import radians
+import array as arr
 
 import numpy as np
 import pandas as pd
@@ -12,6 +13,7 @@ from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
 from matplotlib import pyplot as plt
+from sklearn.neighbors import BallTree
 
 from simulation.common import constants
 
@@ -627,40 +629,29 @@ def generate_golang_io_pointers(input_array):
 
     """
     input_array_copy = arr.array('d', input_array)
-    input_array_pointer = (ctypes.c_double * len(input_array_copy)
-                  ).from_buffer(input_array_copy)
+    input_array_pointer = (ctypes.c_double * len(input_array_copy)).from_buffer(input_array_copy)
 
     output_array = arr.array('d', [0] * len(input_array))
     output_array_pointer = (ctypes.c_double * len(output_array)).from_buffer(output_array)
 
     return input_array_pointer, output_array_pointer, output_array
 
+def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
+    # First we need to find the closest path coordinates for each waypoint/checkpoint
+    path_rad = np.array([[radians(p[0]), radians(p[1])] for p in path])
+    tree = BallTree(path_rad, metric='haversine')
+    _, wp = tree.query([[radians(w[0]), radians(w[1])] for w in waypoints])
+    if verbose: print(f"Waypoint indices in path array:\n{wp}\n")
 
-if __name__ == '__main__':
-    # speed_array input
-    speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
-
-    expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
-    expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
-    expanded_speed_array = add_acceleration(expanded_speed_array, 20)
-    print(expanded_speed_array)
-
-def speeds_with_waypoints(path, distances, speeds, waypoints, verbose = False):
-	# First we need to find the closest path coordinates for each waypoint/checkpoint
-	path_rad = np.array([[radians(p[0]), radians(p[1])] for p in path])
-	tree = BallTree(path_rad, metric='haversine')
-	_, wp = tree.query([[radians(w[0]), radians(w[1])] for w in waypoints])
-	if verbose: print(f"Waypoint indices in path array:\n{wp}\n")
-
-	delta                   = 0.05  # margin of error with double arithmetic
-	path_index              = 0     # current path coordinate
-	temp_distance_travelled = 0     # stores the interim distance travelled between two path coordinates
+    delta = 0.05  # margin of error with double arithmetic
+    path_index = 0  # current path coordinate
+    temp_distance_travelled = 0  # stores the interim distance travelled between two path coordinates
 
     # iterate through the speeds array for each second
-	i = 0
-	while i < len(speeds):
-		distance = speeds[i]
-		"""
+    i = 0
+    while i < len(speeds):
+        distance = speeds[i]
+        """
         For each second, we will:
             1) keep travelling past path coordinates until:
                 i) we don't have enough speed to reach the next path coordinate
@@ -672,62 +663,71 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose = False):
                       coordinates to a temp variable
 		"""
 
-		total_distance_travelled  = 0 # total distance travelled this second
-		flag                      = 0 # flag used to indicate if we reached a waypoint
+        total_distance_travelled = 0  # total distance travelled this second
+        flag = 0  # flag used to indicate if we reached a waypoint
 
-		# if we can reach the next path coordinate
-		while distance + temp_distance_travelled > distances[path_index] - delta:
-			# update distance to be remainder of distance we can travel this second
-			distance = distance + temp_distance_travelled - distances[path_index]
-			# add the distance travelled to our total distance travelled this second
-			total_distance_travelled += distances[path_index] - temp_distance_travelled
-			# reset the temp_distance_travelled since we just reached a new path coordinate
-			temp_distance_travelled = 0
-			# increment values of path_index
-			path_index += 1
+        # if we can reach the next path coordinate
+        while distance + temp_distance_travelled > distances[path_index] - delta:
+            # update distance to be remainder of distance we can travel this second
+            distance = distance + temp_distance_travelled - distances[path_index]
+            # add the distance travelled to our total distance travelled this second
+            total_distance_travelled += distances[path_index] - temp_distance_travelled
+            # reset the temp_distance_travelled since we just reached a new path coordinate
+            temp_distance_travelled = 0
+            # increment values of path_index
+            path_index += 1
 
-			# If we reached the end of the coordinate list, exit
-			if path_index >= len(distances):
-				if verbose:
-					print(f"Travelled {total_distance_travelled} m at second {i}\n" \
-							f"New coordinates: {path[path_index]}\n"                \
-							"Race complete!\n")
-				return np.multiply(speeds, 3.6)
+            # If we reached the end of the coordinate list, exit
+            if path_index >= len(distances):
+                if verbose:
+                    print(f"Travelled {total_distance_travelled} m at second {i}\n" \
+                          f"New coordinates: {path[path_index]}\n" \
+                          "Race complete!\n")
+                return np.multiply(speeds, 3.6)
 
-		# If we have reached a waypoint/checkpoint, replace speeds with 0
-		if wp.size > 0 and path_index == wp[0]:
-			if verbose:
-				print(f"Travelled {total_distance_travelled} m at second {i}\n" \
-						f"New coordinates: {path[path_index]}\n"                \
-						"Reached a waypoint!\n")
-			# delete the waypoint we just reached from the wp array
-			wp = np.delete(wp, 0)
-			# update the current speed to be only what we travelled this second
-			speeds[i] = total_distance_travelled
-			# replace the speeds with 0's
-			speeds[i + 1 : i + 1 + 45 * 60] = [0] * 45 * 60
-			i += 45 * 60 - 1
-			distance = 0  # shouldn't travel anymore in this second
-			flag = 1
-			break
+            # If we have reached a waypoint/checkpoint, replace speeds with 0
+            if wp.size > 0 and path_index == wp[0]:
+                if verbose:
+                    print(
+                        f"Travelled {total_distance_travelled} m at second {i}\n" f"New coordinates: {path[path_index]}\n" "Reached a waypoint!\n")
+                # delete the waypoint we just reached from the wp array
+                wp = np.delete(wp, 0)
+                # update the current speed to be only what we travelled this second
+                speeds[i] = total_distance_travelled
+                # replace the speeds with 0's
+                speeds[i + 1: i + 1 + 45 * 60] = [0] * 45 * 60
+                i += 45 * 60 - 1
+                distance = 0  # shouldn't travel anymore in this second
+                flag = 1
+                break
 
-		if flag:
-			continue
+            if flag:
+                continue
 
-		# If I still have distance to travel but can't reach the next coordinate
-		if distance + temp_distance_travelled < distances[path_index] - delta:
-			# Update total distance travelled
-			total_distance_travelled += distance        
+        # If I still have distance to travel but can't reach the next coordinate
+        if distance + temp_distance_travelled < distances[path_index] - delta:
+            # Update total distance travelled
+            total_distance_travelled += distance
 
-			# Add onto the temperary distance between two coordinates
-			temp_distance_travelled += distance
+            # Add onto the temporary distance between two coordinates
+            temp_distance_travelled += distance
 
-			if verbose:
-				print(f"Travelled {total_distance_travelled} m at second {i}\n" \
-					f"Reached fractional coordinate.\n")
+            if verbose:
+                print(f"Travelled {total_distance_travelled} m at second {i}\n" f"Reached fractional coordinate.\n")
 
-		i += 1
+        i += 1
 
-	if verbose:
-		print("Didn't have enough speed to complete race.")
-	return np.multiply(speeds, 3.6)
+    # if verbose:
+    #     print("Didn't have enough speed to complete race.")
+    return np.multiply(speeds, 3.6)
+
+  if __name__ == '__main__':
+    # speed_array input
+    speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
+
+    expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
+    expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
+    expanded_speed_array = add_acceleration(expanded_speed_array, 20)
+    print(expanded_speed_array)
+
+
