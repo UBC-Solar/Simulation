@@ -37,10 +37,8 @@ def main():
       Keep in mind, however, that the condition len(input_speed) <= simulation_length must be true
     """
 
-    simulation_model = simulation.Simulation(race_type="FSGP")
-    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True,
-                                                    verbose=False,
-                                                    route_visualization=False)
+    simulation_model = simulation.Simulation(race_type="ASC")
+    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False)
 
     bounds = InputBounds()
     bounds.add_bounds(8, 20, 60)
