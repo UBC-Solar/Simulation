@@ -15,7 +15,7 @@ Description: Given a set of driving speeds, find the time required to complete t
 
 @helpers.timeit
 def main():
-    input_speed = np.array([50])
+    input_speed = np.array([30])
 
     """
     Note: it no longer matters how many elements the input_speed array has, the simulation automatically

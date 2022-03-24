@@ -6,7 +6,6 @@ import pytest
 @pytest.fixture
 def solar():
     solar_calculations = simulation.environment.SolarCalculations()
-
     return solar_calculations
 
 
