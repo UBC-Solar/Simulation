@@ -150,3 +150,6 @@ simulation/config/*.json
 
 # Data Images
 data/images/*.png
+
+# idea
+.idea
