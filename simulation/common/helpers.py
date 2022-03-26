@@ -721,7 +721,7 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
     #     print("Didn't have enough speed to complete race.")
     return np.multiply(speeds, 3.6)
 
-  if __name__ == '__main__':
+if __name__ == '__main__':
     # speed_array input
     speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 
@@ -729,5 +729,3 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
     expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
     expanded_speed_array = add_acceleration(expanded_speed_array, 20)
     print(expanded_speed_array)
-
-
