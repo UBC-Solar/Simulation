@@ -1,16 +1,14 @@
 import datetime
 import json
-import os
-
 import numpy as np
+import os
+import simulation
 from bayes_opt import BayesianOptimization
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
 from dotenv import load_dotenv
-
-import simulation
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
@@ -39,11 +37,8 @@ class Simulation:
         represent 7am and 9am respectively)
         """
 
-        # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
-
         assert race_type in ["ASC", "FSGP"]
 
-        # chooses the appropriate settings file to read from
         if race_type == "ASC":
             settings_path = settings_directory / "settings_ASC.json"
         else:
@@ -54,7 +49,7 @@ class Simulation:
 
         self.initial_battery_charge = args['initial_battery_charge']
 
-        # LVS power loss is pretty small so it is neglected, but we can change it in the future if needed.
+        # LVS power loss is pretty small, so it is neglected
         self.lvs_power_loss = args['lvs_power_loss']
 
         # ----- Time constants -----
@@ -140,7 +135,7 @@ class Simulation:
         :param plot_results: set to True to plot the results of the simulation (is True by default)
         :param verbose: Boolean to control logging and debugging behaviour
         :param route_visualization: Flag to control route_visualization plot visibility
-        :param **kwargs: variable list of arguments that specify the car's driving speed at each time step.
+        :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
 
         """
@@ -203,7 +198,7 @@ class Simulation:
 
         if self.race_type == "FSGP":
             # Do this so I'm not plotting the entire 300 laps which will look the same as one lap anyway.
-            helpers.route_visualization(self.gis.singlelap_path, visible=route_visualization)
+            helpers.route_visualization(self.gis.single_lap_path, visible=route_visualization)
         elif self.race_type == "ASC":
             helpers.route_visualization(self.gis.path, visible=route_visualization)
 
@@ -217,7 +212,7 @@ class Simulation:
             *args: Do not serve any function.
             **kwargs: variable list of arguments that specify the car's driving speed at each time step.
 
-        Returns: A local maximium for distance found through optimization
+        Returns: A local maximum for distance found through optimization
 
         """
 
@@ -235,13 +230,15 @@ class Simulation:
             'x7': (guess_lower_bound, guess_upper_bound),
         }
 
-        # verbose = 1 prints only when a maximum is observed, verbose = 0 is silent
+        """
+            Verbose args:
+                0 - silent
+                1 - print only when a maximum is observed
+                2 - print all iterations
+        """
         optimizer = BayesianOptimization(f=self.run_model, pbounds=bounds,
-                                         verbose=2)
+                                         verbose=1)
 
-        # configure these parameters depending on whether optimizing for speed or precision
-        # Parameter Explanations: https://github.com/fmfn/BayesianOptimization/blob/master/examples/exploitation_vs_exploration.ipynb
-        # Acquisition Functions: https://www.cse.wustl.edu/~garnett/cse515t/spring_2015/files/lecture_notes/12.pdf for an explanation
         optimizer.maximize(init_points=200, n_iter=20, acq='ucb', xi=1e-1, kappa=10)
 
         result = optimizer.max
@@ -264,7 +261,7 @@ class Simulation:
 
         return optimizer.max
 
-    def __plot_graph(self, arrays_to_plot, array_labels, graph_title):
+    def __plot_graph(self, arrays_to_plot, array_labels, graph_title, save=False):
         """
 
         This is a utility function to plot out any set of NumPy arrays you pass into it.
@@ -280,10 +277,12 @@ class Simulation:
             arrays_to_plot: An array of NumPy arrays to plot
             array_labels: An array of strings for the individual plot titles
             graph_title: A string that serves as the plot's main title
+            save: A boolean to control whether to save the graphs as an .html file.
 
         Result:
             If number of plots is even, produces a 2 x (len(arrays_to_plot) / 2) plot
             If number of plots is odd, produces a 1 x len(arrays_to_plot) plot
+            If save is enabled, produces an .html file
 
         """
         compress_constant = int(self.timestamps.shape[0] / 5000)
@@ -313,7 +312,8 @@ class Simulation:
 
         grid = gridplot(figures, sizing_mode="scale_both", ncols=3, plot_height=200, plot_width=300)
 
-        output_file(filename=graph_title + '.html', title=graph_title)
+        if save:
+            output_file(filename=graph_title + '.html', title=graph_title)
 
         show(grid)
 
@@ -343,8 +343,6 @@ class Simulation:
                 helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
                                    ["Speed before waypoints", " Speed after waypoints"],
                                    "Before and After waypoints")
-        # Acceleration currently is broken and I'm not sure why. Have to take another look at this soon.
-        # speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         # ----- Expected distance estimate -----
 
@@ -393,11 +391,6 @@ class Simulation:
         # Local times in UNIX timestamps
         local_times = adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization, time_zones)
 
-        # only for reference (may be used in the future)
-        local_times_datetime = np.array(
-            [datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
-        time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
-
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
         roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
@@ -418,7 +411,7 @@ class Simulation:
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
-        # ----- Energy calculations -----
+        # ----- Energy Calculations -----
 
         self.basic_lvs.update(self.tick)
 
@@ -448,11 +441,6 @@ class Simulation:
         # stores the battery SOC at each time step
         state_of_charge = battery_variables_array[0]
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
-
-        # when the battery is empty the car will not move
-        # TODO: if the car cannot climb the slope, the car also does not move
-        # when the car is charging the car does not move
-        # at night the car does not move
 
         if verbose:
 

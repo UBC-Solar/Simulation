@@ -1,11 +1,9 @@
 import datetime
 import json
-import os
-
 import numpy as np
-from dotenv import load_dotenv
-
+import os
 import simulation
+from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
@@ -35,11 +33,8 @@ class TimeSimulation:
         represent 7am and 9am respectively)
         """
 
-        # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
-
         assert race_type in ["ASC", "FSGP"]
 
-        # chooses the appropriate settings file to read from
         if race_type == "ASC":
             settings_path = settings_directory / "settings_ASC.json"
         else:
@@ -54,7 +49,7 @@ class TimeSimulation:
 
         self.initial_battery_charge = args['initial_battery_charge']
 
-        # LVS power loss is pretty small so it is neglected, but we can change it in the future if needed.
+        # LVS power loss is pretty small, so it is neglected
         self.lvs_power_loss = args['lvs_power_loss']
 
         # ----- Time constants -----
@@ -202,7 +197,7 @@ class TimeSimulation:
                                graph_title="Simulation Result")
 
         if self.race_type == "FSGP":
-            helpers.route_visualization(self.gis.singlelap_path, visible=route_visualization)
+            helpers.route_visualization(self.gis.single_lap_path, visible=route_visualization)
         elif self.race_type == "ASC":
             helpers.route_visualization(self.gis.path, visible=route_visualization)
 
@@ -226,8 +221,14 @@ class TimeSimulation:
                                                                       timestamps=self.timestamps,
                                                                       verbose=verbose)
 
-        # Acceleration currently is broken and I'm not sure why. Have to take another look at this soon.
-        # speed_kmh = helpers.add_acceleration(speed_kmh, 500)
+        if self.race_type == "ASC":
+            speed_kmh_without_checkpoints = speed_kmh
+            speed_kmh = helpers.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
+                                                      self.waypoints, verbose=False)[:self.simulation_duration + 1]
+            if verbose:
+                helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
+                                   ["Speed before waypoints", " Speed after waypoints"],
+                                   "Before and After waypoints")
 
         # ----- Expected distance estimate -----
 
@@ -331,11 +332,6 @@ class TimeSimulation:
         # stores the battery SOC at each time step
         state_of_charge = battery_variables_array[0]
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
-
-        # when the battery is empty the car will not move
-        # TODO: if the car cannot climb the slope, the car also does not move
-        # when the car is charging the car does not move
-        # at night the car does not move
 
         if verbose:
 

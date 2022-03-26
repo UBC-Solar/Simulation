@@ -1,24 +1,21 @@
+import array as arr
 import ctypes
 import datetime
 import functools
-import time as timer
-from math import radians
-import array as arr
-
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import time as timer
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
-from matplotlib import pyplot as plt
-from sklearn.neighbors import BallTree
-
-from simulation.common import constants
-
-from sklearn.neighbors import BallTree
 from math import radians
+from math import radians
+from matplotlib import pyplot as plt
+from simulation.common import constants
+from sklearn.neighbors import BallTree
+from sklearn.neighbors import BallTree
 
 """
 Description: contains the simulation's helper functions.
@@ -506,9 +503,8 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
 
 def route_visualization(coords, visible=True):
     """
-    Takes in a list of coordinates and translates those points into a visualizable
-    route using GeoPanda Library. It labels the starting point and draws a line
-    connecting all the coordinate points
+    Takes in a list of coordinates and visualizes them using MapBox.
+
     :Param coords: A NumPy array [n][latitude, longitude]
     Outputs a window that visualizes the route with given coordinates
     """
@@ -533,7 +529,6 @@ def route_visualization(coords, visible=True):
     fig.update_layout(mapbox_style="stamen-terrain", mapbox_zoom=5, mapbox_center_lat=41,
                       margin={"r": 0, "t": 0, "l": 0, "b": 0})
 
-    # shows the plotted points and line
     if visible:
         fig.show()
 
@@ -636,6 +631,7 @@ def generate_golang_io_pointers(input_array):
 
     return input_array_pointer, output_array_pointer, output_array
 
+
 def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
     # First we need to find the closest path coordinates for each waypoint/checkpoint
     path_rad = np.array([[radians(p[0]), radians(p[1])] for p in path])
@@ -651,20 +647,19 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
     i = 0
     while i < len(speeds):
         distance = speeds[i]
+
         """
         For each second, we will:
             1) keep travelling past path coordinates until:
                 i) we don't have enough speed to reach the next path coordinate
                 ii) we reach a waypoint
                     - replace the next 45 minutes of speeds with 0
-            2) come to a "fractional coordinate" that exists between 2 path
-                coordinates
-                    - add the temporary distance travelled between two path
-                      coordinates to a temp variable
-		"""
+            2) come to a "fractional coordinate" that exists between 2 path coordinates
+                - add the temporary distance travelled between two path coordinates to a temp variable
+        """
 
         total_distance_travelled = 0  # total distance travelled this second
-        flag = 0  # flag used to indicate if we reached a waypoint
+        waypoint_flag = 0  # flag used to indicate if we reached a waypoint
 
         # if we can reach the next path coordinate
         while distance + temp_distance_travelled > distances[path_index] - delta:
@@ -680,8 +675,8 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
             # If we reached the end of the coordinate list, exit
             if path_index >= len(distances):
                 if verbose:
-                    print(f"Travelled {total_distance_travelled} m at second {i}\n" \
-                          f"New coordinates: {path[path_index]}\n" \
+                    print(f"Travelled {total_distance_travelled} m at second {i}\n"
+                          f"New coordinates: {path[path_index]}\n"
                           "Race complete!\n")
                 return np.multiply(speeds, 3.6)
 
@@ -698,10 +693,10 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
                 speeds[i + 1: i + 1 + 45 * 60] = [0] * 45 * 60
                 i += 45 * 60 - 1
                 distance = 0  # shouldn't travel anymore in this second
-                flag = 1
+                waypoint_flag = 1
                 break
 
-            if flag:
+            if waypoint_flag:
                 continue
 
         # If I still have distance to travel but can't reach the next coordinate
@@ -720,6 +715,7 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
     # if verbose:
     #     print("Didn't have enough speed to complete race.")
     return np.multiply(speeds, 3.6)
+
 
 if __name__ == '__main__':
     # speed_array input

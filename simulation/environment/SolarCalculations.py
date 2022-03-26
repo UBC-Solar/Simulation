@@ -8,9 +8,9 @@ A class to perform calculation and approximations for obtaining quantities
 
 import datetime
 import numpy as np
+import sys
 from simulation.common import helpers
 from tqdm import tqdm
-import sys
 
 
 class SolarCalculations:
@@ -25,21 +25,22 @@ class SolarCalculations:
 
     # ----- Calculation of solar position in the sky -----
 
-    def calculate_hour_angle(self, time_zone_utc, day_of_year, local_time, longitude):
+    @staticmethod
+    def calculate_hour_angle(time_zone_utc, day_of_year, local_time, longitude):
         """
         Calculates and returns the Hour Angle of the Sun in the sky.
         https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
-        
+
         time_zone_utc: The UTC time zone of your area in hours of UTC offset.
         day_of_year: The number of the day of the current year, with January 1
             being the first day of the year.
         local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
         longitude: The longitude of a location on Earth
 
-        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
 
-        Returns: The Hour Angle in degrees. 
+        Returns: The Hour Angle in degrees.
         """
 
         lst = helpers.local_time_to_apparent_solar_time(time_zone_utc / 3600, day_of_year,
