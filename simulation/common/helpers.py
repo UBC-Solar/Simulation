@@ -445,7 +445,7 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
     return constrained_speed_kmh, not_charge
 
 
-def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
+def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=False):
     """
 
         This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
@@ -462,9 +462,11 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
             arrays_to_plot: An array of NumPy arrays to plot
             array_labels: An array of strings for the individual plot titles
             graph_title: A string that serves as the plot's main title
+            save: Boolean flag to contorl whether to save an .html file
 
         Result:
             Produces a 3 x ceil(len(arrays_to_plot) / 3) plot
+            If save is enabled, save html file
 
         """
     compress_constant = int(timestamps.shape[0] / 5000)
@@ -494,7 +496,8 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
 
     grid = gridplot(figures, sizing_mode="scale_both", ncols=3, plot_height=200, plot_width=300)
 
-    output_file(filename=graph_title + '.html', title=graph_title)
+    if save:
+        output_file(filename=graph_title + '.html', title=graph_title)
 
     show(grid)
 
