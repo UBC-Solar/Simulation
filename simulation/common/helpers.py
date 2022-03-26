@@ -445,7 +445,7 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
     return constrained_speed_kmh, not_charge
 
 
-def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=False):
+def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True):
     """
 
         This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
