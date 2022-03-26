@@ -84,36 +84,7 @@ def reshape_and_repeat(input_array, reshape_length):
         return result
 
 
-def add_acceleration(input_array, acceleration):
-    """
-    Takes in the speed array with sudden speed changes and an acceleration scalar,
-    return a speed array with constant acceleration / deceleration
-    :param input_array: (int[N]) input speed array (km/h)
-    :param acceleration: (int) acceleration (km/h^2)
-    :return:speed array with acceleration (int[N])
-    """
-
-    input_array = input_array.astype(float)
-    array_diff = np.diff(input_array)
-    array_index = np.where(array_diff != 0)
-
-    # acceleration per second (kmh/s)
-    acceleration = abs(acceleration) / 3600
-
-    for i in array_index[0]:
-        # check if accelerate or decelerate
-        if array_diff[i] > 0:
-            while input_array[i] < input_array[i + 1] and i + 1 < len(input_array) - 1:
-                # print("i'm stuck in this if while loop")
-                input_array[i + 1] = input_array[i] + acceleration
-                i += 1
-
-        else:
-            while input_array[i] > input_array[i + 1] and i + 1 < len(input_array) - 1:
-                # print("i'm stuck in this else while loop")
-                input_array[i + 1] = input_array[i] - acceleration
-                i += 1
-
+def apply_deceleration(input_array, acceleration):
     return input_array
 
 
