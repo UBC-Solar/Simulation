@@ -1,5 +1,6 @@
 import math
 import pytest
+
 import numpy as np
 
 from simulation.common import helpers
@@ -37,7 +38,7 @@ def test_trivial():
 
     expected_speed_array = np.array([50, 37.5, 25, 12.5, 0, 0, 0, 0])
     assert np.all(result_speed_array == expected_speed_array)
-
+   
 def test_trivial_2():
     test_speed_array = np.array([40, 44, 49.9, 50, 50, 50, 50, 0, 0, 0, 0])
 
@@ -55,6 +56,7 @@ def test_trivial_3():
     assert np.all(result_speed_array == expected_speed_array)
 
 
+
 def test_negative_steps():
     test_speed_array = np.array([50, 50, 50, 50, 0, 0, 0, 0])
 
@@ -63,6 +65,7 @@ def test_negative_steps():
 
     expected_speed_array = np.array([50, 50, 50, 50, 0, 0, 0, 0])
     assert np.all(result_speed_array == expected_speed_array)
+
 
 def test_none_array():
     test_speed_array = None
@@ -74,7 +77,9 @@ def test_none_array():
 
     assert np.all(result_speed_array == expected_speed_array)
 
+
 def test_huge_interval():
+
     test_speed_array = np.array([50, 50, 50, 50, 0, 0, 50, 0])
 
     test_interval = 123
@@ -91,6 +96,7 @@ def test_interval_size_equal_array_size():
 
     expected_speed_array = np.array([50, 50, 0])
     assert np.all(result_speed_array == expected_speed_array)
+
 
 def test_large_interval_size():
     a = np.full((1, 100), 50)[0]

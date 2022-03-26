@@ -159,6 +159,8 @@ class Simulation:
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
+        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
+
         # ------ Run calculations and get result and modified speed array -------
 
         result = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
