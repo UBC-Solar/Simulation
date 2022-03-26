@@ -1,5 +1,5 @@
 import math
-import unittest
+import pytest
 
 import numpy as np
 
@@ -15,7 +15,7 @@ def test_no_deceleration():
     expected_speed_array = np.array([50, 50, 50, 50, 50, 50, 50, 50])
     assert np.all(result_speed_array == expected_speed_array)
 
-def test_no_deceleration_2(self):
+def test_no_deceleration_2():
     test_speed_array = np.array([0, 0, 0, 0, 0, 0, 0, 0])
 
     result_speed_array = apply_deceleration(test_speed_array, 3)
@@ -23,7 +23,7 @@ def test_no_deceleration_2(self):
     expected_speed_array = np.array([0, 0, 0, 0, 0, 0, 0, 0])
     assert np.all(result_speed_array == expected_speed_array)
 
-def test_acceleration(self):
+def test_acceleration():
     test_speed_array = np.array([10, 20, 30, 40, 50, 60, 70, 80])
 
     result_speed_array = apply_deceleration(test_speed_array, 3)
@@ -31,15 +31,15 @@ def test_acceleration(self):
     expected_speed_array = np.array([10, 20, 30, 40, 50, 60, 70, 80])
     assert np.all(result_speed_array == expected_speed_array)
 
-def test_trivial(self):
+def test_trivial():
     test_speed_array = np.array([50, 50, 50, 50, 0, 0, 0, 0])
 
     result_speed_array = apply_deceleration(test_speed_array, 3)
 
     expected_speed_array = np.array([50, 37.5, 25, 12.5, 0, 0, 0, 0])
     assert np.all(result_speed_array == expected_speed_array)
-
-def test_trivial_2(self):
+   
+def test_trivial_2():
     test_speed_array = np.array([40, 44, 49.9, 50, 50, 50, 50, 0, 0, 0, 0])
 
     result_speed_array = apply_deceleration(test_speed_array, 3)
@@ -47,7 +47,7 @@ def test_trivial_2(self):
     expected_speed_array = np.array([40, 44, 49.9, 50, 37.5, 25, 12.5, 0, 0, 0, 0])
     assert np.all(result_speed_array == expected_speed_array)
 
-def test_trivial_3(self):
+def test_trivial_3():
     test_speed_array = np.array([50, 50, 50, 50, 0, 0, 50, 0])
 
     result_speed_array = apply_deceleration(test_speed_array, 3)
@@ -56,7 +56,8 @@ def test_trivial_3(self):
     assert np.all(result_speed_array == expected_speed_array)
 
 
-def test_negative_steps(self):
+
+def test_negative_steps():
     test_speed_array = np.array([50, 50, 50, 50, 0, 0, 0, 0])
 
     test_interval = -3
@@ -65,7 +66,8 @@ def test_negative_steps(self):
     expected_speed_array = np.array([50, 50, 50, 50, 0, 0, 0, 0])
     assert np.all(result_speed_array == expected_speed_array)
 
-def test_none_array(self):
+
+def test_none_array():
     test_speed_array = None
 
     test_interval = 123
@@ -75,7 +77,9 @@ def test_none_array(self):
 
     assert np.all(result_speed_array == expected_speed_array)
 
-def test_huge_interval(self):
+
+def test_huge_interval():
+
     test_speed_array = np.array([50, 50, 50, 50, 0, 0, 50, 0])
 
     test_interval = 123
@@ -84,7 +88,7 @@ def test_huge_interval(self):
     expected_speed_array = np.array([50, 50, 50, 50, 0, 0, 50, 0])
     assert np.all(result_speed_array == expected_speed_array)
 
-def test_interval_size_equal_array_size(self):
+def test_interval_size_equal_array_size():
     test_speed_array = np.array([50, 50, 0])
 
     test_interval = 3
@@ -93,7 +97,8 @@ def test_interval_size_equal_array_size(self):
     expected_speed_array = np.array([50, 50, 0])
     assert np.all(result_speed_array == expected_speed_array)
 
-def test_large_interval_size(self):
+
+def test_large_interval_size():
     a = np.full((1, 100), 50)[0]
     test_speed_array = np.concatenate((a, 0), axis=None)
 

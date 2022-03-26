@@ -78,9 +78,11 @@ def reshape_and_repeat(input_array, reshape_length):
     else:
         quotient_remainder_tuple = divmod(reshape_length, input_array.size)
         temp = np.repeat(input_array, quotient_remainder_tuple[0])
-        result = np.append(temp, np.repeat(temp[-1], quotient_remainder_tuple[1]))
+        result = np.append(temp, np.repeat(
+            temp[-1], quotient_remainder_tuple[1]))
 
-        print(f"Reshaped input array from {input_array.shape} to {result.shape}\n")
+        print(
+            f"Reshaped input array from {input_array.shape} to {result.shape}\n")
         return result
 
 
@@ -93,6 +95,7 @@ def generate_deceleration_array(initial_velocity, final_velocity, deceleration_i
     :param deceleration_interval: the time it will take to decelerate from initial velocity to final velocity (s)
     :return: an array of the velocities between initial_velocity and final_velocity
     """
+
     deceleration_instance_size = (final_velocity + initial_velocity) / (deceleration_interval + 1)
     return np.arange(initial_velocity, final_velocity, -deceleration_instance_size)[1:]
 
@@ -147,7 +150,6 @@ def is_valid_speed_array(deceleration_interval, idx, initial_velocity, input_spe
         if initial_velocity != input_speed_array[idx - i - 1]:
             return False
     return True
-
 
 
 def hour_from_unix_timestamp(unix_timestamp):
@@ -379,11 +381,11 @@ def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     Returns: The elevation angle in degrees
     """
     term_1 = np.sin(np.radians(declination_angle)) * \
-             np.sin(np.radians(latitude))
+        np.sin(np.radians(latitude))
 
     term_2 = np.cos(np.radians(declination_angle)) * \
-             np.cos(np.radians(latitude)) * \
-             np.cos(np.radians(hour_angle))
+        np.cos(np.radians(latitude)) * \
+        np.cos(np.radians(hour_angle))
 
     elevation_angle = np.arcsin(term_1 + term_2)
     return np.degrees(elevation_angle)
@@ -458,17 +460,21 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
     # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
     # (Charge from 8am-9am and 6pm-8pm) for FSGP
 
-    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
+    simulation_hours = np.arange(
+        start_hour, start_hour + simulation_duration / (60 * 60))
 
     simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
                                            start_hour + simulation_duration / (60 * 60)).astype(int)
 
     if race_type == "ASC":
-        driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 18]
+        driving_time_boolean = [
+            (simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 18]
     elif race_type == "FSGP":
-        driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
+        driving_time_boolean = [
+            (simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
     else:
-        raise ValueError(f"Invalid race_type provided: \"{race_type}\". Must be one of \"ASC\" or \"FSGP\".")
+        raise ValueError(
+            f"Invalid race_type provided: \"{race_type}\". Must be one of \"ASC\" or \"FSGP\".")
     not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
     if verbose:
         plot_graph(timestamps=timestamps,
@@ -528,7 +534,8 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
 
         figures[index].add_tools(hover_tool)
 
-    grid = gridplot(figures, sizing_mode="scale_both", ncols=3, plot_height=200, plot_width=300)
+    grid = gridplot(figures, sizing_mode="scale_both",
+                    ncols=3, plot_height=200, plot_width=300)
 
     output_file(filename=graph_title + '.html', title=graph_title)
 
@@ -552,12 +559,14 @@ def route_visualization(coords, visible=True):
     latitudes = [c[0] for c in coords]
     longitudes = [c[1] for c in coords]
 
-    zipped_data = list(zip(point_labels, latitudes, longitudes, colours, sizes))
+    zipped_data = list(zip(point_labels, latitudes,
+                       longitudes, colours, sizes))
 
     colour_hex = "#002145"
     solid_color_hex_continuous_scale = [colour_hex, colour_hex]
 
-    dataframe = pd.DataFrame(zipped_data, columns=["Point", "Latitude", "Longitude", "Colour", "Size"])
+    dataframe = pd.DataFrame(zipped_data, columns=[
+                             "Point", "Latitude", "Longitude", "Colour", "Size"])
 
     fig = px.scatter_mapbox(dataframe, lat="Latitude", lon="Longitude", color="Colour",
                             hover_name=point_labels, color_continuous_scale=solid_color_hex_continuous_scale,
@@ -662,23 +671,28 @@ def generate_golang_io_pointers(input_array):
 
     """
     input_array_copy = arr.array('d', input_array)
-    input_array_pointer = (ctypes.c_double * len(input_array_copy)).from_buffer(input_array_copy)
+    input_array_pointer = (
+        ctypes.c_double * len(input_array_copy)).from_buffer(input_array_copy)
 
     output_array = arr.array('d', [0] * len(input_array))
-    output_array_pointer = (ctypes.c_double * len(output_array)).from_buffer(output_array)
+    output_array_pointer = (
+        ctypes.c_double * len(output_array)).from_buffer(output_array)
 
     return input_array_pointer, output_array_pointer, output_array
+
 
 def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
     # First we need to find the closest path coordinates for each waypoint/checkpoint
     path_rad = np.array([[radians(p[0]), radians(p[1])] for p in path])
     tree = BallTree(path_rad, metric='haversine')
     _, wp = tree.query([[radians(w[0]), radians(w[1])] for w in waypoints])
-    if verbose: print(f"Waypoint indices in path array:\n{wp}\n")
+    if verbose:
+        print(f"Waypoint indices in path array:\n{wp}\n")
 
     delta = 0.05  # margin of error with double arithmetic
     path_index = 0  # current path coordinate
-    temp_distance_travelled = 0  # stores the interim distance travelled between two path coordinates
+    # stores the interim distance travelled between two path coordinates
+    temp_distance_travelled = 0
 
     # iterate through the speeds array for each second
     i = 0
@@ -702,9 +716,11 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
         # if we can reach the next path coordinate
         while distance + temp_distance_travelled > distances[path_index] - delta:
             # update distance to be remainder of distance we can travel this second
-            distance = distance + temp_distance_travelled - distances[path_index]
+            distance = distance + temp_distance_travelled - \
+                distances[path_index]
             # add the distance travelled to our total distance travelled this second
-            total_distance_travelled += distances[path_index] - temp_distance_travelled
+            total_distance_travelled += distances[path_index] - \
+                temp_distance_travelled
             # reset the temp_distance_travelled since we just reached a new path coordinate
             temp_distance_travelled = 0
             # increment values of path_index
@@ -713,8 +729,8 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
             # If we reached the end of the coordinate list, exit
             if path_index >= len(distances):
                 if verbose:
-                    print(f"Travelled {total_distance_travelled} m at second {i}\n" \
-                          f"New coordinates: {path[path_index]}\n" \
+                    print(f"Travelled {total_distance_travelled} m at second {i}\n"
+                          f"New coordinates: {path[path_index]}\n"
                           "Race complete!\n")
                 return np.multiply(speeds, 3.6)
 
@@ -746,13 +762,15 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
             temp_distance_travelled += distance
 
             if verbose:
-                print(f"Travelled {total_distance_travelled} m at second {i}\n" f"Reached fractional coordinate.\n")
+                print(
+                    f"Travelled {total_distance_travelled} m at second {i}\n" f"Reached fractional coordinate.\n")
 
         i += 1
 
     # if verbose:
     #     print("Didn't have enough speed to complete race.")
     return np.multiply(speeds, 3.6)
+
 
 if __name__ == '__main__':
     # speed_array input
