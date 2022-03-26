@@ -10,6 +10,7 @@ import sys
 import numpy as np
 import requests
 from tqdm import tqdm
+import pathlib
 
 from data.weather.__init__ import weather_directory
 from simulation.common import helpers
@@ -50,7 +51,9 @@ class WeatherForecasts:
         self.last_updated_time = -1
 
         # Setup for Golang use in get_weather_forecast_in_time()
-        self.lib = ctypes.cdll.LoadLibrary("../simulation/environment/weather_in_time_loop.so")
+        go_directory = pathlib.Path(__file__).parent
+
+        self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/weather_in_time_loop.so")
         self.lib.weather_in_time_loop.argtypes = [
             ctypes.POINTER(ctypes.c_double),
             ctypes.POINTER(ctypes.c_double),
