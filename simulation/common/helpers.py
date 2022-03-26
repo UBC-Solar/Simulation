@@ -84,37 +84,70 @@ def reshape_and_repeat(input_array, reshape_length):
         return result
 
 
-def add_acceleration(input_array, acceleration):
+def generate_deceleration_array(initial_velocity, final_velocity, deceleration_interval):
     """
-    Takes in the speed array with sudden speed changes and an acceleration scalar,
-    return a speed array with constant acceleration / deceleration
-    :param input_array: (int[N]) input speed array (km/h)
-    :param acceleration: (int) acceleration (km/h^2)
-    :return:speed array with acceleration (int[N])
+    Create an array where each element represents a step in the deceleration from initial_velocity to final_velocity.
+
+    :param initial_velocity: the velocity at which deceleration occurs for the first time (km/h)
+    :param final_velocity: the target velocity that is being decelerated to (km/h)
+    :param deceleration_interval: the time it will take to decelerate from initial velocity to final velocity (s)
+    :return: an array of the velocities between initial_velocity and final_velocity
     """
+    deceleration_instance_size = (final_velocity + initial_velocity) / (deceleration_interval + 1)
+    return np.arange(initial_velocity, final_velocity, -deceleration_instance_size)[1:]
 
-    input_array = input_array.astype(float)
-    array_diff = np.diff(input_array)
-    array_index = np.where(array_diff != 0)
 
-    # acceleration per second (kmh/s)
-    acceleration = abs(acceleration) / 3600
+def apply_deceleration(input_speed_array, deceleration_interval):
+    """
+    Replace instances of instant deceleration in a velocity array with uniform changes in velocity that are spread
+    over the deceleration_interval.
 
-    for i in array_index[0]:
-        # check if accelerate or decelerate
-        if array_diff[i] > 0:
-            while input_array[i] < input_array[i + 1] and i + 1 < len(input_array) - 1:
-                # print("i'm stuck in this if while loop")
-                input_array[i + 1] = input_array[i] + acceleration
-                i += 1
+    The distance travelled by the simulation will be reduced by a negligible amount.
 
-        else:
-            while input_array[i] > input_array[i + 1] and i + 1 < len(input_array) - 1:
-                # print("i'm stuck in this else while loop")
-                input_array[i + 1] = input_array[i] - acceleration
-                i += 1
+    :param input_speed_array: the velocity array (km/h)
+    :param deceleration_interval: the duration of the deceleration intervals (s)
+    :return: a speed array with uniform deceleration (km/h)
+    """
+    if input_speed_array is None:
+        return np.array([])
+    if deceleration_interval <= 0:
+        return input_speed_array
 
-    return input_array
+    input_speed_array = input_speed_array.astype(float)
+    acceleration_instances = np.diff(input_speed_array, prepend=[0])  # Prepending 0 to align acceleration_instances
+    # array with speed_array
+    deceleration_instances = np.where(acceleration_instances < 0)[0]  # [0] must be added because np.where returns an
+    # array with only one element
+
+    for idx in deceleration_instances:
+        initial_velocity = input_speed_array[idx - 1]
+        final_velocity = input_speed_array[idx]
+
+        if is_valid_speed_array(deceleration_interval, idx, initial_velocity, input_speed_array):
+            deceleration_array = generate_deceleration_array(initial_velocity, final_velocity, deceleration_interval)
+            input_speed_array[idx - deceleration_interval:idx] = deceleration_array
+    return input_speed_array
+
+
+def is_valid_speed_array(deceleration_interval, idx, initial_velocity, input_speed_array):
+    """
+    Check that the specified speed array is valid in relation to the chosen deceleration interval.
+
+    :param deceleration_interval: the duration of the deceleration intervals (s)
+    :param idx: the index used to check our deceleration interval
+    :param initial_velocity: the velocity at the beginning of the deceleration period
+    :param input_speed_array: the speed array
+    :return: True if the array is valid, False if it is not
+    """
+    if deceleration_interval > len(input_speed_array) - 1:  # Check that the speed array isn't smaller than the
+        # deceleration interval
+        return False
+
+    for i in range(0, deceleration_interval):  # Check that the speed is constant over the deceleration interval
+        if initial_velocity != input_speed_array[idx - i - 1]:
+            return False
+    return True
+
 
 
 def hour_from_unix_timestamp(unix_timestamp):
