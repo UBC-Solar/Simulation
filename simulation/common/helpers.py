@@ -96,8 +96,9 @@ def generate_deceleration_array(initial_velocity, final_velocity, deceleration_i
     :return: an array of the velocities between initial_velocity and final_velocity
     """
 
-    deceleration_instance_size = (final_velocity + initial_velocity) / (deceleration_interval + 1)
-    return np.arange(initial_velocity, final_velocity, -deceleration_instance_size)[1:]
+    deceleration_instance_size = (
+        final_velocity - initial_velocity) / (deceleration_interval + 1)
+    return np.arange(initial_velocity, final_velocity, deceleration_instance_size)[1:]
 
 
 def apply_deceleration(input_speed_array, deceleration_interval):
@@ -117,9 +118,11 @@ def apply_deceleration(input_speed_array, deceleration_interval):
         return input_speed_array
 
     input_speed_array = input_speed_array.astype(float)
-    acceleration_instances = np.diff(input_speed_array, prepend=[0])  # Prepending 0 to align acceleration_instances
+    # Prepending 0 to align acceleration_instances
+    acceleration_instances = np.diff(input_speed_array, prepend=[0])
     # array with speed_array
-    deceleration_instances = np.where(acceleration_instances < 0)[0]  # [0] must be added because np.where returns an
+    # [0] must be added because np.where returns an
+    deceleration_instances = np.where(acceleration_instances < 0)[0]
     # array with only one element
 
     for idx in deceleration_instances:
@@ -127,8 +130,10 @@ def apply_deceleration(input_speed_array, deceleration_interval):
         final_velocity = input_speed_array[idx]
 
         if is_valid_speed_array(deceleration_interval, idx, initial_velocity, input_speed_array):
-            deceleration_array = generate_deceleration_array(initial_velocity, final_velocity, deceleration_interval)
-            input_speed_array[idx - deceleration_interval:idx] = deceleration_array
+            deceleration_array = generate_deceleration_array(
+                initial_velocity, final_velocity, deceleration_interval)
+            input_speed_array[idx -
+                              deceleration_interval:idx] = deceleration_array
     return input_speed_array
 
 
@@ -146,7 +151,8 @@ def is_valid_speed_array(deceleration_interval, idx, initial_velocity, input_spe
         # deceleration interval
         return False
 
-    for i in range(0, deceleration_interval):  # Check that the speed is constant over the deceleration interval
+    # Check that the speed is constant over the deceleration interval
+    for i in range(0, deceleration_interval):
         if initial_velocity != input_speed_array[idx - i - 1]:
             return False
     return True
