@@ -10,15 +10,15 @@ class Storage(ABC):
 
     def __init__(self, stored_energy=0):
         self.stored_energy = stored_energy
-        
+
     @abstractmethod
     def update(self, tick):
         raise NotImplementedError
 
-    @abstractmethod 
+    @abstractmethod
     def charge(self, energy):
         raise NotImplementedError
 
-    @abstractmethod 
+    @abstractmethod
     def discharge(self, energy):
         raise NotImplementedError

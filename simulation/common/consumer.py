@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 
-class Consumer(ABC): 
+
+class Consumer(ABC):
     """
     The base consumer model
 
     :param consumed_energy: (float) the initial state for consumed energy
     """
+
     def __init__(self, consumed_energy):
         self.consumed_energy = consumed_energy
 
@@ -17,7 +19,7 @@ class Consumer(ABC):
         :param tick: (float) the length of time for the tick (in seconds)
         """
         raise NotImplementedError
-        
+
     def get_consumed_energy(self):
         return self.consumed_energy
 
@@ -28,4 +30,3 @@ class Consumer(ABC):
         energy = self.get_consumed_energy()
         self.set_consumed_energy(0)
         return energy
-

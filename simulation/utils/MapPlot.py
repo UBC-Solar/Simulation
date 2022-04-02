@@ -1,15 +1,13 @@
 import json
-import os
-import uuid
-from io import BytesIO
-
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pandas as pd
 import requests
+import uuid
 from PIL import Image
 from dotenv import load_dotenv
-
+from io import BytesIO
 from simulation.environment import GIS
 
 BACKGROUND_IMAGE_PATH = './data/images/'
@@ -86,12 +84,12 @@ if __name__ == "__main__":
     load_dotenv()
     google_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
-    origin_coord =np.array([38.9281815, -95.6770217])
-    dest_coord =  np.array([38.9282115, -95.6770268])
+    origin_coord = np.array([38.9281815, -95.6770217])
+    dest_coord = np.array([38.9282115, -95.6770268])
     waypoints = np.array([
         [38.9221906, -95.6762981],
         [38.9217086, -95.6767896], [38.9189926, -95.6753145], [38.9196768, -95.6724799],
-        [38.9196768,-95.6724799], [38.9247448, -95.6714528], [38.9309102, -95.6749362],
+        [38.9196768, -95.6724799], [38.9247448, -95.6714528], [38.9309102, -95.6749362],
         [38.928188, -95.6770129]
     ])
 

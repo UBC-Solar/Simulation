@@ -1,5 +1,3 @@
-# Stores all the simulation constants
-
 # Radius of the Earth (m)
 EARTH_RADIUS = 6371009
 

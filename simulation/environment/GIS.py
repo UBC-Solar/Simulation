@@ -2,19 +2,17 @@ import datetime
 import json
 import logging
 import math
-import os
-import sys
-
 import numpy as np
+import os
 import polyline
 import pytz
 import requests
+import sys
+from data.route.__init__ import route_directory
 from dotenv import load_dotenv
+from simulation.common import helpers
 from timezonefinder import TimezoneFinder
 from tqdm import tqdm
-
-from data.route.__init__ import route_directory
-from simulation.common import helpers
 
 
 class GIS:
@@ -27,7 +25,7 @@ class GIS:
         :param origin_coord: NumPy array containing the start coordinate (lat, long) of the planned travel route
         :param dest_coord: NumPy array containing the end coordinate (lat, long) of the planned travel route
         :param waypoints: NumPy array containing the route waypoints to travel through during simulation
-        :param race_type: String ("FSGP" or "ASC") stating which race is simulated
+        :param race_type: String ("FSGP" or "ASC") stating which race is being simulated
         :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
 
         """
@@ -84,10 +82,11 @@ class GIS:
                 np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
                          origin_coord=self.origin_coord,
                          dest_coord=self.dest_coord, waypoints=self.waypoints)
+
         if race_type == "FSGP":
-            self.singlelap_path = self.path
+            self.single_lap_path = self.path
             self.path = np.tile(self.path, (300, 1))
-            self.singlelap_path_elevations = self.path_elevations
+            self.single_lap_path_elevations = self.path_elevations
             self.path_elevations = np.tile(self.path_elevations, 300)
             self.path_time_zones = self.calculate_time_zones(self.path)
 

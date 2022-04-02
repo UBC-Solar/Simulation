@@ -1,6 +1,6 @@
-import simulation
 import numpy as np
 import pytest
+import simulation
 
 
 @pytest.fixture
