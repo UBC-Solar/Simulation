@@ -34,5 +34,5 @@ setup(name='simulation',
       license="MIT",
       long_description=long_description,
       long_description_content_type='text/markdown',
-      version="0.3a1",
+      version="0.5.0-alpha"
       )

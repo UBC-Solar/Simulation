@@ -154,7 +154,7 @@ class Simulation:
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
-        speed_kmh = helpers.add_acceleration(speed_kmh, 500)
+        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
 
         # ------ Run calculations and get result and modified speed array -------
 
@@ -230,6 +230,8 @@ class Simulation:
                 helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
                                    ["Speed before waypoints", " Speed after waypoints"],
                                    "Before and After waypoints")
+
+        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
 
         # ----- Expected distance estimate -----
 
