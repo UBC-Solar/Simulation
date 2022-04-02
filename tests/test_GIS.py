@@ -1,11 +1,10 @@
-import simulation
 import numpy as np
 import os
+import pytest
+import simulation
 from dotenv import load_dotenv
-
 from simulation.common import helpers
 from simulation.common.constants import EARTH_RADIUS
-import pytest
 
 
 @pytest.fixture

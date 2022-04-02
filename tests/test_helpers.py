@@ -126,7 +126,6 @@ def test_multi_index_runs1():
     assert (expected_multi_index_run_lengths == actual_multi_index_run_lengths).all()
 
 
-
 if __name__ == "__main__":
     test_find_runs1()
     test_check_for_non_consecutive_zeros()

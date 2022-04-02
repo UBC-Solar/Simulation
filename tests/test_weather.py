@@ -1,11 +1,9 @@
-import os
-
 import dotenv
+import os
 import pytest
 import simulation
-
-from simulation.environment import WeatherForecasts
 from simulation.common.helpers import *
+from simulation.environment import WeatherForecasts
 
 
 @pytest.fixture

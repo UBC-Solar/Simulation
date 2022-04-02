@@ -1,4 +1,4 @@
-# UBC Solar's ASC Simulation
+# UBC Solar's ASC and FSGP Simulation
 
 [![Build Status](https://app.travis-ci.com/UBC-Solar/Simulation.svg?branch=master)](https://app.travis-ci.com/UBC-Solar/Simulation)
 

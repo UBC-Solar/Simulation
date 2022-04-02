@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 
 
-class Producer(ABC): 
+class Producer(ABC):
     """
     The base producer model
 
     :param produced_energy: (float) the initial state for produced energy
     """
+
     def __init__(self, produced_energy=0):
         self.produced_energy = produced_energy
 
@@ -18,7 +19,7 @@ class Producer(ABC):
         :param tick: (float) the length of time for the tick (in seconds)
         """
         raise NotImplementedError
-        
+
     def get_produced_energy(self):
         return self.produced_energy
 

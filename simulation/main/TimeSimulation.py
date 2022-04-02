@@ -1,11 +1,9 @@
 import datetime
 import json
-import os
-
 import numpy as np
-from dotenv import load_dotenv
-
+import os
 import simulation
+from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
@@ -35,11 +33,8 @@ class TimeSimulation:
         represent 7am and 9am respectively)
         """
 
-        # TODO: replace max_speed with a direct calculation taking into account car elevation and wind_speed
-
         assert race_type in ["ASC", "FSGP"]
 
-        # chooses the appropriate settings file to read from
         if race_type == "ASC":
             settings_path = settings_directory / "settings_ASC.json"
         else:
@@ -54,7 +49,7 @@ class TimeSimulation:
 
         self.initial_battery_charge = args['initial_battery_charge']
 
-        # LVS power loss is pretty small so it is neglected, but we can change it in the future if needed.
+        # LVS power loss is pretty small, so it is neglected
         self.lvs_power_loss = args['lvs_power_loss']
 
         # ----- Time constants -----
@@ -92,7 +87,8 @@ class TimeSimulation:
 
         self.basic_array = simulation.BasicArray()
 
-        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)
+        self.basic_battery = simulation.BasicBattery(
+            self.initial_battery_charge)
 
         self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)
 
@@ -109,19 +105,21 @@ class TimeSimulation:
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update)
 
-        weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
-        self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
+        weather_hour = helpers.hour_from_unix_timestamp(
+            self.weather.last_updated_time)
+        self.time_of_initialization = self.weather.last_updated_time + \
+            3600 * (24 + self.start_hour - weather_hour)
 
         self.solar_calculations = simulation.SolarCalculations()
 
         self.local_times = 0
 
-        self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
+        self.timestamps = np.arange(
+            0, self.simulation_duration + self.tick, self.tick)
 
     @helpers.timeit
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
                   route_visualization=False, **kwargs):
-
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a Simulation results object, given an initial charge, and a target speed.
@@ -158,7 +156,6 @@ class TimeSimulation:
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
-        speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         # ------ Run calculations and get result and modified speed array -------
 
@@ -202,9 +199,11 @@ class TimeSimulation:
                                graph_title="Simulation Result")
 
         if self.race_type == "FSGP":
-            helpers.route_visualization(self.gis.singlelap_path, visible=route_visualization)
+            helpers.route_visualization(
+                self.gis.single_lap_path, visible=route_visualization)
         elif self.race_type == "ASC":
-            helpers.route_visualization(self.gis.path, visible=route_visualization)
+            helpers.route_visualization(
+                self.gis.path, visible=route_visualization)
 
         return -1 * time_taken
 
@@ -226,8 +225,15 @@ class TimeSimulation:
                                                                       timestamps=self.timestamps,
                                                                       verbose=verbose)
 
-        # Acceleration currently is broken and I'm not sure why. Have to take another look at this soon.
-        # speed_kmh = helpers.add_acceleration(speed_kmh, 500)
+        if self.race_type == "ASC":
+            speed_kmh_without_checkpoints = speed_kmh
+            speed_kmh = helpers.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
+                                                      self.waypoints, verbose=False)[:self.simulation_duration + 1]
+            if verbose:
+                helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
+                                   ["Speed before waypoints",
+                                       " Speed after waypoints"],
+                                   "Before and After waypoints")
 
         # ----- Expected distance estimate -----
 
@@ -246,16 +252,20 @@ class TimeSimulation:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
+        closest_gis_indices = self.gis.calculate_closest_gis_indices(
+            cumulative_distances)
 
-        closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
+        closest_weather_indices = self.weather.calculate_closest_weather_indices(
+            cumulative_distances)
 
         path_distances = self.gis.path_distances
-        cumulative_distances = np.cumsum(path_distances)  # [cumulative_distances] = meters
+        # [cumulative_distances] = meters
+        cumulative_distances = np.cumsum(path_distances)
 
         max_route_distance = cumulative_distances[-1]
 
-        self.route_length = max_route_distance / 1000.0  # store the route length in kilometers
+        # store the route length in kilometers
+        self.route_length = max_route_distance / 1000.0
 
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
@@ -274,16 +284,15 @@ class TimeSimulation:
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization, time_zones)
-
-        # only for reference (may be used in the future)
-        local_times_datetime = np.array(
-            [datetime.datetime.utcfromtimestamp(local_unix_time) for local_unix_time in local_times])
-        time_of_day_hour = np.array([helpers.hour_from_unix_timestamp(ti) for ti in local_times])
+        local_times = adjust_timestamps_to_local_times(
+            self.timestamps, self.time_of_initialization, time_zones)
 
         # Get the weather at every location
-        weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
-        roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
+        weather_forecasts = self.weather.get_weather_forecast_in_time(
+            closest_weather_indices, local_times)
+        roll_by_tick = 3600 * \
+            (24 + self.start_hour -
+             helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
@@ -306,10 +315,13 @@ class TimeSimulation:
         self.basic_lvs.update(self.tick)
 
         lvs_consumed_energy = self.basic_lvs.get_consumed_energy()
-        motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
-        array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
+        motor_consumed_energy = self.basic_motor.calculate_energy_in(
+            speed_kmh, gradients, wind_speeds, self.tick)
+        array_produced_energy = self.basic_array.calculate_produced_energy(
+            solar_irradiances, self.tick)
 
-        motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
+        motor_consumed_energy = np.logical_and(
+            motor_consumed_energy, not_charge) * motor_consumed_energy
 
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
         produced_energy = array_produced_energy
@@ -320,22 +332,19 @@ class TimeSimulation:
         # ----- Array initialisation -----
 
         # used to calculate the time the car was in motion
-        tick_array = np.full_like(self.timestamps, fill_value=self.tick, dtype='f4')
+        tick_array = np.full_like(
+            self.timestamps, fill_value=self.tick, dtype='f4')
         tick_array[0] = 0
 
         # ----- Array calculations -----
 
         cumulative_delta_energy = np.cumsum(delta_energy)
-        battery_variables_array = self.basic_battery.update_array(cumulative_delta_energy)
+        battery_variables_array = self.basic_battery.update_array(
+            cumulative_delta_energy)
 
         # stores the battery SOC at each time step
         state_of_charge = battery_variables_array[0]
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
-
-        # when the battery is empty the car will not move
-        # TODO: if the car cannot climb the slope, the car also does not move
-        # when the car is charging the car does not move
-        # at night the car does not move
 
         if verbose:
 
@@ -353,7 +362,8 @@ class TimeSimulation:
 
             helpers.plot_graph(timestamps=self.timestamps,
                                arrays_to_plot=arrays_to_plot,
-                               array_labels=["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
+                               array_labels=[
+                                   "Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
                                graph_title="Speed Boolean Operations")
         else:
             speed_kmh = np.logical_and(not_charge, state_of_charge) * speed_kmh
@@ -367,11 +377,6 @@ class TimeSimulation:
 
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         distances = distances.clip(0, max_route_distance / 1000)
-
-        try:
-            max_dist_index = np.where(distances == max_route_distance / 1000)[0][0]
-        except IndexError:
-            max_dist_index = len(time_in_motion)
 
         results = SimulationResult()
 
@@ -388,7 +393,8 @@ class TimeSimulation:
         results.distance_travelled = distances[-1]
 
         if results.distance_travelled >= self.route_length:
-            results.time_taken = helpers.calculate_race_completion_time(self.route_length, distances)
+            results.time_taken = helpers.calculate_race_completion_time(
+                self.route_length, distances)
         else:
             results.time_taken = self.simulation_duration
 

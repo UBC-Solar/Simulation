@@ -14,7 +14,6 @@ before the battery runs out [speed -> distance].
 
 @helpers.timeit
 def main():
-
     input_speed = np.array([30])
 
     """
@@ -66,12 +65,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # import cProfile
-    # import pstats
-    #
-    # with cProfile.Profile() as pr:
     main()
-
-    # stats = pstats.Stats(pr)
-    # stats.sort_stats(pstats.SortKey.TIME)
-    # stats.print_stats()

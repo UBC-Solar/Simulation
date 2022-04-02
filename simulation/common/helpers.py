@@ -1,24 +1,21 @@
+import array as arr
 import ctypes
 import datetime
 import functools
-import time as timer
-from math import radians
-import array as arr
-
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import time as timer
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
-from matplotlib import pyplot as plt
-from sklearn.neighbors import BallTree
-
-from simulation.common import constants
-
-from sklearn.neighbors import BallTree
 from math import radians
+from math import radians
+from matplotlib import pyplot as plt
+from simulation.common import constants
+from sklearn.neighbors import BallTree
+from sklearn.neighbors import BallTree
 
 """
 Description: contains the simulation's helper functions.
@@ -493,7 +490,7 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
     return constrained_speed_kmh, not_charge
 
 
-def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
+def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True):
     """
 
         This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
@@ -510,9 +507,11 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
             arrays_to_plot: An array of NumPy arrays to plot
             array_labels: An array of strings for the individual plot titles
             graph_title: A string that serves as the plot's main title
+            save: Boolean flag to contorl whether to save an .html file
 
         Result:
             Produces a 3 x ceil(len(arrays_to_plot) / 3) plot
+            If save is enabled, save html file
 
         """
     compress_constant = int(timestamps.shape[0] / 5000)
@@ -543,7 +542,8 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
     grid = gridplot(figures, sizing_mode="scale_both",
                     ncols=3, plot_height=200, plot_width=300)
 
-    output_file(filename=graph_title + '.html', title=graph_title)
+    if save:
+        output_file(filename=graph_title + '.html', title=graph_title)
 
     show(grid)
 
@@ -552,9 +552,8 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title):
 
 def route_visualization(coords, visible=True):
     """
-    Takes in a list of coordinates and translates those points into a visualizable
-    route using GeoPanda Library. It labels the starting point and draws a line
-    connecting all the coordinate points
+    Takes in a list of coordinates and visualizes them using MapBox.
+
     :Param coords: A NumPy array [n][latitude, longitude]
     Outputs a window that visualizes the route with given coordinates
     """
@@ -581,7 +580,6 @@ def route_visualization(coords, visible=True):
     fig.update_layout(mapbox_style="stamen-terrain", mapbox_zoom=5, mapbox_center_lat=41,
                       margin={"r": 0, "t": 0, "l": 0, "b": 0})
 
-    # shows the plotted points and line
     if visible:
         fig.show()
 
@@ -619,10 +617,10 @@ def calculate_race_completion_time(path_length, cumulative_distances):
 
     Pre-Conditions:
         path_length and cumulative_distances may be in any length unit, but they must share the same length unit
-        Each index of the cumulative_distances array represents one second of the Simulation
+        Each index of the cumulative_distances array represents one second of the simulation
 
     Returns: The number of seconds the vehicle requires to travel the full path length.
-    If vehicle does not travel the full path length, returns float('inf').
+    If vehicle does not travel the full path length, returns 
 
     """
     # Create a boolean array to encode whether the vehicle has completed or not completed the route at a given timestamp
@@ -635,7 +633,7 @@ def calculate_race_completion_time(path_length, cumulative_distances):
     if len(completion_index[0]) > 0:
         return completion_index[0][0]
     else:
-        return float('inf')
+        return len(cumulative_distances) + 1
 
 
 def plot_longitudes(coordinates):
@@ -704,20 +702,19 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
     i = 0
     while i < len(speeds):
         distance = speeds[i]
+
         """
         For each second, we will:
             1) keep travelling past path coordinates until:
                 i) we don't have enough speed to reach the next path coordinate
                 ii) we reach a waypoint
                     - replace the next 45 minutes of speeds with 0
-            2) come to a "fractional coordinate" that exists between 2 path
-                coordinates
-                    - add the temporary distance travelled between two path
-                      coordinates to a temp variable
-		"""
+            2) come to a "fractional coordinate" that exists between 2 path coordinates
+                - add the temporary distance travelled between two path coordinates to a temp variable
+        """
 
         total_distance_travelled = 0  # total distance travelled this second
-        flag = 0  # flag used to indicate if we reached a waypoint
+        waypoint_flag = 0  # flag used to indicate if we reached a waypoint
 
         # if we can reach the next path coordinate
         while distance + temp_distance_travelled > distances[path_index] - delta:
@@ -753,10 +750,10 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
                 speeds[i + 1: i + 1 + 45 * 60] = [0] * 45 * 60
                 i += 45 * 60 - 1
                 distance = 0  # shouldn't travel anymore in this second
-                flag = 1
+                waypoint_flag = 1
                 break
 
-            if flag:
+            if waypoint_flag:
                 continue
 
         # If I still have distance to travel but can't reach the next coordinate
@@ -773,8 +770,6 @@ def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
 
         i += 1
 
-    # if verbose:
-    #     print("Didn't have enough speed to complete race.")
     return np.multiply(speeds, 3.6)
 
 
@@ -784,5 +779,5 @@ if __name__ == '__main__':
 
     expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
     expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
-    expanded_speed_array = add_acceleration(expanded_speed_array, 20)
+    expanded_speed_array = apply_deceleration(expanded_speed_array, 20)
     print(expanded_speed_array)
