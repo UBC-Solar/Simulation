@@ -156,7 +156,6 @@ class TimeSimulation:
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
-        speed_kmh = helpers.add_acceleration(speed_kmh, 500)
 
         # ------ Run calculations and get result and modified speed array -------
 

@@ -95,7 +95,7 @@ def generate_deceleration_array(initial_velocity, final_velocity, deceleration_i
 
     deceleration_instance_size = (
         final_velocity - initial_velocity) / (deceleration_interval + 1)
-    return np.arange(initial_velocity, final_velocity, deceleration_instance_size)[1:(deceleration_interval-1)]
+    return np.arange(initial_velocity, final_velocity, deceleration_instance_size)[1:(deceleration_interval+1)]
 
 
 def apply_deceleration(input_speed_array, deceleration_interval):
@@ -617,10 +617,10 @@ def calculate_race_completion_time(path_length, cumulative_distances):
 
     Pre-Conditions:
         path_length and cumulative_distances may be in any length unit, but they must share the same length unit
-        Each index of the cumulative_distances array represents one second of the Simulation
+        Each index of the cumulative_distances array represents one second of the simulation
 
     Returns: The number of seconds the vehicle requires to travel the full path length.
-    If vehicle does not travel the full path length, returns float('inf').
+    If vehicle does not travel the full path length, returns 
 
     """
     # Create a boolean array to encode whether the vehicle has completed or not completed the route at a given timestamp
@@ -633,7 +633,7 @@ def calculate_race_completion_time(path_length, cumulative_distances):
     if len(completion_index[0]) > 0:
         return completion_index[0][0]
     else:
-        return float('inf')
+        return len(cumulative_distances) + 1
 
 
 def plot_longitudes(coordinates):
@@ -779,5 +779,5 @@ if __name__ == '__main__':
 
     expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
     expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
-    expanded_speed_array = add_acceleration(expanded_speed_array, 20)
+    expanded_speed_array = apply_deceleration(expanded_speed_array, 20)
     print(expanded_speed_array)
