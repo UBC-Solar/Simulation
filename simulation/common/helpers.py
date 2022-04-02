@@ -98,7 +98,7 @@ def generate_deceleration_array(initial_velocity, final_velocity, deceleration_i
 
     deceleration_instance_size = (
         final_velocity - initial_velocity) / (deceleration_interval + 1)
-    return np.arange(initial_velocity, final_velocity, deceleration_instance_size)[1:(deceleration_interval-1)]
+    return np.arange(initial_velocity, final_velocity, deceleration_instance_size)[1:(deceleration_interval+1)]
 
 
 def apply_deceleration(input_speed_array, deceleration_interval):
