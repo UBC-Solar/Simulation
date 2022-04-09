@@ -228,6 +228,11 @@ def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directi
     # car is 270 degrees, cos(90-270) = -1. Wind speed is in direction of the car.
     return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
 
+def get_day_of_year_map(date):
+    """
+    Extracts day, month, year, from datetime object
+    """
+    return get_day_of_year(date.day, date.month, date.year)
 
 def get_day_of_year(day, month, year):
     """

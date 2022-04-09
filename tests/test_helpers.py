@@ -9,7 +9,8 @@ def test_calculate_race_completion_time1():
     test_path_length = 10
     test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
 
-    result = helpers.calculate_race_completion_time(test_path_length, test_cumulative_distances)
+    result = helpers.calculate_race_completion_time(
+        test_path_length, test_cumulative_distances)
     assert result == 8
 
 
@@ -20,8 +21,9 @@ def test_calculate_race_completion_time2():
     test_path_length = 100
     test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
 
-    result = helpers.calculate_race_completion_time(test_path_length, test_cumulative_distances)
-    assert result == float("inf")
+    result = helpers.calculate_race_completion_time(
+        test_path_length, test_cumulative_distances)
+    assert result == 10
 
 
 def test_calculate_race_completion_time3():
@@ -31,7 +33,8 @@ def test_calculate_race_completion_time3():
     test_path_length = 0
     test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
 
-    result = helpers.calculate_race_completion_time(test_path_length, test_cumulative_distances)
+    result = helpers.calculate_race_completion_time(
+        test_path_length, test_cumulative_distances)
     assert result == 0
 
 
@@ -42,7 +45,8 @@ def test_calculate_race_completion_time4():
     test_path_length = 3
     test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
 
-    result = helpers.calculate_race_completion_time(test_path_length, test_cumulative_distances)
+    result = helpers.calculate_race_completion_time(
+        test_path_length, test_cumulative_distances)
     assert result == 5
 
 
@@ -102,7 +106,8 @@ def test_find_runs1():
     expected_output_run_starts = np.array([0, 2, 3])
     expected_output_run_lengths = np.array([2, 1, 4])
 
-    test_output_run_values, test_output_run_starts, test_output_run_lengths = helpers.find_runs(input_array)
+    test_output_run_values, test_output_run_starts, test_output_run_lengths = helpers.find_runs(
+        input_array)
 
     assert (expected_output_run_values == test_output_run_values).all()
     assert (expected_output_run_starts == test_output_run_starts).all()
@@ -113,7 +118,8 @@ def test_multi_index_runs1():
     """
     Unit test for helpers.find_multi_index_runs(x). Tests if it can identify multi-index runs in a small array
     """
-    test_input = np.array([0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 4, 5, 7, 7, 7, 7, 7, 7, 7])
+    test_input = np.array([0, 0, 0, 0, 0, 0, 0, 1, 2, 3,
+                          3, 3, 4, 5, 7, 7, 7, 7, 7, 7, 7])
     expected_multi_index_run_values = np.array([0, 3, 7])
     expected_multi_index_run_lengths = np.array([7, 3, 7])
     expected_multi_index_run_starts = np.array([0, 9, 14])
@@ -121,10 +127,12 @@ def test_multi_index_runs1():
     actual_multi_index_run_values, actual_multi_index_run_starts, actual_multi_index_run_lengths = \
         helpers.find_multi_index_runs(test_input)
 
-    assert (expected_multi_index_run_values == actual_multi_index_run_values).all()
-    assert (expected_multi_index_run_starts == actual_multi_index_run_starts).all()
-    assert (expected_multi_index_run_lengths == actual_multi_index_run_lengths).all()
-
+    assert (expected_multi_index_run_values ==
+            actual_multi_index_run_values).all()
+    assert (expected_multi_index_run_starts ==
+            actual_multi_index_run_starts).all()
+    assert (expected_multi_index_run_lengths ==
+            actual_multi_index_run_lengths).all()
 
 if __name__ == "__main__":
     test_find_runs1()
