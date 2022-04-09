@@ -135,16 +135,17 @@ class SolarCalculations:
                                                local_time, longitude)
 
         term_1 = np.sin(np.radians(declination_angle)) * \
-                 np.sin(np.radians(latitude))
+            np.sin(np.radians(latitude))
 
         term_2 = np.cos(np.radians(declination_angle)) * \
-                 np.sin(np.radians(latitude)) * \
-                 np.cos(np.radians(hour_angle))
+            np.sin(np.radians(latitude)) * \
+            np.cos(np.radians(hour_angle))
 
         elevation_angle = self.calculate_elevation_angle(latitude, longitude,
                                                          time_zone_utc, day_of_year, local_time)
 
-        term_3 = np.float_(term_1 - term_2) / np.cos(np.radians(elevation_angle))
+        term_3 = np.float_(term_1 - term_2) / \
+            np.cos(np.radians(elevation_angle))
 
         if term_3 < -1:
             term_3 = -1
@@ -278,15 +279,14 @@ class SolarCalculations:
 
         scaled_cloud_cover = cloud_cover / 100
 
-        assert np.logical_and(scaled_cloud_cover >= 0, scaled_cloud_cover <= 1).all()
+        assert np.logical_and(scaled_cloud_cover >= 0,
+                              scaled_cloud_cover <= 1).all()
 
         return GHI * (1 - (0.75 * np.power(scaled_cloud_cover, 3.4)))
 
     # ----- Calculation of modes of solar irradiance, but returning numpy arrays -----
-    @helpers.timeit
     def calculate_array_GHI(self, coords, time_zones, local_times,
                             elevations, cloud_covers):
-
         """
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
         on the Earth, for arrays of coordinates, times, elevations and weathers
@@ -305,20 +305,14 @@ class SolarCalculations:
         Returns: (float[N]) Global Horizontal Irradiance in W/m2
         """
 
-        day_of_year = np.zeros(len(coords))
-        local_time = np.zeros(len(coords))
-        with tqdm(total=len(coords), file=sys.stdout, desc="Calculating GHI at each time step") as pbar:
-            for i, _ in enumerate(coords):
-                date = datetime.datetime.utcfromtimestamp(local_times[i])
-
-                day_of_year[i] = helpers.get_day_of_year(date.day, date.month, date.year)
-
-                local_time[i] = date.hour + (float(date.minute * 60 + date.second) / 3600)
-
-                pbar.update(1)
+        date = list(map(
+            datetime.datetime.utcfromtimestamp, local_times))
+        day_of_year = np.array(
+            list(map(helpers.get_day_of_year_map, date)), dtype=np.float64)
+        local_time = np.array(list(map(lambda date: date.hour +
+                                       (float(date.minute * 60 + date.second) / 3600), date)))
 
         ghi = self.calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
                                  day_of_year, local_time, elevations, cloud_covers)
-        print()
 
         return ghi
