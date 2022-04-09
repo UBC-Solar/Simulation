@@ -137,6 +137,7 @@ data/weather/*.npz
 
 # HTML Output files
 examples/*.html
+*.html
 
 # Profiling Files
 examples/*.txt
@@ -146,7 +147,8 @@ examples/cProfile
 docs/UBC Solar - Simulation.pdf
 
 # Config files
-simulation/config/*.json
+simulation/config/settings_ASC.json
+simulation/config/settings_FSGP.json
 
 # Data Images
 data/images/*.png
