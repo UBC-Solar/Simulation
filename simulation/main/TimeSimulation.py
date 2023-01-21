@@ -2,12 +2,12 @@ import datetime
 import json
 import numpy as np
 import os
-import simulation
+import Simulation.simulation as simulation
 from dotenv import load_dotenv
-from simulation.common import helpers
-from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
-from simulation.config import settings_directory
-from simulation.main.SimulationResult import SimulationResult
+from Simulation.simulation.common import helpers
+from Simulation.simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
+from Simulation.simulation.config import settings_directory
+from Simulation.simulation.main.SimulationResult import SimulationResult
 
 
 class TimeSimulation:
@@ -119,7 +119,7 @@ class TimeSimulation:
 
     @helpers.timeit
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
-                  route_visualization=False, **kwargs):
+                  route_visualization=False, return_results_object=False, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
         a Simulation results object, given an initial charge, and a target speed.
@@ -139,6 +139,8 @@ class TimeSimulation:
         :param route_visualization: Flag to control route_visualization plot visibility
         :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
+        :param ReturnResultsObject: Defines whether the function should output a simulationResults object or
+        time taken.
 
         """
 
@@ -159,7 +161,7 @@ class TimeSimulation:
 
         # ------ Run calculations and get result and modified speed array -------
 
-        result = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
+        result = self.run_simulation_calculations(speed_kmh, verbose=verbose)
 
         # ------- Parse results ---------
         # TODO: Rewrite this to use a dictionary like Mihir changed in his bokeh commits...
@@ -205,9 +207,12 @@ class TimeSimulation:
             helpers.route_visualization(
                 self.gis.path, visible=route_visualization)
 
-        return -1 * time_taken
+        if return_results_object:
+            return result
+        else:
+            return -1 * time_taken
 
-    def __run_simulation_calculations(self, speed_kmh, verbose=False):
+    def run_simulation_calculations(self, speed_kmh, verbose=False):
         """
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object
         containing members that specify total distance travelled and time taken at the end of the simulation

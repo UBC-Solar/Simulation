@@ -1,4 +1,4 @@
-from simulation.array.base_array import BaseArray
+from Simulation.simulation.array.base_array import BaseArray
 
 
 class BasicArray(BaseArray):

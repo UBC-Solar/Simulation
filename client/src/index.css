@@ -1,0 +1,27 @@
+
+.graphBody {
+    background-color: white;
+    padding: 100px;
+    height: 400px;
+    width: 80%;
+    margin: 0px auto;
+    margin-top: 40px;
+}
+
+#mainContainer {
+    background-color: white;
+    height: 100vh;
+}
+
+.column {
+}
+
+.graph {
+    position: relative;
+    cursor: default;
+    height: 45vw;
+    width: 45vw;
+    right: 100px;
+    background-color: white;
+    bottom: 100px;
+}

@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-from simulation.motor.base_motor import BaseMotor
+from Simulation.simulation.motor.base_motor import BaseMotor
 
 
 class BasicMotor(BaseMotor):

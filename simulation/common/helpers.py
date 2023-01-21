@@ -13,7 +13,7 @@ from bokeh.plotting import figure, show, output_file
 from math import radians
 from math import radians
 from matplotlib import pyplot as plt
-from simulation.common import constants
+from Simulation.simulation.common import constants
 from sklearn.neighbors import BallTree
 from sklearn.neighbors import BallTree
 
@@ -539,7 +539,8 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
                               y_axis_label=array_labels[index], x_axis_type="datetime"))
 
         # add line renderers to each figure
-        figures[index].line(timestamps[::compress_constant] * 1000, data_array, line_color=Bokeh8[index],
+        colours = ('#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889', '#fa1b9a')
+        figures[index].line(timestamps[::compress_constant] * 1000, data_array, line_color=colours[index],
                             line_width=2)
 
         figures[index].add_tools(hover_tool)

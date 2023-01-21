@@ -9,8 +9,8 @@ import os
 import pathlib
 import requests
 import sys
-from data.weather.__init__ import weather_directory
-from simulation.common import helpers
+from Simulation.data.weather.__init__ import weather_directory
+from Simulation.simulation.common import helpers
 from tqdm import tqdm
 
 
@@ -51,14 +51,14 @@ class WeatherForecasts:
         # Setup for Golang use in get_weather_forecast_in_time()
         go_directory = pathlib.Path(__file__).parent
 
-        self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/weather_in_time_loop.so")
-        self.lib.weather_in_time_loop.argtypes = [
-            ctypes.POINTER(ctypes.c_double),
-            ctypes.POINTER(ctypes.c_double),
-            ctypes.POINTER(ctypes.c_double),
-            ctypes.c_longlong,
-            ctypes.c_longlong
-        ]
+        # self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/weather_in_time_loop.so")
+        # self.lib.weather_in_time_loop.argtypes = [
+        #     ctypes.POINTER(ctypes.c_double),
+        #     ctypes.POINTER(ctypes.c_double),
+        #     ctypes.POINTER(ctypes.c_double),
+        #     ctypes.c_longlong,
+        #     ctypes.c_longlong
+        # ]
 
         self.origin_coord = coords[0]
         self.dest_coord = coords[-1]
@@ -360,7 +360,7 @@ class WeatherForecasts:
         return np.asarray(closest_time_stamp_indices, dtype=np.int32)
 
     @helpers.timeit
-    def get_weather_forecast_in_time(self, indices, unix_timestamps, golang=True):
+    def get_weather_forecast_in_time(self, indices, unix_timestamps, golang=False):
         """
         Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
         what the weather forecast is at each time step being simulated.

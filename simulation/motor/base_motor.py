@@ -1,4 +1,4 @@
-from simulation.common import Consumer
+from Simulation.simulation.common import Consumer
 
 
 class BaseMotor(Consumer):

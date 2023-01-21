@@ -2,17 +2,17 @@ import datetime
 import json
 import numpy as np
 import os
-import simulation
+import Simulation.simulation as simulation
 from bayes_opt import BayesianOptimization
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
 from dotenv import load_dotenv
-from simulation.common import helpers
-from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
-from simulation.config import settings_directory
-from simulation.main.SimulationResult import SimulationResult
+from Simulation.simulation.common import helpers
+from Simulation.simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
+from Simulation.simulation.config import settings_directory
+from Simulation.simulation.main.SimulationResult import SimulationResult
 
 
 class Simulation:

@@ -1,4 +1,4 @@
-from simulation.regen.base_regen import BaseRegen
+from Simulation.simulation.regen.base_regen import BaseRegen
 
 
 class BasicRegen(BaseRegen):

@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.polynomial import Polynomial
 
-from simulation.battery.base_battery import BaseBattery
+from Simulation.simulation.battery.base_battery import BaseBattery
 
 
 class BasicBattery(BaseBattery):

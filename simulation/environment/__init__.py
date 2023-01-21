@@ -1,3 +1,3 @@
-from simulation.environment.GIS import GIS
-from simulation.environment.SolarCalculations import SolarCalculations
-from simulation.environment.WeatherForecasts import WeatherForecasts
+from Simulation.simulation.environment.GIS import GIS
+from Simulation.simulation.environment.SolarCalculations import SolarCalculations
+from Simulation.simulation.environment.WeatherForecasts import WeatherForecasts
