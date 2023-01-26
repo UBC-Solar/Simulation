@@ -51,7 +51,7 @@ def main():
     optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
                                            verbose=False,
                                            route_visualization=False)
-    results_random = random_optimization.maximize(iterations=15)
+    results_random = random_optimization.maximize(iterations=1)
     optimized_random = simulation_model.run_model(speed=np.fromiter(results_random, dtype=float), plot_results=True,
                                                   verbose=False,
                                                   route_visualization=False)
@@ -66,49 +66,6 @@ def main():
     print(f'Random Speeds array: {results_random}')
 
     return time_taken
-
-
-def GetOptimizedSimulation():
-    input_speed = np.array([30])
-
-    """
-    Essentially the exact same as main(), but plot_results=False and returns a SimulationResult object. 
-    TODO: Add functionality to modify data up to a point in the simulation to allow the simulation to run on 
-    real data.  
-    """
-
-    simulation_model = TimeSimulation(race_type="ASC")
-    time_taken = simulation_model.run_model(speed=input_speed, plot_results=False,
-                                            verbose=False,
-                                            route_visualization=False)
-
-    bounds = InputBounds()
-    bounds.add_bounds(8, 20, 60)
-    optimization = BayesianOptimization(bounds, simulation_model.run_model)
-    random_optimization = RandomOptimization(bounds, simulation_model.run_model)
-
-    results = optimization.maximize(init_points=3, n_iter=1, kappa=10)
-    optimized_time = simulation_model.run_model(
-        speed=np.fromiter(results, dtype=float),
-        plot_results=False, verbose=False,route_visualization=False)
-    results_random = random_optimization.maximize(iterations=15)
-    optimized_random = simulation_model.run_model(
-        speed=np.fromiter(results_random, dtype=float),
-        plot_results=False, verbose=False, route_visualization=False)
-    optimized = simulation_model.run_model(
-        speed=np.fromiter(results, dtype=float),
-        plot_results=False, verbose=False,route_visualization=False, return_results_object=True)
-
-    print(
-        f'TimeSimulation results. Time Taken: {-1 * time_taken} seconds, ({str(datetime.timedelta(seconds=int(-1 * time_taken)))})')
-    print(
-        f'Optimized results. Time taken: {-1 * optimized_time} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized_time)))})')
-    print(
-        f'Random results. Time taken: {-1 * optimized_random} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized_random)))})')
-    print(f'Optimized Speeds array: {results}')
-    print(f'Random Speeds array: {results_random}')
-
-    return optimized
 
 
 if __name__ == "__main__":

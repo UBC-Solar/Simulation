@@ -122,7 +122,7 @@ class TimeSimulation:
                   route_visualization=False, return_results_object=False, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
-        a Simulation results object, given an initial charge, and a target speed.
+        a Simulation results object if return_results_object=True, given an initial charge, and a target speed.
         Also requires the current time and location. This is where the magic happens.
 
         Note: if the speed remains constant throughout this update, and knowing the starting
@@ -139,7 +139,7 @@ class TimeSimulation:
         :param route_visualization: Flag to control route_visualization plot visibility
         :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
-        :param ReturnResultsObject: Defines whether the function should output a simulationResults object or
+        :param return_results_object: Defines whether the function should output a simulationResults object or
         time taken.
 
         """
