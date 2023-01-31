@@ -1,10 +1,10 @@
 import numpy as np
 
-from Simulation.simulation.common import helpers
-from Simulation.simulation.main import TimeSimulation
-from Simulation.simulation.optimization.bayesian import BayesianOptimization
-from Simulation.simulation.utils.InputBounds import InputBounds
-from Simulation.simulation.main.SimulationResult import SimulationResult
+from simulation.common import helpers
+from simulation.main import TimeSimulation
+from simulation.optimization.bayesian import BayesianOptimization
+from simulation.utils.InputBounds import InputBounds
+from simulation.main.SimulationResult import SimulationResult
 
 """
 Description: Export Simulation data as a SimulationResults object. 

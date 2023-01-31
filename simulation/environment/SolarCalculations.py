@@ -9,7 +9,7 @@ A class to perform calculation and approximations for obtaining quantities
 import datetime
 import numpy as np
 import sys
-from Simulation.simulation.common import helpers
+from simulation.common import helpers
 from tqdm import tqdm
 
 

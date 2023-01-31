@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from Simulation.simulation.utils.InputBounds import InputBounds
+from simulation.utils.InputBounds import InputBounds
 
 
 class BaseOptimization:

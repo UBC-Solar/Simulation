@@ -9,8 +9,8 @@ import os
 import pathlib
 import requests
 import sys
-from Simulation.data.weather.__init__ import weather_directory
-from Simulation.simulation.common import helpers
+from data.weather.__init__ import weather_directory
+from simulation.common import helpers
 from tqdm import tqdm
 
 

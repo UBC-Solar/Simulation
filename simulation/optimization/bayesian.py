@@ -1,6 +1,6 @@
 import bayes_opt
-from Simulation.simulation.optimization.base_optimization import BaseOptimization
-from Simulation.simulation.utils.InputBounds import InputBounds
+from simulation.optimization.base_optimization import BaseOptimization
+from simulation.utils.InputBounds import InputBounds
 
 
 class BayesianOptimization(BaseOptimization):

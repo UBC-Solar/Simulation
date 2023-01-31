@@ -1,3 +1,3 @@
-from Simulation.simulation.main.MainSimulation import Simulation
-from Simulation.simulation.main.SimulationResult import SimulationResult
-from Simulation.simulation.main.TimeSimulation import TimeSimulation
+from simulation.main.MainSimulation import Simulation
+from simulation.main.SimulationResult import SimulationResult
+from simulation.main.TimeSimulation import TimeSimulation

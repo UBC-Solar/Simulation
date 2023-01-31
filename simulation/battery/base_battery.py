@@ -1,5 +1,5 @@
-from Simulation.simulation.common import BatteryEmptyError
-from Simulation.simulation.common import Storage
+from simulation.common import BatteryEmptyError
+from simulation.common import Storage
 
 
 class BaseBattery(Storage):

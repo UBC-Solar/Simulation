@@ -2,11 +2,11 @@ import datetime
 
 import numpy as np
 
-from Simulation.simulation.common import helpers
-from Simulation.simulation.main import TimeSimulation
-from Simulation.simulation.optimization.bayesian import BayesianOptimization
-from Simulation.simulation.optimization.random import RandomOptimization
-from Simulation.simulation.utils.InputBounds import InputBounds
+from simulation.common import helpers
+from simulation.main import TimeSimulation
+from simulation.optimization.bayesian import BayesianOptimization
+from simulation.optimization.random import RandomOptimization
+from simulation.utils.InputBounds import InputBounds
 
 """
 Description: Given a set of driving speeds, find the time required to complete the route specified in the config files. 

@@ -8,9 +8,9 @@ import polyline
 import pytz
 import requests
 import sys
-from Simulation.data.route.__init__ import route_directory
+from data.route.__init__ import route_directory
 from dotenv import load_dotenv
-from Simulation.simulation.common import helpers
+from simulation.common import helpers
 from timezonefinder import TimezoneFinder
 from tqdm import tqdm
 

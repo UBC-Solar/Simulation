@@ -8,7 +8,7 @@ import uuid
 from PIL import Image
 from dotenv import load_dotenv
 from io import BytesIO
-from Simulation.simulation.environment import GIS
+from simulation.environment import GIS
 
 BACKGROUND_IMAGE_PATH = './data/images/'
 BACKGROUND_COORDINATE_DATA_NAME = 'coordinates.json'

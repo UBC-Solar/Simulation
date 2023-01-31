@@ -13,7 +13,7 @@ from bokeh.plotting import figure, show, output_file
 from math import radians
 from math import radians
 from matplotlib import pyplot as plt
-from Simulation.simulation.common import constants
+from simulation.common import constants
 from sklearn.neighbors import BallTree
 from sklearn.neighbors import BallTree
 

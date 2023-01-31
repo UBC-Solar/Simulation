@@ -1,10 +1,10 @@
 import numpy as np
 
-import Simulation.simulation
-from Simulation.simulation.common import helpers
-from Simulation.simulation.optimization.bayesian import BayesianOptimization
-from Simulation.simulation.optimization.random import RandomOptimization
-from Simulation.simulation.utils.InputBounds import InputBounds
+import simulation
+from simulation.common import helpers
+from simulation.optimization.bayesian import BayesianOptimization
+from simulation.optimization.random import RandomOptimization
+from simulation.utils.InputBounds import InputBounds
 
 """
 Description: Given an hourly driving speed, find the range at the speed

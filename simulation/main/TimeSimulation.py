@@ -2,12 +2,12 @@ import datetime
 import json
 import numpy as np
 import os
-import Simulation.simulation as simulation
+import simulation as simulation
 from dotenv import load_dotenv
-from Simulation.simulation.common import helpers
-from Simulation.simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
-from Simulation.simulation.config import settings_directory
-from Simulation.simulation.main.SimulationResult import SimulationResult
+from simulation.common import helpers
+from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
+from simulation.config import settings_directory
+from simulation.main.SimulationResult import SimulationResult
 
 
 class TimeSimulation:

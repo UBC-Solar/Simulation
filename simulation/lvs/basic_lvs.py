@@ -1,4 +1,4 @@
-from Simulation.simulation.lvs.base_lvs import BaseLVS
+from simulation.lvs.base_lvs import BaseLVS
 
 
 class BasicLVS(BaseLVS):
