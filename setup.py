@@ -26,6 +26,7 @@ setup(name='simulation',
               'mpi4py',
           ]
       },
+      include_package_data=True,
       description='UBC Solar\'s simulation environment',
       author='Fisher Xue',
       url='https://github.com/UBC-Solar/Simulation',
@@ -34,5 +35,5 @@ setup(name='simulation',
       license="MIT",
       long_description=long_description,
       long_description_content_type='text/markdown',
-      version="0.5.0-alpha"
+      version="0.5.4-alpha"
       )
