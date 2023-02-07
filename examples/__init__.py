@@ -1,1 +1,0 @@
-from Simulation.examples import fastest_time_given_distance
