@@ -1,3 +1,0 @@
-include simulation/config/*.json
-include simulation/data/route/*.npz
-include simulation/data/weather/*.npz

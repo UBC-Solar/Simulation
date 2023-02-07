@@ -11,7 +11,7 @@ Documentation Link
 Install inside Simulation/ with `pip3 install -e .`
 """
 
-setup(name='UBC-Solar-Simulation',
+setup(name='simulation',
       packages=[package for package in find_packages()
                 if package.startswith('simulation')],
       package_data={
@@ -26,7 +26,6 @@ setup(name='UBC-Solar-Simulation',
               'mpi4py',
           ]
       },
-      include_package_data=True,
       description='UBC Solar\'s simulation environment',
       author='Fisher Xue',
       url='https://github.com/UBC-Solar/Simulation',
@@ -35,5 +34,5 @@ setup(name='UBC-Solar-Simulation',
       license="MIT",
       long_description=long_description,
       long_description_content_type='text/markdown',
-      version="0.5.4-alpha"
+      version="0.5.0-alpha"
       )
