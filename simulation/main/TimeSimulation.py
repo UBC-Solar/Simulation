@@ -2,7 +2,7 @@ import datetime
 import json
 import numpy as np
 import os
-import simulation as simulation
+import simulation
 from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed

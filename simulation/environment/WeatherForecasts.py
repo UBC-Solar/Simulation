@@ -8,7 +8,7 @@ import os
 import pathlib
 import requests
 import sys
-from simulation.data.weather import weather_directory
+from simulation.cache.weather import weather_directory
 from simulation.common import helpers
 from tqdm import tqdm
 
@@ -47,8 +47,11 @@ class WeatherForecasts:
         self.api_key = api_key
         self.last_updated_time = -1
 
+        # The following section is commented out to allow for cross-compatibility with UNIX
+        # If you are on Windows, you can use the faster Go implementation by setting golang=True and uncommenting
+
         # Setup for Golang use in get_weather_forecast_in_time()
-        go_directory = pathlib.Path(__file__).parent
+        # go_directory = pathlib.Path(__file__).parent
 
         # self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/weather_in_time_loop.so")
         # self.lib.weather_in_time_loop.argtypes = [
@@ -337,6 +340,7 @@ class WeatherForecasts:
         return np.array(closest_time_stamp_indices, 'i')
 
     @staticmethod
+    @helpers.timeit
     def python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array):
         """
 
@@ -432,7 +436,7 @@ class WeatherForecasts:
         Returns: The wind speeds in the direction opposite to the bearing of the vehicle
         """
 
-        # wind direction is 90 degrees meteorlogical, so it is 270 degrees azimuthal. car is 90 degrees
+        # wind direction is 90 degrees meteorological, so it is 270 degrees azimuthal. car is 90 degrees
         #   cos(90 - 90) = cos(0) = 1. Wind speed is moving opposite to the car,
         # car is 270 degrees, cos(90-270) = -1. Wind speed is in direction of the car.
         return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))

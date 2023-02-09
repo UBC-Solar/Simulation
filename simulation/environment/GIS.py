@@ -8,7 +8,7 @@ import polyline
 import pytz
 import requests
 import sys
-from simulation.data.route.__init__ import route_directory
+from simulation.cache.route import route_directory
 from dotenv import load_dotenv
 from simulation.common import helpers
 from timezonefinder import TimezoneFinder

@@ -141,7 +141,7 @@ examples/*.html
 
 # Profiling Files
 examples/*.txt
-examples/cProfile
+simulation/examples/cProfile
 
 # Docs
 docs/UBC Solar - Simulation.pdf

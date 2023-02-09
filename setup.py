@@ -28,12 +28,12 @@ setup(name='simulation',
       },
       include_package_data=True,
       description='UBC Solar\'s simulation environment',
-      author='Fisher Xue',
+      author='Fisher Xue, Mihir Nimgade, Chris Chang, David Widjaja, Justin Hua, Ilya Veksler, Renu Rajamagmesh, Joshua Riefman, Ritchie Xia, Erik Langille, Chris Aung, Ishaan Trivedi, Jason Liang',
       url='https://github.com/UBC-Solar/Simulation',
       author_email='software@ubcsolar.com',
-      keywords="car",
+      keywords="car, simulation, solar",
       license="MIT",
       long_description=long_description,
       long_description_content_type='text/markdown',
-      version="0.5.4-alpha"
+      version="0.5.5-alpha"
       )
