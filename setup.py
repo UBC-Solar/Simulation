@@ -11,7 +11,7 @@ Documentation Link
 Install inside Simulation/ with `pip3 install -e .`
 """
 
-setup(name='simulation',
+setup(name='UBC-Solar-Simulation',
       packages=[package for package in find_packages()
                 if package.startswith('simulation')],
       package_data={
@@ -35,5 +35,5 @@ setup(name='simulation',
       license="MIT",
       long_description=long_description,
       long_description_content_type='text/markdown',
-      version="0.5.5-alpha"
+      version="0.5.6"
       )

@@ -1,3 +1,5 @@
 include simulation/config/*.json
-include simulation/data/route/*.npz
-include simulation/data/weather/*.npz
+include simulation/cache/route/*.npz
+include simulation/cache/weather/*.npz
+include simulation/environment/*.so
+include simulation/environment/*.h

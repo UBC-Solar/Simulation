@@ -17,11 +17,12 @@ from simulation.main.SimulationResult import SimulationResult
 
 class Simulation:
 
-    def __init__(self, race_type):
+    def __init__(self, initial_conditions, race_type):
         """
         Instantiates a simple model of the car.
 
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
+        :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
 
         Depending on the race type, the following initialisation parameters are read from the corresponding
         settings json file located in the config folder.
@@ -47,16 +48,33 @@ class Simulation:
         with open(settings_path) as f:
             args = json.load(f)
 
-        self.initial_battery_charge = args['initial_battery_charge']
+        # ----- Race type -----
 
-        # LVS power loss is pretty small, so it is neglected
-        self.lvs_power_loss = args['lvs_power_loss']
+        self.race_type = race_type
 
-        # ----- Time constants -----
+        # ----- Load from settings_*.json -----
+
+        self.lvs_power_loss = args['lvs_power_loss']  # LVS power loss is pretty small, so it is neglected
 
         self.tick = args['tick']
         self.simulation_duration = args['simulation_duration']
-        self.start_hour = args['start_hour']
+
+        # ----- Load from initial_conditions
+
+        self.initial_battery_charge = initial_conditions.initial_battery_charge
+
+        self.start_hour = initial_conditions.start_hour
+
+        self.origin_coord = initial_conditions.origin_coord
+        self.dest_coord = initial_conditions.dest_coord
+        self.waypoints = initial_conditions.waypoints
+
+        gis_force_update = initial_conditions.gis_force_update
+        weather_force_update = initial_conditions.weather_force_update
+
+        # ----- Route Length -----
+
+        self.route_length = 0  # Tentatively set to 0
 
         # ----- API keys -----
 
@@ -64,25 +82,6 @@ class Simulation:
 
         self.weather_api_key = os.environ.get("OPENWEATHER_API_KEY")
         self.google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
-
-        # ----- Route constants -----
-
-        self.origin_coord = args['origin_coord']
-        self.dest_coord = args['dest_coord']
-        self.waypoints = args['waypoints']
-
-        # ----- Route Length -----
-
-        self.route_length = 0  # Tentatively set to 0
-
-        # ----- Race type -----
-
-        self.race_type = race_type
-
-        # ----- Force update flags -----
-
-        gis_force_update = args['gis_force_update']
-        weather_force_update = args['weather_force_update']
 
         # ----- Component initialisation -----
 
@@ -145,7 +144,7 @@ class Simulation:
             speed = np.fromiter(kwargs.values(), dtype=float)
 
             # Don't plot results since this code is run by the optimizer
-            plot_results = False
+            plot_results = True
             verbose = False
 
         # ----- Reshape speed array -----
