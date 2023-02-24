@@ -3,6 +3,8 @@ import json
 import numpy as np
 import os
 import simulation
+
+from simulation.common.valuedThread import ValuedThread
 from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
@@ -34,7 +36,11 @@ class TimeSimulation:
         represent 7am and 9am respectively)
         """
 
+        # ----- Race type -----
+
         assert race_type in ["ASC", "FSGP"]
+
+        self.race_type = race_type
 
         if race_type == "ASC":
             settings_path = settings_directory / "settings_ASC.json"
@@ -43,10 +49,6 @@ class TimeSimulation:
 
         with open(settings_path) as f:
             args = json.load(f)
-
-        # ----- Race type -----
-
-        self.race_type = race_type
 
         # ----- Load from settings_*.json -----
 
@@ -58,7 +60,7 @@ class TimeSimulation:
         elif self.race_type == "FSGP":
             self.simulation_duration = args['simulation_duration']
 
-        # ----- Load from initial_conditions
+        # ----- Load from initial conditions
 
         self.initial_battery_charge = initial_conditions.initial_battery_charge
 
@@ -66,6 +68,7 @@ class TimeSimulation:
 
         self.origin_coord = initial_conditions.origin_coord
         self.dest_coord = initial_conditions.dest_coord
+        self.current_coord = initial_conditions.current_coord
         self.waypoints = initial_conditions.waypoints
 
         gis_force_update = initial_conditions.gis_force_update
@@ -94,7 +97,7 @@ class TimeSimulation:
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update)
+                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord)
         self.route_coords = self.gis.get_path()
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
@@ -255,11 +258,19 @@ class TimeSimulation:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        closest_gis_indices = self.gis.calculate_closest_gis_indices(
-            cumulative_distances)
+        # Create two threads to run calculate_closest_gis_indices and calculate_closest_weather_indices concurrently
+        gis_thread = ValuedThread(target=self.gis.calculate_closest_gis_indices, args=cumulative_distances)
+        gis_thread.start()
 
-        closest_weather_indices = self.weather.calculate_closest_weather_indices(
-            cumulative_distances)
+        weather_thread = ValuedThread(target=self.weather.calculate_closest_weather_indices, args=cumulative_distances)
+        weather_thread.start()
+
+        closest_gis_indices = gis_thread.join()
+        closest_weather_indices = weather_thread.join()
+
+        # closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
+        #
+        # closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
         path_distances = self.gis.path_distances
         # [cumulative_distances] = meters

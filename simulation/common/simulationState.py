@@ -3,6 +3,7 @@ class SimulationState:
 
         self.origin_coord = args["origin_coord"]
         self.dest_coord = args["dest_coord"]
+        self.current_coord = args["current_coord"]
         self.waypoints = args["waypoints"]
 
         self.start_hour = args["start_hour"]

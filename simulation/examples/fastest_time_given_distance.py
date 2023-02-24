@@ -5,7 +5,8 @@ import json
 
 from simulation.common import helpers
 from simulation.main import TimeSimulation
-from simulation.cache.SimulationState import SimulationState
+from simulation.main.MainSimulation import Simulation
+from simulation.common.simulationState import SimulationState
 from simulation.optimization.bayesian import BayesianOptimization
 from simulation.optimization.random import RandomOptimization
 from simulation.utils.InputBounds import InputBounds
@@ -56,7 +57,7 @@ def main():
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
 
-    results = optimization.maximize(init_points=3, n_iter=10, kappa=10)
+    results = optimization.maximize(init_points=1, n_iter=1, kappa=10)
     optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
                                            verbose=False,
                                            route_visualization=False)

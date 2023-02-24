@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 
 class GIS:
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, force_update=False):
+    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, force_update=False, current_coord=None, temp_flag=False):
         """
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
         simulation's planned route from the Google Maps API and performing operations on the received data.
@@ -37,6 +37,7 @@ class GIS:
 
         self.origin_coord = origin_coord
         self.dest_coord = dest_coord
+        self.current_coord = current_coord
         self.waypoints = waypoints
         self.race_type = race_type
 
@@ -67,6 +68,25 @@ class GIS:
                     self.path = route_data['path']
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
+
+                    if current_coord is not None:
+                        if not np.array_equal(current_coord, origin_coord):
+                            logging.warning("Current position is not origin position. Modifying path data.\n")
+
+                            # We need to find the closest coordinate along the path to the vehicle position
+                            to_current_coord_from_path = np.abs(self.path - current_coord)
+                            distances_from_current_coord = np.zeros(len(to_current_coord_from_path))
+                            for i in range(len(to_current_coord_from_path)):
+                                # As we just need the minimum, using square magnitude will save performance
+                                distances_from_current_coord[i] = \
+                                    GIS.calculate_vector_square_magnitude(to_current_coord_from_path[i])
+
+                            current_coord_index = distances_from_current_coord.argmin()
+
+                            # All coords before the current coordinate should be discarded
+                            self.path = self.path[current_coord_index:]
+                            self.path_elevations = self.path_elevations[current_coord_index:]
+                            self.path_time_zones = self.path_time_zones[current_coord_index:]
 
         if api_call_required or force_update:
             logging.warning("New route requested and/or route save file does not exist. "
@@ -408,6 +428,9 @@ class GIS:
 
         return self.current_index
 
+    @staticmethod
+    def calculate_vector_square_magnitude(vector):
+        return sum(i**2 for i in vector)
 
 if __name__ == "__main__":
     load_dotenv()
