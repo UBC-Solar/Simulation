@@ -4,7 +4,7 @@ import numpy as np
 
 from simulation.common import helpers
 from simulation.main.TimeSimulation import TimeSimulation
-from simulation.cache.SimulationState import SimulationState
+from simulation.common.simulationState import SimulationState
 from simulation.optimization.bayesian import BayesianOptimization
 from simulation.utils.InputBounds import InputBounds
 from simulation.config import settings_directory

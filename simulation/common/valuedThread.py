@@ -5,7 +5,8 @@ class ValuedThread(Thread):
     """
     A subclass of Thread that allows for the thread's target function return value to be captured
     with thread.join()
-    Warning: Current implementation is that arguments passed to target will NOT get unpacked.
+    Warning: Current implementation is that arguments passed to target will NOT get unpacked. Errors
+    may arise if  more than one argument is provided to the thread target.
     """
     def __init__(self, group=None, target=None, name=None, args=(), kwargs={}, Verbose=None):
         Thread.__init__(self, group, target, name, args, kwargs)

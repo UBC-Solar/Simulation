@@ -1,11 +1,13 @@
 import datetime
 import json
+
+import dotenv
 import numpy as np
 import os
 import simulation
 
 from simulation.common.valuedThread import ValuedThread
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv, dotenv_values
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
@@ -80,10 +82,11 @@ class TimeSimulation:
 
         # ----- API keys -----
 
-        load_dotenv()
+        API_KEYS = dotenv_values(".env")
 
-        self.weather_api_key = os.environ.get("OPENWEATHER_API_KEY")
-        self.google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+        # self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
+        self.weather_api_key = None
+        self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
 
         # ----- Component initialisation -----
 
@@ -98,14 +101,17 @@ class TimeSimulation:
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, force_update=gis_force_update, current_coord=self.current_coord)
+
         self.route_coords = self.gis.get_path()
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
+
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600,
                                                    self.race_type,
                                                    weather_data_frequency="daily",
-                                                   force_update=weather_force_update)
+                                                   force_update=weather_force_update,
+                                                   origin_coord=self.gis.launch_point)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + \
