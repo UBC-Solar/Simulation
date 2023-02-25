@@ -66,6 +66,7 @@ class GIS:
                     print()
 
                     self.path = route_data['path']
+                    self.launch_point = route_data['path'][0]
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
 
@@ -74,14 +75,7 @@ class GIS:
                             logging.warning("Current position is not origin position. Modifying path data.\n")
 
                             # We need to find the closest coordinate along the path to the vehicle position
-                            to_current_coord_from_path = np.abs(self.path - current_coord)
-                            distances_from_current_coord = np.zeros(len(to_current_coord_from_path))
-                            for i in range(len(to_current_coord_from_path)):
-                                # As we just need the minimum, using square magnitude will save performance
-                                distances_from_current_coord[i] = \
-                                    GIS.calculate_vector_square_magnitude(to_current_coord_from_path[i])
-
-                            current_coord_index = distances_from_current_coord.argmin()
+                            current_coord_index = GIS.find_closest_coordinate_index(current_coord, self.path)
 
                             # All coords before the current coordinate should be discarded
                             self.path = self.path[current_coord_index:]
@@ -431,6 +425,17 @@ class GIS:
     @staticmethod
     def calculate_vector_square_magnitude(vector):
         return sum(i**2 for i in vector)
+
+    @staticmethod
+    def find_closest_coordinate_index(current_coord, path):
+        to_current_coord_from_path = np.abs(path - current_coord)
+        distances_from_current_coord = np.zeros(len(to_current_coord_from_path))
+        for i in range(len(to_current_coord_from_path)):
+            # As we just need the minimum, using square magnitude will save performance
+            distances_from_current_coord[i] = GIS.calculate_vector_square_magnitude(to_current_coord_from_path[i])
+
+        return distances_from_current_coord.argmin()
+
 
 if __name__ == "__main__":
     load_dotenv()

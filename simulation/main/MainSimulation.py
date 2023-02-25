@@ -13,6 +13,7 @@ from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
+from simulation.common.valuedThread import ValuedThread
 
 
 class Simulation:
@@ -248,6 +249,7 @@ class Simulation:
 
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
+
 
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
 

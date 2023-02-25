@@ -2,6 +2,7 @@
 A class to extract local and path weather predictions such as wind_speed, 
     wind_direction, cloud_cover and weather type
 """
+import ctypes
 import json
 import numpy as np
 import os
@@ -32,11 +33,12 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily", force_update=False):
+    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily", force_update=False, origin_coord=None):
         """
         Initializes the instance of a WeatherForecast class
 
         :param api_key: A personal OpenWeatherAPI key to access weather forecasts
+        :param origin_coord: A NumPy array of a single [latitude, longitude]
         :param coords: A NumPy array of [latitude, longitude]
         :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
             "current", "hourly", or "daily"
@@ -47,22 +49,22 @@ class WeatherForecasts:
         self.api_key = api_key
         self.last_updated_time = -1
 
-        # The following section is commented out to allow for cross-compatibility with UNIX
-        # If you are on Windows, you can use the faster Go implementation by setting golang=True and uncommenting
-
         # Setup for Golang use in get_weather_forecast_in_time()
-        # go_directory = pathlib.Path(__file__).parent
+        go_directory = pathlib.Path(__file__).parent
 
-        # self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/weather_in_time_loop.so")
-        # self.lib.weather_in_time_loop.argtypes = [
-        #     ctypes.POINTER(ctypes.c_double),
-        #     ctypes.POINTER(ctypes.c_double),
-        #     ctypes.POINTER(ctypes.c_double),
-        #     ctypes.c_longlong,
-        #     ctypes.c_longlong
-        # ]
+        self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/weather_in_time_loop.so")
+        self.lib.weather_in_time_loop.argtypes = [
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.c_longlong,
+            ctypes.c_longlong
+        ]
 
-        self.origin_coord = coords[0]
+        if origin_coord is not None:
+            self.origin_coord = np.array(origin_coord)
+        else:
+            self.origin_coord = coords[0]
         self.dest_coord = coords[-1]
 
         assert race_type in ["ASC", "FSGP"]
@@ -79,6 +81,7 @@ class WeatherForecasts:
         # if the file exists, load path from file
         if os.path.isfile(weather_file) and force_update is False:
             with np.load(weather_file) as weather_data:
+                print()
                 if np.array_equal(weather_data['origin_coord'], self.origin_coord) and \
                         np.array_equal(weather_data['dest_coord'], self.dest_coord):
 
@@ -314,6 +317,7 @@ class WeatherForecasts:
 
         return np.array(result)
 
+    @helpers.timeit
     def golang_calculate_closest_timestamp_indices(self, unix_timestamps, dt_local_array):
         """
         GoLang implementation to find the indices of the closest timestamps in dt_local_array and package them into a NumPy Array
@@ -326,7 +330,7 @@ class WeatherForecasts:
 
         """
         unix_timestamps_pointer, closest_time_stamp_indices_pointer, \
-        closest_time_stamp_indices = helpers.generate_golang_io_pointers(unix_timestamps)
+            closest_time_stamp_indices = helpers.generate_golang_io_pointers(unix_timestamps)
 
         dt_local_arr_pointer, _, _ = helpers.generate_golang_io_pointers(dt_local_array)
 
@@ -363,7 +367,7 @@ class WeatherForecasts:
         return np.asarray(closest_time_stamp_indices, dtype=np.int32)
 
     @helpers.timeit
-    def get_weather_forecast_in_time(self, indices, unix_timestamps, golang=False):
+    def get_weather_forecast_in_time(self, indices, unix_timestamps, golang=True):
         """
         Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
         what the weather forecast is at each time step being simulated.
