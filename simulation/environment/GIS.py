@@ -4,6 +4,8 @@ import logging
 import math
 import numpy as np
 import os
+import ctypes
+import pathlib
 import polyline
 import pytz
 import requests
@@ -16,7 +18,7 @@ from tqdm import tqdm
 
 
 class GIS:
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, force_update=False, current_coord=None, temp_flag=False):
+    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, golang, force_update=False, current_coord=None, temp_flag=False):
         """
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
         simulation's planned route from the Google Maps API and performing operations on the received data.
@@ -27,6 +29,7 @@ class GIS:
         :param waypoints: NumPy array containing the route waypoints to travel through during simulation
         :param race_type: String ("FSGP" or "ASC") stating which race is being simulated
         :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
+        :param golang: boolean determining whether to use faster GoLang implementations when available
 
         """
 
@@ -40,6 +43,20 @@ class GIS:
         self.current_coord = current_coord
         self.waypoints = waypoints
         self.race_type = race_type
+        self.golang = golang
+
+        if golang:
+            # Setup for Golang use in calculate_closest_gis_indices()
+            go_directory = pathlib.Path(__file__).parent
+
+            self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/closest_gis_indices_loop.so")
+            self.lib.closest_gis_indices_loop.argtypes = [
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.c_long,
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_int64),
+                ctypes.c_long,
+            ]
 
         # path to file storing the route and elevation NumPy arrays
         if self.race_type == "FSGP":
@@ -110,9 +127,53 @@ class GIS:
 
     def calculate_closest_gis_indices(self, cumulative_distances):
         """
+        Takes in an array of point distances from starting point, returns a list of
+        self.path indices of coordinates which have a distance from the starting point
+        closest to the point distances.
+
+        :param cumulative_distances: (float[N]) array of distances,
+        where cumulative_distances[x] > cumulative_distances[x-1]
+
+        :returns: (float[N]) array of indices of path
+        """
+        if not self.golang:
+            return self.python_calculate_closest_gis_indices(cumulative_distances)
+        else:
+            return self.golang_calculate_closest_gis_indices(cumulative_distances)
+
+    @helpers.timeit
+    def golang_calculate_closest_gis_indices(self, cumulative_distances):
+        """"
+        Faster GoLang implementation of calculate_closest_gis_indices
+        :param cumulative_distances: (float[N]) array of distances,
+        where cumulative_distances[x] > cumulative_distances[x-1]
+
+        :returns: (float[N]) array of indices of path
+        """
+        path_distances = self.path_distances.copy()
+
+        path_distances_pointer, cumulative_distances_pointer, \
+            results_pointer, results = helpers.generate_gis_golang_io_pointers(path_distances,
+                                                                               cumulative_distances,
+                                                                               len(cumulative_distances))
+
+        self.lib.closest_gis_indices_loop(
+            path_distances_pointer,
+            len(path_distances),
+            cumulative_distances_pointer,
+            results_pointer,
+            len(cumulative_distances))
+
+        print("Didnt die?!?!")
+
+        return np.array(results, 'i')
+
+    @helpers.timeit
+    def python_calculate_closest_gis_indices(self, cumulative_distances):
+        """
         Takes in an array of point distances from starting point, returns a list of 
         self.path indices of coordinates which have a distance from the starting point
-        closest to the point distances
+        closest to the point distances.
 
         :param cumulative_distances: (float[N]) array of distances,
         where cumulative_distances[x] > cumulative_distances[x-1]

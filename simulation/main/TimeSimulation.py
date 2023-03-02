@@ -16,7 +16,7 @@ from simulation.main.SimulationResult import SimulationResult
 
 class TimeSimulation:
 
-    def __init__(self, initial_conditions, race_type):
+    def __init__(self, initial_conditions, race_type, golang=True):
         """
 
         Instantiates a simple model of the car.
@@ -36,6 +36,7 @@ class TimeSimulation:
         simulation_duration: length of simulated time (in seconds)
         start_hour: describes the hour to start the simulation (typically either 7 or 9, these
         represent 7am and 9am respectively)
+        golang: boolean determining whether to use faster GoLang implementations when available
         """
 
         # ----- Race type -----
@@ -100,7 +101,8 @@ class TimeSimulation:
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord)
+                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord,
+                                  golang=golang)
 
         self.route_coords = self.gis.get_path()
 
@@ -111,7 +113,8 @@ class TimeSimulation:
                                                    self.race_type,
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update,
-                                                   origin_coord=self.gis.launch_point)
+                                                   origin_coord=self.gis.launch_point,
+                                                   golang=golang)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + \
@@ -264,19 +267,19 @@ class TimeSimulation:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        # Create two threads to run calculate_closest_gis_indices and calculate_closest_weather_indices concurrently
-        gis_thread = ValuedThread(target=self.gis.calculate_closest_gis_indices, args=cumulative_distances)
-        gis_thread.start()
-
-        weather_thread = ValuedThread(target=self.weather.calculate_closest_weather_indices, args=cumulative_distances)
-        weather_thread.start()
-
-        closest_gis_indices = gis_thread.join()
-        closest_weather_indices = weather_thread.join()
-
-        # closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
+        # # Create two threads to run calculate_closest_gis_indices and calculate_closest_weather_indices concurrently
+        # gis_thread = ValuedThread(target=self.gis.calculate_closest_gis_indices, args=cumulative_distances)
+        # gis_thread.start()
         #
-        # closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
+        # weather_thread = ValuedThread(target=self.weather.calculate_closest_weather_indices,
+        # args=cumulative_distances) weather_thread.start()
+        #
+        # closest_gis_indices = gis_thread.join()
+        # closest_weather_indices = weather_thread.join()
+
+        closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
+
+        closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
         path_distances = self.gis.path_distances
         # [cumulative_distances] = meters

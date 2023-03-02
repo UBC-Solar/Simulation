@@ -74,7 +74,7 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
-extern void weather_in_time_loop(GoFloat64* unix_timestamps_inPtr, GoFloat64* closest_time_stamp_indices_outPtr, GoFloat64* dt_local_array_inPtr, GoInt64 dt_local_array_inPtr_size, GoInt64 io_ptr_size);
+extern void closest_gis_indices_loop(GoFloat64* path_distances_inPtr, GoInt64 io_ptrSize, GoFloat64* cumulative_distances_inPtr, GoInt64* results_outPtr, GoInt64 cumulative_distances_ptrSize);
 
 #ifdef __cplusplus
 }

@@ -33,7 +33,7 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily", force_update=False, origin_coord=None):
+    def __init__(self, api_key, coords, duration, race_type, golang, weather_data_frequency="daily", force_update=False, origin_coord=None):
         """
         Initializes the instance of a WeatherForecast class
 
@@ -44,22 +44,25 @@ class WeatherForecasts:
             "current", "hourly", or "daily"
         :param duration: amount of time simulated (in hours)
         :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
+        :param golang: boolean determining whether to use faster GoLang implementations when available
         """
         self.race_type = race_type
         self.api_key = api_key
         self.last_updated_time = -1
+        self.golang = golang
 
-        # Setup for Golang use in get_weather_forecast_in_time()
-        go_directory = pathlib.Path(__file__).parent
+        if golang:
+            # Setup for Golang use in get_weather_forecast_in_time()
+            go_directory = pathlib.Path(__file__).parent
 
-        self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/weather_in_time_loop.so")
-        self.lib.weather_in_time_loop.argtypes = [
-            ctypes.POINTER(ctypes.c_double),
-            ctypes.POINTER(ctypes.c_double),
-            ctypes.POINTER(ctypes.c_double),
-            ctypes.c_longlong,
-            ctypes.c_longlong
-        ]
+            self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/weather_in_time_loop.so")
+            self.lib.weather_in_time_loop.argtypes = [
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.c_longlong,
+                ctypes.c_longlong
+            ]
 
         if origin_coord is not None:
             self.origin_coord = np.array(origin_coord)
@@ -330,9 +333,9 @@ class WeatherForecasts:
 
         """
         unix_timestamps_pointer, closest_time_stamp_indices_pointer, \
-            closest_time_stamp_indices = helpers.generate_golang_io_pointers(unix_timestamps)
+            closest_time_stamp_indices = helpers.generate_weather_golang_io_pointers(unix_timestamps)
 
-        dt_local_arr_pointer, _, _ = helpers.generate_golang_io_pointers(dt_local_array)
+        dt_local_arr_pointer, _, _ = helpers.generate_weather_golang_io_pointers(dt_local_array)
 
         self.lib.weather_in_time_loop(
             unix_timestamps_pointer,
@@ -367,7 +370,7 @@ class WeatherForecasts:
         return np.asarray(closest_time_stamp_indices, dtype=np.int32)
 
     @helpers.timeit
-    def get_weather_forecast_in_time(self, indices, unix_timestamps, golang=True):
+    def get_weather_forecast_in_time(self, indices, unix_timestamps):
         """
         Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
         what the weather forecast is at each time step being simulated.
@@ -383,8 +386,6 @@ class WeatherForecasts:
 
         :param indices: (int[N]) coordinate indices of self.weather_forecast
         :param unix_timestamps: (int[N]) unix timestamps of the vehicle's journey
-        :param golang: Boolean specifying whether a GoLang implementation of get_weather_forecast_in_time should be used
-                   If false, a slower Python implementation is used.
 
         :returns
         - A NumPy array of size [N][9]
@@ -397,7 +398,7 @@ class WeatherForecasts:
         full_weather_forecast_at_coords = self.weather_forecast[indices]
         dt_local_array = full_weather_forecast_at_coords[0, :, 4]
 
-        if golang:
+        if self.golang:
             closest_timestamp_indices = self.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
         else:
             closest_timestamp_indices = self.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
