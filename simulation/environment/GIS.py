@@ -1,3 +1,4 @@
+import array
 import datetime
 import json
 import logging
@@ -54,8 +55,8 @@ class GIS:
                 ctypes.POINTER(ctypes.c_double),
                 ctypes.c_long,
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.POINTER(ctypes.c_int64),
                 ctypes.c_long,
+                ctypes.POINTER(ctypes.c_long),
             ]
 
         # path to file storing the route and elevation NumPy arrays
@@ -150,21 +151,28 @@ class GIS:
 
         :returns: (float[N]) array of indices of path
         """
-        path_distances = self.path_distances.copy()
 
-        path_distances_pointer, cumulative_distances_pointer, \
-            results_pointer, results = helpers.generate_gis_golang_io_pointers(path_distances,
-                                                                               cumulative_distances,
-                                                                               len(cumulative_distances))
+        path_distances = self.path_distances.copy()
+        cumulative_path_distances = np.cumsum(path_distances)
+        cumulative_path_distances[::2] *= -1
+        average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
+
+        average_distances_copy = array.array('d', self.path_distances.copy())
+        average_distances_pointer = (ctypes.c_double * len(average_distances_copy)).from_buffer(average_distances_copy)
+
+        cumulative_distances_copy = array.array('d', cumulative_distances)
+        cumulative_distances_pointer = (ctypes.c_double * len(cumulative_distances_copy)).from_buffer(cumulative_distances_copy)
+
+        results = array.array('l', [0] * len(cumulative_distances))
+        results_pointer = (ctypes.c_long * len(results)).from_buffer(results)
 
         self.lib.closest_gis_indices_loop(
-            path_distances_pointer,
-            len(path_distances),
             cumulative_distances_pointer,
-            results_pointer,
-            len(cumulative_distances))
-
-        print("Didnt die?!?!")
+            len(cumulative_distances),
+            average_distances_pointer,
+            len(average_distances),
+            results_pointer
+        )
 
         return np.array(results, 'i')
 

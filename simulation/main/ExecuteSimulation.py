@@ -15,7 +15,6 @@ Description: Export Simulation data as a SimulationResults object.
 def main() -> SimulationResult:
     """
     Returns a SimulationResult object with the purpose of exporting simulation data.
-    TODO: Add functionality to modify data up to a point in the simulation to allow the simulation to run on real data.
     """
 
     simulation_model = TimeSimulation(race_type="ASC")

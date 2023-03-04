@@ -8,22 +8,23 @@ from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
-from simulation.common.valuedThread import ValuedThread
 
 
 class Simulation:
 
-    def __init__(self, initial_conditions, race_type):
+    def __init__(self, initial_conditions, race_type, golang=True):
         """
         Instantiates a simple model of the car.
 
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
         :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
+        :param golang: boolean which controls whether GoLang implementations are used when available
+
 
         Depending on the race type, the following initialisation parameters are read from the corresponding
         settings json file located in the config folder.
@@ -37,9 +38,14 @@ class Simulation:
         simulation_duration: length of simulated time (in seconds)
         start_hour: describes the hour to start the simulation (typically either 7 or 9, these
         represent 7am and 9am respectively)
+        golang: boolean determining whether to use faster GoLang implementations when available
         """
 
+        # ----- Race type -----
+
         assert race_type in ["ASC", "FSGP"]
+
+        self.race_type = race_type
 
         if race_type == "ASC":
             settings_path = settings_directory / "settings_ASC.json"
@@ -49,16 +55,16 @@ class Simulation:
         with open(settings_path) as f:
             args = json.load(f)
 
-        # ----- Race type -----
-
-        self.race_type = race_type
-
         # ----- Load from settings_*.json -----
 
         self.lvs_power_loss = args['lvs_power_loss']  # LVS power loss is pretty small, so it is neglected
 
         self.tick = args['tick']
-        self.simulation_duration = args['simulation_duration']
+
+        if self.race_type == "ASC":
+            self.simulation_duration = 8 * 24 * 60 * 60  # Arbitrary length as ASC doesn't have a time limit
+        elif self.race_type == "FSGP":
+            self.simulation_duration = args['simulation_duration']
 
         # ----- Load from initial_conditions
 
@@ -68,6 +74,7 @@ class Simulation:
 
         self.origin_coord = initial_conditions.origin_coord
         self.dest_coord = initial_conditions.dest_coord
+        self.current_coord = initial_conditions.current_coord
         self.waypoints = initial_conditions.waypoints
 
         gis_force_update = initial_conditions.gis_force_update
@@ -79,10 +86,10 @@ class Simulation:
 
         # ----- API keys -----
 
-        load_dotenv()
+        API_KEYS = dotenv_values(".env")
 
-        self.weather_api_key = os.environ.get("OPENWEATHER_API_KEY")
-        self.google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+        self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
+        self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
 
         # ----- Component initialisation -----
 
@@ -95,15 +102,20 @@ class Simulation:
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update)
+                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord,
+                                  golang=golang)
+
         self.route_coords = self.gis.get_path()
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
+
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600,
                                                    self.race_type,
                                                    weather_data_frequency="daily",
-                                                   force_update=weather_force_update)
+                                                   force_update=weather_force_update,
+                                                   origin_coord=self.gis.launch_point,
+                                                   golang=golang)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
@@ -145,7 +157,7 @@ class Simulation:
             speed = np.fromiter(kwargs.values(), dtype=float)
 
             # Don't plot results since this code is run by the optimizer
-            plot_results = True
+            plot_results = False
             verbose = False
 
         # ----- Reshape speed array -----
@@ -386,6 +398,7 @@ class Simulation:
             gis_route_elevations_at_each_tick,
             cloud_covers
         ]
+
         results.distance_travelled = distances[-1]
         results.time_taken = time_taken
         results.final_soc = final_soc

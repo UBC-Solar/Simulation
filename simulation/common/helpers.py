@@ -666,60 +666,6 @@ def plot_latitudes(coordinates):
     simple_plot_graph(coordinates[:, 1], "Latitudes")
 
 
-def generate_weather_golang_io_pointers(input_array):
-    """
-    Generates I/O pointers for use in calling Golang functions in WeatherForecasts class.
-
-    Args:
-        input_array: A Python list 0r NumPy Array that will serve as an input to a Golang function
-
-    Returns:
-        - input_array_pointer: A pointer to input_array
-        - output_array_pointer: A pointer to the output_array return value
-        - output_array: The array that output_array_pointer points to.
-                        Will contain result if GoLang writes memory location specified by output_array_pointer
-
-    """
-    input_array_copy = arr.array('d', input_array)
-    input_array_pointer = (
-        ctypes.c_double * len(input_array_copy)).from_buffer(input_array_copy)
-
-    output_array = arr.array('d', [0] * len(input_array))
-    output_array_pointer = (
-        ctypes.c_double * len(output_array)).from_buffer(output_array)
-
-    return input_array_pointer, output_array_pointer, output_array
-
-
-def generate_gis_golang_io_pointers(input_array_1, input_array_2, output_array_size):
-    """
-    Generates I/O pointers for use in calling Golang functions in GIS class.
-
-    Args:
-        input_array_1: A Python list 0r NumPy Array that will serve as an input to a Golang function
-        input_array_2: A Python list 0r NumPy Array that will serve as an input to a Golang function
-        output_array_size: Size of NumPy output Array
-
-    Returns:
-        - input_array_1_pointer: A pointer to input_array_1
-        - input_array_2_pointer: A pointer to input_array_2
-        - output_array_pointer: A pointer to the output_array return value
-    """
-    input_array_1_copy = arr.array('d', input_array_1)
-    input_array_1_pointer = (
-        ctypes.c_double * len(input_array_1_copy)).from_buffer(input_array_1_copy)
-
-    input_array_2_copy = arr.array('d', input_array_2)
-    input_array_2_pointer = (
-        ctypes.c_double * len(input_array_2_copy)).from_buffer(input_array_2_copy)
-
-    output_array = arr.array('l', [0] * output_array_size)
-    output_array_pointer = (
-        ctypes.c_long * len(output_array)).from_buffer(output_array)
-
-    return input_array_1_pointer, input_array_2_pointer, output_array_pointer, output_array
-
-
 def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
     # First we need to find the closest path coordinates for each waypoint/checkpoint
     path_rad = np.array([[radians(p[0]), radians(p[1])] for p in path])

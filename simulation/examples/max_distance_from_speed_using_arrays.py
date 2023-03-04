@@ -1,10 +1,13 @@
 import numpy as np
+import json
 
 import simulation
 from simulation.common import helpers
 from simulation.optimization.bayesian import BayesianOptimization
+from simulation.common.simulationState import SimulationState
 from simulation.optimization.random import RandomOptimization
 from simulation.utils.InputBounds import InputBounds
+from simulation.config import settings_directory
 
 """
 Description: Given an hourly driving speed, find the range at the speed
@@ -36,7 +39,12 @@ def main():
       Keep in mind, however, that the condition len(input_speed) <= simulation_length must be true
     """
 
-    simulation_model = simulation.Simulation(race_type="ASC")
+    with open(settings_directory / "initial_conditions.json") as f:
+        args = json.load(f)
+
+    initialSimulationConditions = SimulationState(args)
+
+    simulation_model = simulation.Simulation(initialSimulationConditions, race_type="ASC")
     distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False)
 
     bounds = InputBounds()

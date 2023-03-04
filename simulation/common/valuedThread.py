@@ -1,7 +1,8 @@
 from threading import Thread
+from multiprocessing import Process
 
 
-class ValuedThread(Thread):
+class ValuedProcess(Process):
     """
     A subclass of Thread that allows for the thread's target function return value to be captured
     with thread.join()

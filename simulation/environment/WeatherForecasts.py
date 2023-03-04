@@ -2,6 +2,7 @@
 A class to extract local and path weather predictions such as wind_speed, 
     wind_direction, cloud_cover and weather type
 """
+import array
 import ctypes
 import json
 import numpy as np
@@ -221,7 +222,7 @@ class WeatherForecasts:
         """
         Passes in a list of coordinates, returns the hourly weather forecast
         for each of the coordinates
-        
+
         :param coords: A NumPy array of [coord_index][2]
         - [2] => [latitude, longitude]
         :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
@@ -332,10 +333,16 @@ class WeatherForecasts:
         Returns: NumPy Array (int[N]) containing closest timestamp indices used by get_weather_forecast_in_time
 
         """
-        unix_timestamps_pointer, closest_time_stamp_indices_pointer, \
-            closest_time_stamp_indices = helpers.generate_weather_golang_io_pointers(unix_timestamps)
 
-        dt_local_arr_pointer, _, _ = helpers.generate_weather_golang_io_pointers(dt_local_array)
+        unix_timestamps_copy = array.array('d', unix_timestamps)
+        unix_timestamps_pointer = (ctypes.c_double * len(unix_timestamps_copy)).from_buffer(unix_timestamps_copy)
+
+        closest_time_stamp_indices = array.array('d', [0] * len(unix_timestamps))
+        closest_time_stamp_indices_pointer = (
+                ctypes.c_double * len(closest_time_stamp_indices)).from_buffer(closest_time_stamp_indices)
+
+        dt_local_arr_copy =  array.array('d', dt_local_array)
+        dt_local_arr_pointer = (ctypes.c_double * len(dt_local_arr_copy)).from_buffer(dt_local_arr_copy)
 
         self.lib.weather_in_time_loop(
             unix_timestamps_pointer,

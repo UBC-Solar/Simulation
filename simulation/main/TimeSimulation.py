@@ -6,7 +6,6 @@ import numpy as np
 import os
 import simulation
 
-from simulation.common.valuedThread import ValuedThread
 from dotenv import load_dotenv, find_dotenv, dotenv_values
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
@@ -23,6 +22,7 @@ class TimeSimulation:
 
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
         :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
+        :param golang: boolean which controls whether GoLang implementations are used when available
 
         Depending on the race type, the following initialisation parameters are read from the corresponding
         settings json file located in the config folder.
@@ -56,6 +56,7 @@ class TimeSimulation:
         # ----- Load from settings_*.json -----
 
         self.lvs_power_loss = args['lvs_power_loss']  # LVS power loss is pretty small, so it is neglected
+
         self.tick = args['tick']
 
         if self.race_type == "ASC":
@@ -85,16 +86,14 @@ class TimeSimulation:
 
         API_KEYS = dotenv_values(".env")
 
-        # self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
-        self.weather_api_key = None
+        self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
         self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
 
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()
 
-        self.basic_battery = simulation.BasicBattery(
-            self.initial_battery_charge)
+        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)
 
         self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)
 
@@ -158,7 +157,7 @@ class TimeSimulation:
             speed = np.fromiter(kwargs.values(), dtype=float)
 
             # Don't plot results since this code is run by the optimizer
-            plot_results = True
+            plot_results = False
             verbose = False
 
         # ----- Reshape speed array -----
@@ -413,6 +412,7 @@ class TimeSimulation:
             gis_route_elevations_at_each_tick,
             cloud_covers
         ]
+
         results.distance_travelled = distances[-1]
 
         if results.distance_travelled >= self.route_length:
