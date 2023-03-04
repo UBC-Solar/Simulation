@@ -1,10 +1,14 @@
 import numpy as np
+import json
 
 from simulation.common import helpers
 from simulation.main import TimeSimulation
 from simulation.optimization.bayesian import BayesianOptimization
+from simulation.common.simulationState import SimulationState
 from simulation.utils.InputBounds import InputBounds
 from simulation.main.SimulationResult import SimulationResult
+from simulation.config import settings_directory
+
 
 """
 Description: Export Simulation data as a SimulationResults object. 
@@ -16,8 +20,11 @@ def main() -> SimulationResult:
     """
     Returns a SimulationResult object with the purpose of exporting simulation data.
     """
+    with open(settings_directory / "initial_conditions.json") as f:
+        args = json.load(f)
 
-    simulation_model = TimeSimulation(race_type="ASC")
+    initialSimulationConditions = SimulationState(args)
+    simulation_model = TimeSimulation(initialSimulationConditions, race_type="ASC")
 
     bounds = InputBounds()
     bounds.add_bounds(8, 20, 60)
