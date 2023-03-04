@@ -102,8 +102,7 @@ class Simulation:
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord,
-                                  golang=golang)
+                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord)
 
         self.route_coords = self.gis.get_path()
 

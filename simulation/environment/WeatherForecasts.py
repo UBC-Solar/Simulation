@@ -2,7 +2,6 @@
 A class to extract local and path weather predictions such as wind_speed, 
     wind_direction, cloud_cover and weather type
 """
-import array
 import ctypes
 import json
 import numpy as np
@@ -50,20 +49,18 @@ class WeatherForecasts:
         self.race_type = race_type
         self.api_key = api_key
         self.last_updated_time = -1
-        self.golang = golang
 
-        if golang:
-            # Setup for Golang use in get_weather_forecast_in_time()
-            go_directory = pathlib.Path(__file__).parent
+        # Setup for Golang use in get_weather_forecast_in_time()
+        go_directory = pathlib.Path(__file__).parent
 
-            self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/weather_in_time_loop.so")
-            self.lib.weather_in_time_loop.argtypes = [
-                ctypes.POINTER(ctypes.c_double),
-                ctypes.POINTER(ctypes.c_double),
-                ctypes.POINTER(ctypes.c_double),
-                ctypes.c_longlong,
-                ctypes.c_longlong
-            ]
+        self.lib = ctypes.cdll.LoadLibrary(f"{go_directory}/weather_in_time_loop.so")
+        self.lib.weather_in_time_loop.argtypes = [
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.c_longlong,
+            ctypes.c_longlong
+        ]
 
         if origin_coord is not None:
             self.origin_coord = np.array(origin_coord)
@@ -222,7 +219,7 @@ class WeatherForecasts:
         """
         Passes in a list of coordinates, returns the hourly weather forecast
         for each of the coordinates
-
+        
         :param coords: A NumPy array of [coord_index][2]
         - [2] => [latitude, longitude]
         :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
@@ -333,16 +330,10 @@ class WeatherForecasts:
         Returns: NumPy Array (int[N]) containing closest timestamp indices used by get_weather_forecast_in_time
 
         """
+        unix_timestamps_pointer, closest_time_stamp_indices_pointer, \
+            closest_time_stamp_indices = helpers.generate_weather_golang_io_pointers(unix_timestamps)
 
-        unix_timestamps_copy = array.array('d', unix_timestamps)
-        unix_timestamps_pointer = (ctypes.c_double * len(unix_timestamps_copy)).from_buffer(unix_timestamps_copy)
-
-        closest_time_stamp_indices = array.array('d', [0] * len(unix_timestamps))
-        closest_time_stamp_indices_pointer = (
-                ctypes.c_double * len(closest_time_stamp_indices)).from_buffer(closest_time_stamp_indices)
-
-        dt_local_arr_copy =  array.array('d', dt_local_array)
-        dt_local_arr_pointer = (ctypes.c_double * len(dt_local_arr_copy)).from_buffer(dt_local_arr_copy)
+        dt_local_arr_pointer, _, _ = helpers.generate_weather_golang_io_pointers(dt_local_array)
 
         self.lib.weather_in_time_loop(
             unix_timestamps_pointer,
@@ -377,7 +368,7 @@ class WeatherForecasts:
         return np.asarray(closest_time_stamp_indices, dtype=np.int32)
 
     @helpers.timeit
-    def get_weather_forecast_in_time(self, indices, unix_timestamps):
+    def get_weather_forecast_in_time(self, indices, unix_timestamps, golang=True):
         """
         Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
         what the weather forecast is at each time step being simulated.
@@ -393,6 +384,8 @@ class WeatherForecasts:
 
         :param indices: (int[N]) coordinate indices of self.weather_forecast
         :param unix_timestamps: (int[N]) unix timestamps of the vehicle's journey
+        :param golang: Boolean specifying whether a GoLang implementation of get_weather_forecast_in_time should be used
+                   If false, a slower Python implementation is used.
 
         :returns
         - A NumPy array of size [N][9]
@@ -405,7 +398,7 @@ class WeatherForecasts:
         full_weather_forecast_at_coords = self.weather_forecast[indices]
         dt_local_array = full_weather_forecast_at_coords[0, :, 4]
 
-        if self.golang:
+        if golang:
             closest_timestamp_indices = self.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
         else:
             closest_timestamp_indices = self.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)

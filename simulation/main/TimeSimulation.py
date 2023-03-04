@@ -100,8 +100,7 @@ class TimeSimulation:
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord,
-                                  golang=golang)
+                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord)
 
         self.route_coords = self.gis.get_path()
 
@@ -265,16 +264,6 @@ class TimeSimulation:
 
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
-
-        # # Create two threads to run calculate_closest_gis_indices and calculate_closest_weather_indices concurrently
-        # gis_thread = ValuedThread(target=self.gis.calculate_closest_gis_indices, args=cumulative_distances)
-        # gis_thread.start()
-        #
-        # weather_thread = ValuedThread(target=self.weather.calculate_closest_weather_indices,
-        # args=cumulative_distances) weather_thread.start()
-        #
-        # closest_gis_indices = gis_thread.join()
-        # closest_weather_indices = weather_thread.join()
 
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
 
