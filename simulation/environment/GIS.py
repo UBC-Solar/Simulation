@@ -1,5 +1,5 @@
-import array
 import datetime
+import array
 import json
 import logging
 import math
@@ -55,8 +55,8 @@ class GIS:
                 ctypes.POINTER(ctypes.c_double),
                 ctypes.c_long,
                 ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_int64),
                 ctypes.c_long,
-                ctypes.POINTER(ctypes.c_long),
             ]
 
         # path to file storing the route and elevation NumPy arrays
@@ -134,6 +134,7 @@ class GIS:
 
         :param cumulative_distances: (float[N]) array of distances,
         where cumulative_distances[x] > cumulative_distances[x-1]
+        :param golang: Flag of whether to use faster Go implementation.
 
         :returns: (float[N]) array of indices of path
         """
@@ -151,28 +152,26 @@ class GIS:
 
         :returns: (float[N]) array of indices of path
         """
-
         path_distances = self.path_distances.copy()
-        cumulative_path_distances = np.cumsum(path_distances)
-        cumulative_path_distances[::2] *= -1
-        average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
 
-        average_distances_copy = array.array('d', self.path_distances.copy())
-        average_distances_pointer = (ctypes.c_double * len(average_distances_copy)).from_buffer(average_distances_copy)
+        path_distances_copy = array.array('d', path_distances)
+        path_distances_pointer = (
+                ctypes.c_double * len(path_distances_copy)).from_buffer(path_distances_copy)
 
         cumulative_distances_copy = array.array('d', cumulative_distances)
-        cumulative_distances_pointer = (ctypes.c_double * len(cumulative_distances_copy)).from_buffer(cumulative_distances_copy)
+        cumulative_distances_pointer = (
+                ctypes.c_double * len(cumulative_distances_copy)).from_buffer(cumulative_distances_copy)
 
         results = array.array('l', [0] * len(cumulative_distances))
-        results_pointer = (ctypes.c_long * len(results)).from_buffer(results)
+        results_pointer = (
+                ctypes.c_long * len(results)).from_buffer(results)
 
         self.lib.closest_gis_indices_loop(
+            path_distances_pointer,
+            len(self.path_distances),
             cumulative_distances_pointer,
-            len(cumulative_distances),
-            average_distances_pointer,
-            len(average_distances),
-            results_pointer
-        )
+            results_pointer,
+            len(cumulative_distances))
 
         return np.array(results, 'i')
 
