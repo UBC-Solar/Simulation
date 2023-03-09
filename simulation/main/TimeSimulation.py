@@ -1,17 +1,16 @@
 import datetime
 import json
 
-import dotenv
 import numpy as np
 import os
 import simulation
+import time as timer
 
 from dotenv import load_dotenv, find_dotenv, dotenv_values
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
-
 
 class TimeSimulation:
 
@@ -89,6 +88,13 @@ class TimeSimulation:
         self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
         self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
 
+        # ----- GoLang library initialization -----
+
+        self.library = simulation.Libraries(raiseExceptionOnFail=False)
+        if golang:
+            if self.library.did_find_binaries() is False:
+                self.golang = False
+
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()
@@ -100,7 +106,8 @@ class TimeSimulation:
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord)
+                                  self.race_type, library=self.library, force_update=gis_force_update, current_coord=self.current_coord,
+                                  golang=golang)
 
         self.route_coords = self.gis.get_path()
 
@@ -109,6 +116,7 @@ class TimeSimulation:
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600,
                                                    self.race_type,
+                                                   library=self.library,
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update,
                                                    origin_coord=self.gis.launch_point,
@@ -264,10 +272,38 @@ class TimeSimulation:
 
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
+        # start = timer.perf_counter()
+        #
+        # gis_calculate_process = multiprocessing.Pool(processes=1)
+        # closest_gis_indices_result = gis_calculate_process.apply_async(self.gis.calculate_closest_gis_indices(cumulative_distances))
+        #
+        # weather_indices_process = multiprocessing.Pool(processes=1)
+        # closest_weather_indices_result = weather_indices_process.apply_async(self.weather.calculate_closest_weather_indices(cumulative_distances))
+        #
+        # closest_gis_indices = closest_gis_indices_result.get()
+        # closest_weather_indices = closest_weather_indices_result.get()
+        #
+        # gis_calculate_process.close()
+        # gis_calculate_process.join()
+        #
+        # weather_indices_process.close()
+        # weather_indices_process.join()
+        #
+        # print(closest_gis_indices[0])
+        # print(closest_weather_indices[0])
+        #
+        # stop = timer.perf_counter()
+        #
+        # print(f"Took {stop-start}s to use multiprocessing.")
+
+        start = timer.perf_counter()
 
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
 
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
+
+        stop = timer.perf_counter()
+        print(f"Took {stop-start}s to run sequentially.")
 
         path_distances = self.gis.path_distances
         # [cumulative_distances] = meters

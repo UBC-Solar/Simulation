@@ -3,11 +3,6 @@ import json
 import numpy as np
 import os
 import simulation as simulation
-from bayes_opt import BayesianOptimization
-from bokeh.layouts import gridplot
-from bokeh.models import HoverTool
-from bokeh.palettes import Bokeh8
-from bokeh.plotting import figure, show, output_file
 from dotenv import dotenv_values
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
@@ -91,6 +86,13 @@ class Simulation:
         self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
         self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
 
+        # ----- GoLang library initialization -----
+
+        self.library = simulation.Libraries(raiseExceptionOnFail=False)
+        if golang:
+            if self.library.did_find_binaries() is False:
+                self.golang = False
+
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()
@@ -102,7 +104,8 @@ class Simulation:
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord)
+                                  self.race_type, library=self.library, force_update=gis_force_update,
+                                  current_coord=self.current_coord, golang=golang)
 
         self.route_coords = self.gis.get_path()
 
@@ -111,6 +114,7 @@ class Simulation:
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600,
                                                    self.race_type,
+                                                   library=self.library,
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update,
                                                    origin_coord=self.gis.launch_point,
