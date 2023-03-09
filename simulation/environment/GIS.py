@@ -4,9 +4,6 @@ import json
 import logging
 import math
 import numpy as np
-import os
-import ctypes
-import pathlib
 import polyline
 import pytz
 import requests
@@ -16,10 +13,11 @@ from dotenv import load_dotenv
 from simulation.common import helpers
 from timezonefinder import TimezoneFinder
 from tqdm import tqdm
+from simulation.common.library import libraries
 
 
 class GIS:
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, force_update=False, current_coord=None, temp_flag=False):
+    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, golang, library=None, force_update=False, current_coord=None, temp_flag=False):
         """
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
         simulation's planned route from the Google Maps API and performing operations on the received data.
@@ -30,6 +28,7 @@ class GIS:
         :param waypoints: NumPy array containing the route waypoints to travel through during simulation
         :param race_type: String ("FSGP" or "ASC") stating which race is being simulated
         :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
+        :param golang: boolean determining whether to use faster GoLang implementations when available
 
         """
 
@@ -43,6 +42,8 @@ class GIS:
         self.current_coord = current_coord
         self.waypoints = waypoints
         self.race_type = race_type
+        self.golang = golang
+        self.lib = library
 
         # path to file storing the route and elevation NumPy arrays
         if self.race_type == "FSGP":
@@ -111,9 +112,25 @@ class GIS:
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
                                                                self.path_distances)
 
+    def calculate_closest_gis_indices(self, cumulative_distances):
+        """
+        Takes in an array of point distances from starting point, returns a list of
+        self.path indices of coordinates which have a distance from the starting point
+        closest to the point distances.
+
+        :param cumulative_distances: (float[N]) array of distances,
+        where cumulative_distances[x] > cumulative_distances[x-1]
+        :param golang: Flag of whether to use faster Go implementation.
+
+        :returns: (float[N]) array of indices of path
+        """
+        if not self.golang:
+            return self.python_calculate_closest_gis_indices(cumulative_distances)
+        else:
+            return self.lib.calculate_closest_gis_indices(cumulative_distances, self.path_distances)
 
     @helpers.timeit
-    def calculate_closest_gis_indices(self, cumulative_distances):
+    def python_calculate_closest_gis_indices(self, cumulative_distances):
         """
         Takes in an array of point distances from starting point, returns a list of 
         self.path indices of coordinates which have a distance from the starting point
@@ -437,6 +454,7 @@ class GIS:
         Returns the closest coordinate to current_coord in path
 
         :param current_coord: A NumPy array[N] representing a N-dimensional vector
+
         :param path: A NumPy array[M][N] of M coordinates which should be N-dimensional vectors
         """
         to_current_coord_from_path = np.abs(path - current_coord)
