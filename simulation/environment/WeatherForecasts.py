@@ -2,18 +2,14 @@
 A class to extract local and path weather predictions such as wind_speed, 
     wind_direction, cloud_cover and weather type
 """
-import array
-import ctypes
 import json
 import numpy as np
 import os
-import pathlib
 import requests
 import sys
 from simulation.cache.weather import weather_directory
 from simulation.common import helpers
 from tqdm import tqdm
-from simulation.common.library import libraries
 
 
 class WeatherForecasts:

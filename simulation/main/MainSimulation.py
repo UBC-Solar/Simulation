@@ -1,7 +1,6 @@
 import datetime
 import json
 import numpy as np
-import os
 import simulation as simulation
 from dotenv import dotenv_values
 from simulation.common import helpers
@@ -86,12 +85,14 @@ class Simulation:
         self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
         self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
 
-        # ----- GoLang library initialization -----
+        # ----- GoLang library initialisation -----
 
         self.library = simulation.Libraries(raiseExceptionOnFail=False)
         if golang:
-            if self.library.did_find_binaries() is False:
+            # If compatible GoLang binaries weren't found, disable GoLang usage.
+            if self.library.found_compatible_binaries() is False:
                 self.golang = False
+
 
         # ----- Component initialisation -----
 

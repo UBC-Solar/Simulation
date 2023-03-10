@@ -1,5 +1,5 @@
 import datetime
-import array
+import os
 import json
 import logging
 import math
@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 from simulation.common import helpers
 from timezonefinder import TimezoneFinder
 from tqdm import tqdm
-from simulation.common.library import libraries
 
 
 class GIS:

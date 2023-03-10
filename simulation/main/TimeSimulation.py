@@ -1,8 +1,8 @@
 import datetime
 import json
+import logging
 
 import numpy as np
-import os
 import simulation
 import time as timer
 
@@ -11,6 +11,7 @@ from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
+
 
 class TimeSimulation:
 
@@ -88,12 +89,15 @@ class TimeSimulation:
         self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
         self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
 
-        # ----- GoLang library initialization -----
+        # ----- GoLang library initialisation -----
 
         self.library = simulation.Libraries(raiseExceptionOnFail=False)
         if golang:
-            if self.library.did_find_binaries() is False:
+            # If compatible GoLang binaries weren't found, disable GoLang usage.
+            if self.library.found_compatible_binaries() is False:
                 self.golang = False
+                logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
+                                "To use GoLang implementations, compile GoLang for your operating system.")
 
         # ----- Component initialisation -----
 
@@ -106,7 +110,8 @@ class TimeSimulation:
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, library=self.library, force_update=gis_force_update, current_coord=self.current_coord,
+                                  self.race_type, library=self.library, force_update=gis_force_update,
+                                  current_coord=self.current_coord,
                                   golang=golang)
 
         self.route_coords = self.gis.get_path()
@@ -303,7 +308,7 @@ class TimeSimulation:
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
         stop = timer.perf_counter()
-        print(f"Took {stop-start}s to run sequentially.")
+        print(f"Took {stop - start}s to run sequentially.")
 
         path_distances = self.gis.path_distances
         # [cumulative_distances] = meters
