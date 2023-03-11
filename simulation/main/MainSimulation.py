@@ -1,5 +1,7 @@
 import datetime
 import json
+import logging
+
 import numpy as np
 import simulation as simulation
 from dotenv import dotenv_values
@@ -92,6 +94,9 @@ class Simulation:
             # If compatible GoLang binaries weren't found, disable GoLang usage.
             if self.library.found_compatible_binaries() is False:
                 self.golang = False
+                logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
+                                "To use GoLang implementations, see COMPILING_HOWTO about "
+                                "compiling GoLang for your operating system.")
 
 
         # ----- Component initialisation -----

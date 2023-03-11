@@ -2,14 +2,15 @@ import datetime
 
 import numpy as np
 import json
+import sys
 
 from simulation.common import helpers
 from simulation.main import TimeSimulation
-from simulation.common.simulationState import SimulationState
 from simulation.optimization.bayesian import BayesianOptimization
 from simulation.optimization.random import RandomOptimization
 from simulation.utils.InputBounds import InputBounds
 from simulation.config import settings_directory
+from simulation.common import simulationState
 
 
 """
@@ -44,12 +45,25 @@ def main():
     with open(settings_directory / "initial_conditions.json") as f:
         args = json.load(f)
 
-    initialSimulationConditions = SimulationState(args)
+    initialSimulationConditions = simulationState.SimulationState(args)
+
+    golang = True
+
+    cmds = sys.argv
+    for cmd in cmds:
+        split_cmd = cmd.split('=')
+        if split_cmd[0] == 'golang':
+            if split_cmd[1] == '1':
+                golang = True
+            if split_cmd[1] == '0':
+                golang = False
+
+    print("GoLang is: " + str(golang))
 
     simulation_model = TimeSimulation(initialSimulationConditions, race_type="ASC")
     time_taken = simulation_model.run_model(speed=input_speed, plot_results=True,
                                             verbose=False,
-                                            route_visualization=False)
+                                            route_visualization=False, golang=golang)
 
     bounds = InputBounds()
     bounds.add_bounds(8, 20, 60)

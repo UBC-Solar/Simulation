@@ -4,6 +4,7 @@ import array
 import numpy as np
 import os
 
+
 class Libraries:
     """
     Manages all GoLang binaries, verifies compatibility, and contains GoLang implementations and pointer generation

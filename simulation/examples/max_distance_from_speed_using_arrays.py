@@ -1,5 +1,6 @@
 import numpy as np
 import json
+import sys
 
 import simulation
 from simulation.common import helpers
@@ -44,8 +45,21 @@ def main():
 
     initialSimulationConditions = SimulationState(args)
 
+    golang = True
+
+    cmds = sys.argv
+    for cmd in cmds:
+        split_cmd = cmd.split('=')
+        if split_cmd[0] == 'golang':
+            if split_cmd[1] == '1':
+                golang = True
+            if split_cmd[1] == '0':
+                golang = False
+
+    print("GoLang is: " + str(golang))
+
     simulation_model = simulation.Simulation(initialSimulationConditions, race_type="ASC")
-    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False)
+    distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False, golang=golang)
 
     bounds = InputBounds()
     bounds.add_bounds(8, 20, 60)
