@@ -11,7 +11,7 @@ Documentation Link
 Install inside Simulation/ with `pip3 install -e .`
 """
 
-setup(name='simulation',
+setup(name='UBC-Solar-Simulation',
       packages=[package for package in find_packages()
                 if package.startswith('simulation')],
       package_data={
@@ -26,13 +26,14 @@ setup(name='simulation',
               'mpi4py',
           ]
       },
+      include_package_data=True,
       description='UBC Solar\'s simulation environment',
-      author='Fisher Xue',
+      author='Fisher Xue, Mihir Nimgade, Chris Chang, David Widjaja, Justin Hua, Ilya Veksler, Renu Rajamagmesh, Joshua Riefman, Ritchie Xia, Erik Langille, Chris Aung, Ishaan Trivedi, Jason Liang',
       url='https://github.com/UBC-Solar/Simulation',
       author_email='software@ubcsolar.com',
-      keywords="car",
+      keywords="car, simulation, solar",
       license="MIT",
       long_description=long_description,
       long_description_content_type='text/markdown',
-      version="0.5.0-alpha"
+      version="0.5.6"
       )

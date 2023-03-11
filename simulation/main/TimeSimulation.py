@@ -1,8 +1,10 @@
 import datetime
 import json
+
 import numpy as np
 import os
 import simulation
+
 from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
@@ -12,12 +14,14 @@ from simulation.main.SimulationResult import SimulationResult
 
 class TimeSimulation:
 
-    def __init__(self, race_type):
+    def __init__(self, initial_conditions, race_type, golang=True):
         """
 
         Instantiates a simple model of the car.
 
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
+        :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
+        :param golang: boolean which controls whether GoLang implementations are used when available
 
         Depending on the race type, the following initialisation parameters are read from the corresponding
         settings json file located in the config folder.
@@ -31,98 +35,100 @@ class TimeSimulation:
         simulation_duration: length of simulated time (in seconds)
         start_hour: describes the hour to start the simulation (typically either 7 or 9, these
         represent 7am and 9am respectively)
+        golang: boolean determining whether to use faster GoLang implementations when available
         """
 
+        # ----- Race type -----
+
         assert race_type in ["ASC", "FSGP"]
+
+        self.race_type = race_type
 
         if race_type == "ASC":
             settings_path = settings_directory / "settings_ASC.json"
         else:
             settings_path = settings_directory / "settings_FSGP.json"
 
-        # ----- Race type -----
-
-        self.race_type = race_type
-
         with open(settings_path) as f:
             args = json.load(f)
 
-        self.initial_battery_charge = args['initial_battery_charge']
+        # ----- Load from settings_*.json -----
 
-        # LVS power loss is pretty small, so it is neglected
-        self.lvs_power_loss = args['lvs_power_loss']
-
-        # ----- Time constants -----
+        self.lvs_power_loss = args['lvs_power_loss']  # LVS power loss is pretty small, so it is neglected
 
         self.tick = args['tick']
+
         if self.race_type == "ASC":
-            self.simulation_duration = 8 * 24 * 60 * 60
+            self.simulation_duration = 8 * 24 * 60 * 60  # Arbitrary length as ASC doesn't have a time limit
         elif self.race_type == "FSGP":
             self.simulation_duration = args['simulation_duration']
-        self.start_hour = args['start_hour']
 
-        # ----- API keys -----
+        # ----- Load from initial conditions
 
-        load_dotenv()
+        self.initial_battery_charge = initial_conditions.initial_battery_charge
 
-        self.weather_api_key = os.environ.get("OPENWEATHER_API_KEY")
-        self.google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+        self.start_hour = initial_conditions.start_hour
 
-        # ----- Route constants -----
+        self.origin_coord = initial_conditions.origin_coord
+        self.dest_coord = initial_conditions.dest_coord
+        self.current_coord = initial_conditions.current_coord
+        self.waypoints = initial_conditions.waypoints
 
-        self.origin_coord = args['origin_coord']
-        self.dest_coord = args['dest_coord']
-        self.waypoints = args['waypoints']
+        gis_force_update = initial_conditions.gis_force_update
+        weather_force_update = initial_conditions.weather_force_update
 
         # ----- Route Length -----
 
         self.route_length = 0  # Tentatively set to 0
 
-        # ----- Force update flags -----
+        # ----- API keys -----
 
-        gis_force_update = args['gis_force_update']
-        weather_force_update = args['weather_force_update']
+        load_dotenv()
+
+        self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
+        self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()
 
-        self.basic_battery = simulation.BasicBattery(
-            self.initial_battery_charge)
+        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)
 
         self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)
 
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update)
+                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord)
+
         self.route_coords = self.gis.get_path()
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
+
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600,
                                                    self.race_type,
                                                    weather_data_frequency="daily",
-                                                   force_update=weather_force_update)
+                                                   force_update=weather_force_update,
+                                                   origin_coord=self.gis.launch_point,
+                                                   golang=golang)
 
-        weather_hour = helpers.hour_from_unix_timestamp(
-            self.weather.last_updated_time)
+        weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + \
-            3600 * (24 + self.start_hour - weather_hour)
+                                      3600 * (24 + self.start_hour - weather_hour)
 
         self.solar_calculations = simulation.SolarCalculations()
 
         self.local_times = 0
 
-        self.timestamps = np.arange(
-            0, self.simulation_duration + self.tick, self.tick)
+        self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
     @helpers.timeit
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
-                  route_visualization=False, **kwargs):
+                  route_visualization=False, return_results_object=False, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
-        a Simulation results object, given an initial charge, and a target speed.
+        a Simulation results object if return_results_object=True, given an initial charge, and a target speed.
         Also requires the current time and location. This is where the magic happens.
 
         Note: if the speed remains constant throughout this update, and knowing the starting
@@ -139,6 +145,8 @@ class TimeSimulation:
         :param route_visualization: Flag to control route_visualization plot visibility
         :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
+        :param return_results_object: Defines whether the function should output a simulationResults object or
+        time taken.
 
         """
 
@@ -159,7 +167,7 @@ class TimeSimulation:
 
         # ------ Run calculations and get result and modified speed array -------
 
-        result = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
+        result = self.run_simulation_calculations(speed_kmh, verbose=verbose)
 
         # ------- Parse results ---------
         # TODO: Rewrite this to use a dictionary like Mihir changed in his bokeh commits...
@@ -175,6 +183,7 @@ class TimeSimulation:
 
         distance_travelled = result.distance_travelled
         time_taken = result.time_taken
+        print("Distance travelled: " + str(distance_travelled))
         final_soc = result.final_soc
 
         print(f"Simulation successful!\n"
@@ -205,9 +214,12 @@ class TimeSimulation:
             helpers.route_visualization(
                 self.gis.path, visible=route_visualization)
 
-        return -1 * time_taken
+        if return_results_object:
+            return result
+        else:
+            return -1 * time_taken
 
-    def __run_simulation_calculations(self, speed_kmh, verbose=False):
+    def run_simulation_calculations(self, speed_kmh, verbose=False):
         """
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object
         containing members that specify total distance travelled and time taken at the end of the simulation
@@ -232,7 +244,7 @@ class TimeSimulation:
             if verbose:
                 helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
                                    ["Speed before waypoints",
-                                       " Speed after waypoints"],
+                                    " Speed after waypoints"],
                                    "Before and After waypoints")
 
         # ----- Expected distance estimate -----
@@ -252,11 +264,9 @@ class TimeSimulation:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        closest_gis_indices = self.gis.calculate_closest_gis_indices(
-            cumulative_distances)
+        closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
 
-        closest_weather_indices = self.weather.calculate_closest_weather_indices(
-            cumulative_distances)
+        closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
         path_distances = self.gis.path_distances
         # [cumulative_distances] = meters
@@ -291,8 +301,8 @@ class TimeSimulation:
         weather_forecasts = self.weather.get_weather_forecast_in_time(
             closest_weather_indices, local_times)
         roll_by_tick = 3600 * \
-            (24 + self.start_hour -
-             helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
+                       (24 + self.start_hour -
+                        helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
@@ -390,6 +400,7 @@ class TimeSimulation:
             gis_route_elevations_at_each_tick,
             cloud_covers
         ]
+
         results.distance_travelled = distances[-1]
 
         if results.distance_travelled >= self.route_length:

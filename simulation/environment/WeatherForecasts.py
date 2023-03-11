@@ -9,7 +9,7 @@ import os
 import pathlib
 import requests
 import sys
-from data.weather.__init__ import weather_directory
+from simulation.cache.weather import weather_directory
 from simulation.common import helpers
 from tqdm import tqdm
 
@@ -33,16 +33,18 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily", force_update=False):
+    def __init__(self, api_key, coords, duration, race_type,golang=False, weather_data_frequency="daily", force_update=False, origin_coord=None):
         """
         Initializes the instance of a WeatherForecast class
 
         :param api_key: A personal OpenWeatherAPI key to access weather forecasts
+        :param origin_coord: A NumPy array of a single [latitude, longitude]
         :param coords: A NumPy array of [latitude, longitude]
         :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
             "current", "hourly", or "daily"
         :param duration: amount of time simulated (in hours)
         :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
+        :param golang: boolean determining whether to use faster GoLang implementations when available
         """
         self.race_type = race_type
         self.api_key = api_key
@@ -60,7 +62,10 @@ class WeatherForecasts:
             ctypes.c_longlong
         ]
 
-        self.origin_coord = coords[0]
+        if origin_coord is not None:
+            self.origin_coord = np.array(origin_coord)
+        else:
+            self.origin_coord = coords[0]
         self.dest_coord = coords[-1]
 
         assert race_type in ["ASC", "FSGP"]
@@ -312,6 +317,7 @@ class WeatherForecasts:
 
         return np.array(result)
 
+    @helpers.timeit
     def golang_calculate_closest_timestamp_indices(self, unix_timestamps, dt_local_array):
         """
         GoLang implementation to find the indices of the closest timestamps in dt_local_array and package them into a NumPy Array
@@ -324,9 +330,9 @@ class WeatherForecasts:
 
         """
         unix_timestamps_pointer, closest_time_stamp_indices_pointer, \
-        closest_time_stamp_indices = helpers.generate_golang_io_pointers(unix_timestamps)
+            closest_time_stamp_indices = helpers.generate_weather_golang_io_pointers(unix_timestamps)
 
-        dt_local_arr_pointer, _, _ = helpers.generate_golang_io_pointers(dt_local_array)
+        dt_local_arr_pointer, _, _ = helpers.generate_weather_golang_io_pointers(dt_local_array)
 
         self.lib.weather_in_time_loop(
             unix_timestamps_pointer,
@@ -338,6 +344,7 @@ class WeatherForecasts:
         return np.array(closest_time_stamp_indices, 'i')
 
     @staticmethod
+    @helpers.timeit
     def python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array):
         """
 
@@ -433,7 +440,7 @@ class WeatherForecasts:
         Returns: The wind speeds in the direction opposite to the bearing of the vehicle
         """
 
-        # wind direction is 90 degrees meteorlogical, so it is 270 degrees azimuthal. car is 90 degrees
+        # wind direction is 90 degrees meteorological, so it is 270 degrees azimuthal. car is 90 degrees
         #   cos(90 - 90) = cos(0) = 1. Wind speed is moving opposite to the car,
         # car is 270 degrees, cos(90-270) = -1. Wind speed is in direction of the car.
         return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))

@@ -1,14 +1,17 @@
 import datetime
+import array
 import json
 import logging
 import math
 import numpy as np
 import os
+import ctypes
+import pathlib
 import polyline
 import pytz
 import requests
 import sys
-from data.route.__init__ import route_directory
+from simulation.cache.route import route_directory
 from dotenv import load_dotenv
 from simulation.common import helpers
 from timezonefinder import TimezoneFinder
@@ -16,7 +19,7 @@ from tqdm import tqdm
 
 
 class GIS:
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, force_update=False):
+    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, force_update=False, current_coord=None, temp_flag=False):
         """
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
         simulation's planned route from the Google Maps API and performing operations on the received data.
@@ -37,6 +40,7 @@ class GIS:
 
         self.origin_coord = origin_coord
         self.dest_coord = dest_coord
+        self.current_coord = current_coord
         self.waypoints = waypoints
         self.race_type = race_type
 
@@ -65,8 +69,21 @@ class GIS:
                     print()
 
                     self.path = route_data['path']
+                    self.launch_point = route_data['path'][0]
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
+
+                    if current_coord is not None:
+                        if not np.array_equal(current_coord, origin_coord):
+                            logging.warning("Current position is not origin position. Modifying path data.\n")
+
+                            # We need to find the closest coordinate along the path to the vehicle position
+                            current_coord_index = GIS.find_closest_coordinate_index(current_coord, self.path)
+
+                            # All coords before the current coordinate should be discarded
+                            self.path = self.path[current_coord_index:]
+                            self.path_elevations = self.path_elevations[current_coord_index:]
+                            self.path_time_zones = self.path_time_zones[current_coord_index:]
 
         if api_call_required or force_update:
             logging.warning("New route requested and/or route save file does not exist. "
@@ -94,11 +111,13 @@ class GIS:
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
                                                                self.path_distances)
 
+
+    @helpers.timeit
     def calculate_closest_gis_indices(self, cumulative_distances):
         """
         Takes in an array of point distances from starting point, returns a list of 
         self.path indices of coordinates which have a distance from the starting point
-        closest to the point distances
+        closest to the point distances.
 
         :param cumulative_distances: (float[N]) array of distances,
         where cumulative_distances[x] > cumulative_distances[x-1]
@@ -407,6 +426,26 @@ class GIS:
         self.current_index = self.current_index - 1
 
         return self.current_index
+
+    @staticmethod
+    def calculate_vector_square_magnitude(vector):
+        return sum(i**2 for i in vector)
+
+    @staticmethod
+    def find_closest_coordinate_index(current_coord, path):
+        """
+        Returns the closest coordinate to current_coord in path
+
+        :param current_coord: A NumPy array[N] representing a N-dimensional vector
+        :param path: A NumPy array[M][N] of M coordinates which should be N-dimensional vectors
+        """
+        to_current_coord_from_path = np.abs(path - current_coord)
+        distances_from_current_coord = np.zeros(len(to_current_coord_from_path))
+        for i in range(len(to_current_coord_from_path)):
+            # As we just need the minimum, using square magnitude will save performance
+            distances_from_current_coord[i] = GIS.calculate_vector_square_magnitude(to_current_coord_from_path[i])
+
+        return distances_from_current_coord.argmin()
 
 
 if __name__ == "__main__":

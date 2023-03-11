@@ -102,7 +102,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+simulation/examples/.env
 .venv
 env/
 venv/
@@ -141,7 +141,7 @@ examples/*.html
 
 # Profiling Files
 examples/*.txt
-examples/cProfile
+simulation/examples/cProfile
 
 # Docs
 docs/UBC Solar - Simulation.pdf
@@ -155,3 +155,4 @@ data/images/*.png
 
 # idea
 .idea
+/simulation/examples/.env

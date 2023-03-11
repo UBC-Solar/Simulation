@@ -539,7 +539,8 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
                               y_axis_label=array_labels[index], x_axis_type="datetime"))
 
         # add line renderers to each figure
-        figures[index].line(timestamps[::compress_constant] * 1000, data_array, line_color=Bokeh8[index],
+        colours = ('#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889', '#fa1b9a')
+        figures[index].line(timestamps[::compress_constant] * 1000, data_array, line_color=colours[index],
                             line_width=2)
 
         figures[index].add_tools(hover_tool)
@@ -665,9 +666,9 @@ def plot_latitudes(coordinates):
     simple_plot_graph(coordinates[:, 1], "Latitudes")
 
 
-def generate_golang_io_pointers(input_array):
+def generate_weather_golang_io_pointers(input_array):
     """
-    Generates I/O pointers for use in calling Golang functions using NumPy arrays as arguments
+    Generates I/O pointers for use in calling Golang functions in WeatherForecasts class.
 
     Args:
         input_array: A Python list 0r NumPy Array that will serve as an input to a Golang function
@@ -688,6 +689,35 @@ def generate_golang_io_pointers(input_array):
         ctypes.c_double * len(output_array)).from_buffer(output_array)
 
     return input_array_pointer, output_array_pointer, output_array
+
+
+def generate_gis_golang_io_pointers(input_array_1, input_array_2, output_array_size):
+    """
+    Generates I/O pointers for use in calling Golang functions in GIS class.
+
+    Args:
+        input_array_1: A Python list 0r NumPy Array that will serve as an input to a Golang function
+        input_array_2: A Python list 0r NumPy Array that will serve as an input to a Golang function
+        output_array_size: Size of NumPy output Array
+
+    Returns:
+        - input_array_1_pointer: A pointer to input_array_1
+        - input_array_2_pointer: A pointer to input_array_2
+        - output_array_pointer: A pointer to the output_array return value
+    """
+    input_array_1_copy = arr.array('d', input_array_1)
+    input_array_1_pointer = (
+        ctypes.c_double * len(input_array_1_copy)).from_buffer(input_array_1_copy)
+
+    input_array_2_copy = arr.array('d', input_array_2)
+    input_array_2_pointer = (
+        ctypes.c_double * len(input_array_2_copy)).from_buffer(input_array_2_copy)
+
+    output_array = arr.array('l', [0] * len(output_array_size))
+    output_array_pointer = (
+        ctypes.c_long * len(output_array)).from_buffer(output_array)
+
+    return input_array_1_pointer, input_array_2_pointer, output_array_pointer, output_array
 
 
 def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
