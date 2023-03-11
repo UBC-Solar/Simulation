@@ -1,12 +1,11 @@
 import datetime
 import json
 
-import dotenv
 import numpy as np
 import os
 import simulation
 
-from dotenv import load_dotenv, find_dotenv, dotenv_values
+from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
@@ -84,10 +83,10 @@ class TimeSimulation:
 
         # ----- API keys -----
 
-        API_KEYS = dotenv_values(".env")
+        load_dotenv()
 
-        self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
-        self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
+        self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
+        self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- Component initialisation -----
 

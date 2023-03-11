@@ -3,8 +3,8 @@ import pytest
 
 import numpy as np
 
-from Simulation.simulation.common import helpers
-from Simulation.simulation.common.helpers import *
+from simulation.common import helpers
+from simulation.common.helpers import *
 
 
 def test_no_deceleration():

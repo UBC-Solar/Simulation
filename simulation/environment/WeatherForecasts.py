@@ -33,7 +33,7 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, golang, weather_data_frequency="daily", force_update=False, origin_coord=None):
+    def __init__(self, api_key, coords, duration, race_type,golang=False, weather_data_frequency="daily", force_update=False, origin_coord=None):
         """
         Initializes the instance of a WeatherForecast class
 
@@ -82,7 +82,6 @@ class WeatherForecasts:
         # if the file exists, load path from file
         if os.path.isfile(weather_file) and force_update is False:
             with np.load(weather_file) as weather_data:
-                print()
                 if np.array_equal(weather_data['origin_coord'], self.origin_coord) and \
                         np.array_equal(weather_data['dest_coord'], self.dest_coord):
 

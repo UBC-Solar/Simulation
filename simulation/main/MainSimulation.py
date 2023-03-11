@@ -2,13 +2,14 @@ import datetime
 import json
 import numpy as np
 import os
-import simulation as simulation
+import simulation
 from bayes_opt import BayesianOptimization
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
 from dotenv import dotenv_values
+from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
@@ -86,10 +87,10 @@ class Simulation:
 
         # ----- API keys -----
 
-        API_KEYS = dotenv_values(".env")
+        load_dotenv()
 
-        self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
-        self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
+        self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
+        self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- Component initialisation -----
 
