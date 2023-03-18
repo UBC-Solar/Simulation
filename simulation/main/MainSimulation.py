@@ -89,9 +89,9 @@ class Simulation:
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- GoLang library initialisation -----
-
+        self.golang = golang
         self.library = simulation.Libraries(raiseExceptionOnFail=False)
-        if golang and self.library.found_compatible_binaries() is False:
+        if self.golang and self.library.found_compatible_binaries() is False:
             # If compatible GoLang binaries weren't found, disable GoLang usage.
             self.golang = False
             logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
