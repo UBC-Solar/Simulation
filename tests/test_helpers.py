@@ -1,5 +1,5 @@
-from Simulation.simulation.common import helpers
-from Simulation.simulation.common.helpers import *
+from simulation.common import helpers
+from simulation.common.helpers import *
 
 
 def test_calculate_race_completion_time1():
