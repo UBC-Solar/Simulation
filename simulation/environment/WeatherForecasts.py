@@ -31,7 +31,7 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, golang, library=None, weather_data_frequency="daily", force_update=False, origin_coord=None):
+    def __init__(self, api_key, coords, duration, race_type, golang=False, library=None, weather_data_frequency="daily", force_update=False, origin_coord=None):
         """
         Initializes the instance of a WeatherForecast class
 
@@ -70,7 +70,6 @@ class WeatherForecasts:
         # if the file exists, load path from file
         if os.path.isfile(weather_file) and force_update is False:
             with np.load(weather_file) as weather_data:
-                print()
                 if np.array_equal(weather_data['origin_coord'], self.origin_coord) and \
                         np.array_equal(weather_data['dest_coord'], self.dest_coord):
 
@@ -248,22 +247,18 @@ class WeatherForecasts:
         Returns:
 
         """
-        current_coordinate_index = 0
-        result = []
-
-        # TODO: can rewrite this to use self.gis.path[closest_gis_indices]
 
         """
         IMPORTANT: we only have weather coordinates for a discrete set of coordinates. However, the car could be at any
         coordinate in between these available weather coordinates. We need to figure out what coordinate the car is at
         at each timestep and then we can figure out the full weather forecast at each timestep.
-        
+
         For example, imagine the car is at some coordinate (10, 20). Further imagine that we have a week's worth of
         weather forecasts for the following five coordinates: (5, 4), (11, 19), (20, 30), (40, 30), (0, 60). Which
         set of weather forecasts should we choose? Well, we should choose the (11, 19) one since our coordinate
         (10, 20) is closest to (11, 19). This is what the following code is accomplishing. However, it is not dealing
         with the coordinates directly but rather is dealing with the distances between the coordinates. 
-        
+
         Furthermore, once we have chosen a week's worth of weather forecasts for a specific coordinate, we must isolate
         a single weather forecast depending on what time the car is at the coordinate (10, 20). That is the job of the
         `get_weather_forecast_in_time()` method.
@@ -290,6 +285,19 @@ class WeatherForecasts:
 
         # contains the average distance between two consecutive elements in the cumulative_weather_path_distances array
         average_distances = np.abs(np.diff(cumulative_weather_path_distances) / 2)
+
+        if not self.golang:
+            return self.python_calculate_closest_weather_indices(cumulative_distances, average_distances)
+        else:
+            return self.lib.golang_calculate_closest_weather_indices(cumulative_distances, average_distances)
+
+    def python_calculate_closest_weather_indices(self, cumulative_distances, average_distances):
+        """
+        Python implementation of calculate_closest_weather_indices. See parent function for documentation details.
+        """
+
+        current_coordinate_index = 0
+        result = []
 
         for distance in np.nditer(cumulative_distances):
 
@@ -359,7 +367,7 @@ class WeatherForecasts:
         dt_local_array = full_weather_forecast_at_coords[0, :, 4]
 
         if self.golang:
-            closest_timestamp_indices = self.lib.calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
+            closest_timestamp_indices = self.lib.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
         else:
             closest_timestamp_indices = self.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
 

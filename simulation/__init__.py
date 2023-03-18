@@ -2,7 +2,6 @@ from simulation.common import Consumer
 from simulation.common import Producer
 from simulation.common import Storage
 from simulation.common import BatteryEmptyError
-from simulation.common import Libraries
 
 from simulation.array import BaseArray
 from simulation.battery import BaseBattery
@@ -20,9 +19,11 @@ from simulation.environment.GIS import GIS
 from simulation.environment.SolarCalculations import SolarCalculations
 from simulation.environment.WeatherForecasts import WeatherForecasts
 
+from simulation.library import Libraries
+
 from simulation.main import Simulation
 
-__version__ = "0.5.5-alpha"
+__version__ = "0.5.6"
 
 print(f"Package 'simulation' imported. Version: {__version__}\n")
 
