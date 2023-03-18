@@ -4,7 +4,6 @@ import numpy as np
 import json
 import sys
 
-from simulation.common import helpers
 from simulation.main import TimeSimulation
 from simulation.optimization.bayesian import BayesianOptimization
 from simulation.optimization.random import RandomOptimization
@@ -18,7 +17,6 @@ Description: Given a set of driving speeds, find the time required to complete t
 """
 
 
-@helpers.timeit
 def main():
     input_speed = np.array([30])
 
@@ -60,11 +58,10 @@ def main():
 
     print("GoLang is: " + str(golang))
 
-    simulation_model = TimeSimulation(initialSimulationConditions, race_type="ASC")
+    simulation_model = TimeSimulation(initialSimulationConditions, race_type="ASC", golang=golang)
     time_taken = simulation_model.run_model(speed=input_speed, plot_results=True,
                                             verbose=False,
-                                            route_visualization=False, golang=golang)
-
+                                            route_visualization=False)
     bounds = InputBounds()
     bounds.add_bounds(8, 20, 60)
     optimization = BayesianOptimization(bounds, simulation_model.run_model)

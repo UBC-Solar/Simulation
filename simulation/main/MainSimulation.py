@@ -1,10 +1,11 @@
 import datetime
 import json
 import logging
+import os
 
 import numpy as np
-import simulation as simulation
-from dotenv import dotenv_values
+import simulation
+from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
@@ -82,22 +83,20 @@ class Simulation:
 
         # ----- API keys -----
 
-        API_KEYS = dotenv_values(".env")
+        load_dotenv()
 
-        self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
-        self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
+        self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
+        self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- GoLang library initialisation -----
 
         self.library = simulation.Libraries(raiseExceptionOnFail=False)
-        if golang:
+        if golang and self.library.found_compatible_binaries() is False:
             # If compatible GoLang binaries weren't found, disable GoLang usage.
-            if self.library.found_compatible_binaries() is False:
-                self.golang = False
-                logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
-                                "To use GoLang implementations, see COMPILING_HOWTO about "
-                                "compiling GoLang for your operating system.")
-
+            self.golang = False
+            logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
+                            "To use GoLang implementations, see COMPILING_HOWTO about "
+                            "compiling GoLang for your operating system.")
 
         # ----- Component initialisation -----
 
@@ -245,7 +244,7 @@ class Simulation:
 
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
-            speed_kmh = helpers.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
+            speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
             if verbose:
                 helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
@@ -270,7 +269,6 @@ class Simulation:
 
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
-
 
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
 

@@ -5,9 +5,8 @@ import os
 
 import numpy as np
 import simulation
-import time as timer
 
-from dotenv import load_dotenv, find_dotenv, dotenv_values
+from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
@@ -85,21 +84,20 @@ class TimeSimulation:
 
         # ----- API keys -----
 
-        API_KEYS = dotenv_values(".env")
+        load_dotenv()
 
-        self.weather_api_key = API_KEYS['OPENWEATHER_API_KEY']
-        self.google_api_key = API_KEYS['GOOGLE_MAPS_API_KEY']
+        self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
+        self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- GoLang library initialisation -----
 
         self.library = simulation.Libraries(raiseExceptionOnFail=False)
-        if golang:
+        if golang and self.library.found_compatible_binaries() is False:
             # If compatible GoLang binaries weren't found, disable GoLang usage.
-            if self.library.found_compatible_binaries() is False:
-                self.golang = False
-                logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
-                                "To use GoLang implementations, see COMPILING_HOWTO about "
-                                "compiling GoLang for your operating system.")
+            self.golang = False
+            logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
+                            "To use GoLang implementations, see COMPILING_HOWTO about "
+                            "compiling GoLang for your operating system.")
 
         # ----- Component initialisation -----
 
@@ -133,7 +131,7 @@ class TimeSimulation:
         self.time_of_initialization = self.weather.last_updated_time + \
                                       3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations()
+        self.solar_calculations = simulation.SolarCalculations(golang=golang, library=self.library)
 
         self.local_times = 0
 
@@ -175,7 +173,6 @@ class TimeSimulation:
             verbose = False
 
         # ----- Reshape speed array -----
-
         print(f"Input speeds: {speed}\n")
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
@@ -235,6 +232,7 @@ class TimeSimulation:
         else:
             return -1 * time_taken
 
+    @helpers.timeit
     def run_simulation_calculations(self, speed_kmh, verbose=False):
         """
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object
@@ -255,7 +253,7 @@ class TimeSimulation:
 
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
-            speed_kmh = helpers.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
+            speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
             if verbose:
                 helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
@@ -279,38 +277,11 @@ class TimeSimulation:
 
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
-        # start = timer.perf_counter()
-        #
-        # gis_calculate_process = multiprocessing.Pool(processes=1)
-        # closest_gis_indices_result = gis_calculate_process.apply_async(self.gis.calculate_closest_gis_indices(cumulative_distances))
-        #
-        # weather_indices_process = multiprocessing.Pool(processes=1)
-        # closest_weather_indices_result = weather_indices_process.apply_async(self.weather.calculate_closest_weather_indices(cumulative_distances))
-        #
-        # closest_gis_indices = closest_gis_indices_result.get()
-        # closest_weather_indices = closest_weather_indices_result.get()
-        #
-        # gis_calculate_process.close()
-        # gis_calculate_process.join()
-        #
-        # weather_indices_process.close()
-        # weather_indices_process.join()
-        #
-        # print(closest_gis_indices[0])
-        # print(closest_weather_indices[0])
-        #
-        # stop = timer.perf_counter()
-        #
-        # print(f"Took {stop-start}s to use multiprocessing.")
-
-        start = timer.perf_counter()
-
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
 
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
-        stop = timer.perf_counter()
-        print(f"Took {stop - start}s to run sequentially.")
+        # closest_gis_indices, closest_weather_indices = self.library.calculate_indices()
 
         path_distances = self.gis.path_distances
         # [cumulative_distances] = meters
