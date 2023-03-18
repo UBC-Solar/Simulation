@@ -17,6 +17,9 @@ You may also need to include: \
 and/or\
 `CGO_ENABLED=1`
 
+Once `.so` and `.h` files have been compiled, they should be placed into a new folder inside of `library/binaries` 
+so that Simulation can find them.
+
 ## Example
 Compiling on M1 Mac requires the following commands to compile weather_in_time_loop.so:\
-`GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -o weather_in_time_loop.so buildmode=c-shared weather_in_time_loop.go` 
+`GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -o weather_in_time_loop.so -buildmode=c-shared weather_in_time_loop.go` 
