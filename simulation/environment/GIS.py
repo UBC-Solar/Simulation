@@ -125,24 +125,25 @@ class GIS:
 
         :returns: (float[N]) array of indices of path
         """
+
+        path_distances = self.path_distances.copy()
+        cumulative_path_distances = np.cumsum(path_distances)
+        cumulative_path_distances[::2] *= -1
+        average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
+
         if not self.golang:
-            return self.python_calculate_closest_gis_indices(cumulative_distances)
+            return self.python_calculate_closest_gis_indices(cumulative_distances, average_distances)
         else:
-            return self.lib.golang_calculate_closest_gis_indices(cumulative_distances, self.path_distances)
+            return self.lib.golang_calculate_closest_gis_indices(cumulative_distances, average_distances)
 
     @helpers.timeit
-    def python_calculate_closest_gis_indices(self, cumulative_distances):
+    def python_calculate_closest_gis_indices(self, cumulative_distances, average_distances):
         """
         Python implementation of golang_calculate_closest_gis_indices. See parent function for documentation details.
         """
 
         current_coordinate_index = 0
         result = []
-
-        path_distances = self.path_distances.copy()
-        cumulative_path_distances = np.cumsum(path_distances)
-        cumulative_path_distances[::2] *= -1
-        average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
 
         with tqdm(total=len(cumulative_distances), file=sys.stdout, desc="Calculating closest GIS indices") as pbar:
             for distance in np.nditer(cumulative_distances):
@@ -157,8 +158,6 @@ class GIS:
                 result.append(current_coordinate_index)
 
                 pbar.update(1)
-
-        print()
 
         return np.array(result)
 
@@ -467,9 +466,6 @@ class GIS:
         _, wp = tree.query([[radians(w[0]), radians(w[1])] for w in waypoints])
         if verbose:
             print(f"Waypoint indices in path array:\n{wp}\n")
-
-        speeds1 = self.speeds_with_waypoints_loop(path, distances, speeds, wp, verbose)
-        speeds2 = self.lib.golang_speeds_with_waypoints_loop(speeds, distances, wp)
 
         # iterate through the speeds array for each second
         if not self.golang:

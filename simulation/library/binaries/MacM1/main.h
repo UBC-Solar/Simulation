@@ -74,7 +74,11 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
-extern void closest_weather_indices_loop(GoFloat64* cumulative_distances_inPtr, GoInt64 cumulative_distances_ptrSize, GoFloat64* average_distances_inPtr, GoInt64 average_distances_ptrSize, GoInt64* results_outPtr, GoInt64 results_ptrSize);
+extern void calculate_array_GHI_times(GoInt64* local_times_inPtr, GoInt64 local_times_ptrSize, GoFloat64* day_of_year_outPtr, GoInt64 day_of_year_ptrSize, GoFloat64* local_time_outPtr, GoInt64 local_time_ptrSize);
+extern void closest_gis_indices_loop(GoFloat64* averageDistancesPtr, GoInt64 averageDistancesSize, GoFloat64* cumulativeDistancesPtr, GoInt64 cumulativeDistancesSize, GoInt64* resultsPtr, GoInt64 resultsSize);
+extern void closest_weather_indices_loop(GoFloat64* cumulativeDistancesPtr, GoInt64 cumulativeDistancesSize, GoFloat64* averageDistancesPtr, GoInt64 averageDistancesSize, GoInt64* resultsPtr, GoInt64 resultsSize);
+extern void speeds_with_waypoints_loop(GoFloat64* speeds_inPtr, GoInt64 speeds_ptrSize, GoFloat64* distances_inPtr, GoInt64 distances_ptrSize, GoInt64* waypoints_inPtr, GoInt64 waypoints_ptrSize);
+extern void weather_in_time_loop(GoFloat64* unix_timestamps_inPtr, GoFloat64* closest_time_stamp_indices_outPtr, GoFloat64* dt_local_array_inPtr, GoInt64 dt_local_array_inPtr_size, GoInt64 io_ptr_size);
 
 #ifdef __cplusplus
 }
