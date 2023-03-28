@@ -45,18 +45,28 @@ def main():
 
     initialSimulationConditions = SimulationState(args)
 
-    golang = True
-
+    # Parse commands passed from command line, such as "golang=True"
     cmds = sys.argv
+
+    if "-help" in cmds:
+        display_commands()
+        exit()
+
     for cmd in cmds:
         split_cmd = cmd.split('=')
-        if split_cmd[0] == 'golang':
-            if split_cmd[1] == '1':
+        if split_cmd[0] == '-golang':
+            if split_cmd[1] == 'True' or split_cmd[1] == 'true' or split_cmd[1] == '1':
                 golang = True
-            if split_cmd[1] == '0':
+            if split_cmd[1] == 'False' or split_cmd[1] == 'false' or split_cmd[1] == '0':
                 golang = False
 
-    print("GoLang is: " + str(golang))
+    # If GoLang wasn't explicitly enabled or disabled, default to be enabled.
+    try:
+        golang
+    except:
+        golang = True
+
+    print("GoLang is " + str("enabled." if golang else "disabled."))
 
     simulation_model = simulation.Simulation(initialSimulationConditions, race_type="ASC")
     distance_travelled = simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False, golang=golang)
@@ -85,6 +95,15 @@ def main():
 
     return distance_travelled
 
+
+# Display list of valid command line commands to the user.
+def display_commands():
+    print("---------COMMANDS---------\n"
+          "-help     Display list of \n"
+          "          valid commands.\n"
+          "-golang   Define whether\n"
+          "          golang implementations\n"
+          "          will be used.\n")
 
 if __name__ == "__main__":
     main()

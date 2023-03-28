@@ -87,8 +87,7 @@ def generate_deceleration_array(initial_velocity, final_velocity, deceleration_i
     :return: an array of the velocities between initial_velocity and final_velocity
     """
 
-    deceleration_instance_size = (
-                                         final_velocity - initial_velocity) / (deceleration_interval + 1)
+    deceleration_instance_size = (final_velocity - initial_velocity) / (deceleration_interval + 1)
     return np.arange(initial_velocity, final_velocity, deceleration_instance_size)[1:(deceleration_interval + 1)]
 
 
@@ -383,14 +382,10 @@ def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
 
     Returns: The elevation angle in degrees
     """
-    term_1 = np.sin(np.radians(declination_angle)) * \
-             np.sin(np.radians(latitude))
-
-    term_2 = np.cos(np.radians(declination_angle)) * \
-             np.cos(np.radians(latitude)) * \
-             np.cos(np.radians(hour_angle))
-
+    term_1 = np.sin(np.radians(declination_angle)) * np.sin(np.radians(latitude))
+    term_2 = np.cos(np.radians(declination_angle)) * np.cos(np.radians(latitude)) * np.cos(np.radians(hour_angle))
     elevation_angle = np.arcsin(term_1 + term_2)
+
     return np.degrees(elevation_angle)
 
 

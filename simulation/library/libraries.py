@@ -117,9 +117,9 @@ class Libraries:
         """
 
         # Generate pointers to arrays to pass to a Go binary
-        average_distances_pointer = Libraries.GenerateInputPointer(average_distances, ctypes.c_double)
-        cumulative_distances_pointer = Libraries.GenerateInputPointer(cumulative_distances, ctypes.c_double)
-        results_pointer, results = Libraries.GenerateOutputPointer(len(cumulative_distances), ctypes.c_long)
+        average_distances_pointer = Libraries.generate_input_pointer(average_distances, ctypes.c_double)
+        cumulative_distances_pointer = Libraries.generate_input_pointer(cumulative_distances, ctypes.c_double)
+        results_pointer, results = Libraries.generate_output_pointer(len(cumulative_distances), ctypes.c_long)
 
         # Execute the Go shared library (compiled Go function) and pass it the pointers we generated
         self.main_library.closest_gis_indices_loop(
@@ -139,9 +139,9 @@ class Libraries:
         """
 
         # Generate pointers to arrays to pass to a Go binary
-        unix_timestamps_pointer = Libraries.GenerateInputPointer(unix_timestamps, ctypes.c_double)
-        dt_local_arr_pointer = Libraries.GenerateInputPointer(dt_local_array, ctypes.c_double)
-        closest_time_stamp_indices_pointer, closest_time_stamp_indices = Libraries.GenerateOutputPointer(unix_timestamps, ctypes.c_double)
+        unix_timestamps_pointer = Libraries.generate_input_pointer(unix_timestamps, ctypes.c_double)
+        dt_local_arr_pointer = Libraries.generate_input_pointer(dt_local_array, ctypes.c_double)
+        closest_time_stamp_indices_pointer, closest_time_stamp_indices = Libraries.generate_output_pointer(unix_timestamps, ctypes.c_double)
 
         # Execute the Go shared library (compiled Go function) and pass it the pointers we generated
         self.main_library.weather_in_time_loop(
@@ -159,9 +159,9 @@ class Libraries:
         """
 
         # Get pointers for GoLang
-        cumulative_distances_pointer = Libraries.GenerateInputPointer(cumulative_distances, ctypes.c_double)
-        average_distances_pointer = Libraries.GenerateInputPointer(average_distances, ctypes.c_double)
-        closest_weather_indices_pointer, closest_weather_indices = Libraries.GenerateOutputPointer(len(cumulative_distances), ctypes.c_long)
+        cumulative_distances_pointer = Libraries.generate_input_pointer(cumulative_distances, ctypes.c_double)
+        average_distances_pointer = Libraries.generate_input_pointer(average_distances, ctypes.c_double)
+        closest_weather_indices_pointer, closest_weather_indices = Libraries.generate_output_pointer(len(cumulative_distances), ctypes.c_long)
 
         self.main_library.closest_weather_indices_loop(
             cumulative_distances_pointer,
@@ -180,9 +180,9 @@ class Libraries:
         """
 
         # Get pointers for GoLang
-        local_times_pointer = Libraries.GenerateInputPointer(local_times, ctypes.c_long)
-        day_of_year_pointer, day_of_year = Libraries.GenerateOutputPointer(len(local_times), ctypes.c_double)
-        local_time_pointer, local_time = Libraries.GenerateOutputPointer(len(local_times), ctypes.c_double)
+        local_times_pointer = Libraries.generate_input_pointer(local_times, ctypes.c_long)
+        day_of_year_pointer, day_of_year = Libraries.generate_output_pointer(len(local_times), ctypes.c_double)
+        local_time_pointer, local_time = Libraries.generate_output_pointer(len(local_times), ctypes.c_double)
 
         self.main_library.calculate_array_GHI_times(
             local_times_pointer,
@@ -206,9 +206,9 @@ class Libraries:
             flattened_waypoints[i] = waypoints[i][0]
 
         # Get pointers for GoLang
-        new_speeds_pointer, new_speeds = Libraries.GenerateInputOutputPointer(speeds, ctypes.c_double)
-        distances_pointer = Libraries.GenerateInputPointer(distances, ctypes.c_double)
-        waypoints_pointer = Libraries.GenerateInputPointer(flattened_waypoints, ctypes.c_long)
+        new_speeds_pointer, new_speeds = Libraries.generate_input_output_pointer(speeds, ctypes.c_double)
+        distances_pointer = Libraries.generate_input_pointer(distances, ctypes.c_double)
+        waypoints_pointer = Libraries.generate_input_pointer(flattened_waypoints, ctypes.c_long)
 
         self.main_library.speeds_with_waypoints_loop(
             new_speeds_pointer,
@@ -221,9 +221,8 @@ class Libraries:
 
         return np.array(new_speeds, 'd')
 
-
     @staticmethod
-    def GenerateInputPointer(input_array, c_type):
+    def generate_input_pointer(input_array, c_type):
         """
         Generate a pointer to an input array to be passed to compiled Go binaries.
 
@@ -236,7 +235,7 @@ class Libraries:
         return array_copy_pointer
 
     @staticmethod
-    def GenerateOutputPointer(output_array_length, c_type):
+    def generate_output_pointer(output_array_length, c_type):
         """
         Generate an array and a pointer to that array for a Go binary to write to.
 
@@ -249,7 +248,7 @@ class Libraries:
         return output_array_pointer, output_array
 
     @staticmethod
-    def GenerateInputOutputPointer(input_array, c_type):
+    def generate_input_output_pointer(input_array, c_type):
         """
         Generate an array and a pointer to that array for a Go binary to write to that is equal to an existing array.
         This is useful if you want to modify an array instead of creating a new one.
