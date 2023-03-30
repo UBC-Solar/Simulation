@@ -121,7 +121,6 @@ class GIS:
 
         :param cumulative_distances: (float[N]) array of distances,
         where cumulative_distances[x] > cumulative_distances[x-1]
-        :param golang: Flag of whether to use faster Go implementation.
 
         :returns: (float[N]) array of indices of path
         """
