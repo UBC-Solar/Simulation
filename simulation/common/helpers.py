@@ -539,7 +539,7 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
                               y_axis_label=array_labels[index], x_axis_type="datetime"))
 
         # add line renderers to each figure
-        colours = ('#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889', '#fa1b9a')
+        colours = ('#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889', '#fa1b9a', '#F05223')
         figures[index].line(timestamps[::compress_constant] * 1000, data_array, line_color=colours[index],
                             line_width=2)
 

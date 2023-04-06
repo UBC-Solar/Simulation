@@ -127,3 +127,22 @@ class BasicBattery(BaseBattery):
         voltage_array = self.calculate_voltage_from_discharge_capacity(discharge_capacity_array)
 
         return soc_array, voltage_array, stored_energy_array
+
+    def get_raw_soc(self, cumulative_energy_array):
+        """
+        Return the not truncated (SOC is allowed to go above 100% and below 0%) state of charge.
+
+        :param cumulative_energy_array: a NumPy array containing the cumulative energy changes at each time step
+        experienced by the battery
+        :return soc_array: a NumPy array containing the battery state of charge at each time step
+        """
+        stored_energy_array = np.full_like(cumulative_energy_array, fill_value=self.stored_energy)
+        stored_energy_array += cumulative_energy_array / 3600
+
+        energy_discharged_array = np.full_like(cumulative_energy_array, fill_value=self.max_energy_capacity) - stored_energy_array
+
+        discharge_capacity_array = self.calculate_discharge_capacity_from_energy(energy_discharged_array)
+
+        soc_array = self.calculate_soc_from_discharge_capacity(discharge_capacity_array)
+
+        return soc_array
