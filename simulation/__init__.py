@@ -3,13 +3,13 @@ from simulation.common import Producer
 from simulation.common import Storage
 from simulation.common import BatteryEmptyError
 
-from simulation.array import BaseArray
+from simulation.arrays import BaseArray
 from simulation.battery import BaseBattery
 from simulation.lvs import BaseLVS
 from simulation.motor import BaseMotor
 from simulation.regen import BaseRegen
 
-from simulation.array import BasicArray
+from simulation.arrays import BasicArray
 from simulation.battery import BasicBattery
 from simulation.lvs import BasicLVS
 from simulation.motor import BasicMotor

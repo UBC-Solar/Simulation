@@ -141,7 +141,7 @@ class Simulation:
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations()
+        self.solar_calculations = simulation.SolarCalculations(library=self.library)
 
         self.local_times = 0
 
@@ -200,7 +200,7 @@ class Simulation:
 
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
-            speed_kmh = helpers.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
+            speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
             if verbose:
                 helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],

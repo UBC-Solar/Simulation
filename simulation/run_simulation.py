@@ -4,12 +4,12 @@ import numpy as np
 import json
 import sys
 
-from simulation.main.MainSimulation import Simulation, SimulationReturnType
-from simulation.optimization.bayesian import BayesianOptimization
-from simulation.optimization.random import RandomOptimization
-from simulation.utils.InputBounds import InputBounds
-from simulation.config import settings_directory
-from simulation.common import simulationState
+from main.Simulation import Simulation, SimulationReturnType
+from optimization.bayesian import BayesianOptimization
+from optimization.random import RandomOptimization
+from utils.InputBounds import InputBounds
+from config import settings_directory
+from common import simulationState
 
 """
 Description: Given a set of driving speeds, find the time required to complete the route specified in the config files. 
@@ -46,23 +46,25 @@ def main():
     with open(settings_directory / "initial_conditions.json") as f:
         args = json.load(f)
 
-    initialSimulationConditions = simulationState.SimulationState(args)
+    initial_simulation_conditions = simulationState.SimulationState(args)
 
     #  ----- Parse commands passed from command line ----- #
 
     cmds = sys.argv
-    simulation_parameters = ParseCommands(cmds)
+    simulation_parameters = parse_commands(cmds)
 
     print("GoLang is " + str("enabled." if simulation_parameters.golang else "disabled."))
     print("Optimizing for " + str("time." if simulation_parameters.return_type == 0 else "distance."))
     print(f"Will perform {simulation_parameters.optimization_iterations} optimization iterations.")
 
-    #  ----- Begin optimization ----- #
+    #  ----- Optimize with Bayesian Optimization ----- #
 
-    simulation_model = Simulation(initialSimulationConditions, simulation_parameters.return_type, race_type="ASC")
-    unoptimized = simulation_model.run_model(speed=input_speed, plot_results=True,
-                                             verbose=False,
-                                             route_visualization=False)
+    simulation_model = Simulation(initial_simulation_conditions, simulation_parameters.return_type,
+                                  race_type="ASC",
+                                  golang=simulation_parameters.golang)
+    unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=True,
+                                                  verbose=False,
+                                                  route_visualization=False)
     bounds = InputBounds()
     bounds.add_bounds(8, 20, 60)
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
@@ -72,6 +74,7 @@ def main():
     optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
                                            verbose=False,
                                            route_visualization=False)
+
     results_random = random_optimization.maximize(iterations=simulation_parameters.optimization_iterations)
     optimized_random = simulation_model.run_model(speed=np.fromiter(results_random, dtype=float), plot_results=True,
                                                   verbose=False,
@@ -79,14 +82,20 @@ def main():
 
     #  ----- Output results ----- #
 
-    if simulation_parameters.return_type is SimulationReturnType.time_taken:
+    display_output(simulation_parameters.return_type, unoptimized_time, optimized, optimized_random, results, results_random)
+
+    return unoptimized_time
+
+
+def display_output(return_type, unoptimized, optimized, optimized_random, results, results_random):
+    if return_type is SimulationReturnType.time_taken:
         print(f'TimeSimulation results. Time Taken: {-1 * unoptimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * unoptimized)))})')
         print(f'Optimized results. Time taken: {-1 * optimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized)))})')
         print(f'Random results. Time taken: {-1 * optimized_random} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized_random)))})')
         print(f'Optimized Speeds array: {results}')
         print(f'Random Speeds array: {results_random}')
 
-    elif simulation_parameters.return_type is SimulationReturnType.distance_travelled:
+    elif return_type is SimulationReturnType.distance_travelled:
         print(f'Distance travelled: {unoptimized}')
         print(f'Optimized results. Max traversable distance: {optimized}')
         print(f'Random results. Max traversable distance: {optimized_random}')
@@ -98,31 +107,30 @@ def main():
 
 def display_commands():
     """
-    Display all valid command line commands to the user.
+    Display all valid command line arguments to the user.
     """
-    print("---------COMMANDS---------\n"
-          "-help     Display list of \n"
-          "          valid commands.\n"
-          "-golang   Define whether\n"
-          "          golang implementations\n"
-          "          will be used.\n"
-          "-optimize Define what data \n"
-          "          the simulation\n"
-          "          should optimize.\n"
-          "-iter     Set how many\n"
-          "          iterations of \n"
-          "          optimizations should\n"
-          "          be performed on\n"
-          "          the simulation.\n"
+    print("-----------------COMMANDS----------------\n"
+          "-help     Display list of valid commands.\n"
           "\n"
-          "----------EXAMPLE---------\n"
-          ">>>python3 fastest_time_given_distance.py -golang=False -optimize=time -iter=3\n")
+          "-golang   Define whether golang implementations\n"
+          "          will be used. \n"
+          "          (True/False)\n"
+          "\n"
+          "-optimize Define what data the simulation\n"
+          "          should optimize. \n"
+          "          (time_taken/distance_travelled)\n"
+          "\n"
+          "-iter     Set how many iterations of optimizations\n"
+          "          should be performed on the simulation.\n"
+          "\n"
+          "------------------USAGE------------------\n"
+          ">>>python3 run_simulation.py -golang=False -optimize=time_taken -iter=3\n")
 
 
-valid_commands = ["-help", "-golang", "-optimize", "-iter"]
+valid_commands = ["-help", "-golang", "-optimize", "-iter", "run_simulation.py"]
 
 
-def verify_commands(cmds):
+def identify_invalid_commands(cmds):
     """
 
     Check to make sure that commands passed from user are valid.
@@ -136,10 +144,10 @@ def verify_commands(cmds):
         split_cmd = cmd.split('=')
         if not split_cmd[0] in valid_commands:
             return split_cmd[0]
-    return True
+    return False
 
 
-def ParseCommands(cmds):
+def parse_commands(cmds):
     """
 
     Parse commands from command line into parameters for the simulation.
@@ -157,7 +165,7 @@ def ParseCommands(cmds):
         exit()
 
     # If an invalid command is detected, exit and let the user know.
-    if not (cmd := verify_commands(cmds)):
+    if cmd := identify_invalid_commands(cmds):
         raise AssertionError(f"Command '{cmd}' not found. Please use -help for list of valid commands.")
 
     # Loop through commands and parse them to assign their values to their respective parameters.
