@@ -315,7 +315,6 @@ class WeatherForecasts:
         return np.array(result)
 
     @staticmethod
-    @helpers.timeit
     def python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array):
         """
 
@@ -337,7 +336,6 @@ class WeatherForecasts:
 
         return np.asarray(closest_time_stamp_indices, dtype=np.int32)
 
-    @helpers.timeit
     def get_weather_forecast_in_time(self, indices, unix_timestamps):
         """
         Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
