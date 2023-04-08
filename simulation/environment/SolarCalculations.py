@@ -11,17 +11,24 @@ import numpy as np
 import sys
 from simulation.common import helpers
 from tqdm import tqdm
+import time as timer
 
 
 class SolarCalculations:
 
-    def __init__(self):
+    def __init__(self, golang=True, library=None):
         """
         Initializes the instance of a SolarCalculations class
+
+        :param golang: Boolean that determines whether GoLang implementations will be used when applicable.
+        :param library: GoLang binaries library
         """
 
         # Solar Constant in W/m2
         self.S_0 = 1353
+
+        self.golang = golang
+        self.lib = library
 
     # ----- Calculation of solar position in the sky -----
 
@@ -285,6 +292,18 @@ class SolarCalculations:
         return GHI * (1 - (0.75 * np.power(scaled_cloud_cover, 3.4)))
 
     # ----- Calculation of modes of solar irradiance, but returning numpy arrays -----
+    @helpers.timeit
+    def python_calculate_array_GHI_times(self, local_times):
+        date = list(map(datetime.datetime.utcfromtimestamp, local_times))
+        day_of_year = np.array(list(map(helpers.get_day_of_year_map, date)), dtype=np.float64)
+        local_time = np.array(list(map(SolarCalculations.dateConvert, date)))
+        return day_of_year, local_time
+
+    @staticmethod
+    def dateConvert(date):
+        return date.hour + (float(date.minute * 60 + date.second) / 3600)
+
+    @helpers.timeit
     def calculate_array_GHI(self, coords, time_zones, local_times,
                             elevations, cloud_covers):
         """
@@ -304,13 +323,10 @@ class SolarCalculations:
 
         Returns: (float[N]) Global Horizontal Irradiance in W/m2
         """
-
-        date = list(map(
-            datetime.datetime.utcfromtimestamp, local_times))
-        day_of_year = np.array(
-            list(map(helpers.get_day_of_year_map, date)), dtype=np.float64)
-        local_time = np.array(list(map(lambda date: date.hour +
-                                       (float(date.minute * 60 + date.second) / 3600), date)))
+        if not self.golang:
+            day_of_year, local_time = self.python_calculate_array_GHI_times(local_times)
+        else:
+            day_of_year, local_time = self.lib.golang_calculate_array_GHI_times(local_times)
 
         ghi = self.calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
                                  day_of_year, local_time, elevations, cloud_covers)

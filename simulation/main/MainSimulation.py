@@ -1,10 +1,10 @@
+import datetime
 import json
-from enum import Enum
+import logging
+import os
 
 import numpy as np
-import os
 import simulation
-
 from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
@@ -12,23 +12,16 @@ from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 
 
-class SimulationReturnType(Enum):
-    time_taken = 0
-    distance_travelled = 1
-    simulation_results = 2
-
-
 class Simulation:
 
-    def __init__(self, initial_conditions, return_type, race_type, golang=True):
+    def __init__(self, initial_conditions, race_type, golang=True):
         """
-
         Instantiates a simple model of the car.
 
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
         :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
-        :param return_type: discretely defines what kind of data run_model should return.
         :param golang: boolean which controls whether GoLang implementations are used when available
+
 
         Depending on the race type, the following initialisation parameters are read from the corresponding
         settings json file located in the config folder.
@@ -42,13 +35,8 @@ class Simulation:
         simulation_duration: length of simulated time (in seconds)
         start_hour: describes the hour to start the simulation (typically either 7 or 9, these
         represent 7am and 9am respectively)
+        golang: boolean determining whether to use faster GoLang implementations when available
         """
-
-        # ----- Return type -----
-
-        assert return_type in SimulationReturnType, "return_type must be of SimulationReturnType enum."
-
-        self.return_type = return_type
 
         # ----- Race type -----
 
@@ -75,7 +63,7 @@ class Simulation:
         elif self.race_type == "FSGP":
             self.simulation_duration = args['simulation_duration']
 
-        # ----- Load from initial conditions
+        # ----- Load from initial_conditions
 
         self.initial_battery_charge = initial_conditions.initial_battery_charge
 
@@ -100,6 +88,16 @@ class Simulation:
         self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
+        # ----- GoLang library initialisation -----
+        self.golang = golang
+        self.library = simulation.Libraries(raiseExceptionOnFail=False)
+        if self.golang and self.library.found_compatible_binaries() is False:
+            # If compatible GoLang binaries weren't found, disable GoLang usage.
+            self.golang = False
+            logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
+                            "To use GoLang implementations, see COMPILING_HOWTO about "
+                            "compiling GoLang for your operating system.")
+
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()
@@ -111,7 +109,8 @@ class Simulation:
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord)
+                                  self.race_type, library=self.library, force_update=gis_force_update,
+                                  current_coord=self.current_coord, golang=golang)
 
         self.route_coords = self.gis.get_path()
 
@@ -120,6 +119,7 @@ class Simulation:
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600,
                                                    self.race_type,
+                                                   library=self.library,
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update,
                                                    origin_coord=self.gis.launch_point,
@@ -176,30 +176,9 @@ class Simulation:
         speed_kmh = np.insert(speed_kmh, 0, 0)
         speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
 
-        tick_array = np.diff(self.timestamps)
-        tick_array = np.insert(tick_array, 0, 0)
-
-        speed_kmh, not_charge = helpers.apply_race_timing_constraints(speed_kmh=speed_kmh, start_hour=self.start_hour,
-                                                                      simulation_duration=self.simulation_duration,
-                                                                      race_type=self.race_type,
-                                                                      timestamps=self.timestamps,
-                                                                      verbose=verbose)
-
-        if self.race_type == "ASC":
-            speed_kmh_without_checkpoints = speed_kmh
-            speed_kmh = helpers.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
-                                                      self.waypoints, verbose=False)[:self.simulation_duration + 1]
-            if verbose:
-                helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
-                                   ["Speed before waypoints", " Speed after waypoints"],
-                                   "Before and After waypoints")
-
-        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
-        raw_speed = speed_kmh
-
         # ------ Run calculations and get result and modified speed array -------
 
-        result = self.__run_simulation_calculations(speed_kmh, tick_array, not_charge, verbose=verbose)
+        result = self.__run_simulation_calculations(speed_kmh, verbose=verbose)
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
@@ -215,7 +194,6 @@ class Simulation:
         distance_travelled = result.distance_travelled
         time_taken = result.time_taken
         final_soc = result.final_soc
-        raw_soc = self.basic_battery.get_raw_soc(np.cumsum(delta_energy))
 
         print(f"Simulation successful!\n"
               f"Time taken: {time_taken}\n"
@@ -229,10 +207,9 @@ class Simulation:
         if plot_results:
             arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
                               solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
-                              cloud_covers, raw_soc, raw_speed]
+                              cloud_covers]
             y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)",
-                       "Raw SOC (%)", "Raw Speed (km/h)"]
+                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
 
             helpers.plot_graph(timestamps=self.timestamps,
                                arrays_to_plot=arrays_to_plot,
@@ -240,33 +217,46 @@ class Simulation:
                                graph_title="Simulation Result")
 
         if self.race_type == "FSGP":
+            # Do this so I'm not plotting the entire 300 laps which will look the same as one lap anyway.
             helpers.route_visualization(self.gis.single_lap_path, visible=route_visualization)
         elif self.race_type == "ASC":
             helpers.route_visualization(self.gis.path, visible=route_visualization)
 
-        if self.return_type is SimulationReturnType.distance_travelled:
-            return distance_travelled
-        if self.return_type is SimulationReturnType.time_taken:
-            return -1 * time_taken
-        if self.return_type is SimulationReturnType.simulation_results:
-            return result
-        else:
-            raise TypeError("Return type not found.")
+        return distance_travelled
 
-    def __run_simulation_calculations(self, speed_kmh, tick_array, not_charge, verbose=False):
+    def __run_simulation_calculations(self, speed_kmh, verbose=False):
         """
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
         containing members that specify total distance travelled and time taken at the end of the simulation
         and final battery state of charge. This is where most of the main simulation logic happens.
 
         :param speed_kmh: array that specifies the solar car's driving speed (in km/h) at each time step
-        :param tick_array: array that specifies ticks used in calculations
-        :param not_charge: array that specifies when the car is charging for calculations
         """
+
+        tick_array = np.diff(self.timestamps)
+        tick_array = np.insert(tick_array, 0, 0)
+
+        speed_kmh, not_charge = helpers.apply_race_timing_constraints(speed_kmh=speed_kmh, start_hour=self.start_hour,
+                                                                      simulation_duration=self.simulation_duration,
+                                                                      race_type=self.race_type,
+                                                                      timestamps=self.timestamps,
+                                                                      verbose=verbose)
+
+        if self.race_type == "ASC":
+            speed_kmh_without_checkpoints = speed_kmh
+            speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
+                                                      self.waypoints, verbose=False)[:self.simulation_duration + 1]
+            if verbose:
+                helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
+                                   ["Speed before waypoints", " Speed after waypoints"],
+                                   "Before and After waypoints")
+
+        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
 
         # ----- Expected distance estimate -----
 
         # Array of cumulative distances theoretically achievable via the speed array
+
         distances = tick_array * speed_kmh / 3.6
         cumulative_distances = np.cumsum(distances)
 
@@ -392,6 +382,17 @@ class Simulation:
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         distances = distances.clip(0, max_route_distance / 1000)
 
+        try:
+            max_dist_index = np.where(distances == max_route_distance / 1000)[0][0]
+        except IndexError:
+            max_dist_index = len(time_in_motion)
+
+        time_in_motion = np.array(
+            (list(time_in_motion[0:max_dist_index])) + list(np.zeros_like(time_in_motion[max_dist_index:])))
+
+        time_taken = np.sum(time_in_motion)
+        time_taken = str(datetime.timedelta(seconds=int(time_taken)))
+
         results = SimulationResult()
 
         results.arrays = [
@@ -406,13 +407,7 @@ class Simulation:
         ]
 
         results.distance_travelled = distances[-1]
-
-        if results.distance_travelled >= self.route_length:
-            results.time_taken = helpers.calculate_race_completion_time(
-                self.route_length, distances)
-        else:
-            results.time_taken = self.simulation_duration
-
+        results.time_taken = time_taken
         results.final_soc = final_soc
 
         self.time_zones = time_zones
