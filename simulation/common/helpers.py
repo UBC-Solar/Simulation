@@ -1,5 +1,3 @@
-import array as arr
-import ctypes
 import datetime
 import functools
 import numpy as np
@@ -10,12 +8,8 @@ from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
-from math import radians
-from math import radians
 from matplotlib import pyplot as plt
 from simulation.common import constants
-from sklearn.neighbors import BallTree
-from sklearn.neighbors import BallTree
 
 """
 Description: contains the simulation's helper functions.
@@ -93,9 +87,8 @@ def generate_deceleration_array(initial_velocity, final_velocity, deceleration_i
     :return: an array of the velocities between initial_velocity and final_velocity
     """
 
-    deceleration_instance_size = (
-        final_velocity - initial_velocity) / (deceleration_interval + 1)
-    return np.arange(initial_velocity, final_velocity, deceleration_instance_size)[1:(deceleration_interval+1)]
+    deceleration_instance_size = (final_velocity - initial_velocity) / (deceleration_interval + 1)
+    return np.arange(initial_velocity, final_velocity, deceleration_instance_size)[1:(deceleration_interval + 1)]
 
 
 def apply_deceleration(input_speed_array, deceleration_interval):
@@ -228,11 +221,13 @@ def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directi
     # car is 270 degrees, cos(90-270) = -1. Wind speed is in direction of the car.
     return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
 
+
 def get_day_of_year_map(date):
     """
     Extracts day, month, year, from datetime object
     """
     return get_day_of_year(date.day, date.month, date.year)
+
 
 def get_day_of_year(day, month, year):
     """
@@ -243,8 +238,7 @@ def get_day_of_year(day, month, year):
         Day refers to a number representing the n'th day of the year. So, Jan 1st will be the 1st day of the year
         """
 
-    return (datetime.date(year, month, day) -
-            datetime.date(year, 1, 1)).days + 1
+    return (datetime.date(year, month, day) - datetime.date(year, 1, 1)).days + 1
 
 
 def calculate_declination_angle(day_of_year):
@@ -388,14 +382,10 @@ def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
 
     Returns: The elevation angle in degrees
     """
-    term_1 = np.sin(np.radians(declination_angle)) * \
-        np.sin(np.radians(latitude))
-
-    term_2 = np.cos(np.radians(declination_angle)) * \
-        np.cos(np.radians(latitude)) * \
-        np.cos(np.radians(hour_angle))
-
+    term_1 = np.sin(np.radians(declination_angle)) * np.sin(np.radians(latitude))
+    term_2 = np.cos(np.radians(declination_angle)) * np.cos(np.radians(latitude)) * np.cos(np.radians(hour_angle))
     elevation_angle = np.arcsin(term_1 + term_2)
+
     return np.degrees(elevation_angle)
 
 
@@ -571,13 +561,13 @@ def route_visualization(coords, visible=True):
     longitudes = [c[1] for c in coords]
 
     zipped_data = list(zip(point_labels, latitudes,
-                       longitudes, colours, sizes))
+                           longitudes, colours, sizes))
 
     colour_hex = "#002145"
     solid_color_hex_continuous_scale = [colour_hex, colour_hex]
 
     dataframe = pd.DataFrame(zipped_data, columns=[
-                             "Point", "Latitude", "Longitude", "Colour", "Size"])
+        "Point", "Latitude", "Longitude", "Colour", "Size"])
 
     fig = px.scatter_mapbox(dataframe, lat="Latitude", lon="Longitude", color="Colour",
                             hover_name=point_labels, color_continuous_scale=solid_color_hex_continuous_scale,
@@ -664,149 +654,6 @@ def plot_latitudes(coordinates):
 
     """
     simple_plot_graph(coordinates[:, 1], "Latitudes")
-
-
-def generate_weather_golang_io_pointers(input_array):
-    """
-    Generates I/O pointers for use in calling Golang functions in WeatherForecasts class.
-
-    Args:
-        input_array: A Python list 0r NumPy Array that will serve as an input to a Golang function
-
-    Returns:
-        - input_array_pointer: A pointer to input_array
-        - output_array_pointer: A pointer to the output_array return value
-        - output_array: The array that output_array_pointer points to.
-                        Will contain result if GoLang writes memory location specified by output_array_pointer
-
-    """
-    input_array_copy = arr.array('d', input_array)
-    input_array_pointer = (
-        ctypes.c_double * len(input_array_copy)).from_buffer(input_array_copy)
-
-    output_array = arr.array('d', [0] * len(input_array))
-    output_array_pointer = (
-        ctypes.c_double * len(output_array)).from_buffer(output_array)
-
-    return input_array_pointer, output_array_pointer, output_array
-
-
-def generate_gis_golang_io_pointers(input_array_1, input_array_2, output_array_size):
-    """
-    Generates I/O pointers for use in calling Golang functions in GIS class.
-
-    Args:
-        input_array_1: A Python list 0r NumPy Array that will serve as an input to a Golang function
-        input_array_2: A Python list 0r NumPy Array that will serve as an input to a Golang function
-        output_array_size: Size of NumPy output Array
-
-    Returns:
-        - input_array_1_pointer: A pointer to input_array_1
-        - input_array_2_pointer: A pointer to input_array_2
-        - output_array_pointer: A pointer to the output_array return value
-    """
-    input_array_1_copy = arr.array('d', input_array_1)
-    input_array_1_pointer = (
-        ctypes.c_double * len(input_array_1_copy)).from_buffer(input_array_1_copy)
-
-    input_array_2_copy = arr.array('d', input_array_2)
-    input_array_2_pointer = (
-        ctypes.c_double * len(input_array_2_copy)).from_buffer(input_array_2_copy)
-
-    output_array = arr.array('l', [0] * len(output_array_size))
-    output_array_pointer = (
-        ctypes.c_long * len(output_array)).from_buffer(output_array)
-
-    return input_array_1_pointer, input_array_2_pointer, output_array_pointer, output_array
-
-
-def speeds_with_waypoints(path, distances, speeds, waypoints, verbose=False):
-    # First we need to find the closest path coordinates for each waypoint/checkpoint
-    path_rad = np.array([[radians(p[0]), radians(p[1])] for p in path])
-    tree = BallTree(path_rad, metric='haversine')
-    _, wp = tree.query([[radians(w[0]), radians(w[1])] for w in waypoints])
-    if verbose:
-        print(f"Waypoint indices in path array:\n{wp}\n")
-
-    delta = 0.05  # margin of error with double arithmetic
-    path_index = 0  # current path coordinate
-    # stores the interim distance travelled between two path coordinates
-    temp_distance_travelled = 0
-
-    # iterate through the speeds array for each second
-    i = 0
-    while i < len(speeds):
-        distance = speeds[i]
-
-        """
-        For each second, we will:
-            1) keep travelling past path coordinates until:
-                i) we don't have enough speed to reach the next path coordinate
-                ii) we reach a waypoint
-                    - replace the next 45 minutes of speeds with 0
-            2) come to a "fractional coordinate" that exists between 2 path coordinates
-                - add the temporary distance travelled between two path coordinates to a temp variable
-        """
-
-        total_distance_travelled = 0  # total distance travelled this second
-        waypoint_flag = 0  # flag used to indicate if we reached a waypoint
-
-        # if we can reach the next path coordinate
-        while distance + temp_distance_travelled > distances[path_index] - delta:
-            # update distance to be remainder of distance we can travel this second
-            distance = distance + temp_distance_travelled - \
-                distances[path_index]
-            # add the distance travelled to our total distance travelled this second
-            total_distance_travelled += distances[path_index] - \
-                temp_distance_travelled
-            # reset the temp_distance_travelled since we just reached a new path coordinate
-            temp_distance_travelled = 0
-            # increment values of path_index
-            path_index += 1
-
-            # If we reached the end of the coordinate list, exit
-            if path_index >= len(distances):
-                if verbose:
-                    print(f"Travelled {total_distance_travelled} m at second {i}\n"
-                          f"New coordinates: {path[path_index]}\n"
-                          "Race complete!\n")
-                return np.multiply(speeds, 3.6)
-
-            # If we have reached a waypoint/checkpoint, replace speeds with 0
-            if wp.size > 0 and path_index == wp[0]:
-                if verbose:
-                    print(
-                        f"Travelled {total_distance_travelled} m at second {i}\n" f"New coordinates: {path[path_index]}\n" "Reached a waypoint!\n")
-                # delete the waypoint we just reached from the wp array
-                wp = np.delete(wp, 0)
-                # update the current speed to be only what we travelled this second
-                speeds[i] = total_distance_travelled
-                # replace the speeds with 0's
-                speeds[i + 1: i + 1 + 45 * 60] = [0] * 45 * 60
-                i += 45 * 60 - 1
-                distance = 0  # shouldn't travel anymore in this second
-                waypoint_flag = 1
-                break
-
-            if waypoint_flag:
-                continue
-
-        # If I still have distance to travel but can't reach the next coordinate
-        if distance + temp_distance_travelled < distances[path_index] - delta:
-            # Update total distance travelled
-            total_distance_travelled += distance
-
-            # Add onto the temporary distance between two coordinates
-            temp_distance_travelled += distance
-
-            if verbose:
-                print(
-                    f"Travelled {total_distance_travelled} m at second {i}\n" f"Reached fractional coordinate.\n")
-
-        i += 1
-
-    return np.multiply(speeds, 3.6)
-
 
 if __name__ == '__main__':
     # speed_array input

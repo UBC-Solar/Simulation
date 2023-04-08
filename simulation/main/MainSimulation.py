@@ -1,14 +1,10 @@
 import datetime
 import json
-import numpy as np
+import logging
 import os
+
+import numpy as np
 import simulation
-from bayes_opt import BayesianOptimization
-from bokeh.layouts import gridplot
-from bokeh.models import HoverTool
-from bokeh.palettes import Bokeh8
-from bokeh.plotting import figure, show, output_file
-from dotenv import dotenv_values
 from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
@@ -92,6 +88,16 @@ class Simulation:
         self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
+        # ----- GoLang library initialisation -----
+        self.golang = golang
+        self.library = simulation.Libraries(raiseExceptionOnFail=False)
+        if self.golang and self.library.found_compatible_binaries() is False:
+            # If compatible GoLang binaries weren't found, disable GoLang usage.
+            self.golang = False
+            logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
+                            "To use GoLang implementations, see COMPILING_HOWTO about "
+                            "compiling GoLang for your operating system.")
+
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()
@@ -103,7 +109,8 @@ class Simulation:
         self.basic_motor = simulation.BasicMotor()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, force_update=gis_force_update, current_coord=self.current_coord)
+                                  self.race_type, library=self.library, force_update=gis_force_update,
+                                  current_coord=self.current_coord, golang=golang)
 
         self.route_coords = self.gis.get_path()
 
@@ -112,6 +119,7 @@ class Simulation:
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600,
                                                    self.race_type,
+                                                   library=self.library,
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update,
                                                    origin_coord=self.gis.launch_point,
@@ -236,7 +244,7 @@ class Simulation:
 
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
-            speed_kmh = helpers.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
+            speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
             if verbose:
                 helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
@@ -261,7 +269,6 @@ class Simulation:
 
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
-
 
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
 

@@ -5,7 +5,7 @@
 
 #line 1 "cgo-builtin-export-prolog"
 
-#include <stddef.h>
+#include <stddef.h> /* for ptrdiff_t below */
 
 #ifndef GO_CGO_EXPORT_PROLOGUE_H
 #define GO_CGO_EXPORT_PROLOGUE_H
@@ -40,17 +40,11 @@ typedef long long GoInt64;
 typedef unsigned long long GoUint64;
 typedef GoInt64 GoInt;
 typedef GoUint64 GoUint;
-typedef size_t GoUintptr;
+typedef __SIZE_TYPE__ GoUintptr;
 typedef float GoFloat32;
 typedef double GoFloat64;
-#ifdef _MSC_VER
-#include <complex.h>
-typedef _Fcomplex GoComplex64;
-typedef _Dcomplex GoComplex128;
-#else
 typedef float _Complex GoComplex64;
 typedef double _Complex GoComplex128;
-#endif
 
 /*
   static assertion to make sure the file is being used on architecture
@@ -74,6 +68,10 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
+extern void calculate_array_GHI_times(GoInt64* local_times_inPtr, GoInt64 local_times_ptrSize, GoFloat64* day_of_year_outPtr, GoInt64 day_of_year_ptrSize, GoFloat64* local_time_outPtr, GoInt64 local_time_ptrSize);
+extern void closest_gis_indices_loop(GoFloat64* averageDistancesPtr, GoInt64 averageDistancesSize, GoFloat64* cumulativeDistancesPtr, GoInt64 cumulativeDistancesSize, GoInt64* resultsPtr, GoInt64 resultsSize);
+extern void closest_weather_indices_loop(GoFloat64* cumulativeDistancesPtr, GoInt64 cumulativeDistancesSize, GoFloat64* averageDistancesPtr, GoInt64 averageDistancesSize, GoInt64* resultsPtr, GoInt64 resultsSize);
+extern void speeds_with_waypoints_loop(GoFloat64* speeds_inPtr, GoInt64 speeds_ptrSize, GoFloat64* distances_inPtr, GoInt64 distances_ptrSize, GoInt64* waypoints_inPtr, GoInt64 waypoints_ptrSize);
 extern void weather_in_time_loop(GoFloat64* unix_timestamps_inPtr, GoFloat64* closest_time_stamp_indices_outPtr, GoFloat64* dt_local_array_inPtr, GoInt64 dt_local_array_inPtr_size, GoInt64 io_ptr_size);
 
 #ifdef __cplusplus
