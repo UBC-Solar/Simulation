@@ -1,4 +1,6 @@
+import datetime
 import json
+import logging
 from enum import Enum
 
 import numpy as np
@@ -25,7 +27,6 @@ class Simulation:
 
     def __init__(self, initial_conditions, return_type, race_type, golang=True):
         """
-
         Instantiates a simple model of the car.
 
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
@@ -79,7 +80,7 @@ class Simulation:
         elif self.race_type == "FSGP":
             self.simulation_duration = args['simulation_duration']
 
-        # ----- Load from initial conditions
+        # ----- Load from initial_conditions
 
         self.initial_battery_charge = initial_conditions.initial_battery_charge
 
