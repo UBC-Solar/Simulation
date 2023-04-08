@@ -81,12 +81,12 @@ Before running the following commands make sure you have navigated to the "Simul
 #### Ubuntu/MacOS
 
 ```bash
-python3 examples/max_distance_from_speed_using_arrays.py
+python3 simulation/run_simulation.py
 ```
 #### Windows
 
 ```bash
-python .\examples\max_distance_from_speed_using_arrays.py
+python .\simulation\run_simulation.py
 ```
 
 ### Testing

@@ -1,6 +1,10 @@
 import datetime
 import json
 import logging
+from enum import Enum
+
+import numpy as np
+import logging
 import os
 
 import numpy as np
@@ -13,15 +17,21 @@ from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 
 
-class TimeSimulation:
+class SimulationReturnType(Enum):
+    time_taken = 0
+    distance_travelled = 1
+    simulation_results = 2
 
-    def __init__(self, initial_conditions, race_type, golang=True):
+
+class Simulation:
+
+    def __init__(self, initial_conditions, return_type, race_type, golang=True):
         """
-
         Instantiates a simple model of the car.
 
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
         :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
+        :param return_type: discretely defines what kind of data run_model should return.
         :param golang: boolean which controls whether GoLang implementations are used when available
 
         Depending on the race type, the following initialisation parameters are read from the corresponding
@@ -38,6 +48,12 @@ class TimeSimulation:
         represent 7am and 9am respectively)
         golang: boolean determining whether to use faster GoLang implementations when available
         """
+
+        # ----- Return type -----
+
+        assert return_type in SimulationReturnType, "return_type must be of SimulationReturnType enum."
+
+        self.return_type = return_type
 
         # ----- Race type -----
 
@@ -64,7 +80,7 @@ class TimeSimulation:
         elif self.race_type == "FSGP":
             self.simulation_duration = args['simulation_duration']
 
-        # ----- Load from initial conditions
+        # ----- Load from initial_conditions
 
         self.initial_battery_charge = initial_conditions.initial_battery_charge
 
@@ -90,7 +106,6 @@ class TimeSimulation:
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- GoLang library initialisation -----
-
         self.golang = golang
         self.library = simulation.Libraries(raiseExceptionOnFail=False)
         if self.golang and self.library.found_compatible_binaries() is False:
@@ -112,8 +127,7 @@ class TimeSimulation:
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, library=self.library, force_update=gis_force_update,
-                                  current_coord=self.current_coord,
-                                  golang=golang)
+                                  current_coord=self.current_coord, golang=golang)
 
         self.route_coords = self.gis.get_path()
 
@@ -129,10 +143,9 @@ class TimeSimulation:
                                                    golang=golang)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
-        self.time_of_initialization = self.weather.last_updated_time + \
-                                      3600 * (24 + self.start_hour - weather_hour)
+        self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations(golang=golang, library=self.library)
+        self.solar_calculations = simulation.SolarCalculations(library=self.library)
 
         self.local_times = 0
 
@@ -140,11 +153,12 @@ class TimeSimulation:
 
     @helpers.timeit
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
-                  route_visualization=False, return_results_object=False, **kwargs):
+                  route_visualization=False, **kwargs):
         """
         Updates the model in tick increments for the entire simulation duration. Returns
-        a Simulation results object if return_results_object=True, given an initial charge, and a target speed.
-        Also requires the current time and location. This is where the magic happens.
+        a final battery charge and a distance travelled for this duration, given an
+        initial charge, and a target speed. Also requires the current time and location.
+        This is where the magic happens.
 
         Note: if the speed remains constant throughout this update, and knowing the starting
             time, the cumulative distance at every time can be known. From the cumulative
@@ -156,12 +170,10 @@ class TimeSimulation:
 
         :param speed: array that specifies the solar car's driving speed at each time step
         :param plot_results: set to True to plot the results of the simulation (is True by default)
-        :param verbose: Flag to control logging and debugging behaviour
+        :param verbose: Boolean to control logging and debugging behaviour
         :param route_visualization: Flag to control route_visualization plot visibility
         :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
-        :param return_results_object: Defines whether the function should output a simulationResults object or
-        time taken.
 
         """
 
@@ -174,74 +186,12 @@ class TimeSimulation:
             verbose = False
 
         # ----- Reshape speed array -----
+
         print(f"Input speeds: {speed}\n")
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
-
-        # ------ Run calculations and get result and modified speed array -------
-
-        result = self.run_simulation_calculations(speed_kmh, verbose=verbose)
-
-        # ------- Parse results ---------
-        # TODO: Rewrite this to use a dictionary like Mihir changed in his bokeh commits...
-        simulation_arrays = result.arrays
-        speed_kmh = simulation_arrays[0]
-        distances = simulation_arrays[1]
-        state_of_charge = simulation_arrays[2]
-        delta_energy = simulation_arrays[3]
-        solar_irradiances = simulation_arrays[4]
-        wind_speeds = simulation_arrays[5]
-        gis_route_elevations_at_each_tick = simulation_arrays[6]
-        cloud_covers = simulation_arrays[7]
-
-        distance_travelled = result.distance_travelled
-        time_taken = result.time_taken
-        print("Distance travelled: " + str(distance_travelled))
-        final_soc = result.final_soc
-
-        print(f"Simulation successful!\n"
-              f"Time taken: {str(datetime.timedelta(seconds=int(time_taken)))}\n"
-              f"Route length: {self.route_length:.2f}km\n"
-              f"Maximum distance traversable: {distance_travelled:.2f}km\n"
-              f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
-              f"Final battery SOC: {final_soc:.2f}%\n")
-
-        # ----- Plotting -----
-
-        if plot_results:
-            arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
-                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
-                              cloud_covers]
-            y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)"]
-
-            helpers.plot_graph(timestamps=self.timestamps,
-                               arrays_to_plot=arrays_to_plot,
-                               array_labels=y_label,
-                               graph_title="Simulation Result")
-
-        if self.race_type == "FSGP":
-            helpers.route_visualization(
-                self.gis.single_lap_path, visible=route_visualization)
-        elif self.race_type == "ASC":
-            helpers.route_visualization(
-                self.gis.path, visible=route_visualization)
-
-        if return_results_object:
-            return result
-        else:
-            return -1 * time_taken
-
-    @helpers.timeit
-    def run_simulation_calculations(self, speed_kmh, verbose=False):
-        """
-        Helper method to perform all calculations used in run_model. Returns a SimulationResult object
-        containing members that specify total distance travelled and time taken at the end of the simulation
-        and final battery state of charge. This is where most of the main simulation logic happens.
-
-        :param speed_kmh: array that specifies the solar car's driving speed (in km/h) at each time step
-        """
+        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
 
         tick_array = np.diff(self.timestamps)
         tick_array = np.insert(tick_array, 0, 0)
@@ -258,14 +208,82 @@ class TimeSimulation:
                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
             if verbose:
                 helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
-                                   ["Speed before waypoints",
-                                    " Speed after waypoints"],
+                                   ["Speed before waypoints", " Speed after waypoints"],
                                    "Before and After waypoints")
+
+        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
+        raw_speed = speed_kmh
+
+        # ------ Run calculations and get result and modified speed array -------
+
+        result = self.__run_simulation_calculations(speed_kmh, tick_array, not_charge, verbose=verbose)
+
+        # ------- Parse results ---------
+        simulation_arrays = result.arrays
+        speed_kmh = simulation_arrays[0]
+        distances = simulation_arrays[1]
+        state_of_charge = simulation_arrays[2]
+        delta_energy = simulation_arrays[3]
+        solar_irradiances = simulation_arrays[4]
+        wind_speeds = simulation_arrays[5]
+        gis_route_elevations_at_each_tick = simulation_arrays[6]
+        cloud_covers = simulation_arrays[7]
+
+        distance_travelled = result.distance_travelled
+        time_taken = result.time_taken
+        final_soc = result.final_soc
+        raw_soc = self.basic_battery.get_raw_soc(np.cumsum(delta_energy))
+
+        print(f"Simulation successful!\n"
+              f"Time taken: {time_taken}\n"
+              f"Route length: {self.route_length:.2f}km\n"
+              f"Maximum distance traversable: {distance_travelled:.2f}km\n"
+              f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
+              f"Final battery SOC: {final_soc:.2f}%\n")
+
+        # ----- Plotting -----
+
+        if plot_results:
+            arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
+                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
+                              cloud_covers, raw_soc, raw_speed]
+            y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)",
+                       "Raw SOC (%)", "Raw Speed (km/h)"]
+
+            helpers.plot_graph(timestamps=self.timestamps,
+                               arrays_to_plot=arrays_to_plot,
+                               array_labels=y_label,
+                               graph_title="Simulation Result")
+
+        if self.race_type == "FSGP":
+            helpers.route_visualization(self.gis.single_lap_path, visible=route_visualization)
+        elif self.race_type == "ASC":
+            helpers.route_visualization(self.gis.path, visible=route_visualization)
+
+        if self.return_type is SimulationReturnType.distance_travelled:
+            return distance_travelled
+        if self.return_type is SimulationReturnType.time_taken:
+            return -1 * time_taken
+        if self.return_type is SimulationReturnType.simulation_results:
+            return result
+        else:
+            raise TypeError("Return type not found.")
+
+    def __run_simulation_calculations(self, speed_kmh, tick_array, not_charge, verbose=False):
+        """
+        Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
+        containing members that specify total distance travelled and time taken at the end of the simulation
+        and final battery state of charge. This is where most of the main simulation logic happens.
+
+        :param speed_kmh: array that specifies the solar car's driving speed (in km/h) at each time step
+        :param tick_array: array that specifies ticks used in calculations
+        :param not_charge: array that specifies when the car is charging for calculations
+        """
 
         # ----- Expected distance estimate -----
 
         # Array of cumulative distances theoretically achievable via the speed array
-
         distances = tick_array * speed_kmh / 3.6
         cumulative_distances = np.cumsum(distances)
 
@@ -278,20 +296,17 @@ class TimeSimulation:
 
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
+
         closest_gis_indices = self.gis.calculate_closest_gis_indices(cumulative_distances)
 
         closest_weather_indices = self.weather.calculate_closest_weather_indices(cumulative_distances)
 
-        # closest_gis_indices, closest_weather_indices = self.library.calculate_indices()
-
         path_distances = self.gis.path_distances
-        # [cumulative_distances] = meters
-        cumulative_distances = np.cumsum(path_distances)
+        cumulative_distances = np.cumsum(path_distances)  # [cumulative_distances] = meters
 
         max_route_distance = cumulative_distances[-1]
 
-        # store the route length in kilometers
-        self.route_length = max_route_distance / 1000.0
+        self.route_length = max_route_distance / 1000.0  # store the route length in kilometers
 
         # Array of elevations at every route point
         gis_route_elevations = self.gis.get_path_elevations()
@@ -310,15 +325,11 @@ class TimeSimulation:
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = adjust_timestamps_to_local_times(
-            self.timestamps, self.time_of_initialization, time_zones)
+        local_times = adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization, time_zones)
 
         # Get the weather at every location
-        weather_forecasts = self.weather.get_weather_forecast_in_time(
-            closest_weather_indices, local_times)
-        roll_by_tick = 3600 * \
-                       (24 + self.start_hour -
-                        helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
+        weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
+        roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
         absolute_wind_speeds = weather_forecasts[:, 5]
         wind_directions = weather_forecasts[:, 6]
@@ -336,18 +347,15 @@ class TimeSimulation:
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
-        # ----- Energy calculations -----
+        # ----- Energy Calculations -----
 
         self.basic_lvs.update(self.tick)
 
         lvs_consumed_energy = self.basic_lvs.get_consumed_energy()
-        motor_consumed_energy = self.basic_motor.calculate_energy_in(
-            speed_kmh, gradients, wind_speeds, self.tick)
-        array_produced_energy = self.basic_array.calculate_produced_energy(
-            solar_irradiances, self.tick)
+        motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
+        array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
 
-        motor_consumed_energy = np.logical_and(
-            motor_consumed_energy, not_charge) * motor_consumed_energy
+        motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
 
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
         produced_energy = array_produced_energy
@@ -358,15 +366,13 @@ class TimeSimulation:
         # ----- Array initialisation -----
 
         # used to calculate the time the car was in motion
-        tick_array = np.full_like(
-            self.timestamps, fill_value=self.tick, dtype='f4')
+        tick_array = np.full_like(self.timestamps, fill_value=self.tick, dtype='f4')
         tick_array[0] = 0
 
         # ----- Array calculations -----
 
         cumulative_delta_energy = np.cumsum(delta_energy)
-        battery_variables_array = self.basic_battery.update_array(
-            cumulative_delta_energy)
+        battery_variables_array = self.basic_battery.update_array(cumulative_delta_energy)
 
         # stores the battery SOC at each time step
         state_of_charge = battery_variables_array[0]
@@ -388,8 +394,7 @@ class TimeSimulation:
 
             helpers.plot_graph(timestamps=self.timestamps,
                                arrays_to_plot=arrays_to_plot,
-                               array_labels=[
-                                   "Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
+                               array_labels=["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
                                graph_title="Speed Boolean Operations")
         else:
             speed_kmh = np.logical_and(not_charge, state_of_charge) * speed_kmh
