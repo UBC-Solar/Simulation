@@ -135,7 +135,6 @@ class GIS:
         else:
             return self.lib.golang_calculate_closest_gis_indices(cumulative_distances, average_distances)
 
-    @helpers.timeit
     def python_calculate_closest_gis_indices(self, cumulative_distances, average_distances):
         """
         Python implementation of golang_calculate_closest_gis_indices. See parent function for documentation details.
@@ -457,7 +456,6 @@ class GIS:
 
         return distances_from_current_coord.argmin()
 
-    @helpers.timeit
     def speeds_with_waypoints(self, path, distances, speeds, waypoints, verbose=False):
         # First we need to find the closest path coordinates for each waypoint/checkpoint
         path_rad = np.array([[radians(p[0]), radians(p[1])] for p in path])

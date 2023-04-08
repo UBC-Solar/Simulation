@@ -292,7 +292,6 @@ class SolarCalculations:
         return GHI * (1 - (0.75 * np.power(scaled_cloud_cover, 3.4)))
 
     # ----- Calculation of modes of solar irradiance, but returning numpy arrays -----
-    @helpers.timeit
     def python_calculate_array_GHI_times(self, local_times):
         date = list(map(datetime.datetime.utcfromtimestamp, local_times))
         day_of_year = np.array(list(map(helpers.get_day_of_year_map, date)), dtype=np.float64)
@@ -303,7 +302,6 @@ class SolarCalculations:
     def dateConvert(date):
         return date.hour + (float(date.minute * 60 + date.second) / 3600)
 
-    @helpers.timeit
     def calculate_array_GHI(self, coords, time_zones, local_times,
                             elevations, cloud_covers):
         """
