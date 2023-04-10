@@ -18,10 +18,12 @@ class SolarCalculations:
 
     def __init__(self, golang=True, library=None):
         """
+
         Initializes the instance of a SolarCalculations class
 
         :param golang: Boolean that determines whether GoLang implementations will be used when applicable.
         :param library: GoLang binaries library
+
         """
 
         # Solar Constant in W/m2
@@ -35,19 +37,18 @@ class SolarCalculations:
     @staticmethod
     def calculate_hour_angle(time_zone_utc, day_of_year, local_time, longitude):
         """
+
         Calculates and returns the Hour Angle of the Sun in the sky.
         https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
-
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
-        day_of_year: The number of the day of the current year, with January 1
-            being the first day of the year.
-        local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
-        longitude: The longitude of a location on Earth
-
-        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
+        Note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
+        :param np.ndarray time_zone_utc: The UTC time zone of your area in hours of UTC offset.
+        :param np.ndarray day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+        :param np.ndarray local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
+        :param np.ndarray longitude: The longitude of a location on Earth
+        :returns: The Hour Angle in degrees.
+        :rtype: np.ndarray
 
-        Returns: The Hour Angle in degrees.
         """
 
         lst = helpers.local_time_to_apparent_solar_time(time_zone_utc / 3600, day_of_year,
@@ -60,22 +61,22 @@ class SolarCalculations:
     def calculate_elevation_angle(self, latitude, longitude, time_zone_utc, day_of_year,
                                   local_time):
         """
+
         Calculates the Elevation Angle of the Sun relative to a location on the Earth
         https://www.pveducation.org/pvcdrom/properties-of-sunlight/elevation-angle
-
-        latitude: The latitude of a location on Earth
-        longitude: The longitude of a location on Earth       
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example,
-            Vancouver has time_zone_utc = -7
-        day_of_year: The number of the day of the current year, with January 1
-            being the first day of the year.
-        local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
-
-        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+        Note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
 
-        Returns: The elevation angle in degrees
+        :param np.ndarray latitude: The latitude of a location on Earth
+        :param np.ndarray longitude: The longitude of a location on Earth
+        :param np.ndarray time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example, Vancouver has time_zone_utc = -7
+        :param np.ndarray day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+        :param np.ndarray  local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
+        :returns: The elevation angle in degrees
+        :rtype: np.ndarray
+
         """
+
         # Negative declination angles: Northern Hemisphere winter
         # 0 declination angle : Equinoxes (March 22, Sept 22)
         # Positive declination angle: Northern Hemisphere summer
@@ -96,20 +97,20 @@ class SolarCalculations:
     def calculate_zenith_angle(self, latitude, longitude, time_zone_utc, day_of_year,
                                local_time):
         """
+
         Calculates the Zenith Angle of the Sun relative to a location on the Earth
         https://www.pveducation.org/pvcdrom/properties-of-sunlight/azimuth-angle
-
-        latitude: The latitude of a location on Earth
-        longitude: The longitude of a location on Earth       
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
-        day_of_year: The number of the day of the current year, with January 1
-            being the first day of the year.
-        local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
-
-        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+        Note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
 
-        Returns: The zenith angle in degrees
+        :param latitude: The latitude of a location on Earth
+        :param longitude: The longitude of a location on Earth
+        :param time_zone_utc: The UTC time zone of your area in hours of UTC offset.
+        :param day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+        :param local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
+        :return: The zenith angle in degrees
+        :rtype: float
+
         """
 
         elevation_angle = self.calculate_elevation_angle(latitude, longitude,
@@ -120,21 +121,20 @@ class SolarCalculations:
     def calculate_azimuth_angle(self, latitude, longitude, time_zone_utc, day_of_year,
                                 local_time):
         """
+
         Calculates the Azimuth Angle of the Sun relative to a location on the Earth.
         https://www.pveducation.org/pvcdrom/properties-of-sunlight/azimuth-angle
-
-        latitude: The latitude of a location on Earth
-        longitude: The longitude of a location on Earth       
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example,
-            Vancouver has time_zone_utc = -7
-        day_of_year: The number of the day of the current year, with January 1
-            being the first day of the year.
-        local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
-
-        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+        Note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
 
-        Returns: The azimuth angle in degrees
+        :param latitude: The latitude of a location on Earth
+        :param longitude: The longitude of a location on Earth
+        :param time_zone_utc: The UTC time zone of your area in hours of UTC offset. For example, Vancouver has time_zone_utc = -7
+        :param day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+        :param local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
+        :returns: The azimuth angle in degrees
+        :rtype: np.ndarray
+
         """
 
         declination_angle = helpers.calculate_declination_angle(day_of_year)
@@ -170,22 +170,22 @@ class SolarCalculations:
     def calculate_DNI(self, latitude, longitude, time_zone_utc, day_of_year,
                       local_time, elevation):
         """
+
         Calculates the Direct Normal Irradiance from the Sun, relative to a location
         on the Earth (clearsky)
         https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
-
-        latitude: The latitude of a location on Earth
-        longitude: The longitude of a location on Earth       
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
-        day_of_year: The number of the day of the current year, with January 1
-            being the first day of the year.
-        local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
-        elevation: The local elevation of a location in metres
-
-        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the 
+        Note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
 
-        Returns: The Direct Normal Irradiance in W/m2
+        :param np.ndarray latitude: The latitude of a location on Earth
+        :param np.ndarray longitude: The longitude of a location on Earth
+        :param np.ndarray time_zone_utc: The UTC time zone of your area in hours of UTC offset.
+        :param np.ndarray day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+        :param np.ndarray local_time: The local time in hours from midnight. (Adjust for Daylight Savings)
+        :param np.ndarray elevation: The local elevation of a location in metres
+        :returns: The Direct Normal Irradiance in W/m2
+        :rtype: np.ndarray
+
         """
 
         zenith_angle = self.calculate_zenith_angle(latitude, longitude,
@@ -204,22 +204,22 @@ class SolarCalculations:
     def calculate_DHI(self, latitude, longitude, time_zone_utc, day_of_year,
                       local_time, elevation):
         """
+
         Calculates the Diffuse Horizontal Irradiance from the Sun, relative to a location
         on the Earth (clearsky)
         https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
-
-        latitude: The latitude of a location on Earth
-        longitude: The longitude of a location on Earth
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset.
-        day_of_year: The number of the day of the current year, with January 1
-            being the first day of the year.
-        local_time: The local time in hours from midnight
-        elevation: The local elevation of a location in metres
-
-        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
+        Note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
 
-        Returns: The Diffuse Horizontal Irradiance in W/m2
+        :param np.ndarray latitude: The latitude of a location on Earth
+        :param np.ndarray longitude: The longitude of a location on Earth
+        :param np.ndarray time_zone_utc: The UTC time zone of your area in hours of UTC offset.
+        :param np.ndarray np.ndarray day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+        :param np.ndarray local_time: The local time in hours from midnight
+        :param np.ndarray elevation: The local elevation of a location in metres
+        :returns: The Diffuse Horizontal Irradiance in W/m2
+        :rtype: np.ndarray
+
         """
 
         DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
@@ -232,25 +232,23 @@ class SolarCalculations:
     def calculate_GHI(self, latitude, longitude, time_zone_utc, day_of_year,
                       local_time, elevation, cloud_cover):
         """
+
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
         on the Earth
         https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
-
-        latitude: The latitude of a location on Earth
-        longitude: The longitude of a location on Earth
-        time_zone_utc: The UTC time zone of your area in hours of UTC offset, without
-            including the effects of Daylight Savings Time. For example, Vancouver
-             has time_zone_utc = -8 year-round.
-        day_of_year: The number of the day of the current year, with January 1
-            being the first day of the year.
-        local_time: The local time in hours from midnight.
-        elevation: The local elevation of a location in metres
-        cloud_cover: A NumPy array representing cloud cover as a percentage from 0 to 100
-
-        note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
+        Note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
 
-        Returns: The Global Horizontal Irradiance in W/m^2
+        :param np.ndarray latitude: The latitude of a location on Earth
+        :param np.ndarray longitude: The longitude of a location on Earth
+        :param np.ndarray time_zone_utc: The UTC time zone of your area in hours of UTC offset, without including the effects of Daylight Savings Time. For example, Vancouver has time_zone_utc = -8 year-round.
+        :param np.ndarray day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+        :param np.ndarray local_time: The local time in hours from midnight.
+        :param np.ndarray elevation: The local elevation of a location in metres
+        :param np.ndarray cloud_cover: A NumPy array representing cloud cover as a percentage from 0 to 100
+        :returns: The Global Horizontal Irradiance in W/m^2
+        :rtype: np.ndarray
+
         """
 
         DHI = self.calculate_DHI(latitude, longitude, time_zone_utc, day_of_year,
@@ -269,16 +267,17 @@ class SolarCalculations:
     @staticmethod
     def apply_cloud_cover(GHI, cloud_cover):
         """
+
         Applies a cloud cover model to the GHI data.
 
         Cloud cover adjustment follows the equation laid out here:
         http://www.shodor.org/os411/courses/_master/tools/calculators/solarrad/
 
-        Args:
-            GHI: Global Horizontal Index in W/m^2
-            cloud_cover: A NumPy array representing cloud cover as a percentage from 0 to 100
+        :param np.ndarray GHI: Global Horizontal Index in W/m^2
+        :param np.ndarray cloud_cover: A NumPy array representing cloud cover as a percentage from 0 to 100
 
-        Returns: GHI after considering cloud cover data
+        :returns: GHI after considering cloud cover data
+        :rtype: np.ndarray
 
         """
 
@@ -300,27 +299,38 @@ class SolarCalculations:
 
     @staticmethod
     def dateConvert(date):
+        """
+
+        Convert a date into local time.
+
+        :param datetime.date date: date to be converted
+        :return: a date converted into local time.
+        :rtype: int
+
+        """
+
         return date.hour + (float(date.minute * 60 + date.second) / 3600)
 
     def calculate_array_GHI(self, coords, time_zones, local_times,
                             elevations, cloud_covers):
         """
+
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
         on the Earth, for arrays of coordinates, times, elevations and weathers
         https://www.pveducation.org/pvcdrom/properties-of-sunlight/calculation-of-solar-insolation
-
-        coords: (float[N][lat, lng]) array of latitudes and longitudes
-        time_zones: (int[N]) time zones at different locations in seconds relative to UTC
-        local_times: (int[N]) unix time that the vehicle will be at each location. 
-                        (Adjusted for Daylight Savings)
-        elevations: (float[N]) elevation from sea level in m
-        cloud_covers: (float[N]) percentage cloud cover in range of 0 to 1 
-
-        note: If local_times and time_zones are both unadjusted for Daylight Savings, the 
+        Note: If local_times and time_zones are both unadjusted for Daylight Savings, the
                 calculation will end up just the same
 
-        Returns: (float[N]) Global Horizontal Irradiance in W/m2
+        :param np.ndarray coords: (float[N][lat, lng]) array of latitudes and longitudes
+        :param np.ndarray time_zones: (int[N]) time zones at different locations in seconds relative to UTC
+        :param np.ndarray local_times: (int[N]) unix time that the vehicle will be at each location. (Adjusted for Daylight Savings)
+        :param np.ndarray elevations: (float[N]) elevation from sea level in m
+        :param np.ndarray cloud_covers: (float[N]) percentage cloud cover in range of 0 to 1
+        :returns: (float[N]) Global Horizontal Irradiance in W/m2
+        :rtype: np.ndarray
+
         """
+
         if not self.golang:
             day_of_year, local_time = self.python_calculate_array_GHI_times(local_times)
         else:

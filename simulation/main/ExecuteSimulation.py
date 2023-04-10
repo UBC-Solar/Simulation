@@ -14,7 +14,9 @@ Description: Export Simulation data as a SimulationResults object.
 
 def GetSimulationData(golang=True) -> SimulationResult:
     """
+
     Returns a SimulationResult object with the purpose of exporting simulation data.
+
     """
 
     input_speed = np.array([30])

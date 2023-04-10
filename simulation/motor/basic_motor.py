@@ -35,9 +35,12 @@ class BasicMotor(BaseMotor):
 
     def calculate_power_out(self):
         """
+
         Calculates the power transferred to the wheel by the motor and the motor controller
     
-        returns: the power transferred to the wheel in W
+        :returns: the power transferred to the wheel in W
+        :rtype: float
+
         """
         power_in = self.dc_v * self.dc_i
         power_controller = power_in * self.e_mc
@@ -54,8 +57,10 @@ class BasicMotor(BaseMotor):
     #   current supplied by the battery to the motor controller
     def update_motor_input(self, dc_v, dc_i):
         """
+
         For the motor, the energy consumed by the motor/motor controller depends on the voltage 
             and current supplied by the battery to the motor controller
+
         """
 
         self.dc_v = dc_v
@@ -63,14 +68,16 @@ class BasicMotor(BaseMotor):
 
     def calculate_power_in(self, required_speed_kmh, gradient, wind_speed):
         """
+
         For a given road gradient, calculate the power that must be inputted into
             the motor to maintain a required speed
 
-        :param required_speed_kmh: required speed in km/h
-        :param gradient: road gradient, where > 0 means uphill and < 0 means downhill
-        :param wind_speed: speed of wind in m/s, where > 0 means against the direction of the vehicle.
+        :param np.ndarray required_speed_kmh: required speed in km/h
+        :param np.ndarray gradient: road gradient, where > 0 means uphill and < 0 means downhill
+        :param np.ndarray wind_speed: speed of wind in m/s, where > 0 means against the direction of the vehicle.
+        :returns: power required to travel at a speed and gradient in W
+        :rtype: np.ndarray
 
-        returns: power required to travel at a speed and gradient in W
         """
 
         required_speed_ms = required_speed_kmh / 3.6
@@ -89,10 +96,12 @@ class BasicMotor(BaseMotor):
 
     def update(self, tick):
         """
+
         For the motor, the update tick calculates a value for the energy expended in a period
             of time.
         
-        :param tick: length of 1 update cycle in seconds
+        :param int tick: length of 1 update cycle in seconds
+
         """
 
         self.consumed_energy = self.input_power * tick
@@ -100,16 +109,18 @@ class BasicMotor(BaseMotor):
     @staticmethod
     def calculate_motor_efficiency(motor_angular_speed, motor_output_energy, tick):
         """
+
         Calculates a NumPy array of motor efficiency from NumPy array of operating angular speeds and NumPy array
             of output power. Based on data obtained from NGM SC-M150 Datasheet and modelling done in MATLAB
 
         r squared value: 0.873
 
-        :param motor_angular_speed: (float[N]) angular speed motor operates in rad/s
-        :param motor_output_energy: (float[N]) energy motor outputs to the wheel in J
-        :param tick: length of 1 update cycle in seconds
-
+        :param np.ndarray motor_angular_speed: (float[N]) angular speed motor operates in rad/s
+        :param np.ndarray motor_output_energy: (float[N]) energy motor outputs to the wheel in J
+        :param int tick: length of 1 update cycle in seconds
         :returns e_m: (float[N]) efficiency of the motor
+        :rtype: np.ndarray
+
         """
 
         # Power = Energy / Time
@@ -133,17 +144,18 @@ class BasicMotor(BaseMotor):
     @staticmethod
     def calculate_motor_controller_efficiency(motor_angular_speed, motor_output_energy, tick):
         """
+
         Calculates a NumPy array of motor controller efficiency from NumPy array of operating angular speeds and
         NumPy array of output power. Based on data obtained from the WaveSculptor Motor Controller Datasheet efficiency
         curve for a 90 V DC Bus and modelling done in MATLAB.
 
         r squared value: 0.7431
 
-        :param motor_angular_speed: (float[N]) angular speed motor operates in rad/s
-        :param motor_output_energy: (float[N]) energy motor outputs to the wheel in J
-        :param tick: length of 1 update cycle in seconds
-
+        :param np.ndarray motor_angular_speed: (float[N]) angular speed motor operates in rad/s
+        :param np.ndarray motor_output_energy: (float[N]) energy motor outputs to the wheel in J
+        :param int tick: length of 1 update cycle in seconds
         :returns e_mc (float[N]) efficiency of the motor controller
+        :rtype: np.ndarray
 
         """
 
@@ -176,15 +188,17 @@ class BasicMotor(BaseMotor):
 
     def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, tick):
         """
+
         Create a function which takes in array of elevation, array of wind speed, required
             speed, returns the consumed energy.
 
-        :param required_speed_kmh: (float[N]) required speed array in km/h
-        :param gradients: (float[N]) gradient at parts of the road
-        :param wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
-        :param tick: (int) length of 1 update cycle in seconds
+        :param np.ndarray required_speed_kmh: (float[N]) required speed array in km/h
+        :param np.ndarray gradients: (float[N]) gradient at parts of the road
+        :param np.ndarray wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
+        :param int tick: length of 1 update cycle in seconds
+        :returns: (float[N]) energy expended by the motor at every tick
+        :rtype: np.ndarray
 
-        returns: (float[N]) energy expended by the motor at every tick
         """
 
         required_speed_ms = required_speed_kmh / 3.6

@@ -22,9 +22,11 @@ class BasicBattery(BaseBattery):
 
     def __init__(self, state_of_charge):
         """
+
         Constructor for BasicBattery class.
 
-        :param state_of_charge: initial battery state of charge
+        :param float state_of_charge: initial battery state of charge
+
         """
 
         # ----- DayBreak battery constants -----
@@ -67,9 +69,11 @@ class BasicBattery(BaseBattery):
 
     def update(self, tick):
         """
+
         Updates battery variables according to energy changes.
 
-        :param tick: time interval (in seconds) for battery variable update (dt)
+        :param float tick: time interval (in seconds) for battery variable update (dt)
+
         """
 
         energy_discharged = self.max_energy_capacity - self.stored_energy
@@ -80,9 +84,11 @@ class BasicBattery(BaseBattery):
 
     def charge(self, energy):
         """
+
         Adds energy to the battery.
 
-        :param energy: energy (in joules) to be added to battery.
+        :param float energy: energy (in joules) to be added to battery.
+
         """
 
         # divide by 3600 to convert from joules to watt-hours
@@ -90,11 +96,13 @@ class BasicBattery(BaseBattery):
 
     def discharge(self, energy):
         """
+
         Takes energy from the battery.
 
         :param energy: energy (in joules) to be taken from battery.
         
         :return discharged_energy: energy (in joules) removed from the battery.
+
         """
 
         return super().discharge(energy / 3600)
@@ -106,12 +114,12 @@ class BasicBattery(BaseBattery):
         :param cumulative_energy_array: a NumPy array containing the cumulative energy changes at each time step
         experienced by the battery
 
-        :return soc_array: a NumPy array containing the battery state of charge at each time step
+        :return: soc_array – a NumPy array containing the battery state of charge at each time step
 
-        :return voltage_array: a NumPy array containing the voltage of the battery at each time step
+        :return: voltage_array – a NumPy array containing the voltage of the battery at each time step
 
-        :return stored_energy_array: a NumPy array containing the energy stored in the battery at each time step
-        step
+        :return: stored_energy_array– a NumPy array containing the energy stored in the battery at each time step
+
         """
 
         stored_energy_array = np.full_like(cumulative_energy_array, fill_value=self.stored_energy)
@@ -130,12 +138,17 @@ class BasicBattery(BaseBattery):
 
     def get_raw_soc(self, cumulative_energy_array):
         """
+
         Return the not truncated (SOC is allowed to go above 100% and below 0%) state of charge.
 
-        :param cumulative_energy_array: a NumPy array containing the cumulative energy changes at each time step
+        :param np.ndarray cumulative_energy_array: a NumPy array containing the cumulative energy changes at each time step
         experienced by the battery
-        :return soc_array: a NumPy array containing the battery state of charge at each time step
+
+        :return: a NumPy array containing the battery state of charge at each time step
+        :rtype: np.ndarray
+
         """
+
         stored_energy_array = np.full_like(cumulative_energy_array, fill_value=self.stored_energy)
         stored_energy_array += cumulative_energy_array / 3600
 

@@ -18,8 +18,10 @@ from math import radians
 
 
 class GIS:
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, golang, library=None, force_update=False, current_coord=None, temp_flag=False):
+    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, golang, library=None,
+                 force_update=False, current_coord=None, temp_flag=False):
         """
+
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
         simulation's planned route from the Google Maps API and performing operations on the received data.
 
@@ -115,14 +117,15 @@ class GIS:
 
     def calculate_closest_gis_indices(self, cumulative_distances):
         """
+
         Takes in an array of point distances from starting point, returns a list of
         self.path indices of coordinates which have a distance from the starting point
         closest to the point distances.
 
-        :param cumulative_distances: (float[N]) array of distances,
-        where cumulative_distances[x] > cumulative_distances[x-1]
-
+        :param np.ndarray cumulative_distances: (float[N]) array of distances, where cumulative_distances[x] > cumulative_distances[x-1]
         :returns: (float[N]) array of indices of path
+        :rtype: np.ndarray
+
         """
 
         path_distances = self.path_distances.copy()
@@ -137,7 +140,9 @@ class GIS:
 
     def python_calculate_closest_gis_indices(self, cumulative_distances, average_distances):
         """
+
         Python implementation of golang_calculate_closest_gis_indices. See parent function for documentation details.
+
         """
 
         current_coordinate_index = 0
@@ -161,11 +166,12 @@ class GIS:
 
     def calculate_time_zones(self, coords):
         """
+
         Takes in an array of coordinates, return the time zone relative to UTC, of each location in seconds
 
-        :param coords: (float[N][lat lng]) array of coordinates
+        :param np.ndarray coords: (float[N][lat lng]) array of coordinates
+        :returns np.ndarray time_diff: (float[N]) array of time differences in seconds
 
-        :returns time_diff: (float[N]) array of time differences in seconds
         """
 
         timezones_return = np.zeros(len(coords))
@@ -189,11 +195,13 @@ class GIS:
 
     def get_time_zones(self, gis_indices):
         """
+
         Takes in an array of path indices, returns the time zone at each index
 
-        :param gis_indices: (float[N]) array of path indices
-
+        :param np.ndarray gis_indices: (float[N]) array of path indices
         :returns: (float[N]) array of time zones in seconds
+        :rtype: np.ndarray
+
         """
 
         return self.path_time_zones[gis_indices]
@@ -202,11 +210,13 @@ class GIS:
 
     def get_gradients(self, gis_indices):
         """
+
         Takes in an array of path indices, returns the road gradient at each index
 
-        :param gis_indices: (float[N]) array of path indices
-
+        :param np.ndarray gis_indices: (float[N]) array of path indices
         :returns: (float[N]) array of road gradients
+        :rtype np.ndarray:
+
         """
 
         return self.path_gradients[gis_indices]
@@ -215,30 +225,45 @@ class GIS:
         """
         Returns all N coordinates of the path in a NumPy array
         [N][latitude, longitude]
+
+        :rtype: np.ndarray
+
         """
 
         return self.path
 
     def get_path_elevations(self):
         """
+
         Returns all N elevations of the path in a NumPy array
         [N][elevation]
+
+        :rtype: np.ndarray
+
         """
 
         return self.path_elevations
 
     def get_path_distances(self):
         """
+
         Returns all N-1 distances of the path in a NumPy array
         [N-1][elevation]
+
+        :rtype: np.ndarray
+
         """
 
         return self.path_distances
 
     def get_path_gradients(self):
         """
+
         Returns all N-1 gradients of a path in a NumPy array
         [N-1][gradient]
+
+        :rtype: np.ndarray
+
         """
 
         return self.path_gradients
@@ -247,16 +272,17 @@ class GIS:
 
     def update_path(self, origin_coord, dest_coord, waypoints):
         """
+
         Returns a path between the origin coordinate and the destination coordinate,
         passing through a group of optional waypoints.
-
-        origin_coord: A NumPy array [latitude, longitude] of the starting coordinate
-        dest_coord: A NumPy array [latitude, longitude] of the destination coordinate
-        waypoint: A NumPy array [n][latitude, longitude], where n<=10
-
-        Returns: A NumPy array [n][latitude, longitude], marking out the path.
-
         https://developers.google.com/maps/documentation/directions/start
+
+        :param np.ndarray origin_coord: A NumPy array [latitude, longitude] of the starting coordinate
+        :param np.ndarray dest_coord: A NumPy array [latitude, longitude] of the destination coordinate
+        :param list waypoints: A NumPy array [n][latitude, longitude], where n<=10
+        :returns: A NumPy array [n][latitude, longitude], marking out the path.
+        :rtype: np.ndarray
+
         """
 
         # set up URL
@@ -318,19 +344,22 @@ class GIS:
 
         return route
 
-    def calculate_path_min_max(self):
+    def calculate_path_min_max(self):  # DEPRECATED
+        logging.warning(f"Using deprecated function 'calculate_path_min_max()'!")
         min_lat, min_long = self.path.min(axis=0)
         max_lat, max_long = self.path.max(axis=0)
         return [min_long, min_lat, max_long, max_lat]
 
     def calculate_path_elevations(self, coords):
         """
-        Returns the elevations of every coordinate in the array of coordinates passed in as a coordinate
 
+        Returns the elevations of every coordinate in the array of coordinates passed in as a coordinate
         See Error Message Interpretations: https://developers.google.com/maps/documentation/elevation/overview
 
-        :param coords: A NumPy array [n][latitude, longitude]
+        :param np.ndarray coords: A NumPy array [n][latitude, longitude]
         :returns: A NumPy array [n][elevation] in metres
+        :rtype: np.ndarray
+
         """
 
         # construct URL
@@ -384,8 +413,13 @@ class GIS:
 
     def calculate_current_heading_array(self):
         """
+
         Calculates the bearing of the vehicle between consecutive points
         https://www.movable-type.co.uk/scripts/latlong.html
+
+        :returns: array of bearings
+        :rtype: np.ndarray
+
         """
         bearing_array = np.zeros(len(self.path))
 
@@ -412,11 +446,12 @@ class GIS:
 
     def update_vehicle_position(self, incremental_distance):
         """
+
         Returns the closest coordinate to the current coordinate
 
-        :param incremental_distance: distance in m covered in the latest tick
-
+        :param float incremental_distance: distance in m covered in the latest tick
         :returns: The new index of the vehicle
+        :rtype: int
         """
 
         additional_distance = self.distance_remainder + incremental_distance
@@ -437,17 +472,31 @@ class GIS:
 
     @staticmethod
     def calculate_vector_square_magnitude(vector):
-        return sum(i**2 for i in vector)
+        """
+
+        Calculate the square magnitude of an input vector. Must be one-dimensional.
+
+        :param np.ndarray vector: NumPy array[N] representing a vector[N]
+        :return: square magnitude of the input vector
+        :rtype: float
+
+        """
+
+        return sum(i ** 2 for i in vector)
 
     @staticmethod
     def find_closest_coordinate_index(current_coord, path):
         """
+
         Returns the closest coordinate to current_coord in path
 
-        :param current_coord: A NumPy array[N] representing a N-dimensional vector
+        :param np.ndarray current_coord: A NumPy array[N] representing a N-dimensional vector
+        :param np.ndarray path: A NumPy array[M][N] of M coordinates which should be N-dimensional vectors
+        :returns: index of the closest coordinate.
+        :rtype: int
 
-        :param path: A NumPy array[M][N] of M coordinates which should be N-dimensional vectors
         """
+
         to_current_coord_from_path = np.abs(path - current_coord)
         distances_from_current_coord = np.zeros(len(to_current_coord_from_path))
         for i in range(len(to_current_coord_from_path)):
@@ -457,6 +506,20 @@ class GIS:
         return distances_from_current_coord.argmin()
 
     def speeds_with_waypoints(self, path, distances, speeds, waypoints, verbose=False):
+        """
+
+        Calculate speeds with waypoints.
+
+        :param np.ndarray path: array of path coordinates[N][2]
+        :param np.ndarray distances: array of distances[N]
+        :param np.ndarray speeds: array of speeds[N]
+        :param list waypoints: array of waypoints[2]
+        :param bool verbose: flag of whether to be verbose or not
+        :return: modified speeds array based on waypoints
+        :rtype: np.ndarray
+
+        """
+
         # First we need to find the closest path coordinates for each waypoint/checkpoint
         path_rad = np.array([[radians(p[0]), radians(p[1])] for p in path])
         tree = BallTree(path_rad, metric='haversine')

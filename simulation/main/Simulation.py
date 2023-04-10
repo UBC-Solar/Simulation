@@ -19,16 +19,34 @@ from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
-from simulation.common.plotting import Graph, GraphsManager
+from simulation.common.plotting import Graph, GraphManager
 
 
 class SimulationReturnType(Enum):
+    """
+
+    This enum exists to discretize different data types run_model should return.
+
+    """
+
     time_taken = 0
     distance_travelled = 1
     simulation_results = 2
 
 
 class Simulation:
+    """
+    Attributes:
+        google_api_key: API key to access GoogleMaps API. Stored in a .env file. Please ask Simulation Lead for this!
+        weather_api_key: API key to access OpenWeather API. Stored in a .env file. Please ask Simulation Lead for this!
+        origin_coord: array containing latitude and longitude of route start point
+        dest_coord: array containing latitude and longitude of route end point
+        waypoints: array containing latitude and longitude pairs of route waypoints
+        tick: length of simulation's discrete time step (in seconds)
+        simulation_duration: length of simulated time (in seconds)
+        start_hour: describes the hour to start the simulation (typically either 7 or 9, these
+        represent 7am and 9am respectively)
+    """
 
     def __init__(self, initial_conditions, return_type, race_type, golang=True):
         """
@@ -39,19 +57,6 @@ class Simulation:
         :param return_type: discretely defines what kind of data run_model should return.
         :param golang: boolean which controls whether GoLang implementations are used when available
 
-        Depending on the race type, the following initialisation parameters are read from the corresponding
-        settings json file located in the config folder.
-
-        google_api_key: API key to access GoogleMaps API. Stored in a .env file. Please ask Chris for this!
-        weather_api_key: API key to access OpenWeather API. Stored in a .env file. Please ask Chris for this!
-        origin_coord: array containing latitude and longitude of route start point
-        dest_coord: array containing latitude and longitude of route end point
-        waypoints: array containing latitude and longitude pairs of route waypoints
-        tick: length of simulation's discrete time step (in seconds)
-        simulation_duration: length of simulated time (in seconds)
-        start_hour: describes the hour to start the simulation (typically either 7 or 9, these
-        represent 7am and 9am respectively)
-        golang: boolean determining whether to use faster GoLang implementations when available
         """
 
         # ----- Return type -----
@@ -113,6 +118,7 @@ class Simulation:
         # ----- GoLang library initialisation -----
         self.golang = golang
         self.library = simulation.Libraries(raiseExceptionOnFail=False)
+
         if self.golang and self.library.found_compatible_binaries() is False:
             # If compatible GoLang binaries weren't found, disable GoLang usage.
             self.golang = False
@@ -156,11 +162,12 @@ class Simulation:
 
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
-        self.plotting = GraphsManager()
+        self.plotting = GraphManager()
 
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
                   route_visualization=False, **kwargs):
         """
+
         Updates the model in tick increments for the entire simulation duration. Returns
         a final battery charge and a distance travelled for this duration, given an
         initial charge, and a target speed. Also requires the current time and location.
@@ -211,7 +218,7 @@ class Simulation:
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
             speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
-                                                      self.waypoints, verbose=False)[:self.simulation_duration + 1]
+                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
             if verbose:
                 helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
                                    ["Speed before waypoints", " Speed after waypoints"],
@@ -277,6 +284,7 @@ class Simulation:
 
     def __run_simulation_calculations(self, speed_kmh, tick_array, not_charge, pbar, verbose=False):
         """
+
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
         containing members that specify total distance travelled and time taken at the end of the simulation
         and final battery state of charge. This is where most of the main simulation logic happens.
@@ -285,7 +293,9 @@ class Simulation:
         :param tick_array: array that specifies ticks used in calculations
         :param not_charge: array that specifies when the car is charging for calculations
         :param pbar: progress bar used to track Simulation progress
+
         """
+
         pbar.update(1)
 
         # ----- Expected distance estimate -----

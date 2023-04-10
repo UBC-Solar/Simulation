@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+import numpy as np
 
 class Car(ABC):
     def __init__(self, array, battery, lvs, motor):

@@ -1,3 +1,4 @@
+import numpy as np
 from simulation.arrays.base_array import BaseArray
 
 
@@ -19,7 +20,8 @@ class BasicArray(BaseArray):
     @staticmethod
     def calculate_produced_power(solar_irradiance, panel_efficiency, panel_size):
         """
-        returns the power produced by a solar panel in watts
+
+        Returns the power produced by a solar panel in Watts
 
         :param solar_irradiance: (float) a value for global horizontal irradiance (GHI)
             in W/m2
@@ -28,6 +30,8 @@ class BasicArray(BaseArray):
         :param panel_size: (float) the area of the solar panels in m2
         
         :returns: the power produced by a solar panel in W
+        :rtype: float
+
         """
 
         produced_power = solar_irradiance * panel_efficiency * panel_size
@@ -36,9 +40,10 @@ class BasicArray(BaseArray):
 
     def update(self, tick):
         """
-        updates solar array model for a single tick
 
-        :param tick: (float) the length of time for the tick (in seconds)
+        Updates solar array model for a single tick
+
+        :param float tick: the length of time for the tick (in seconds)
 
         note: do not use this please. Use calculate_produced_energy instead.
         """
@@ -49,15 +54,18 @@ class BasicArray(BaseArray):
 
     def calculate_produced_energy(self, solar_irradiance, tick):
         """
-        returns a numpy array with the energy produced by the solar panels across
+
+        Returns a numpy array with the energy produced by the solar panels across
         each the length of each tick
 
-        :param solar_irradiance: (float[N]) the global horizontal irradiance(GHI) at
+        :param np.ndarray solar_irradiance: (float[N]) the global horizontal irradiance(GHI) at
             each moment experienced by the vehicle, in W/m2
-        :param tick: (float) the duration of a time step in seconds
+        :param float tick: (float) the duration of a time step in seconds
 
-        returns: (float[N]) array of energy produced by the solar panels on the vehicle
+        :returns: (float[N]) array of energy produced by the solar panels on the vehicle
             in Joules
+        :rtype: np.ndarray
+
         """
 
         return solar_irradiance * self.panel_efficiency * self.panel_size * tick

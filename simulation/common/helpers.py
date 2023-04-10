@@ -1,5 +1,7 @@
 import datetime
 import functools
+import logging
+
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -17,6 +19,14 @@ Description: contains the simulation's helper functions.
 
 
 def timeit(func):
+    """
+
+    Apply this decorator to functions in order to time and print how long they take to execute.
+
+    :param func: function to be timed
+
+    """
+
     @functools.wraps(func)
     def wrapper_timer(*args, **kwargs):
         print(f">>> Running {func.__name__!r}... \n")
@@ -33,16 +43,30 @@ def timeit(func):
 def date_from_unix_timestamp(unix_timestamp):
     """
 
-    Args:
-        unix_timestamp: A unix timestamp
+    Return a stringified UTC datetime from UNIX timestamped.
 
-    Returns: A string of the UTC representation of the UNIX timestamp in the format Y-m-d H:M:S
+    :param int unix_timestamp: A unix timestamp
+
+    :returns: A string of the UTC representation of the UNIX timestamp in the format Y-m-d H:M:S
+    :rtype: str
 
     """
+
     return datetime.datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
 def check_for_non_consecutive_zeros(array, verbose=False):
+    """
+
+    Checks if an array has non-consecutive zeroes as elements.
+
+    :param np.ndarray array: array to be examined
+    :param bool verbose: whether method should be verbose
+    :return: whether the array has non-consecutive zeroes
+    :rtype: bool
+
+    """
+
     zeroed_indices = np.where(array == 0)[0]
 
     if len(zeroed_indices) == 0:
@@ -63,8 +87,31 @@ def check_for_non_consecutive_zeros(array, verbose=False):
 
 
 def reshape_and_repeat(input_array, reshape_length):
+    """
+
+    Reshape and repeat an input array to have a certain length while maintaining its elements.
+    Examples:
+        If you want a constant speed for the entire simulation, insert a single element
+        into the input_speed array.
+
+            input_speed = np.array([30]) <-- constant speed of 30km/h
+
+        If you want 50km/h in the first half of the simulation and 60km/h in the second half,
+        do the following:
+
+            input_speed = np.array([50, 60])
+
+        This logic will apply for all subsequent array lengths (3, 4, 5, etc.)
+    Keep in mind, however, that the condition len(input_array) <= reshape_length must be true
+
+    :param np.ndarray input_array: array to be modified
+    :param float reshape_length: length for input array to be modified to
+    :return: modified array
+    :rtype: np.ndarray
+
+    """
+
     if input_array.size >= reshape_length:
-        print(f"Input array of shape {input_array.shape} was not reshaped\n")
         return input_array
     else:
         quotient_remainder_tuple = divmod(reshape_length, input_array.size)
@@ -72,19 +119,20 @@ def reshape_and_repeat(input_array, reshape_length):
         result = np.append(temp, np.repeat(
             temp[-1], quotient_remainder_tuple[1]))
 
-        print(
-            f"Reshaped input array from {input_array.shape} to {result.shape}\n")
         return result
 
 
 def generate_deceleration_array(initial_velocity, final_velocity, deceleration_interval):
     """
+
     Create an array where each element represents a step in the deceleration from initial_velocity to final_velocity.
 
-    :param initial_velocity: the velocity at which deceleration occurs for the first time (km/h)
-    :param final_velocity: the target velocity that is being decelerated to (km/h)
-    :param deceleration_interval: the time it will take to decelerate from initial velocity to final velocity (s)
+    :param float initial_velocity: the velocity at which deceleration occurs for the first time (km/h)
+    :param float final_velocity: the target velocity that is being decelerated to (km/h)
+    :param int deceleration_interval: the time it will take to decelerate from initial velocity to final velocity (s)
     :return: an array of the velocities between initial_velocity and final_velocity
+    :rtype: np.ndarray
+
     """
 
     deceleration_instance_size = (final_velocity - initial_velocity) / (deceleration_interval + 1)
@@ -93,15 +141,19 @@ def generate_deceleration_array(initial_velocity, final_velocity, deceleration_i
 
 def apply_deceleration(input_speed_array, deceleration_interval):
     """
+
     Replace instances of instant deceleration in a velocity array with uniform changes in velocity that are spread
     over the deceleration_interval.
 
     The distance travelled by the simulation will be reduced by a negligible amount.
 
-    :param input_speed_array: the velocity array (km/h)
-    :param deceleration_interval: the duration of the deceleration intervals (s)
+    :param np.ndarray input_speed_array: the velocity array (km/h)
+    :param int deceleration_interval: the duration of the deceleration intervals (s)
     :return: a speed array with uniform deceleration (km/h)
+    :rtype: np.ndarray
+
     """
+
     if input_speed_array is None:
         return np.array([])
     if deceleration_interval <= 0:
@@ -129,13 +181,16 @@ def apply_deceleration(input_speed_array, deceleration_interval):
 
 def is_valid_speed_array(deceleration_interval, idx, initial_velocity, input_speed_array):
     """
+
     Check that the specified speed array is valid in relation to the chosen deceleration interval.
 
-    :param deceleration_interval: the duration of the deceleration intervals (s)
-    :param idx: the index used to check our deceleration interval
-    :param initial_velocity: the velocity at the beginning of the deceleration period
-    :param input_speed_array: the speed array
+    :param int deceleration_interval: the duration of the deceleration intervals (s)
+    :param int idx: the index used to check our deceleration interval
+    :param float initial_velocity: the velocity at the beginning of the deceleration period
+    :param np.ndarray input_speed_array: the speed array
     :return: True if the array is valid, False if it is not
+    :rtype: bool
+
     """
     if deceleration_interval > len(input_speed_array) - 1:  # Check that the speed array isn't smaller than the
         # deceleration interval
@@ -149,18 +204,32 @@ def is_valid_speed_array(deceleration_interval, idx, initial_velocity, input_spe
 
 
 def hour_from_unix_timestamp(unix_timestamp):
+    """
+
+    Return the hour of a UNIX timestamp.
+
+    :param float unix_timestamp: a UNIX timestamp
+    :return: hour of UTC datetime from unix timestamp
+    :rtype: int
+
+    """
+
     val = datetime.datetime.utcfromtimestamp(unix_timestamp)
     return val.hour
 
 
 def adjust_timestamps_to_local_times(timestamps, starting_drive_time, time_zones):
     """
-    Takes in the timestamps of the vehicle's driving duration, starting drive time, and a list of time zones,
-        returns the local times at each point
 
-    :param timestamps: (int[N]) timestamps starting from 0, in seconds
-    :param starting_drive_time: (int[N]) local time that the car was start to be driven in UNIX time (Daylight Saving included)
-    :param time_zones: (int[N])
+    Takes in the timestamps of the vehicle's driving duration, starting drive time, and a list of time zones,
+    returns the local times at each point
+
+    :param np.ndarray timestamps: (int[N]) timestamps starting from 0, in seconds
+    :param float starting_drive_time: (int[N]) local time that the car was start to be driven in UNIX time (Daylight Saving included)
+    :param np.ndarray time_zones: (int[N])
+    :returns: array of local times at each point
+    :rtype: np.ndarray
+
     """
 
     return np.array(timestamps + starting_drive_time - (time_zones[0] - time_zones), dtype=np.uint64)
@@ -168,14 +237,16 @@ def adjust_timestamps_to_local_times(timestamps, starting_drive_time, time_zones
 
 def calculate_path_distances(coords):
     """
+
     The coordinates are spaced quite tightly together, and they capture the
     features of the road. So, the lines between every pair of adjacent
     coordinates can be treated like a straight line, and the distances can
     thus be obtained.
 
-    :param coords: A NumPy array [n][latitude, longitude]
-
+    :param np.ndarray coords: A NumPy array [n][latitude, longitude]
     :returns path_distances: a NumPy array [n-1][distances],
+    :rtype: np.ndarray
+
     """
 
     offset = np.roll(coords, (1, 1))
@@ -205,15 +276,16 @@ def calculate_path_distances(coords):
 
 def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
     """
+
     Returns the array of wind speed in m/s, in the direction opposite to the
         bearing of the vehicle
 
-    vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
-    wind_speeds: (float[N]) The absolute speeds in m/s
-    wind_directions: (float[N]) The wind direction in the meteorlogical convention. To convert from
-        meteorlogical convention to azimuth angle, use (x + 180) % 360
+    :param np.ndarray vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
+    :param np.ndarray wind_speeds: (float[N]) The absolute speeds in m/s
+    :param np.ndarray wind_directions: (float[N]) The wind direction in the meteorlogical convention. To convert from meteorological convention to azimuth angle, use (x + 180) % 360
+    :returns: The wind speeds in the direction opposite to the bearing of the vehicle
+    :rtype: np.ndarray
 
-    Returns: The wind speeds in the direction opposite to the bearing of the vehicle
     """
 
     # wind direction is 90 degrees meteorlogical, so it is 270 degrees azimuthal. car is 90 degrees
@@ -224,33 +296,42 @@ def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directi
 
 def get_day_of_year_map(date):
     """
+
     Extracts day, month, year, from datetime object
+
+    :param datetime.date date: date to be decomposed
+
     """
     return get_day_of_year(date.day, date.month, date.year)
 
 
 def get_day_of_year(day, month, year):
     """
-        Calculates the day of the year, given the day, month and year.
 
-        day, month, year: self explanatory
+    Calculates the day of the year, given the day, month and year.
+    Day refers to a number representing the nth day of the year. So, Jan 1st will be the 1st day of the year
 
-        Day refers to a number representing the n'th day of the year. So, Jan 1st will be the 1st day of the year
-        """
+    :param int day: nth day of the year
+    :param int month: month
+    :param int year: year
+    :returns: day of year
+    :rtype: int
+
+    """
 
     return (datetime.date(year, month, day) - datetime.date(year, 1, 1)).days + 1
 
 
 def calculate_declination_angle(day_of_year):
     """
+
     Calculates the Declination Angle of the Earth at a given day
     https://www.pveducation.org/pvcdrom/properties-of-sunlight/declination-angle
 
-    day_of_year: The number of the day of the current year, with January 1
-        being the first day of the year.
+    :param np.ndarray day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+    :returns: The declination angle of the Earth relative to the Sun, in degrees
+    :rtype: np.ndarray
 
-    Returns: The declination angle of the Earth relative to the Sun, in
-        degrees
     """
 
     declination_angle = -23.45 * np.cos(np.radians((np.float_(360) / 365) *
@@ -263,14 +344,14 @@ def calculate_declination_angle(day_of_year):
 
 def calculate_eot_correction(day_of_year):
     """
+
     Approximates and returns the correction factor between the apparent
     solar time and the mean solar time
 
-    day_of_year: The number of the day of the current year, with January 1
-        being the first day of the year.
+    :param np.ndarray day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+    :returns: The Equation of Time correction EoT in minutes, where apparent Solar Time = Mean Solar Time + EoT
+    :rtype: np.ndarray
 
-    Returns: The Equation of Time correction EoT in minutes, where
-        Apparent Solar Time = Mean Solar Time + EoT
     """
 
     b = np.radians((np.float_(360) / 364) * (day_of_year - 81))
@@ -282,12 +363,14 @@ def calculate_eot_correction(day_of_year):
 
 def calculate_LSTM(time_zone_utc):
     """
+
     Calculates and returns the LSTM, or Local Solar Time Meridian.
     https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
 
-    time_zone_utc: The UTC time zone of your area in hours of UTC offset.
+    :param np.ndarray time_zone_utc: The UTC time zone of your area in hours of UTC offset.
+    :returns: The Local Solar Time Meridian in degrees
+    :rtype: np.ndarray
 
-    Returns: The Local Solar Time Meridian in degrees
     """
 
     return 15 * time_zone_utc
@@ -296,20 +379,21 @@ def calculate_LSTM(time_zone_utc):
 def local_time_to_apparent_solar_time(time_zone_utc, day_of_year, local_time,
                                       longitude):
     """
+
     Converts between the local time to the apparent solar time and returns the apparent
     solar time.
     https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
 
-    time_zone_utc: The UTC time zone of your area in hours of UTC offset.
-    day_of_year: The number of the day of the current year, with January 1
-        being the first day of the year.
-    local_time: The local time in hours from midnight (Adjust for Daylight Savings)
-    longitude: The longitude of a location on Earth
+    Note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
+        calculation will end up just the same
 
-    note: If local time and time_zone_utc are both unadjusted for Daylight Savings, the
-            calculation will end up just the same
+    :param np.ndarray time_zone_utc: The UTC time zone of your area in hours of UTC offset.
+    :param np.ndarray day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+    :param np.ndarray local_time: The local time in hours from midnight (Adjust for Daylight Savings)
+    :param np.ndarray longitude: The longitude of a location on Earth
+    :returns: The Apparent Solar Time of a location, in hours from midnight
+    :rtype: np.ndarray
 
-    Returns: The Apparent Solar Time of a location, in hours from midnight
     """
 
     lstm = calculate_LSTM(time_zone_utc)
@@ -323,16 +407,18 @@ def local_time_to_apparent_solar_time(time_zone_utc, day_of_year, local_time,
 
 def calculate_path_gradients(elevations, distances):
     """
+
     Get the approximate gradients of every point on the path.
-
-    :param elevations: [N][elevations]
-    :param distances: [N-1][distances]
-
-    :returns gradients: [N-1][gradients]
 
     Note:
         - gradient > 0 corresponds to uphill
         - gradient < 0 corresponds to downhill
+
+    :param np.ndarray elevations: [N][elevations]
+    :param np.ndarray distances: [N-1][distances]
+    :returns gradients: [N-1][gradients]
+    :rtype: np.ndarray
+
     """
 
     # subtract every next elevation with the previous elevation to
@@ -354,8 +440,9 @@ def calculate_path_gradients(elevations, distances):
     return gradients
 
 
-def cull_dataset(coords):
+def cull_dataset(coords, cull_factor=625):  # DEPRECATED
     """
+
     As we currently have a limited number of API calls(60) every minute with the
         current Weather API, we must shrink the dataset significantly. As the
         OpenWeatherAPI models have a resolution of between 2.5 - 70 km, we will
@@ -364,24 +451,34 @@ def cull_dataset(coords):
 
     As the Google Maps API has a resolution of around 40m between points,
         we must cull at 625:1 (because 25,000m / 40m = 625)
-    """
 
-    return coords[::625]
+    :param int cull_factor: factor in which the input array should be culled, default is 625.
+    :param np.ndarray coords: array to be culled
+    :returns: culled array
+    :rtype: np.ndarray
+
+    """
+    logging.warning("Using deprecated function 'cull_dataset()'!")
+    return coords[::cull_factor]
 
 
 def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     """
+
     Gets the two terms to calculate and return elevation angle, given the
     declination angle, hour angle, and latitude.
 
     This method separates the math part of the calculation from its caller
     method to optimize for numba compilation.
 
-    declination_angle: The declination angle of the Earth relative to the Sun
-    hour_angle: The hour angle of the sun in the sky
+    :param np.ndarray latitude: array of latitudes
+    :param np.ndarray declination_angle: The declination angle of the Earth relative to the Sun
+    :param np.ndarray hour_angle: The hour angle of the sun in the sky
+    :returns: The elevation angle in degrees
+    :rtype: np.ndarray
 
-    Returns: The elevation angle in degrees
     """
+
     term_1 = np.sin(np.radians(declination_angle)) * np.sin(np.radians(latitude))
     term_2 = np.cos(np.radians(declination_angle)) * np.cos(np.radians(latitude)) * np.cos(np.radians(hour_angle))
     elevation_angle = np.arcsin(term_1 + term_2)
@@ -391,16 +488,19 @@ def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
 
 def find_runs(x):
     """
+
     Method to identify runs of consecutive items in NumPy array
     Based on code from: user alimanfoo on https://gist.github.com/alimanfoo/c5977e87111abe8127453b21204c1065
 
     :returns a tuple of 3 NumPy arrays for (run_values, run_starts, run_lengths)
-    Args:
-        x: a 1D NumPy array3
-    Throws: ValueError if array dimension is greater than 1
+    :param x: a 1D NumPy array3
+    :raises: ValueError if array dimension is greater than 1
 
-    Returns: a tuple of 3 NumPy arrays for (run_values, run_starts, run_lengths)
+    :returns: a tuple of 3 NumPy arrays for (run_values, run_starts, run_lengths)
+    :rtype: tuple
+
     """
+
     x = np.asanyarray(x)
     if x.ndim != 1:
         raise ValueError('only 1D array supported')
@@ -440,18 +540,17 @@ def find_multi_index_runs(x):
 def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, race_type, timestamps, verbose):
     """
 
-    Args:
-        speed_kmh: A NumPy array representing the speed at each timestamp in km/h
-        start_hour: An integer representing the race's start hour
-        simulation_duration: An integer representing simulation duration in seconds
-        race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
-        timestamps: A NumPy array representing the timestamps for the simulated race
-        verbose: A flag to show speed array modifications for debugging purposes
+    Applies regulation timing constraints to a speed array.
 
-    Returns: constrained_speed_kmh, a speed array with race timing constraints applied to it, not_charge,
-    a boolean array representing when the car can charge and when it cannot (1 = charge, 0 = not_charge)
-
-    Raises: ValueError is race_type is not one of "ASC" or "FSGP"
+    :param np.ndarray speed_kmh: A NumPy array representing the speed at each timestamp in km/h
+    :param int start_hour: An integer representing the race's start hour
+    :param int simulation_duration: An integer representing simulation duration in seconds
+    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
+    :param np.ndarray timestamps: A NumPy array representing the timestamps for the simulated race
+    :param bool verbose: A flag to show speed array modifications for debugging purposes
+    :returns: constrained_speed_kmh, a speed array with race timing constraints applied to it, not_charge, a boolean array representing when the car can charge and when it cannot (1 = charge, 0 = not_charge)
+    :rtype: np.ndarray
+    :raises: ValueError is race_type is not one of "ASC" or "FSGP"
 
     """
 
@@ -488,27 +587,27 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
 def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True):
     """
 
-        This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
-        The precondition of this function is that the length of arrays_to_plot and array_labels are equal.
+    This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
+    The precondition of this function is that the length of arrays_to_plot and array_labels are equal.
 
-        This is because there be a 1:1 mapping of each entry of arrays_to_plot to array_labels such that:
-            arrays_to_plot[n] has label array_labels[n]
+    This is because there be a 1:1 mapping of each entry of arrays_to_plot to array_labels such that:
+        arrays_to_plot[n] has label array_labels[n]
 
-        Another precondition of this function is that each of the arrays within arrays_to_plot also have the
-        same length. This is each of them will share the same time axis.
+    Result:
+        Produces a 3 x ceil(len(arrays_to_plot) / 3) plot
+        If save is enabled, save html file
 
-        Args:
-            timestamps: An array of timestamps for the race
-            arrays_to_plot: An array of NumPy arrays to plot
-            array_labels: An array of strings for the individual plot titles
-            graph_title: A string that serves as the plot's main title
-            save: Boolean flag to contorl whether to save an .html file
+    Another precondition of this function is that each of the arrays within arrays_to_plot also have the
+    same length. This is each of them will share the same time axis.
 
-        Result:
-            Produces a 3 x ceil(len(arrays_to_plot) / 3) plot
-            If save is enabled, save html file
+    :param np.ndarray timestamps: An array of timestamps for the race
+    :param list arrays_to_plot: An array of NumPy arrays to plot
+    :param list array_labels: An array of strings for the individual plot titles
+    :param str graph_title: A string that serves as the plot's main title
+    :param bool save: Boolean flag to control whether to save an .html file
 
-        """
+    """
+
     compress_constant = int(timestamps.shape[0] / 5000)
 
     for index, array in enumerate(arrays_to_plot):
@@ -528,8 +627,12 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
         figures.append(figure(title=array_labels[index], x_axis_label="Time (hr)",
                               y_axis_label=array_labels[index], x_axis_type="datetime"))
 
-        # add line renderers to each figure
-        colours = ('#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889', '#fa1b9a', '#F05223')
+        # add line renderers to each figur
+        colours = (
+            '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889', '#fa1b9a',
+            '#F05223', '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889',
+            '#fa1b9a', '#F05223', '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3',
+            '#892889', '#fa1b9a', '#F05223', '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#EC1557', '#F05223')
         figures[index].line(timestamps[::compress_constant] * 1000, data_array, line_color=colours[index],
                             line_width=2)
 
@@ -548,10 +651,12 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
 
 def route_visualization(coords, visible=True):
     """
-    Takes in a list of coordinates and visualizes them using MapBox.
 
-    :Param coords: A NumPy array [n][latitude, longitude]
+    Takes in a list of coordinates and visualizes them using MapBox.
     Outputs a window that visualizes the route with given coordinates
+
+    :param np.ndarray coords: A NumPy array [n][latitude, longitude]
+
     """
 
     point_labels = [f"Point {str(i)}" for i in range(len(coords))]
@@ -583,12 +688,11 @@ def route_visualization(coords, visible=True):
 def simple_plot_graph(data, title, visible=True):
     """
 
-    Args:
-        visible: A control flag specifying if the plot should be shown
-        data: A NumPy[n] array of data to plot
-        title: The graph title
+    Displays a graph of the data using Matplotlib
 
-    Result: Displays a graph of the data using Matplotlib
+    :param bool visible: A control flag specifying if the plot should be shown
+    :param np.ndarray data: A NumPy[n] array of data to plot
+    :param str title: The graph title
 
     """
     fig, ax = plt.subplots()
@@ -601,24 +705,25 @@ def simple_plot_graph(data, title, visible=True):
 
 def calculate_race_completion_time(path_length, cumulative_distances):
     """
+
     This function uses the maximum path distance and cumulative distances travelled
     during the simulation to identify how long the car takes to finish travelling the route.
 
     This problem, although framed in the context of the Simulation, is just to find the array position of the first
     value that is greater or equal to a target value
 
-    Args:
-        path_length: The length of the path the vehicle travels on
-        cumulative_distances: A NumPy array representing the cumulative distanced travelled by the vehicle
+    :param float path_length: The length of the path the vehicle travels on
+    :param np.ndarray cumulative_distances: A NumPy array representing the cumulative distanced travelled by the vehicle
 
     Pre-Conditions:
         path_length and cumulative_distances may be in any length unit, but they must share the same length unit
         Each index of the cumulative_distances array represents one second of the simulation
 
-    Returns: The number of seconds the vehicle requires to travel the full path length.
-    If vehicle does not travel the full path length, returns 
+    :returns: The number of seconds the vehicle requires to travel the full path length. If vehicle does not travel the full path length, returns
+    :rtype: int
 
     """
+
     # Create a boolean array to encode whether the vehicle has completed or not completed the route at a given timestamp
     # This is based on the assumption that each index represents a single timestamp of one second
     crossed_finish_line = np.where(cumulative_distances >= path_length, 1, 0)
@@ -634,11 +739,11 @@ def calculate_race_completion_time(path_length, cumulative_distances):
 
 def plot_longitudes(coordinates):
     """
-    Plots the longitudes of a set of coordinates. Meant to support Simulation development and verification of route data.
-    Args:
-        coordinates: A NumPy array (float[N][longitude, latitude]) representing a path of coordinates
 
-    Returns: Nothing, but plots the longitudes
+    Plots the longitudes of a set of coordinates. Meant to support Simulation development and verification of route data.
+
+    :param np.ndarray coordinates: A NumPy array (float[N][longitude, latitude]) representing a path of coordinates
+    :returns: Nothing, but plots the longitudes
 
     """
     simple_plot_graph(coordinates[:, 0], "Longitudes")
@@ -646,14 +751,16 @@ def plot_longitudes(coordinates):
 
 def plot_latitudes(coordinates):
     """
-    Plots the latitudes of a set of coordinates. Meant to support Simulation development and verification of route data.
-    Args:
-        coordinates: A NumPy array (float[N][longitude, latitude]) representing a path of coordinates
 
-    Returns: Nothing, but plots the latitudes
+    Plots the latitudes of a set of coordinates. Meant to support Simulation development and verification of route data.
+
+    :param np.ndarray coordinates: A NumPy array (float[N][longitude, latitude]) representing a path of coordinates
+    :returns: Nothing, but plots the latitudes
 
     """
+
     simple_plot_graph(coordinates[:, 1], "Latitudes")
+
 
 if __name__ == '__main__':
     # speed_array input
