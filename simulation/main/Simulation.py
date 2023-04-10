@@ -19,6 +19,7 @@ from simulation.common import helpers
 from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
+from simulation.common.plotting import Graph, GraphsManager
 
 
 class SimulationReturnType(Enum):
@@ -155,6 +156,8 @@ class Simulation:
 
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
+        self.plotting = GraphsManager()
+
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
                   route_visualization=False, **kwargs):
         """
@@ -255,10 +258,8 @@ class Simulation:
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)",
                        "Raw SOC (%)", "Raw Speed (km/h)"]
 
-            helpers.plot_graph(timestamps=self.timestamps,
-                               arrays_to_plot=arrays_to_plot,
-                               array_labels=y_label,
-                               graph_title="Simulation Result")
+            self.plotting.add_graph_to_queue(Graph(arrays_to_plot, y_label, "Results"))
+            self.plotting.plot_graphs(self.timestamps)
 
         if self.race_type == "FSGP":
             helpers.route_visualization(self.gis.single_lap_path, visible=route_visualization)
@@ -415,26 +416,20 @@ class Simulation:
         state_of_charge = battery_variables_array[0]
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
 
+        speed_kmh = np.logical_and(not_charge, state_of_charge) * speed_kmh
+
         if verbose:
+            indices_and_environment_graph = Graph([temp, closest_gis_indices, closest_weather_indices, gradients,
+                                                   time_zones, gis_vehicle_bearings],
+                                                  ["speed dist (m)", "gis ind", "weather ind", "gradients (m)",
+                                                   "time zones",
+                                                   "vehicle bearings"], "Indices and Environment variables")
+            self.plotting.add_graph_to_queue(indices_and_environment_graph)
 
-            helpers.plot_graph(timestamps=self.timestamps,
-                               arrays_to_plot=[temp, closest_gis_indices, closest_weather_indices, gradients,
-                                               time_zones, gis_vehicle_bearings],
-                               array_labels=["speed dist (m)", "gis ind", "weather ind", "gradients (m)", "time zones",
-                                             "vehicle bearings"],
-                               graph_title="Indices and Environment variables")
-            arrays_to_plot = [speed_kmh, state_of_charge]
-
-            for arr in [state_of_charge, not_charge]:
-                speed_kmh = np.logical_and(speed_kmh, arr) * speed_kmh
-                arrays_to_plot.append(speed_kmh)
-
-            helpers.plot_graph(timestamps=self.timestamps,
-                               arrays_to_plot=arrays_to_plot,
-                               array_labels=["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
-                               graph_title="Speed Boolean Operations")
-        else:
-            speed_kmh = np.logical_and(not_charge, state_of_charge) * speed_kmh
+            speed_boolean_graph = Graph([speed_kmh, state_of_charge],
+                                        ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
+                                        "Speed Boolean Operations")
+            self.plotting.add_graph_to_queue(speed_boolean_graph)
 
         pbar.update(1)
 
