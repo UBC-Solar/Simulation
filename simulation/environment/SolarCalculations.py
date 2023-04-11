@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 """
 A class to perform calculation and approximations for obtaining quantities
     such as solar time, solar position, and the various types of solar irradiance.
@@ -8,10 +7,8 @@ A class to perform calculation and approximations for obtaining quantities
 
 import datetime
 import numpy as np
-import sys
+
 from simulation.common import helpers
-from tqdm import tqdm
-import time as timer
 
 
 class SolarCalculations:

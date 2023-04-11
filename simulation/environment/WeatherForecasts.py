@@ -7,6 +7,7 @@ import numpy as np
 import os
 import requests
 import sys
+
 from simulation.cache.weather import weather_directory
 from simulation.common import helpers
 from tqdm import tqdm

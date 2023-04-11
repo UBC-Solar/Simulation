@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from simulation.common import Producer
 
 

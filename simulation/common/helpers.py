@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import time as timer
+
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
-from bokeh.palettes import Bokeh8
 from bokeh.plotting import figure, show, output_file
 from matplotlib import pyplot as plt
 from simulation.common import constants
