@@ -28,10 +28,9 @@ def GetSimulationData(golang=True) -> SimulationResult:
     initialSimulationConditions = SimulationState(args)
     simulation_model = Simulation(initialSimulationConditions, return_type, race_type="ASC", golang=golang)
 
-    optimized = simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False, route_visualization=False,
-                                           return_results_object=True)
+    results = simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False, route_visualization=False)
 
-    return optimized
+    return results
 
 
 if __name__ == "__main__":

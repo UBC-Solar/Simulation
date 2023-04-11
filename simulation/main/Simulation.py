@@ -1,19 +1,14 @@
 import json
 import sys
-from enum import Enum
-
 import logging
 import os
-
 import numpy as np
-
-from tqdm import tqdm
-
 import simulation
 
+from tqdm import tqdm
+from enum import Enum
 from dotenv import load_dotenv
 from simulation.common import helpers
-from simulation.common.helpers import adjust_timestamps_to_local_times, get_array_directional_wind_speed
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 from simulation.common.plotting import Graph, GraphManager
@@ -33,6 +28,7 @@ class SimulationReturnType(Enum):
 
 class Simulation:
     """
+
     Attributes:
         google_api_key: API key to access GoogleMaps API. Stored in a .env file. Please ask Simulation Lead for this!
         weather_api_key: API key to access OpenWeather API. Stored in a .env file. Please ask Simulation Lead for this!
@@ -43,10 +39,12 @@ class Simulation:
         simulation_duration: length of simulated time (in seconds)
         start_hour: describes the hour to start the simulation (typically either 7 or 9, these
         represent 7am and 9am respectively)
+
     """
 
     def __init__(self, initial_conditions, return_type, race_type, golang=True):
         """
+
         Instantiates a simple model of the car.
 
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
@@ -83,7 +81,8 @@ class Simulation:
         self.tick = args['tick']
 
         if self.race_type == "ASC":
-            self.simulation_duration = 8 * 24 * 60 * 60  # Arbitrary length as ASC doesn't have a time limit
+            race_length = args['race_length']  # Race length in days, arbitrary as ASC doesn't have a time limit
+            self.simulation_duration = race_length * 24 * 60 * 60
         elif self.race_type == "FSGP":
             self.simulation_duration = args['simulation_duration']
 
@@ -354,7 +353,7 @@ class Simulation:
         time_zones = self.gis.get_time_zones(closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization, time_zones)
+        local_times = helpers.adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization, time_zones)
 
         pbar.update(1)
 
@@ -372,7 +371,7 @@ class Simulation:
         pbar.update(1)
 
         # Get the wind speeds at every location
-        wind_speeds = get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
+        wind_speeds = helpers.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
                                                        wind_directions)
 
         pbar.update(1)

@@ -22,14 +22,15 @@ class SimulationSettings:
     This class stores settings that will be used by the simulation.
 
     """
-    def __init__(self, golang=True, return_type=SimulationReturnType.distance_travelled, optimization_iterations=5):
+    def __init__(self, golang=True, return_type=SimulationReturnType.distance_travelled, optimization_iterations=5, visualize_route=False, verbose=False):
         self.optimization_iterations = optimization_iterations
         self.golang = golang
         self.return_type = return_type
+        self.visualize_route = visualize_route
+        self.verbose = verbose
 
 
 def run_simulation(simulation_settings):
-
     input_speed = np.array([30])
 
     #  ----- Parse initial conditions ----- #
@@ -45,8 +46,8 @@ def run_simulation(simulation_settings):
                                   race_type="ASC",
                                   golang=simulation_settings.golang)
     unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=True,
-                                                  verbose=False,
-                                                  route_visualization=False)
+                                                  verbose=simulation_settings.verbose,
+                                                  route_visualization=simulation_settings.visualize_route)
     bounds = InputBounds()
     bounds.add_bounds(8, 20, 60)
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
@@ -54,13 +55,13 @@ def run_simulation(simulation_settings):
 
     results = optimization.maximize(init_points=3, n_iter=simulation_settings.optimization_iterations, kappa=10)
     optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
-                                           verbose=False,
-                                           route_visualization=False)
+                                           verbose=simulation_settings.verbose,
+                                           route_visualization=simulation_settings.visualize_route)
 
     results_random = random_optimization.maximize(iterations=simulation_settings.optimization_iterations)
     optimized_random = simulation_model.run_model(speed=np.fromiter(results_random, dtype=float), plot_results=True,
-                                                  verbose=False,
-                                                  route_visualization=False)
+                                                  verbose=simulation_settings.verbose,
+                                                  route_visualization=simulation_settings.visualize_route)
 
     #  ----- Output results ----- #
 
@@ -82,6 +83,8 @@ def main():
     simulation_settings = parse_commands(cmds)
 
     print("GoLang is " + str("enabled." if simulation_settings.golang else "disabled."))
+    print("Verbose is " + str("on." if simulation_settings.verbose else "off."))
+    print("Route visualization is " + str("on." if simulation_settings.visualize_route else "off."))
     print("Optimizing for " + str("time." if simulation_settings.return_type == 0 else "distance."))
     print(f"Will perform {simulation_settings.optimization_iterations} optimization iterations.")
 
@@ -116,24 +119,32 @@ def display_commands():
     """
 
     print("-----------------COMMANDS----------------\n"
-          "-help     Display list of valid commands.\n"
+          "-help              Display list of valid commands.\n"
+          "\n"                
+          "-golang            Define whether golang implementations\n"
+          "                   will be used. \n"
+          "                   (True/False)\n"
+          "\n"                
+          "-optimize          Define what data the simulation\n"
+          "                   should optimize. \n"
+          "                   (time_taken/distance_travelled)\n"
+          "\n"                
+          "-iter              Set how many iterations of optimizations\n"
+          "                   should be performed on the simulation.\n"
+          "\n"                
+          "-verbose           Set whether simulation methods should\n"
+          "                   execute as verbose.\n"
+          "                   (True/False)\n"
           "\n"
-          "-golang   Define whether golang implementations\n"
-          "          will be used. \n"
-          "          (True/False)\n"
-          "\n"
-          "-optimize Define what data the simulation\n"
-          "          should optimize. \n"
-          "          (time_taken/distance_travelled)\n"
-          "\n"
-          "-iter     Set how many iterations of optimizations\n"
-          "          should be performed on the simulation.\n"
-          "\n"
+          "-visualize-route   Define whether the simulation route\n"
+          "                   should be plotted and visualized.\n"
+          "                   (True/False)\n"
+          "\n"     
           "------------------USAGE------------------\n"
           ">>>python3 run_simulation.py -golang=False -optimize=time_taken -iter=3\n")
 
 
-valid_commands = ["-help", "-golang", "-optimize", "-iter", "run_simulation.py"]
+valid_commands = ["-help", "-golang", "-optimize", "-iter", "-verbose", "-visualize-route"]
 
 
 def identify_invalid_commands(cmds):
@@ -148,10 +159,10 @@ def identify_invalid_commands(cmds):
     """
 
     for cmd in cmds:
-
         # Make sure is actually a command and not "python3" or "python", which we don't need to handle.
         if not cmd[0] == '-':
             continue
+
         # Get the identifier of the command, not the argument of it.
         split_cmd = cmd.split('=')
         if not split_cmd[0] in valid_commands:
@@ -202,6 +213,12 @@ def parse_commands(cmds):
 
         elif split_cmd[0] == '-iter':
             simulation_settings.optimization_iterations = int(split_cmd[1])
+
+        elif split_cmd[0] == '-verbose':
+            simulation_settings.verbose = True if split_cmd[1] == 'True' else False
+
+        elif split_cmd[0] == '-visualize-route':
+            simulation_settings.visualize_route = True if split_cmd[1] == 'True' else False
 
     return simulation_settings
 
