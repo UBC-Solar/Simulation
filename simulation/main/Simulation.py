@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
-from simulation.common.plotting import Graph, GraphManager
+from simulation.common.plotting import Graph, Plotting
 
 
 class SimulationReturnType(Enum):
@@ -158,7 +158,7 @@ class Simulation:
 
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
-        self.plotting = GraphManager()
+        self.plotting = Plotting()
 
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
                   route_visualization=False, **kwargs):
@@ -202,9 +202,6 @@ class Simulation:
         speed_kmh = np.insert(speed_kmh, 0, 0)
         speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
 
-        tick_array = np.diff(self.timestamps)
-        tick_array = np.insert(tick_array, 0, 0)
-
         speed_kmh, not_charge = helpers.apply_race_timing_constraints(speed_kmh=speed_kmh, start_hour=self.start_hour,
                                                                       simulation_duration=self.simulation_duration,
                                                                       race_type=self.race_type,
@@ -216,16 +213,16 @@ class Simulation:
             speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
                                                        self.waypoints, verbose=False)[:self.simulation_duration + 1]
             if verbose:
-                helpers.plot_graph(self.timestamps, [speed_kmh_without_checkpoints, speed_kmh],
-                                   ["Speed before waypoints", " Speed after waypoints"],
-                                   "Before and After waypoints")
+                self.plotting.add_graph_to_queue(Graph([speed_kmh_without_checkpoints, speed_kmh],
+                                                       ["Speed before waypoints", " Speed after waypoints"],
+                                                       "Before and After waypoints"))
 
         speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
         raw_speed = speed_kmh
 
         # ------ Run calculations and get result and modified speed array -------
         with tqdm(total=20, file=sys.stdout, desc="Running Simulation Calculations") as pbar:
-            result = self.__run_simulation_calculations(speed_kmh, tick_array, not_charge, pbar, verbose=verbose)
+            result = self.__run_simulation_calculations(speed_kmh, not_charge, pbar, verbose=verbose)
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
@@ -278,7 +275,7 @@ class Simulation:
         else:
             raise TypeError("Return type not found.")
 
-    def __run_simulation_calculations(self, speed_kmh, tick_array, not_charge, pbar, verbose=False):
+    def __run_simulation_calculations(self, speed_kmh, not_charge, pbar, verbose=False):
         """
 
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
@@ -286,11 +283,15 @@ class Simulation:
         and final battery state of charge. This is where most of the main simulation logic happens.
 
         :param speed_kmh: array that specifies the solar car's driving speed (in km/h) at each time step
-        :param tick_array: array that specifies ticks used in calculations
         :param not_charge: array that specifies when the car is charging for calculations
         :param pbar: progress bar used to track Simulation progress
 
         """
+
+        # ----- Tick array -----
+
+        tick_array = np.diff(self.timestamps)
+        tick_array = np.insert(tick_array, 0, 0)
 
         pbar.update(1)
 
