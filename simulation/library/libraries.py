@@ -20,8 +20,10 @@ class Libraries:
 
     def __init__(self, raiseExceptionOnFail=True):
         """
+
         :param raiseExceptionOnFail: Boolean to control whether an exception should be raised if Go binaries cant be
         found. Should not be set to false unless that scenario is handled.
+
         """
         self.raiseExceptionOnFail = raiseExceptionOnFail
 
@@ -78,8 +80,12 @@ class Libraries:
 
     def GetGoDirectory(self):
         """
+
         Will get the directory to compatible go binaries else return None/raise an exception.
+
         :returns: Path to compatible GoLang binaries
+        :rtype: str
+
         """
 
         binaries_directory = f"{pathlib.Path(__file__).parent}/binaries"
@@ -105,15 +111,23 @@ class Libraries:
 
     def found_compatible_binaries(self):
         """
+
+        Check if compatible Go binaries were found and loaded.
+
         :returns: Boolean which indicates if compatible Go binaries were found and loaded.
+        :rtype: bool
+
         """
+
         return self.go_directory is not None
 
     # ---- GoLang implementation of functions and methods ---- #
 
     def golang_calculate_closest_gis_indices(self, cumulative_distances, average_distances):
         """
+
         GoLang implementation of golang_calculate_closest_gis_indices. See parent function for documentation details.
+
         """
 
         # Generate pointers to arrays to pass to a Go binary
@@ -135,7 +149,9 @@ class Libraries:
 
     def golang_calculate_closest_timestamp_indices(self, unix_timestamps, dt_local_array):
         """
+
         GoLang implementation of calculate_closest_timestamp_indices. See parent function for documentation details.
+
         """
 
         # Generate pointers to arrays to pass to a Go binary
@@ -155,7 +171,9 @@ class Libraries:
 
     def golang_calculate_closest_weather_indices(self, cumulative_distances, average_distances):
         """
+
         GoLang implementation of calculate_closest_weather_indices. See parent function for details.
+
         """
 
         # Get pointers for GoLang
@@ -176,7 +194,9 @@ class Libraries:
 
     def golang_calculate_array_GHI_times(self, local_times):
         """
+
         GoLang implementation of calculate_array_GHI_times. See parent function for details.
+
         """
 
         # Get pointers for GoLang
@@ -197,7 +217,9 @@ class Libraries:
 
     def golang_speeds_with_waypoints_loop(self, speeds, distances, waypoints):
         """
+
         GoLang implementation of speeds_with_waypoints_loop. See parent function for details.
+
         """
 
         # We need to flatten waypoints from a [1x7] matrix to a 1D array.
@@ -224,11 +246,13 @@ class Libraries:
     @staticmethod
     def generate_input_pointer(input_array, c_type):
         """
+
         Generate a pointer to an input array to be passed to compiled Go binaries.
 
         :param input_array: Array in which a pointer will be generated for
         :param c_type: The corresponding ctypes type for input_array
         :return: A pointer pointing to input_array
+
         """
         array_copy = array.array(Libraries.ctypes_dict[c_type], input_array)
         array_copy_pointer = (c_type * len(array_copy)).from_buffer(array_copy)
@@ -237,11 +261,13 @@ class Libraries:
     @staticmethod
     def generate_output_pointer(output_array_length, c_type):
         """
+
         Generate an array and a pointer to that array for a Go binary to write to.
 
         :param output_array_length: Length of the output array
         :param c_type: The corresponding ctypes type for the output array
         :return: A pointer pointing to output_array, and output array itself
+
         """
         output_array = array.array(Libraries.ctypes_dict[c_type], [0] * output_array_length)
         output_array_pointer = (c_type * len(output_array)).from_buffer(output_array)
@@ -250,12 +276,14 @@ class Libraries:
     @staticmethod
     def generate_input_output_pointer(input_array, c_type):
         """
+
         Generate an array and a pointer to that array for a Go binary to write to that is equal to an existing array.
         This is useful if you want to modify an array instead of creating a new one.
 
         :param input_array: Array in which a pointer will be generated for
         :param c_type: The corresponding ctypes type for the output array
         :return: A pointer pointing to output_array, and output array itself
+
         """
         output_array = array.array(Libraries.ctypes_dict[c_type], input_array)
         output_array_pointer = (c_type * len(output_array)).from_buffer(output_array)

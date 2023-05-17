@@ -7,6 +7,7 @@ import numpy as np
 import os
 import requests
 import sys
+
 from simulation.cache.weather import weather_directory
 from simulation.common import helpers
 from tqdm import tqdm
@@ -33,6 +34,7 @@ class WeatherForecasts:
 
     def __init__(self, api_key, coords, duration, race_type, golang=False, library=None, weather_data_frequency="daily", force_update=False, origin_coord=None):
         """
+
         Initializes the instance of a WeatherForecast class
 
         :param api_key: A personal OpenWeatherAPI key to access weather forecasts
@@ -43,6 +45,7 @@ class WeatherForecasts:
         :param duration: amount of time simulated (in hours)
         :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
         :param golang: boolean determining whether to use faster GoLang implementations when available
+
         """
         self.race_type = race_type
         self.api_key = api_key
@@ -107,22 +110,24 @@ class WeatherForecasts:
 
     def get_coord_weather_forecast(self, coord, weather_data_frequency, duration):
         """
+
         Passes in a single coordinate, returns a weather forecast
         for the coordinate depending on the entered "weather_data_frequency"
         argument. This function is unlikely to ever be called directly.
 
-        :param coord: A single coordinate stored inside a NumPy array [latitude, longitude]
-        :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
+        :param np.ndarray coord: A single coordinate stored inside a NumPy array [latitude, longitude]
+        :param str weather_data_frequency: Influences what resolution weather data is requested, must be one of
             "current", "hourly", or "daily"
-        :param duration: amount of time simulated (in hours)
+        :param int  duration: amount of time simulated (in hours)
 
         :returns weather_array: [N][9]
         - [N]: is 1 for "current", 24 for "hourly", 8 for "daily"
         - [9]: (latitude, longitude, dt (UNIX time), timezone_offset (in seconds), dt + timezone_offset (local time),
                wind_speed, wind_direction, cloud_cover, description_id)
-
+        :rtype: np.ndarray
         For reference to the API used:
         - https://openweathermap.org/api/one-call-api
+
         """
 
         # TODO: Who knows, maybe we want to run the simulation like a week into the future, when the weather forecast
@@ -204,14 +209,15 @@ class WeatherForecasts:
 
     def update_path_weather_forecast(self, coords, weather_data_frequency, duration):
         """
+
         Passes in a list of coordinates, returns the hourly weather forecast
         for each of the coordinates
 
-        :param coords: A NumPy array of [coord_index][2]
+        :param np.ndarray coords: A NumPy array of [coord_index][2]
         - [2] => [latitude, longitude]
-        :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
+        :param str weather_data_frequency: Influences what resolution weather data is requested, must be one of
             "current", "hourly", or "daily"
-        :param duration: duration of weather requested, in hours
+        :param int duration: duration of weather requested, in hours
 
         :returns
         - A NumPy array [coord_index][N][9]
@@ -219,6 +225,7 @@ class WeatherForecasts:
         - [N]: is 1 for "current", 24 for "hourly", 8 for "daily"
         - [9]: (latitude, longitude, dt (UNIX time), timezone_offset (in seconds), dt + timezone_offset (local time),
                wind_speed, wind_direction, cloud_cover, description_id)
+
         """
 
         if int(duration) > 48 and weather_data_frequency == "hourly":
@@ -241,10 +248,9 @@ class WeatherForecasts:
     def calculate_closest_weather_indices(self, cumulative_distances):
         """
 
-        Args:
-            cumulative_distances: NumPy Array representing cumulative distances theoretically achievable for a given input speed array
-
-        Returns:
+        :param np.ndarray cumulative_distances: NumPy Array representing cumulative distances theoretically achievable for a given input speed array
+        :returns: array of the closest weather indices.
+        :rtype: np.ndarray
 
         """
 
@@ -293,7 +299,9 @@ class WeatherForecasts:
 
     def python_calculate_closest_weather_indices(self, cumulative_distances, average_distances):
         """
+
         Python implementation of calculate_closest_weather_indices. See parent function for documentation details.
+
         """
 
         current_coordinate_index = 0
@@ -315,17 +323,15 @@ class WeatherForecasts:
         return np.array(result)
 
     @staticmethod
-    @helpers.timeit
     def python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array):
         """
 
         Python implementation to find the indices of the closest timestamps in dt_local_array and package them into a NumPy Array
 
-        Args:
-            unix_timestamps: NumPy Array (float[N]) of unix timestamps of the vehicle's journey
-            dt_local_array: NumPy Array (float[N]) of local times, represented as unix timestamps
-
-        Returns: NumPy Array of (int[N]) containing closest timestamp indices used by get_weather_forecast_in_time
+        :param np.ndarray unix_timestamps: NumPy Array (float[N]) of unix timestamps of the vehicle's journey
+        :param np.ndarray dt_local_array: NumPy Array (float[N]) of local times, represented as unix timestamps
+        :returns: NumPy Array of (int[N]) containing closest timestamp indices used by get_weather_forecast_in_time
+        :rtype: np.ndarray
 
         """
         closest_time_stamp_indices = []
@@ -337,9 +343,9 @@ class WeatherForecasts:
 
         return np.asarray(closest_time_stamp_indices, dtype=np.int32)
 
-    @helpers.timeit
     def get_weather_forecast_in_time(self, indices, unix_timestamps):
         """
+
         Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
         what the weather forecast is at each time step being simulated.
 
@@ -352,13 +358,13 @@ class WeatherForecasts:
         choose? Clearly, we should choose the weather forecast at 90 since it is the closest to 100. That's what the
         below code is accomplishing.
 
-        :param indices: (int[N]) coordinate indices of self.weather_forecast
-        :param unix_timestamps: (int[N]) unix timestamps of the vehicle's journey
-
-        :returns
-        - A NumPy array of size [N][9]
-        - [9]: (latitude, longitude, unix_time, timezone_offset, unix_time_corrected, wind_speed, wind_direction,
-                    cloud_cover, precipitation, description):
+        :param np.ndarray indices: (int[N]) coordinate indices of self.weather_forecast
+        :param np.ndarray unix_timestamps: (int[N]) unix timestamps of the vehicle's journey
+        :returns:
+            - A NumPy array of size [N][9]
+            - [9] (latitude, longitude, unix_time, timezone_offset, unix_time_corrected, wind_speed, wind_direction,
+                        cloud_cover, precipitation, description):
+        :rtype: np.ndarray
 
         """
 
@@ -382,14 +388,21 @@ class WeatherForecasts:
     @staticmethod
     def cull_dataset(coords, reduction_factor):
         """
+        
         As we currently have a limited number of API calls(60) every minute with the
-            current Weather API, we must shrink the dataset significantly. As the
-            OpenWeatherAPI models have a resolution of between 2.5 - 70 km, we will
-            go for a resolution of 25km. Assuming we travel at 100km/h for 12 hours,
-            1200 kilometres/25 = 48 API calls
+        current Weather API, we must shrink the dataset significantly. As the
+        OpenWeatherAPI models have a resolution of between 2.5 - 70 km, we will
+        go for a resolution of 25km. Assuming we travel at 100km/h for 12 hours,
+        1200 kilometres/25 = 48 API calls
 
         As the Google Maps API has a resolution of around 40m between points,
-            for ASC, we must cull at 625:1 (because 25,000m / 40m = 625)
+        for ASC, we must cull at 625:1 (because 25,000m / 40m = 625)
+        
+        :param np.ndarray coords: array to be reduced
+        :param int reduction_factor: the factor in which the array will be reduced
+        :return: reduced array
+        :rtype: np.ndarray
+        
         """
 
         return coords[::reduction_factor]
@@ -397,16 +410,17 @@ class WeatherForecasts:
     @staticmethod
     def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
         """
+
         Returns the array of wind speed in m/s, in the direction opposite to the 
             bearing of the vehicle
 
 
-        vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
-        wind_speeds: (float[N]) The absolute speeds in m/s
-        wind_directions: (float[N]) The wind direction in the meteorlogical convention. To convert from
-            meteorlogical convention to azimuth angle, use (x + 180) % 360
-
-        Returns: The wind speeds in the direction opposite to the bearing of the vehicle
+        :param np.ndarray vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
+        :param np.ndarray wind_speeds: (float[N]) The absolute speeds in m/s
+        :param np.ndarray wind_directions: (float[N]) The wind direction in the meteorlogical convention. To convert from meteorlogical convention to azimuth angle, use (x + 180) % 360
+        :returns: The wind speeds in the direction opposite to the bearing of the vehicle
+        :rtype: np.ndarray
+        
         """
 
         # wind direction is 90 degrees meteorological, so it is 270 degrees azimuthal. car is 90 degrees
@@ -417,10 +431,15 @@ class WeatherForecasts:
     @staticmethod
     def get_weather_advisory(weather_id):
         """
+
         Returns a string indicating the type of weather to expect, from the standardized
             weather code passed as a parameter
 
         https://openweathermap.org/weather-conditions#Weather-Condition-Codes-2
+        :param int weather_id: Weather ID
+        :return: type of weather advisory
+        :rtype: str
+
         """
 
         if 200 <= weather_id < 300:

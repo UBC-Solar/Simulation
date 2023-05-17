@@ -1,4 +1,9 @@
 class SimulationState:
+    """
+
+    Contains information about the state of the simulation at a time.
+
+    """
     def __init__(self, args):
 
         self.origin_coord = args["origin_coord"]

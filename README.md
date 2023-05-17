@@ -71,22 +71,37 @@ NOTE: Any Python version before 3.8 is not supported so please make sure that yo
     battery = simulation.BasicBattery(0.90)
     ```
 
-### Run an example simulation
+### Run Simulation
 
-To run an example simulation, you can either run the main Python script directly from your IDE or you can run it from your terminal. 
+To run Simulation, you can either run the main Python script directly from your IDE or you can run it from your terminal. 
 The following instructions are for running it from your terminal.
 
-Before running the following commands make sure you have navigated to the "Simulation" folder on your terminal or the commands will not work. Please note support those in `examples/archive` has discontinued.
+Before running the following commands make sure you have navigated to the "Simulation" folder on your terminal or the commands will not work. Please note support those in `examples` and `examples/archive` has discontinued.
 
 #### Ubuntu/MacOS
 
 ```bash
-python3 examples/max_distance_from_speed_using_arrays.py
+python3 simulation/run_simulation.py
 ```
 #### Windows
 
 ```bash
-python .\examples\max_distance_from_speed_using_arrays.py
+python .\simulation\run_simulation.py
+```
+
+### Arguments
+
+You can view a list of valid arguments and settings that Simulation can accept with the `-help` command.
+
+#### Ubuntu/MacOS
+
+```bash
+python3 simulation/run_simulation.py -help
+```
+#### Windows
+
+```bash
+python .\simulation\run_simulation.py -help
 ```
 
 ### Testing
