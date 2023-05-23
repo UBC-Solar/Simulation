@@ -554,24 +554,8 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
 
     """
 
-    # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
-    # (Charge from 8am-9am and 6pm-8pm) for FSGP
+    driving_time_boolean = get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type)
 
-    simulation_hours = np.arange(
-        start_hour, start_hour + simulation_duration / (60 * 60))
-
-    simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
-                                           start_hour + simulation_duration / (60 * 60)).astype(int)
-
-    if race_type == "ASC":
-        driving_time_boolean = [
-            (simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 18]
-    elif race_type == "FSGP":
-        driving_time_boolean = [
-            (simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
-    else:
-        raise ValueError(
-            f"Invalid race_type provided: \"{race_type}\". Must be one of \"ASC\" or \"FSGP\".")
     not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
     if verbose:
         plot_graph(timestamps=timestamps,
@@ -582,6 +566,36 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
     constrained_speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
 
     return constrained_speed_kmh, not_charge
+
+
+def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type):
+    """
+
+    Applies regulation timing constraints to a speed array.
+
+    :param int start_hour: An integer representing the race's start hour
+    :param int simulation_duration: An integer representing simulation duration in seconds
+    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
+    :returns: driving_time_boolean, a boolean array with race timing constraints applied to it
+    :rtype: np.ndarray
+    :raises: ValueError is race_type is not one of "ASC" or "FSGP"
+
+    """
+
+    # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
+    # (Charge from 8am-9am and 6pm-8pm) for FSGP
+
+    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
+    simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
+
+    if race_type == "ASC":
+        driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 18]
+    elif race_type == "FSGP":
+        driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
+    else:
+        raise ValueError(f"Invalid race_type provided: \"{race_type}\". Must be one of \"ASC\" or \"FSGP\".")
+
+    return driving_time_boolean
 
 
 def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True):
@@ -762,7 +776,45 @@ def plot_latitudes(coordinates):
     simple_plot_graph(coordinates[:, 1], "Latitudes")
 
 
+def map_array_to_targets(input_array, target_array):
+    """
+
+    Will map an array of values to the non-zero elements (a target) of targets_array.
+    The assertion that len(input_array) and # of targets must match.
+
+    Examples:
+        If input array is [9, 6, 12] and target_array is [0, 1, 1, 0, 1], the output
+    would be [0, 9, 6, 0, 12].
+        If input array is [7, 4, 3, 1] and target_array is [0, 1, 0, 1, 1], then the assertion will
+    fail as there are four elements in input_array and three targets in target_array, thus an error
+    will be raised.
+
+    :param input_array: array of values that will be mapped to the logical
+    :param target_array: array of zero and non-zero values
+    :returns: a new array consisting of the elements of input_array, mapped to the targets values of target_array.
+    :rtype: np.ndarray
+
+    """
+
+    if len(target_array) - target_array.count(0) != len(input_array):
+        raise AssertionError("Target count and input_array do not match.")
+
+    output_array = np.zeros(len(target_array), dtype=float)
+    i = 0
+
+    for value in input_array:
+        while target_array[i] == 0:
+            i += 1
+        output_array[i] = value
+        i += 1
+
+    return output_array
+
+
 if __name__ == '__main__':
+    out = map_array_to_targets([90, 60, 10, 7], [0, 1, 1, 1, 0])
+    print(out)
+    exit()
     # speed_array input
     speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 
