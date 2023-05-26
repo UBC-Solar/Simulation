@@ -42,8 +42,6 @@ def run_simulation(simulation_settings):
 
     """
 
-    input_speed = np.array([30])
-
     #  ----- Parse initial conditions ----- #
 
     with open(settings_directory / "initial_conditions.json") as f:
@@ -56,11 +54,15 @@ def run_simulation(simulation_settings):
     simulation_model = Simulation(initial_simulation_conditions, simulation_settings.return_type,
                                   race_type="ASC",
                                   golang=simulation_settings.golang)
+    driving_hours = simulation_model.get_driving_hours()
+    input_speed = np.array([30] * driving_hours)
+
     unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=True,
                                                   verbose=simulation_settings.verbose,
                                                   route_visualization=simulation_settings.route_visualization)
+
     bounds = InputBounds()
-    bounds.add_bounds(8, 20, 60)
+    bounds.add_bounds(driving_hours, 20, 60)
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
 

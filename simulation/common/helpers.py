@@ -575,7 +575,7 @@ def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_ty
     :param int start_hour: An integer representing the race's start hour
     :param int simulation_duration: An integer representing simulation duration in seconds
     :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
-    :param str time: return array where an element represents an hour or a second
+    :param bool as_seconds: will return an array of seconds, or hours if set to False
     :returns: driving_time_boolean, a boolean array with race timing constraints applied to it
     :rtype: np.ndarray
     :raises: ValueError is race_type is not one of "ASC" or "FSGP"
@@ -667,7 +667,7 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
     return
 
 
-def route_visualization(coords, visible=True):
+def route_visualization(coords, visible=True):  # TODO: Consolidate this with Plotting module
     """
 
     Takes in a list of coordinates and visualizes them using MapBox.

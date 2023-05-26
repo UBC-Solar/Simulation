@@ -198,14 +198,18 @@ class Simulation:
         if not kwargs:
             print(f"Input speeds: {speed}\n")
 
-        speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
-        speed_kmh = np.insert(speed_kmh, 0, 0)
-        speed_kmh, not_charge = helpers.apply_race_timing_constraints(speed_kmh=speed_kmh, start_hour=self.start_hour,
-                                                                      simulation_duration=self.simulation_duration,
-                                                                      race_type=self.race_type,
-                                                                      timestamps=self.timestamps,
-                                                                      verbose=verbose)
-        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
+        speed_boolean_array = helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
+                                                                          self.race_type, as_seconds=False).astype(int)
+        speed_mapped = helpers.map_array_to_targets(speed, speed_boolean_array)
+        speed_mapped_kmh = helpers.reshape_and_repeat(speed_mapped, self.simulation_duration)
+        speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
+        speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
+
+        _, not_charge = helpers.apply_race_timing_constraints(speed_kmh=speed_kmh, start_hour=self.start_hour,
+                                                              simulation_duration=self.simulation_duration,
+                                                              race_type=self.race_type,
+                                                              timestamps=self.timestamps,
+                                                              verbose=verbose)
 
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
@@ -478,3 +482,7 @@ class Simulation:
         self.local_times = local_times
 
         return results
+
+    def get_driving_hours(self):
+        return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
+                                                           self.race_type, as_seconds=False).astype(int).sum()
