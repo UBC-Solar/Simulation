@@ -200,13 +200,12 @@ class Simulation:
 
         speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
         speed_kmh = np.insert(speed_kmh, 0, 0)
-        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
-
         speed_kmh, not_charge = helpers.apply_race_timing_constraints(speed_kmh=speed_kmh, start_hour=self.start_hour,
                                                                       simulation_duration=self.simulation_duration,
                                                                       race_type=self.race_type,
                                                                       timestamps=self.timestamps,
                                                                       verbose=verbose)
+        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
 
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
