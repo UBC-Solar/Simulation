@@ -51,26 +51,31 @@ def run_simulation(simulation_settings):
 
     #  ----- Optimize with Bayesian Optimization ----- #
 
+    # Initialize simulation model
     simulation_model = Simulation(initial_simulation_conditions, simulation_settings.return_type,
                                   race_type="ASC",
                                   golang=simulation_settings.golang)
     driving_hours = simulation_model.get_driving_hours()
     input_speed = np.array([30] * driving_hours)
 
+    # Run simulation model with a "guess" speed array
     unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=True,
                                                   verbose=simulation_settings.verbose,
                                                   route_visualization=simulation_settings.route_visualization)
 
+    # Set up optimization models
     bounds = InputBounds()
     bounds.add_bounds(driving_hours, 20, 60)
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
 
+    # Perform optimization with Bayesian optimization
     results = optimization.maximize(init_points=3, n_iter=simulation_settings.optimization_iterations, kappa=10)
     optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
                                            verbose=simulation_settings.verbose,
                                            route_visualization=simulation_settings.route_visualization)
 
+    # Perform optimization with random optimization
     results_random = random_optimization.maximize(iterations=simulation_settings.optimization_iterations)
     optimized_random = simulation_model.run_model(speed=np.fromiter(results_random, dtype=float), plot_results=True,
                                                   verbose=simulation_settings.verbose,
