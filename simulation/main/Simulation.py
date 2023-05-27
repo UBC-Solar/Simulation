@@ -9,7 +9,7 @@ from tqdm import tqdm
 from enum import Enum
 from dotenv import load_dotenv
 from simulation.common import helpers
-from simulation.config import settings_directory
+from simulation.config import config_directory
 from simulation.main.SimulationResult import SimulationResult
 from simulation.common.plotting import Graph, Plotting
 
@@ -42,63 +42,50 @@ class Simulation:
 
     """
 
-    def __init__(self, initial_conditions, return_type, race_type, golang=True):
+    def __init__(self, builder):
         """
 
         Instantiates a simple model of the car.
 
-        :param race_type: a string that describes the race type to simulate (ASC or FSGP)
-        :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
-        :param return_type: discretely defines what kind of data run_model should return.
-        :param golang: boolean which controls whether GoLang implementations are used when available
+        :param builder: a SimulationState object that provides settings for the Simulation
 
         """
 
         # ----- Return type -----
 
-        assert return_type in SimulationReturnType, "return_type must be of SimulationReturnType enum."
+        assert builder.return_type in SimulationReturnType, "return_type must be of SimulationReturnType enum."
 
-        self.return_type = return_type
+        self.return_type = builder.return_type
 
         # ----- Race type -----
 
-        assert race_type in ["ASC", "FSGP"]
+        assert builder.race_type in ["ASC", "FSGP"]
 
-        self.race_type = race_type
-
-        if race_type == "ASC":
-            settings_path = settings_directory / "settings_ASC.json"
-        else:
-            settings_path = settings_directory / "settings_FSGP.json"
-
-        with open(settings_path) as f:
-            args = json.load(f)
-
-        # ----- Load from settings_*.json -----
-
-        self.lvs_power_loss = args['lvs_power_loss']  # LVS power loss is pretty small, so it is neglected
-
-        self.tick = args['tick']
-
-        if self.race_type == "ASC":
-            race_length = args['race_length']  # Race length in days, arbitrary as ASC doesn't have a time limit
-            self.simulation_duration = race_length * 24 * 60 * 60
-        elif self.race_type == "FSGP":
-            self.simulation_duration = args['simulation_duration']
+        self.race_type = builder.race_type
 
         # ----- Load from initial_conditions
 
-        self.initial_battery_charge = initial_conditions.initial_battery_charge
+        self.lvs_power_loss = builder.lvs_power_loss  # LVS power loss is pretty small, so it is neglected
 
-        self.start_hour = initial_conditions.start_hour
+        self.tick = builder.tick
 
-        self.origin_coord = initial_conditions.origin_coord
-        self.dest_coord = initial_conditions.dest_coord
-        self.current_coord = initial_conditions.current_coord
-        self.waypoints = initial_conditions.waypoints
+        if self.race_type == "ASC":
+            race_length = builder.race_length  # Race length in days, arbitrary as ASC doesn't have a time limit
+            self.simulation_duration = race_length * 24 * 60 * 60
+        elif self.race_type == "FSGP":
+            self.simulation_duration = builder.simulation_duration
 
-        gis_force_update = initial_conditions.gis_force_update
-        weather_force_update = initial_conditions.weather_force_update
+        self.initial_battery_charge = builder.initial_battery_charge
+
+        self.start_hour = builder.start_hour
+
+        self.origin_coord = builder.origin_coord
+        self.dest_coord = builder.dest_coord
+        self.current_coord = builder.current_coord
+        self.waypoints = builder.waypoints
+
+        gis_force_update = builder.gis_force_update
+        weather_force_update = builder.weather_force_update
 
         # ----- Route Length -----
 
@@ -112,7 +99,7 @@ class Simulation:
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- GoLang library initialisation -----
-        self.golang = golang
+        self.golang = builder.golang
         self.library = simulation.Libraries(raiseExceptionOnFail=False)
 
         if self.golang and self.library.found_compatible_binaries() is False:
@@ -134,7 +121,7 @@ class Simulation:
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, library=self.library, force_update=gis_force_update,
-                                  current_coord=self.current_coord, golang=golang)
+                                  current_coord=self.current_coord, golang=self.golang)
 
         self.route_coords = self.gis.get_path()
 
@@ -147,7 +134,7 @@ class Simulation:
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update,
                                                    origin_coord=self.gis.launch_point,
-                                                   golang=golang)
+                                                   golang=self.golang)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
@@ -494,3 +481,4 @@ class Simulation:
         return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
                                                            self.race_type, self.granularity,
                                                            as_seconds=False).sum().astype(int)
+

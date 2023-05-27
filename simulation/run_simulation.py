@@ -4,11 +4,11 @@ import numpy as np
 import json
 import sys
 
-from main.Simulation import Simulation, SimulationReturnType
+from main.Simulation import SimulationReturnType
 from optimization.bayesian import BayesianOptimization
 from optimization.random import RandomOptimization
 from utils.InputBounds import InputBounds
-from config import settings_directory
+from config import config_directory
 from common import simulationState
 
 """
@@ -22,7 +22,8 @@ class SimulationSettings:
     This class stores settings that will be used by the simulation.
 
     """
-    def __init__(self, golang=True, return_type=SimulationReturnType.distance_travelled, optimization_iterations=5, route_visualization=False, verbose=False, granularity=1):
+    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.time_taken, optimization_iterations=5, route_visualization=False, verbose=False, granularity=1):
+        self.race_type = race_type
         self.optimization_iterations = optimization_iterations
         self.golang = golang
         self.return_type = return_type
@@ -31,40 +32,50 @@ class SimulationSettings:
         self.granularity = granularity
 
 
-def run_simulation(simulation_settings):
+def run_simulation(settings):
     """
 
     This method parses initial conditions for the simulation and store them in a simulationState object. Then, begin
     optimizing simulation with Bayesian optimization and then random optimization.
 
-    :param SimulationSettings simulation_settings: object that stores settings for the simulation and optimization sequence
+    :param SimulationSettings settings: object that stores settings for the simulation and optimization sequence
     :return: returns the time taken for simulation to complete before optimization
     :rtype: float
 
     """
 
-    #  ----- Parse initial conditions ----- #
+    #  ----- Load initial conditions ----- #
 
-    with open(settings_directory / "initial_conditions.json") as f:
-        args = json.load(f)
+    with open(config_directory / "initial_conditions.json") as f:
+        initial_conditions = json.load(f)
 
-    initial_simulation_conditions = simulationState.SimulationState(args)
+    # ----- Load from settings_*.json -----
 
-    #  ----- Optimize with Bayesian Optimization ----- #
+    if settings.race_type == "ASC":
+        config_path = config_directory / "settings_ASC.json"
+    else:
+        config_path = config_directory / "settings_FSGP.json"
 
-    # Initialize simulation model
-    simulation_model = Simulation(initial_simulation_conditions, simulation_settings.return_type,
-                                  race_type="ASC",
-                                  golang=simulation_settings.golang,
-                                  granularity=simulation_settings.granularity)
+    with open(config_path) as f:
+        model_parameters = json.load(f)
 
-    driving_hours = simulation_model.get_driving_time_divisions()
+    # Build simulation model
+    simulation_builder = simulationState.SimulationState()\
+        .set_initial_conditions(initial_conditions)\
+        .set_model_parameters(model_parameters, settings.race_type)\
+        .set_golang(settings.golang)\
+        .set_return_type(settings.return_type)
+
+    simulation_model = simulation_builder.get()
+
+    # Initialize a "guess" speed array
+    driving_hours = simulation_model.get_driving_hours()
     input_speed = np.array([30] * driving_hours)
 
-    # Run simulation model with a "guess" speed array
+    # Run simulation model with the "guess" speed array
     unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=True,
-                                                  verbose=simulation_settings.verbose,
-                                                  route_visualization=simulation_settings.route_visualization)
+                                                  verbose=settings.verbose,
+                                                  route_visualization=settings.route_visualization)
 
     # Set up optimization models
     bounds = InputBounds()
@@ -73,20 +84,20 @@ def run_simulation(simulation_settings):
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
 
     # Perform optimization with Bayesian optimization
-    results = optimization.maximize(init_points=3, n_iter=simulation_settings.optimization_iterations, kappa=10)
+    results = optimization.maximize(init_points=3, n_iter=settings.optimization_iterations, kappa=10)
     optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
-                                           verbose=simulation_settings.verbose,
-                                           route_visualization=simulation_settings.route_visualization)
+                                           verbose=settings.verbose,
+                                           route_visualization=settings.route_visualization)
 
     # Perform optimization with random optimization
-    results_random = random_optimization.maximize(iterations=simulation_settings.optimization_iterations)
+    results_random = random_optimization.maximize(iterations=settings.optimization_iterations)
     optimized_random = simulation_model.run_model(speed=np.fromiter(results_random, dtype=float), plot_results=True,
-                                                  verbose=simulation_settings.verbose,
-                                                  route_visualization=simulation_settings.route_visualization)
+                                                  verbose=settings.verbose,
+                                                  route_visualization=settings.route_visualization)
 
     #  ----- Output results ----- #
 
-    display_output(simulation_settings.return_type, unoptimized_time, optimized, optimized_random, results, results_random)
+    display_output(settings.return_type, unoptimized_time, optimized, optimized_random, results, results_random)
 
     return unoptimized_time
 
@@ -144,6 +155,9 @@ def display_commands():
     print("------------------------COMMANDS-----------------------\n"
           "-help                 Display list of valid commands.\n"
           "\n"                   
+          "-race_type            Define which race should be simulated. \n"     
+          "                      (ASC/FSGP)\n"
+          "\n"
           "-golang               Define whether golang implementations\n"
           "                      will be used. \n"
           "                      (True/False)\n"
@@ -171,7 +185,7 @@ def display_commands():
           ">>>python3 run_simulation.py -golang=False -optimize=time_taken -iter=3\n")
 
 
-valid_commands = ["-help", "-golang", "-optimize", "-iter", "-verbose", "-route-visualization", "-granularity"]
+valid_commands = ["-help", "-race_type", "-golang", "-optimize", "-iter", "-verbose", "-route_visualization", "-granularity"]
 
 
 def identify_invalid_commands(cmds):
@@ -242,8 +256,13 @@ def parse_commands(cmds):
         elif split_cmd[0] == '-verbose':
             simulation_settings.verbose = True if split_cmd[1] == 'True' else False
 
-        elif split_cmd[0] == '-route-visualization':
+        elif split_cmd[0] == '-route_visualization':
             simulation_settings.route_visualization = True if split_cmd[1] == 'True' else False
+
+        elif split_cmd[0] == '-race_type':
+            if not split_cmd[1] in ['ASC', 'FSGP']:
+                raise AssertionError(f"Invalid race type {split_cmd[1]}. Please enter 'ASC' or 'FSGP'.")
+            simulation_settings.race_type = split_cmd[1]
 
         elif split_cmd[0] == '-granularity':
             simulation_settings.granularity = split_cmd[1]
