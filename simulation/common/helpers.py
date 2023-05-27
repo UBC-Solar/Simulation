@@ -590,14 +590,14 @@ def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_ty
     if as_seconds is True:
         simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
         if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 18]
+            driving_time_boolean = [(simulation_hours_by_second % 24) <= 9, (simulation_hours_by_second % 24) >= 18]
         else:  # FSGP
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
+            driving_time_boolean = [(simulation_hours_by_second % 24) <= 9, (simulation_hours_by_second % 24) >= 18]
     else:
         if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours % 24) <= 7, (simulation_hours % 24) >= 18]
+            driving_time_boolean = [(simulation_hours % 24) <= 9, (simulation_hours % 24) >= 18]
         else:  # FSGP
-            driving_time_boolean = [(simulation_hours % 24) <= 8, (simulation_hours % 24) >= 18]
+            driving_time_boolean = [(simulation_hours % 24) <= 9, (simulation_hours % 24) >= 18]
 
     return np.invert(np.logical_or.reduce(driving_time_boolean))
 
