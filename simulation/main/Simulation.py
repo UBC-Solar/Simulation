@@ -42,7 +42,7 @@ class Simulation:
 
     """
 
-    def __init__(self, initial_conditions, return_type, race_type, granularity, golang=True):
+    def __init__(self, initial_conditions, return_type, race_type, golang=True):
         """
 
         Instantiates a simple model of the car.
@@ -50,7 +50,6 @@ class Simulation:
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
         :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
         :param return_type: discretely defines what kind of data run_model should return.
-        :param float granularity: define the length of the time period represented by each speed array element
         :param golang: boolean which controls whether GoLang implementations are used when available
 
         """
@@ -74,9 +73,6 @@ class Simulation:
 
         with open(settings_path) as f:
             args = json.load(f)
-
-        # ---- Granularity -----
-        self.granularity = granularity
 
         # ----- Load from settings_*.json -----
 
