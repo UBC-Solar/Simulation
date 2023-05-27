@@ -423,6 +423,9 @@ class Simulation:
         state_of_charge = battery_variables_array[0]
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
 
+        # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
+        speed_kmh = np.logical_and(not_charge, state_of_charge) * speed_kmh
+
         if verbose:
             indices_and_environment_graph = Graph([temp, closest_gis_indices, closest_weather_indices, gradients,
                                                    time_zones, gis_vehicle_bearings],
