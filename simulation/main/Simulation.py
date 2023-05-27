@@ -205,11 +205,9 @@ class Simulation:
         speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
         speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
 
-        _, not_charge = helpers.apply_race_timing_constraints(speed_kmh=speed_kmh, start_hour=self.start_hour,
-                                                              simulation_duration=self.simulation_duration,
-                                                              race_type=self.race_type,
-                                                              timestamps=self.timestamps,
-                                                              verbose=verbose)
+        not_charge = helpers.get_charge_timing_constraints_boolean(start_hour=self.start_hour,
+                                                                   simulation_duration=self.simulation_duration,
+                                                                   race_type=self.race_type)
 
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
@@ -376,7 +374,7 @@ class Simulation:
 
         # Get the wind speeds at every location
         wind_speeds = helpers.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
-                                                       wind_directions)
+                                                               wind_directions)
 
         pbar.update(1)
 
@@ -385,6 +383,7 @@ class Simulation:
                                                                         time_zones, local_times,
                                                                         gis_route_elevations_at_each_tick,
                                                                         cloud_covers)
+
 
         pbar.update(2)
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
@@ -397,7 +396,7 @@ class Simulation:
         motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
         array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
 
-        motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
+        array_produced_energy = np.logical_and(array_produced_energy, not_charge) * array_produced_energy
 
         pbar.update(1)
 
