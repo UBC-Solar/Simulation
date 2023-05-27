@@ -4,7 +4,7 @@ import json
 from simulation.main.Simulation import Simulation, SimulationReturnType
 from simulation.common.simulationState import SimulationState
 from simulation.main.SimulationResult import SimulationResult
-from simulation.config import settings_directory
+from simulation.config import config_directory
 
 
 """
@@ -21,7 +21,7 @@ def GetSimulationData(golang=True) -> SimulationResult:
 
     input_speed = np.array([30])
 
-    with open(settings_directory / "initial_conditions.json") as f:
+    with open(config_directory / "initial_conditions.json") as f:
         args = json.load(f)
 
     return_type = SimulationReturnType.simulation_results
