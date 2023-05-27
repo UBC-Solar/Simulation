@@ -205,10 +205,6 @@ class Simulation:
         speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
         speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
 
-        not_charge = helpers.get_charge_timing_constraints_boolean(start_hour=self.start_hour,
-                                                                   simulation_duration=self.simulation_duration,
-                                                                   race_type=self.race_type)
-
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
             speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
@@ -223,7 +219,7 @@ class Simulation:
 
         # ------ Run calculations and get result and modified speed array -------
         with tqdm(total=20, file=sys.stdout, desc="Running Simulation Calculations") as pbar:
-            result = self.__run_simulation_calculations(speed_kmh, not_charge, pbar, verbose=verbose)
+            result = self.__run_simulation_calculations(speed_kmh, pbar, verbose=verbose)
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
@@ -276,7 +272,7 @@ class Simulation:
         else:
             raise TypeError("Return type not found.")
 
-    def __run_simulation_calculations(self, speed_kmh, not_charge, pbar, verbose=False):
+    def __run_simulation_calculations(self, speed_kmh, pbar, verbose=False):
         """
 
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
@@ -284,7 +280,6 @@ class Simulation:
         and final battery state of charge. This is where most of the main simulation logic happens.
 
         :param speed_kmh: array that specifies the solar car's driving speed (in km/h) at each time step
-        :param not_charge: array that specifies when the car is charging for calculations
         :param pbar: progress bar used to track Simulation progress
 
         """
@@ -384,8 +379,8 @@ class Simulation:
                                                                         gis_route_elevations_at_each_tick,
                                                                         cloud_covers)
 
-
         pbar.update(2)
+
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
         # ----- Energy Calculations -----
@@ -396,6 +391,9 @@ class Simulation:
         motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
         array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
 
+        not_charge = helpers.get_charge_timing_constraints_boolean(start_hour=self.start_hour,
+                                                                   simulation_duration=self.simulation_duration,
+                                                                   race_type=self.race_type)
         array_produced_energy = np.logical_and(array_produced_energy, not_charge) * array_produced_energy
 
         pbar.update(1)
@@ -424,8 +422,6 @@ class Simulation:
         # stores the battery SOC at each time step
         state_of_charge = battery_variables_array[0]
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
-
-        speed_kmh = np.logical_and(not_charge, state_of_charge) * speed_kmh
 
         if verbose:
             indices_and_environment_graph = Graph([temp, closest_gis_indices, closest_weather_indices, gradients,
