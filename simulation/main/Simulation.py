@@ -370,7 +370,6 @@ class Simulation:
                                                                         gis_route_elevations_at_each_tick,
                                                                         cloud_covers)
 
-
         pbar.update(2)
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
