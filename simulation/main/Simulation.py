@@ -152,6 +152,8 @@ class Simulation:
 
         self.plotting = Plotting()
 
+        self.speed_kmh = None
+
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
                   route_visualization=False, **kwargs):
         """
@@ -210,7 +212,7 @@ class Simulation:
                                                        ["Speed before waypoints", " Speed after waypoints"],
                                                        "Before and After waypoints"))
 
-        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
+        self.speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
         raw_speed = speed_kmh
 
         # ------ Run calculations and get result and modified speed array -------
