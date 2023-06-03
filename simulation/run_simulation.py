@@ -98,7 +98,8 @@ def run_simulation(settings):
 
     #  ----- Output results ----- #
 
-    display_output(settings.return_type, unoptimized_time, optimized, optimized_random, results, results_random)
+    display_output(simulation_settings.return_type, unoptimized_time, optimized, optimized_random, results,
+                   results_random)
 
     return unoptimized_time
 
@@ -131,9 +132,12 @@ def main():
 
 def display_output(return_type, unoptimized, optimized, optimized_random, results, results_random):
     if return_type is SimulationReturnType.time_taken:
-        print(f'TimeSimulation results. Time Taken: {-1 * unoptimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * unoptimized)))})')
-        print(f'Optimized results. Time taken: {-1 * optimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized)))})')
-        print(f'Random results. Time taken: {-1 * optimized_random} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized_random)))})')
+        print(
+            f'TimeSimulation results. Time Taken: {-1 * unoptimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * unoptimized)))})')
+        print(
+            f'Optimized results. Time taken: {-1 * optimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized)))})')
+        print(
+            f'Random results. Time taken: {-1 * optimized_random} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized_random)))})')
 
     elif return_type is SimulationReturnType.distance_travelled:
         print(f'Distance travelled: {unoptimized}')
