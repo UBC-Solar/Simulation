@@ -12,7 +12,7 @@ Description: Export Simulation data as a SimulationResults object.
 """
 
 
-def GetSimulationData(golang=True) -> SimulationResult:
+def GetSimulationData(golang=True):
     """
 
     Returns a SimulationResult object with the purpose of exporting simulation data.
@@ -29,9 +29,11 @@ def GetSimulationData(golang=True) -> SimulationResult:
     simulation_model = Simulation(initialSimulationConditions, return_type, race_type="ASC", golang=golang)
 
     results = simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False, route_visualization=False)
-
-    return results
+    map_coordinates = simulation_model.gis.path
+    return results, map_coordinates
 
 
 if __name__ == "__main__":
-    print(GetSimulationData().time_taken)
+    results, map_coordinates = GetSimulationData()
+    print(map_coordinates[100])
+    print(results.time_taken)
