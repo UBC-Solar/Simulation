@@ -10,7 +10,6 @@ from enum import Enum
 from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.config import settings_directory
-from simulation.main.SimulationResult import SimulationResult
 from simulation.common.plotting import Graph, Plotting
 
 
@@ -23,7 +22,7 @@ class SimulationReturnType(Enum):
 
     time_taken = 0
     distance_travelled = 1
-    simulation_results = 2
+    void = 2
 
 
 class Simulation:
@@ -173,6 +172,7 @@ class Simulation:
         self.distance = None
         self.route_length = None
         self.time_taken = None
+        self.distance_travelled = None
 
         # --------- Calculations ---------
 
@@ -193,6 +193,7 @@ class Simulation:
         self.lvs_consumed_energy = None
         self.motor_consumed_energy = None
         self.array_produced_energy = None
+        self.raw_soc = None
         self.not_charge = None
         self.consumed_energy = None
         self.produced_energy = None
@@ -254,42 +255,26 @@ class Simulation:
                                                        "Before and After waypoints"))
 
         self.speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
-        raw_speed = speed_kmh
+        raw_speed = self.speed_kmh
 
         # ------ Run calculations and get result and modified speed array -------
         with tqdm(total=20, file=sys.stdout, desc="Running Simulation Calculations") as pbar:
-            result = self.__run_simulation_calculations(pbar)
-
-        # ------- Parse results ---------
-        simulation_arrays = result.arrays
-        speed_kmh = simulation_arrays[0]
-        distances = simulation_arrays[1]
-        state_of_charge = simulation_arrays[2]
-        delta_energy = simulation_arrays[3]
-        solar_irradiances = simulation_arrays[4]
-        wind_speeds = simulation_arrays[5]
-        gis_route_elevations_at_each_tick = simulation_arrays[6]
-        cloud_covers = simulation_arrays[7]
-
-        distance_travelled = result.distance_travelled
-        time_taken = result.time_taken
-        final_soc = result.final_soc
-        raw_soc = self.basic_battery.get_raw_soc(np.cumsum(delta_energy))
+            self.__run_simulation_calculations(pbar)
 
         if not kwargs:
             print(f"Simulation successful!\n"
-                  f"Time taken: {time_taken}\n"
+                  f"Time taken: {self.time_taken}\n"
                   f"Route length: {self.route_length:.2f}km\n"
-                  f"Maximum distance traversable: {distance_travelled:.2f}km\n"
+                  f"Maximum distance traversable: {self.distance_travelled:.2f}km\n"
                   f"Average speed: {np.average(speed_kmh):.2f}km/h\n"
-                  f"Final battery SOC: {final_soc:.2f}%\n")
+                  f"Final battery SOC: {self.final_soc:.2f}%\n")
 
         # ----- Plotting -----
 
         if plot_results:
-            arrays_to_plot = [speed_kmh, distances, state_of_charge, delta_energy,
-                              solar_irradiances, wind_speeds, gis_route_elevations_at_each_tick,
-                              cloud_covers, raw_soc, raw_speed]
+            arrays_to_plot = [self.speed_kmh, self.distances, self.state_of_charge, self.delta_energy,
+                              self.solar_irradiances, self.wind_speeds, self.gis_route_elevations_at_each_tick,
+                              self.cloud_covers, self.raw_soc, raw_speed]
             y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)",
                        "Raw SOC (%)", "Raw Speed (km/h)"]
@@ -318,11 +303,11 @@ class Simulation:
                 helpers.route_visualization(self.gis.path, visible=route_visualization)
 
         if self.return_type is SimulationReturnType.distance_travelled:
-            return distance_travelled
+            return self.distance_travelled
         if self.return_type is SimulationReturnType.time_taken:
-            return -1 * time_taken
-        if self.return_type is SimulationReturnType.simulation_results:
-            return result
+            return -1 * self.time_taken
+        if self.return_type is SimulationReturnType.void:
+            pass
         else:
             raise TypeError("Return type not found.")
 
@@ -481,6 +466,7 @@ class Simulation:
         # stores the battery SOC at each time step
         self.state_of_charge = battery_variables_array[0]
         self.state_of_charge[np.abs(self.state_of_charge) < 1e-03] = 0
+        self.raw_soc = self.basic_battery.get_raw_soc(np.cumsum(self.delta_energy))
 
         # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
         self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
@@ -497,32 +483,15 @@ class Simulation:
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         self.distances = self.distances.clip(0, self.max_route_distance / 1000)
 
-        results = SimulationResult()
-
-        results.arrays = [
-            self.speed_kmh,
-            self.distances,
-            self.state_of_charge,
-            self.delta_energy,
-            self.solar_irradiances,
-            self.wind_speeds,
-            self.gis_route_elevations_at_each_tick,
-            self.cloud_covers
-        ]
-
-        results.distance_travelled = self.distances[-1]
+        self.distance_travelled = self.distances[-1]
 
         pbar.update(1)
 
-        if results.distance_travelled >= self.route_length:
-            results.time_taken = helpers.calculate_race_completion_time(
+        if self.distance_travelled >= self.route_length:
+            self.time_taken = helpers.calculate_race_completion_time(
                 self.route_length, self.distances)
         else:
-            results.time_taken = self.simulation_duration
-
-        results.final_soc = self.final_soc
-
-        return results
+            self.time_taken = self.simulation_duration
 
     def get_driving_hours(self) -> int:
         """
@@ -535,3 +504,44 @@ class Simulation:
 
         return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
                                                            self.race_type, as_seconds=False).astype(int).sum()
+
+    def get_results(self, values):
+        simulation_results = {
+            "speed_kmh": self.speed_kmh,
+            "distances": self.distances,
+            "state_of_charge": self.state_of_charge,
+            "delta_energy": self.delta_energy,
+            "solar_irradiances": self.solar_irradiances,
+            "wind_speeds": self.wind_speeds,
+            "gis_route_elevations_at_each_tick": self.gis_route_elevations_at_each_tick,
+            "cloud_covers": self.cloud_covers,
+            "distance": self.distance,
+            "route_length": self.route_length,
+            "time_taken": self.time_taken,
+            "tick_array": self.tick_array,
+            "time_zones": self.time_zones,
+            "cumulative_distances": self.cumulative_distances,
+            "temp": self.temp,
+            "closest_gis_indices": self.closest_gis_indices,
+            "closest_weather_indices": self.closest_weather_indices,
+            "path_distances": self.path_distances,
+            "max_route_distance": self.max_route_distance,
+            "gis_vehicle_bearings": self.gis_vehicle_bearings,
+            "gradients": self.gradients,
+            "absolute_wind_speeds": self.absolute_wind_speeds,
+            "wind_directions": self.wind_directions,
+            "lvs_consumed_energy": self.lvs_consumed_energy,
+            "motor_consumed_energy": self.motor_consumed_energy,
+            "array_produced_energy": self.array_produced_energy,
+            "not_charge": self.not_charge,
+            "consumed_energy": self.consumed_energy,
+            "produced_energy": self.produced_energy,
+            "time_in_motion": self.time_in_motion,
+            "final_soc": self.final_soc,
+            "distance_travelled": self.distance_travelled
+        }
+
+        results = []
+        for value in values:
+            results.append(simulation_results[value])
+        return results
