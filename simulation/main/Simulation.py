@@ -204,14 +204,10 @@ class Simulation:
         self.speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
 
         if self.race_type == "ASC":
-            speed_kmh_without_checkpoints = self.speed_kmh
             self.speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances,
                                                             self.speed_kmh / 3.6,
-                                                            self.waypoints, verbose=False)[:self.simulation_duration + 1]
-            if verbose:
-                self.plotting.add_graph_to_queue(Graph([speed_kmh_without_checkpoints, self.speed_kmh],
-                                                       ["Speed before waypoints", " Speed after waypoints"],
-                                                       "Before and After waypoints"))
+                                                            self.waypoints, verbose=False)[
+                             :self.simulation_duration + 1]
 
         self.speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
         raw_speed = speed_kmh
