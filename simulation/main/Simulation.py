@@ -260,10 +260,24 @@ class Simulation:
             self.plotting.add_graph_to_queue(Graph(arrays_to_plot, y_label, "Results"))
             self.plotting.plot_graphs(self.timestamps)
 
-        if self.race_type == "FSGP":
-            helpers.route_visualization(self.gis.single_lap_path, visible=route_visualization)
-        elif self.race_type == "ASC":
-            helpers.route_visualization(self.gis.path, visible=route_visualization)
+            if verbose:
+                indices_and_environment_graph = Graph([self.temp, self.closest_gis_indices, self.closest_weather_indices,
+                                                       self.gradients, self.time_zones, self.gis_vehicle_bearings],
+                                                      ["speed dist (m)", "gis ind", "weather ind", "gradients (m)",
+                                                       "time zones",
+                                                       "vehicle bearings"], "Indices and Environment variables")
+                self.plotting.add_graph_to_queue(indices_and_environment_graph)
+
+                speed_boolean_graph = Graph([self.speed_kmh, self.state_of_charge],
+                                            ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
+                                            "Speed Boolean Operations")
+                self.plotting.add_graph_to_queue(speed_boolean_graph)
+
+        if route_visualization:
+            if self.race_type == "FSGP":
+                helpers.route_visualization(self.gis.single_lap_path, visible=route_visualization)
+            elif self.race_type == "ASC":
+                helpers.route_visualization(self.gis.path, visible=route_visualization)
 
         if self.return_type is SimulationReturnType.distance_travelled:
             return distance_travelled
@@ -274,7 +288,7 @@ class Simulation:
         else:
             raise TypeError("Return type not found.")
 
-    def __run_simulation_calculations(self, pbar, verbose=False):
+    def __run_simulation_calculations(self, pbar):
         """
 
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
@@ -298,7 +312,7 @@ class Simulation:
         self.distances = self.tick_array * self.speed_kmh / 3.6
         self.cumulative_distances = np.cumsum(self.distances)
 
-        temp = self.cumulative_distances
+        self.temp = self.cumulative_distances
         pbar.update(1)
 
         # ----- Weather and location calculations -----
@@ -431,19 +445,6 @@ class Simulation:
 
         # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
         self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
-
-        if verbose:
-            indices_and_environment_graph = Graph([temp, self.closest_gis_indices, self.closest_weather_indices, 
-                                                   self.gradients, self.time_zones, self.gis_vehicle_bearings],
-                                                  ["speed dist (m)", "gis ind", "weather ind", "gradients (m)",
-                                                   "time zones",
-                                                   "vehicle bearings"], "Indices and Environment variables")
-            self.plotting.add_graph_to_queue(indices_and_environment_graph)
-
-            speed_boolean_graph = Graph([self.speed_kmh, self.state_of_charge],
-                                        ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
-                                        "Speed Boolean Operations")
-            self.plotting.add_graph_to_queue(speed_boolean_graph)
 
         pbar.update(1)
 
