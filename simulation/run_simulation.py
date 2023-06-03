@@ -22,7 +22,9 @@ class SimulationSettings:
     This class stores settings that will be used by the simulation.
 
     """
-    def __init__(self, golang=True, return_type=SimulationReturnType.distance_travelled, optimization_iterations=5, route_visualization=False, verbose=False):
+
+    def __init__(self, golang=True, return_type=SimulationReturnType.distance_travelled, optimization_iterations=5,
+                 route_visualization=False, verbose=False):
         self.optimization_iterations = optimization_iterations
         self.golang = golang
         self.return_type = return_type
@@ -83,7 +85,8 @@ def run_simulation(simulation_settings):
 
     #  ----- Output results ----- #
 
-    display_output(simulation_settings.return_type, unoptimized_time, optimized, optimized_random, results, results_random)
+    display_output(simulation_settings.return_type, unoptimized_time, optimized, optimized_random, results,
+                   results_random)
 
     return unoptimized_time
 
@@ -116,9 +119,12 @@ def main():
 
 def display_output(return_type, unoptimized, optimized, optimized_random, results, results_random):
     if return_type is SimulationReturnType.time_taken:
-        print(f'TimeSimulation results. Time Taken: {-1 * unoptimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * unoptimized)))})')
-        print(f'Optimized results. Time taken: {-1 * optimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized)))})')
-        print(f'Random results. Time taken: {-1 * optimized_random} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized_random)))})')
+        print(
+            f'TimeSimulation results. Time Taken: {-1 * unoptimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * unoptimized)))})')
+        print(
+            f'Optimized results. Time taken: {-1 * optimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized)))})')
+        print(
+            f'Random results. Time taken: {-1 * optimized_random} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized_random)))})')
 
     elif return_type is SimulationReturnType.distance_travelled:
         print(f'Distance travelled: {unoptimized}')
@@ -140,26 +146,26 @@ def display_commands():
 
     print("------------------------COMMANDS-----------------------\n"
           "-help                 Display list of valid commands.\n"
-          "\n"                   
+          "\n"
           "-golang               Define whether golang implementations\n"
           "                      will be used. \n"
           "                      (True/False)\n"
-          "\n"                   
+          "\n"
           "-optimize             Define what data the simulation\n"
           "                      should optimize. \n"
           "                      (time_taken/distance_travelled)\n"
-          "\n"                   
+          "\n"
           "-iter                 Set how many iterations of optimizations\n"
           "                      should be performed on the simulation.\n"
-          "\n"                   
+          "\n"
           "-verbose              Set whether simulation methods should\n"
           "                      execute as verbose.\n"
           "                      (True/False)\n"
-          "\n"                  
+          "\n"
           "route-visualization   Define whether the simulation route\n"
           "                      should be plotted and visualized.\n"
           "                      (True/False)\n"
-          "\n"     
+          "\n"
           "-------------------------USAGE--------------------------\n"
           ">>>python3 run_simulation.py -golang=False -optimize=time_taken -iter=3\n")
 
@@ -239,6 +245,34 @@ def parse_commands(cmds):
             simulation_settings.route_visualization = True if split_cmd[1] == 'True' else False
 
     return simulation_settings
+
+
+def run_unoptimized_and_export(input_speed=None, values=None, golang=True):
+    """
+
+    Export simulation data.
+
+    """
+
+    with open(settings_directory / "initial_conditions.json") as f:
+        args = json.load(f)
+
+    return_type = SimulationReturnType.void
+    initialSimulationConditions = simulationState.SimulationState(args)
+
+    simulation_model = Simulation(initialSimulationConditions, return_type, race_type="ASC", golang=golang)
+    driving_hours = simulation_model.get_driving_hours()
+    if input_speed is None:
+        input_speed = np.array([30] * driving_hours)
+    if values is None:
+        values = ["speed_kmh", "distances", "state_of_charge", "delta_energy", "solar_irradiances",
+                  "wind_speeds", "gis_route_elevations_at_each_tick", "cloud_covers",
+                  "distance_travelled", "time_taken", "final_soc"]
+
+    simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False, route_visualization=False)
+    results_array = simulation_model.get_results(values)
+
+    return results_array
 
 
 if __name__ == "__main__":
