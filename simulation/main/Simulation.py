@@ -246,19 +246,14 @@ class Simulation:
         self.speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
 
         if self.race_type == "ASC":
-            speed_kmh_without_checkpoints = self.speed_kmh
             self.speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances,
                                                             self.speed_kmh / 3.6,
-                                                            self.waypoints, verbose=False)[:self.simulation_duration + 1]
-            if verbose:
-                self.plotting.add_graph_to_queue(Graph([speed_kmh_without_checkpoints, self.speed_kmh],
-                                                       ["Speed before waypoints", " Speed after waypoints"],
-                                                       "Before and After waypoints"))
+                                                            self.waypoints, verbose=False)[
+                             :self.simulation_duration + 1]
 
-        self.speed_kmh = helpers.apply_deceleration(self.speed_kmh, 20)
         raw_speed = self.speed_kmh
 
-        # ------ Run calculations and get result and modified speed array -------
+        # ------ Run calculations -------
         with tqdm(total=20, file=sys.stdout, desc="Running Simulation Calculations") as pbar:
             self.__run_simulation_calculations(pbar)
 
@@ -273,28 +268,35 @@ class Simulation:
         # ----- Plotting -----
 
         if plot_results:
-            arrays_to_plot = [self.speed_kmh, self.distances, self.state_of_charge, self.delta_energy,
-                              self.solar_irradiances, self.wind_speeds, self.gis_route_elevations_at_each_tick,
-                              self.cloud_covers, self.raw_soc, raw_speed]
+            arrays_ = [self.speed_kmh, self.distances, self.state_of_charge, self.delta_energy,
+                       self.solar_irradiances, self.wind_speeds, self.gis_route_elevations_at_each_tick,
+                       self.cloud_covers, self.raw_soc, raw_speed]
             y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                        "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)",
                        "Raw SOC (%)", "Raw Speed (km/h)"]
 
-            self.plotting.add_graph_to_queue(Graph(arrays_to_plot, y_label, "Results"))
+            self.plotting.add_graph_to_queue(Graph(arrays_, y_label, "Results"))
             self.plotting.plot_graphs(self.timestamps)
 
             if verbose:
+                speed_and_checkpoints_graph = Graph(
+                    [raw_speed, self.speed_kmh],
+                    ["Speed before waypoints", " Speed after waypoints"],
+                    "Before and After waypoints")
                 indices_and_environment_graph = Graph(
                     [self.temp, self.closest_gis_indices, self.closest_weather_indices,
                      self.gradients, self.time_zones, self.gis_vehicle_bearings],
                     ["speed dist (m)", "gis ind", "weather ind", "gradients (m)",
                      "time zones",
                      "vehicle bearings"], "Indices and Environment variables")
-                self.plotting.add_graph_to_queue(indices_and_environment_graph)
 
-                speed_boolean_graph = Graph([self.speed_kmh, self.state_of_charge],
-                                            ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
-                                            "Speed Boolean Operations")
+                speed_boolean_graph = Graph(
+                    [self.speed_kmh, self.state_of_charge],
+                    ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
+                    "Speed Boolean Operations")
+
+                self.plotting.add_graph_to_queue(speed_and_checkpoints_graph)
+                self.plotting.add_graph_to_queue(indices_and_environment_graph)
                 self.plotting.add_graph_to_queue(speed_boolean_graph)
 
         if route_visualization:
@@ -315,9 +317,8 @@ class Simulation:
     def __run_simulation_calculations(self, pbar):
         """
 
-        Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
-        containing members that specify total distance travelled and time taken at the end of the simulation
-        and final battery state of charge. This is where most of the main simulation logic happens.
+        Helper method to perform all calculations used in run_model.
+        This is where most of the main simulation logic happens.
 
         :param pbar: progress bar used to track Simulation progress
 
