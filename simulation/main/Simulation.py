@@ -201,14 +201,15 @@ class Simulation:
         speed_mapped = helpers.map_array_to_targets(speed, speed_boolean_array)
         speed_mapped_kmh = helpers.reshape_and_repeat(speed_mapped, self.simulation_duration)
         speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
-        speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
+        self.speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
 
         if self.race_type == "ASC":
-            speed_kmh_without_checkpoints = speed_kmh
-            speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
-                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
+            speed_kmh_without_checkpoints = self.speed_kmh
+            self.speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances,
+                                                            self.speed_kmh / 3.6,
+                                                            self.waypoints, verbose=False)[:self.simulation_duration + 1]
             if verbose:
-                self.plotting.add_graph_to_queue(Graph([speed_kmh_without_checkpoints, speed_kmh],
+                self.plotting.add_graph_to_queue(Graph([speed_kmh_without_checkpoints, self.speed_kmh],
                                                        ["Speed before waypoints", " Speed after waypoints"],
                                                        "Before and After waypoints"))
 
