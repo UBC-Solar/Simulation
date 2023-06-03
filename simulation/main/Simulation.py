@@ -160,7 +160,44 @@ class Simulation:
 
         self.plotting = Plotting()
 
+        # --------- Results ---------
+
         self.speed_kmh = None
+        self.distances = None
+        self.state_of_charge = None
+        self.delta_energy = None
+        self.solar_irradiances = None
+        self.wind_speeds = None
+        self.gis_route_elevations_at_each_tick = None
+        self.cloud_covers = None
+        self.distance = None
+        self.route_length = None
+        self.time_taken = None
+
+        # --------- Calculations ---------
+
+        self.tick_array = None
+        self.time_zones = None
+        self.distances = None
+        self.cumulative_distances = None
+        self.temp = None
+        self.closest_gis_indices = None
+        self.closest_weather_indices = None
+        self.path_distances = None
+        self.max_route_distance = None
+        self.gis_route_elevations_at_each_tick = None
+        self.gis_vehicle_bearings = None
+        self.gradients = None
+        self.absolute_wind_speeds = None
+        self.wind_directions = None
+        self.lvs_consumed_energy = None
+        self.motor_consumed_energy = None
+        self.array_produced_energy = None
+        self.not_charge = None
+        self.consumed_energy = None
+        self.produced_energy = None
+        self.time_in_motion = None
+        self.final_soc = None
 
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
                   route_visualization=False, **kwargs):
@@ -221,7 +258,7 @@ class Simulation:
 
         # ------ Run calculations and get result and modified speed array -------
         with tqdm(total=20, file=sys.stdout, desc="Running Simulation Calculations") as pbar:
-            result = self.__run_simulation_calculations(pbar, verbose=verbose)
+            result = self.__run_simulation_calculations(pbar)
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
@@ -261,11 +298,12 @@ class Simulation:
             self.plotting.plot_graphs(self.timestamps)
 
             if verbose:
-                indices_and_environment_graph = Graph([self.temp, self.closest_gis_indices, self.closest_weather_indices,
-                                                       self.gradients, self.time_zones, self.gis_vehicle_bearings],
-                                                      ["speed dist (m)", "gis ind", "weather ind", "gradients (m)",
-                                                       "time zones",
-                                                       "vehicle bearings"], "Indices and Environment variables")
+                indices_and_environment_graph = Graph(
+                    [self.temp, self.closest_gis_indices, self.closest_weather_indices,
+                     self.gradients, self.time_zones, self.gis_vehicle_bearings],
+                    ["speed dist (m)", "gis ind", "weather ind", "gradients (m)",
+                     "time zones",
+                     "vehicle bearings"], "Indices and Environment variables")
                 self.plotting.add_graph_to_queue(indices_and_environment_graph)
 
                 speed_boolean_graph = Graph([self.speed_kmh, self.state_of_charge],
@@ -365,27 +403,27 @@ class Simulation:
         self.time_zones = self.gis.get_time_zones(self.closest_gis_indices)
 
         # Local times in UNIX timestamps
-        self.local_times = helpers.adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization,
+        local_times = helpers.adjust_timestamps_to_local_times(self.timestamps, self.time_of_initialization,
                                                                self.time_zones)
 
         pbar.update(1)
 
         # Get the weather at every location
-        weather_forecasts = self.weather.get_weather_forecast_in_time(self.closest_weather_indices, self.local_times)
-        self.roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
-        self.weather_forecasts = np.roll(weather_forecasts, -self.roll_by_tick, 0)
+        weather_forecasts = self.weather.get_weather_forecast_in_time(self.closest_weather_indices, local_times)
+        roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
+        weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
 
         pbar.update(2)
 
-        self.absolute_wind_speeds = weather_forecasts[:, 5]
+        absolute_wind_speeds = weather_forecasts[:, 5]
         self.wind_directions = weather_forecasts[:, 6]
-        self.cloud_covers = self.weather_forecasts[:, 7]
+        self.cloud_covers = weather_forecasts[:, 7]
 
         pbar.update(1)
 
         # Get the wind speeds at every location
         self.wind_speeds = helpers.get_array_directional_wind_speed(self.gis_vehicle_bearings,
-                                                                    self.absolute_wind_speeds,
+                                                                    absolute_wind_speeds,
                                                                     self.wind_directions)
 
         pbar.update(1)
@@ -393,7 +431,7 @@ class Simulation:
         # Get an array of solar irradiance at every coordinate and time
         self.solar_irradiances = self.solar_calculations.calculate_array_GHI(
             self.route_coords[self.closest_gis_indices],
-            self.time_zones, self.local_times,
+            self.time_zones, local_times,
             self.gis_route_elevations_at_each_tick,
             self.cloud_covers)
 
@@ -406,7 +444,8 @@ class Simulation:
         self.basic_lvs.update(self.tick)
 
         self.lvs_consumed_energy = self.basic_lvs.get_consumed_energy()
-        self.motor_consumed_energy = self.basic_motor.calculate_energy_in(self.speed_kmh, self.gradients, self.wind_speeds,
+        self.motor_consumed_energy = self.basic_motor.calculate_energy_in(self.speed_kmh, self.gradients,
+                                                                          self.wind_speeds,
                                                                           self.tick)
         self.array_produced_energy = self.basic_array.calculate_produced_energy(self.solar_irradiances, self.tick)
 
@@ -434,13 +473,13 @@ class Simulation:
 
         # ----- Array calculations -----
 
-        self.cumulative_delta_energy = np.cumsum(self.delta_energy)
-        self.battery_variables_array = self.basic_battery.update_array(self.cumulative_delta_energy)
+        cumulative_delta_energy = np.cumsum(self.delta_energy)
+        battery_variables_array = self.basic_battery.update_array(cumulative_delta_energy)
 
         pbar.update(1)
 
         # stores the battery SOC at each time step
-        self.state_of_charge = self.battery_variables_array[0]
+        self.state_of_charge = battery_variables_array[0]
         self.state_of_charge[np.abs(self.state_of_charge) < 1e-03] = 0
 
         # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
