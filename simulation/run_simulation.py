@@ -262,6 +262,12 @@ def run_unoptimized_and_export(input_speed=None, values=None, golang=True):
 
     Export simulation data.
 
+    :param input_speed: defaulted to 30km/h, an array of speeds that the Simulation will use.
+    :param values: defaulted to what was outputted by now-deprecated SimulationResults object, a tuple of strings that
+    each correspond to a value or array that the Simulation will export. See Simulation.get_results() for valid keys.
+    :param golang: define whether GoLang
+    implementations should be used.
+
     """
 
     with open(settings_directory / "initial_conditions.json") as f:

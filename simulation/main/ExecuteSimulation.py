@@ -15,6 +15,8 @@ Description: Export Simulation data as a SimulationResults object.
 def GetSimulationData(golang=True):
     """
 
+    This is now deprecated and will be removed in the future.
+
     Returns a SimulationResult object with the purpose of exporting simulation data.
 
     """
