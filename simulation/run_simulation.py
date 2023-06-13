@@ -22,12 +22,13 @@ class SimulationSettings:
     This class stores settings that will be used by the simulation.
 
     """
-    def __init__(self, golang=True, return_type=SimulationReturnType.distance_travelled, optimization_iterations=5, route_visualization=False, verbose=False):
+    def __init__(self, golang=True, return_type=SimulationReturnType.distance_travelled, optimization_iterations=5, route_visualization=False, verbose=False, granularity=1):
         self.optimization_iterations = optimization_iterations
         self.golang = golang
         self.return_type = return_type
         self.route_visualization = route_visualization
         self.verbose = verbose
+        self.granularity = granularity
 
 
 def run_simulation(simulation_settings):
@@ -54,8 +55,10 @@ def run_simulation(simulation_settings):
     # Initialize simulation model
     simulation_model = Simulation(initial_simulation_conditions, simulation_settings.return_type,
                                   race_type="ASC",
-                                  golang=simulation_settings.golang)
-    driving_hours = simulation_model.get_driving_hours()
+                                  golang=simulation_settings.golang,
+                                  granularity=simulation_settings.granularity)
+
+    driving_hours = simulation_model.get_driving_time_divisions()
     input_speed = np.array([30] * driving_hours)
 
     # Run simulation model with a "guess" speed array
@@ -156,15 +159,19 @@ def display_commands():
           "                      execute as verbose.\n"
           "                      (True/False)\n"
           "\n"                  
-          "route-visualization   Define whether the simulation route\n"
+          "-route-visualization   Define whether the simulation route\n"
           "                      should be plotted and visualized.\n"
           "                      (True/False)\n"
-          "\n"     
+          "\n"
+          "-granularity          Define how granular the speed array\n"
+          "                      should be, where 1 is hourly and 2 is\n"
+          "                      bi-hourly.\n"
+          "\n"
           "-------------------------USAGE--------------------------\n"
           ">>>python3 run_simulation.py -golang=False -optimize=time_taken -iter=3\n")
 
 
-valid_commands = ["-help", "-golang", "-optimize", "-iter", "-verbose", "-route-visualization"]
+valid_commands = ["-help", "-golang", "-optimize", "-iter", "-verbose", "-route-visualization", "-granularity"]
 
 
 def identify_invalid_commands(cmds):
@@ -237,6 +244,9 @@ def parse_commands(cmds):
 
         elif split_cmd[0] == '-route-visualization':
             simulation_settings.route_visualization = True if split_cmd[1] == 'True' else False
+
+        elif split_cmd[0] == '-granularity':
+            simulation_settings.granularity = split_cmd[1]
 
     return simulation_settings
 

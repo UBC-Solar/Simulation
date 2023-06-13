@@ -42,7 +42,7 @@ class Simulation:
 
     """
 
-    def __init__(self, initial_conditions, return_type, race_type, golang=True):
+    def __init__(self, initial_conditions, return_type, race_type, granularity, golang=True):
         """
 
         Instantiates a simple model of the car.
@@ -50,6 +50,7 @@ class Simulation:
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
         :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
         :param return_type: discretely defines what kind of data run_model should return.
+        :param float granularity: define the length of the time period represented by each speed array element
         :param golang: boolean which controls whether GoLang implementations are used when available
 
         """
@@ -73,6 +74,9 @@ class Simulation:
 
         with open(settings_path) as f:
             args = json.load(f)
+
+        # ---- Granularity -----
+        self.granularity = granularity
 
         # ----- Load from settings_*.json -----
 
@@ -199,7 +203,8 @@ class Simulation:
             print(f"Input speeds: {speed}\n")
 
         speed_boolean_array = helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
-                                                                          self.race_type, as_seconds=False).astype(int)
+                                                                          self.race_type, as_seconds=False,
+                                                                          granularity=self.granularity).astype(int)
         speed_mapped = helpers.map_array_to_targets(speed, speed_boolean_array)
         speed_mapped_kmh = helpers.reshape_and_repeat(speed_mapped, self.simulation_duration)
         speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
@@ -481,14 +486,15 @@ class Simulation:
 
         return results
 
-    def get_driving_hours(self) -> int:
+    def get_driving_time_divisions(self) -> int:
         """
 
-        Returns the number of hours that the car is permitted to be driving.
+        Returns the number of time divisions (based on granularity) that the car is permitted to be driving.
         Dependent on rules in get_race_timing_constraints_boolean() function in common/helpers.
 
         :return: number of hours as an integer
         """
 
         return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
-                                                           self.race_type, as_seconds=False).astype(int).sum()
+                                                           self.race_type, self.granularity,
+                                                           as_seconds=False).sum().astype(int)
