@@ -66,6 +66,10 @@ class Simulation:
         # ---- Granularity -----
         self.granularity = builder.granularity
 
+        # ---- Granularity -----
+        self.granularity = builder.granularity
+
+        # ----- Load from settings_*.json -----
         self.lvs_power_loss = builder.lvs_power_loss  # LVS power loss is pretty small, so it is neglected
 
         self.tick = builder.tick
