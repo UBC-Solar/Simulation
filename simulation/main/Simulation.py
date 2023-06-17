@@ -156,6 +156,8 @@ class Simulation:
 
         self.basic_motor = simulation.BasicMotor()
 
+        self.basic_regen = simulation.BasicRegen()
+
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, library=self.library, force_update=gis_force_update,
                                   current_coord=self.current_coord, golang=self.golang)
