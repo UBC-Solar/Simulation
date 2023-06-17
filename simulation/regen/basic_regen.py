@@ -26,9 +26,9 @@ class BasicRegen(BaseRegen):
         self.produced_energy = self.calculate_change_energy(deceleration_instances)*self.efficiency
 
         return self.produced_energy
-    
+
     def calculate_change_energy(self, speed_delta_kmh):
-        """ 
+        """
         Calculate the change in kinetic energy caused by a change in speed
         :param speed_delta: an array containing the change in speeds
         """
