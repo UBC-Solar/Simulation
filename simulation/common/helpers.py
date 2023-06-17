@@ -548,26 +548,26 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
     :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
     :param np.ndarray timestamps: A NumPy array representing the timestamps for the simulated race
     :param bool verbose: A flag to show speed array modifications for debugging purposes
-    :returns: constrained_speed_kmh, a speed array with race timing constraints applied to it, not_charge, a boolean array representing when the car can charge and when it cannot (1 = charge, 0 = not_charge)
+    :returns: constrained_speed_kmh, a speed array with race timing constraints applied to it, not_charging_array, a boolean array representing when the car can charge and when it cannot (1 = charge, 0 = not_charging_array)
     :rtype: np.ndarray
     :raises: ValueError is race_type is not one of "ASC" or "FSGP"
 
     """
 
-    not_charge = get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type)
+    not_charging_array = get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type)
 
     if verbose:
         plot_graph(timestamps=timestamps,
-                   arrays_to_plot=[not_charge, speed_kmh],
+                   arrays_to_plot=[not_charging_array, speed_kmh],
                    array_labels=["not charge", "updated speed (km/h)"],
                    graph_title="not charge and speed")
 
-    constrained_speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+    constrained_speed_kmh = np.logical_and(speed_kmh, not_charging_array) * speed_kmh
 
-    return constrained_speed_kmh, not_charge
+    return constrained_speed_kmh, not_charging_array
 
 
-def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type, as_seconds=True):
+def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type, granularity, as_seconds=True):
     """
 
     Applies regulation timing constraints to a speed array.
@@ -576,6 +576,7 @@ def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_ty
     :param int simulation_duration: An integer representing simulation duration in seconds
     :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
     :param bool as_seconds: will return an array of seconds, or hours if set to False
+    :param float granularity: how granular the time divisions for Simulation's speed array should be, where 1 is hourly and 0.5 is twice per hour.
     :returns: driving_time_boolean, a boolean array with race timing constraints applied to it
     :rtype: np.ndarray
     :raises: ValueError is race_type is not one of "ASC" or "FSGP"
@@ -585,7 +586,7 @@ def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_ty
     # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
     # (Charge from 8am-9am and 6pm-8pm) for FSGP
 
-    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
+    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60), (1.0 / granularity))
 
     if as_seconds is True:
         simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
@@ -852,7 +853,6 @@ def map_array_to_targets(input_array, target_array):
 
 if __name__ == '__main__':
     out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])
-    print(out)
 
     # speed_array input
     speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
