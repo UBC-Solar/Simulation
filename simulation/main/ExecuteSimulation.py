@@ -29,8 +29,7 @@ def GetSimulationData(golang=True):
     simulation_model = Simulation(initialSimulationConditions, return_type, race_type="ASC", golang=golang)
 
     results = simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False, route_visualization=False)
-    map_coordinates = simulation_model.gis.path
-    return results, map_coordinates
+    return results
 
 
 if __name__ == "__main__":

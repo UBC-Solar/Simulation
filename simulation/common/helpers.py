@@ -850,6 +850,23 @@ def map_array_to_targets(input_array, target_array):
 
     return output_array
 
+def get_map_data_indices(closest_gis_indices):
+    """
+    gets list of indices of the data to be displayed on corresponding
+    coordinates of the client side map
+
+    :param closest_gis_indices: a list of indices of the closest gis coordinate
+                                at each tick
+    """
+    map_data_indices = [0]
+    for n, index in enumerate(closest_gis_indices):
+        if n == 0:
+            continue
+        else:
+            if not closest_gis_indices[n] == closest_gis_indices[n-1]:
+                map_data_indices.append(n)
+    return map_data_indices
+
 
 if __name__ == '__main__':
     out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])

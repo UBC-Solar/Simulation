@@ -400,6 +400,7 @@ class Simulation:
                                                                    simulation_duration=self.simulation_duration,
                                                                    race_type=self.race_type)
         array_produced_energy = np.logical_and(array_produced_energy, not_charge) * array_produced_energy
+        motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
 
         pbar.update(1)
 
@@ -456,6 +457,8 @@ class Simulation:
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         distances = distances.clip(0, max_route_distance / 1000)
 
+        map_data_indices = helpers.get_map_data_indices(closest_gis_indices)
+
         results = SimulationResult()
 
         results.arrays = [
@@ -466,7 +469,9 @@ class Simulation:
             solar_irradiances,
             wind_speeds,
             gis_route_elevations_at_each_tick,
-            cloud_covers
+            cloud_covers,
+            closest_gis_indices,
+            map_data_indices
         ]
 
         results.distance_travelled = distances[-1]
