@@ -548,7 +548,36 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
     :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
     :param np.ndarray timestamps: A NumPy array representing the timestamps for the simulated race
     :param bool verbose: A flag to show speed array modifications for debugging purposes
-    :returns: constrained_speed_kmh, a speed array with race timing constraints applied to it, not_charge, a boolean array representing when the car can charge and when it cannot (1 = charge, 0 = not_charge)
+    :returns: constrained_speed_kmh, a speed array with race timing constraints applied to it, not_charging_array, a boolean array representing when the car can charge and when it cannot (1 = charge, 0 = not_charging_array)
+    :rtype: np.ndarray
+    :raises: ValueError is race_type is not one of "ASC" or "FSGP"
+
+    """
+
+    not_charging_array = get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type)
+
+    if verbose:
+        plot_graph(timestamps=timestamps,
+                   arrays_to_plot=[not_charging_array, speed_kmh],
+                   array_labels=["not charge", "updated speed (km/h)"],
+                   graph_title="not charge and speed")
+
+    constrained_speed_kmh = np.logical_and(speed_kmh, not_charging_array) * speed_kmh
+
+    return constrained_speed_kmh, not_charging_array
+
+
+def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type, granularity, as_seconds=True):
+    """
+
+    Applies regulation timing constraints to a speed array.
+
+    :param int start_hour: An integer representing the race's start hour
+    :param int simulation_duration: An integer representing simulation duration in seconds
+    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
+    :param bool as_seconds: will return an array of seconds, or hours if set to False
+    :param float granularity: how granular the time divisions for Simulation's speed array should be, where 1 is hourly and 0.5 is twice per hour.
+    :returns: driving_time_boolean, a boolean array with race timing constraints applied to it
     :rtype: np.ndarray
     :raises: ValueError is race_type is not one of "ASC" or "FSGP"
 
@@ -557,31 +586,56 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
     # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
     # (Charge from 8am-9am and 6pm-8pm) for FSGP
 
-    simulation_hours = np.arange(
-        start_hour, start_hour + simulation_duration / (60 * 60))
+    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60), (1.0 / granularity))
 
-    simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
-                                           start_hour + simulation_duration / (60 * 60)).astype(int)
-
-    if race_type == "ASC":
-        driving_time_boolean = [
-            (simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 18]
-    elif race_type == "FSGP":
-        driving_time_boolean = [
-            (simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 18]
+    if as_seconds is True:
+        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
+        if race_type == "ASC":
+            driving_time_boolean = [(simulation_hours_by_second % 24) <= 9, (simulation_hours_by_second % 24) >= 18]
+        else:  # FSGP
+            driving_time_boolean = [(simulation_hours_by_second % 24) <= 9, (simulation_hours_by_second % 24) >= 18]
     else:
-        raise ValueError(
-            f"Invalid race_type provided: \"{race_type}\". Must be one of \"ASC\" or \"FSGP\".")
-    not_charge = np.invert(np.logical_or.reduce(driving_time_boolean))
-    if verbose:
-        plot_graph(timestamps=timestamps,
-                   arrays_to_plot=[not_charge, speed_kmh],
-                   array_labels=["not charge", "updated speed (km/h)"],
-                   graph_title="not charge and speed")
+        if race_type == "ASC":
+            driving_time_boolean = [(simulation_hours % 24) <= 9, (simulation_hours % 24) >= 18]
+        else:  # FSGP
+            driving_time_boolean = [(simulation_hours % 24) <= 9, (simulation_hours % 24) >= 18]
 
-    constrained_speed_kmh = np.logical_and(speed_kmh, not_charge) * speed_kmh
+    return np.invert(np.logical_or.reduce(driving_time_boolean))
 
-    return constrained_speed_kmh, not_charge
+
+def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_type, as_seconds=True):
+    """
+
+    Applies regulation timing constraints to an array representing when the car will be able to charge.
+
+    :param int start_hour: An integer representing the race's start hour
+    :param int simulation_duration: An integer representing simulation duration in seconds
+    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
+    :param bool as_seconds: will return an array of seconds, or hours if set to False
+    :returns: driving_time_boolean, a boolean array with charge timing constraints applied to it
+    :rtype: np.ndarray
+    :raises: ValueError is race_type is not one of "ASC" or "FSGP"
+
+    """
+
+    # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
+    # (Charge from 8am-9am and 6pm-8pm) for FSGP
+
+    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
+
+    if as_seconds is True:
+        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
+        if race_type == "ASC":
+            driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 20]
+        else:  # FSGP
+            driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 20]
+    else:
+        if race_type == "ASC":
+            driving_time_boolean = [(simulation_hours % 24) <= 7, (simulation_hours % 24) >= 20]
+        else:  # FSGP
+            driving_time_boolean = [(simulation_hours % 24) <= 8, (simulation_hours % 24) >= 20]
+
+    return np.invert(np.logical_or.reduce(driving_time_boolean))
 
 
 def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True):
@@ -649,7 +703,7 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
     return
 
 
-def route_visualization(coords, visible=True):
+def route_visualization(coords, visible=True):  # TODO: Consolidate this with Plotting module
     """
 
     Takes in a list of coordinates and visualizes them using MapBox.
@@ -762,7 +816,44 @@ def plot_latitudes(coordinates):
     simple_plot_graph(coordinates[:, 1], "Latitudes")
 
 
+def map_array_to_targets(input_array, target_array):
+    """
+
+    Will map an array of values to the non-zero elements (a target) of targets_array.
+    The assertion that len(input_array) and # of targets must match.
+
+    Examples:
+        If input array is [9, 6, 12] and target_array is [0, 1, 1, 0, 1], the output
+    would be [0, 9, 6, 0, 12].
+        If input array is [7, 4, 3, 1] and target_array is [0, 1, 0, 1, 1], then the assertion will
+    fail as there are four elements in input_array and three targets in target_array, thus an error
+    will be raised.
+
+    :param input_array: array of values that will be mapped to the boolean array
+    :param target_array: a boolean array of zero and non-zero values
+    :returns: a new array consisting of the elements of input_array, mapped to the targets values of target_array.
+    :rtype: np.ndarray
+
+    """
+
+    if target_array.sum() != len(input_array):
+        raise AssertionError("Number of targets and length of input_array do not match.")
+
+    output_array = np.zeros(len(target_array), dtype=float)
+    i = 0
+
+    for value in input_array:
+        while target_array[i] == 0:
+            i += 1
+        output_array[i] = value
+        i += 1
+
+    return output_array
+
+
 if __name__ == '__main__':
+    out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])
+
     # speed_array input
     speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 

@@ -42,7 +42,7 @@ class Simulation:
 
     """
 
-    def __init__(self, initial_conditions, return_type, race_type, golang=True):
+    def __init__(self, initial_conditions, return_type, race_type, granularity, golang=True):
         """
 
         Instantiates a simple model of the car.
@@ -50,6 +50,7 @@ class Simulation:
         :param race_type: a string that describes the race type to simulate (ASC or FSGP)
         :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
         :param return_type: discretely defines what kind of data run_model should return.
+        :param float granularity: define the length of the time period represented by each speed array element
         :param golang: boolean which controls whether GoLang implementations are used when available
 
         """
@@ -73,6 +74,9 @@ class Simulation:
 
         with open(settings_path) as f:
             args = json.load(f)
+
+        # ---- Granularity -----
+        self.granularity = granularity
 
         # ----- Load from settings_*.json -----
 
@@ -198,15 +202,13 @@ class Simulation:
         if not kwargs:
             print(f"Input speeds: {speed}\n")
 
-        speed_kmh = helpers.reshape_and_repeat(speed, self.simulation_duration)
-        speed_kmh = np.insert(speed_kmh, 0, 0)
-        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
-
-        speed_kmh, not_charge = helpers.apply_race_timing_constraints(speed_kmh=speed_kmh, start_hour=self.start_hour,
-                                                                      simulation_duration=self.simulation_duration,
-                                                                      race_type=self.race_type,
-                                                                      timestamps=self.timestamps,
-                                                                      verbose=verbose)
+        speed_boolean_array = helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
+                                                                          self.race_type, as_seconds=False,
+                                                                          granularity=self.granularity).astype(int)
+        speed_mapped = helpers.map_array_to_targets(speed, speed_boolean_array)
+        speed_mapped_kmh = helpers.reshape_and_repeat(speed_mapped, self.simulation_duration)
+        speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
+        speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
 
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
@@ -222,7 +224,7 @@ class Simulation:
 
         # ------ Run calculations and get result and modified speed array -------
         with tqdm(total=20, file=sys.stdout, desc="Running Simulation Calculations") as pbar:
-            result = self.__run_simulation_calculations(speed_kmh, not_charge, pbar, verbose=verbose)
+            result = self.__run_simulation_calculations(speed_kmh, pbar, verbose=verbose)
 
         # ------- Parse results ---------
         simulation_arrays = result.arrays
@@ -275,7 +277,7 @@ class Simulation:
         else:
             raise TypeError("Return type not found.")
 
-    def __run_simulation_calculations(self, speed_kmh, not_charge, pbar, verbose=False):
+    def __run_simulation_calculations(self, speed_kmh, pbar, verbose=False):
         """
 
         Helper method to perform all calculations used in run_model. Returns a SimulationResult object 
@@ -283,7 +285,6 @@ class Simulation:
         and final battery state of charge. This is where most of the main simulation logic happens.
 
         :param speed_kmh: array that specifies the solar car's driving speed (in km/h) at each time step
-        :param not_charge: array that specifies when the car is charging for calculations
         :param pbar: progress bar used to track Simulation progress
 
         """
@@ -373,7 +374,7 @@ class Simulation:
 
         # Get the wind speeds at every location
         wind_speeds = helpers.get_array_directional_wind_speed(gis_vehicle_bearings, absolute_wind_speeds,
-                                                       wind_directions)
+                                                               wind_directions)
 
         pbar.update(1)
 
@@ -384,6 +385,7 @@ class Simulation:
                                                                         cloud_covers)
 
         pbar.update(2)
+
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
         # ----- Energy Calculations -----
@@ -394,7 +396,10 @@ class Simulation:
         motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
         array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
 
-        motor_consumed_energy = np.logical_and(motor_consumed_energy, not_charge) * motor_consumed_energy
+        not_charge = helpers.get_charge_timing_constraints_boolean(start_hour=self.start_hour,
+                                                                   simulation_duration=self.simulation_duration,
+                                                                   race_type=self.race_type)
+        array_produced_energy = np.logical_and(array_produced_energy, not_charge) * array_produced_energy
 
         pbar.update(1)
 
@@ -423,6 +428,7 @@ class Simulation:
         state_of_charge = battery_variables_array[0]
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
 
+        # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
         speed_kmh = np.logical_and(not_charge, state_of_charge) * speed_kmh
 
         if verbose:
@@ -479,3 +485,16 @@ class Simulation:
         self.local_times = local_times
 
         return results
+
+    def get_driving_time_divisions(self) -> int:
+        """
+
+        Returns the number of time divisions (based on granularity) that the car is permitted to be driving.
+        Dependent on rules in get_race_timing_constraints_boolean() function in common/helpers.
+
+        :return: number of hours as an integer
+        """
+
+        return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
+                                                           self.race_type, self.granularity,
+                                                           as_seconds=False).sum().astype(int)
