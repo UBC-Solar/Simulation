@@ -101,7 +101,7 @@ class Daybreak(StandardVehicle):
         self.vehicle_mass = None
 
 
-class Brightside:
+class Brightside(StandardVehicle):
     """
 
     This class will hold vehicle constants in the future.
