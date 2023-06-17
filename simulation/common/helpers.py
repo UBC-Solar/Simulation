@@ -852,7 +852,6 @@ def map_array_to_targets(input_array, target_array):
 
 if __name__ == '__main__':
     out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])
-    print(out)
 
     # speed_array input
     speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
