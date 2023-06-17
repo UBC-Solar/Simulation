@@ -67,6 +67,9 @@ class Simulation:
 
         self.lvs_power_loss = builder.lvs_power_loss  # LVS power loss is pretty small, so it is neglected
 
+        # ---- Granularity -----
+        self.granularity = builder.granularity
+
         self.tick = builder.tick
 
         if self.race_type == "ASC":
