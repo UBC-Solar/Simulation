@@ -9,7 +9,7 @@ from tqdm import tqdm
 from enum import Enum
 from dotenv import load_dotenv
 from simulation.common import helpers
-from simulation.config import config_directory
+from simulation.config import settings_directory
 from simulation.main.SimulationResult import SimulationResult
 from simulation.common.plotting import Graph, Plotting
 
@@ -42,50 +42,67 @@ class Simulation:
 
     """
 
-    def __init__(self, builder):
+    def __init__(self, initial_conditions, return_type, race_type, granularity, golang=True):
         """
 
         Instantiates a simple model of the car.
 
-        :param builder: a SimulationState object that provides settings for the Simulation
+        :param race_type: a string that describes the race type to simulate (ASC or FSGP)
+        :param initial_conditions: a SimulationState object that provides initial conditions for the simulation
+        :param return_type: discretely defines what kind of data run_model should return.
+        :param float granularity: define the length of the time period represented by each speed array element
+        :param golang: boolean which controls whether GoLang implementations are used when available
 
         """
 
         # ----- Return type -----
 
-        assert builder.return_type in SimulationReturnType, "return_type must be of SimulationReturnType enum."
+        assert return_type in SimulationReturnType, "return_type must be of SimulationReturnType enum."
 
-        self.return_type = builder.return_type
+        self.return_type = return_type
 
         # ----- Race type -----
 
-        assert builder.race_type in ["ASC", "FSGP"]
+        assert race_type in ["ASC", "FSGP"]
 
-        self.race_type = builder.race_type
+        self.race_type = race_type
+
+        if race_type == "ASC":
+            settings_path = settings_directory / "settings_ASC.json"
+        else:
+            settings_path = settings_directory / "settings_FSGP.json"
+
+        with open(settings_path) as f:
+            args = json.load(f)
+
+        # ---- Granularity -----
+        self.granularity = granularity
+
+        # ----- Load from settings_*.json -----
+
+        self.lvs_power_loss = args['lvs_power_loss']  # LVS power loss is pretty small, so it is neglected
+
+        self.tick = args['tick']
+
+        if self.race_type == "ASC":
+            race_length = args['race_length']  # Race length in days, arbitrary as ASC doesn't have a time limit
+            self.simulation_duration = race_length * 24 * 60 * 60
+        elif self.race_type == "FSGP":
+            self.simulation_duration = args['simulation_duration']
 
         # ----- Load from initial_conditions
 
-        self.lvs_power_loss = builder.lvs_power_loss  # LVS power loss is pretty small, so it is neglected
+        self.initial_battery_charge = initial_conditions.initial_battery_charge
 
-        self.tick = builder.tick
+        self.start_hour = initial_conditions.start_hour
 
-        if self.race_type == "ASC":
-            race_length = builder.race_length  # Race length in days, arbitrary as ASC doesn't have a time limit
-            self.simulation_duration = race_length * 24 * 60 * 60
-        elif self.race_type == "FSGP":
-            self.simulation_duration = builder.simulation_duration
+        self.origin_coord = initial_conditions.origin_coord
+        self.dest_coord = initial_conditions.dest_coord
+        self.current_coord = initial_conditions.current_coord
+        self.waypoints = initial_conditions.waypoints
 
-        self.initial_battery_charge = builder.initial_battery_charge
-
-        self.start_hour = builder.start_hour
-
-        self.origin_coord = builder.origin_coord
-        self.dest_coord = builder.dest_coord
-        self.current_coord = builder.current_coord
-        self.waypoints = builder.waypoints
-
-        gis_force_update = builder.gis_force_update
-        weather_force_update = builder.weather_force_update
+        gis_force_update = initial_conditions.gis_force_update
+        weather_force_update = initial_conditions.weather_force_update
 
         # ----- Route Length -----
 
@@ -99,7 +116,7 @@ class Simulation:
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- GoLang library initialisation -----
-        self.golang = builder.golang
+        self.golang = golang
         self.library = simulation.Libraries(raiseExceptionOnFail=False)
 
         if self.golang and self.library.found_compatible_binaries() is False:
@@ -121,7 +138,7 @@ class Simulation:
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, library=self.library, force_update=gis_force_update,
-                                  current_coord=self.current_coord, golang=self.golang)
+                                  current_coord=self.current_coord, golang=golang)
 
         self.route_coords = self.gis.get_path()
 
@@ -134,7 +151,7 @@ class Simulation:
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update,
                                                    origin_coord=self.gis.launch_point,
-                                                   golang=self.golang)
+                                                   golang=golang)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
@@ -186,7 +203,8 @@ class Simulation:
             print(f"Input speeds: {speed}\n")
 
         speed_boolean_array = helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
-                                                                          self.race_type, as_seconds=False).astype(int)
+                                                                          self.race_type, as_seconds=False,
+                                                                          granularity=self.granularity).astype(int)
         speed_mapped = helpers.map_array_to_targets(speed, speed_boolean_array)
         speed_mapped_kmh = helpers.reshape_and_repeat(speed_mapped, self.simulation_duration)
         speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
@@ -410,6 +428,9 @@ class Simulation:
         state_of_charge = battery_variables_array[0]
         state_of_charge[np.abs(state_of_charge) < 1e-03] = 0
 
+        # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
+        speed_kmh = np.logical_and(not_charge, state_of_charge) * speed_kmh
+
         if verbose:
             indices_and_environment_graph = Graph([temp, closest_gis_indices, closest_weather_indices, gradients,
                                                    time_zones, gis_vehicle_bearings],
@@ -465,15 +486,15 @@ class Simulation:
 
         return results
 
-    def get_driving_hours(self) -> int:
+    def get_driving_time_divisions(self) -> int:
         """
 
-        Returns the number of hours that the car is permitted to be driving.
+        Returns the number of time divisions (based on granularity) that the car is permitted to be driving.
         Dependent on rules in get_race_timing_constraints_boolean() function in common/helpers.
 
         :return: number of hours as an integer
         """
 
         return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
-                                                           self.race_type, as_seconds=False).astype(int).sum()
-
+                                                           self.race_type, self.granularity,
+                                                           as_seconds=False).sum().astype(int)
