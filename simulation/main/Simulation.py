@@ -475,7 +475,7 @@ class Simulation:
     def get_driving_time_divisions(self) -> int:
         """
 
-        Returns the number of hours that the car is permitted to be driving.
+        Returns the number of time divisions (based on granularity) that the car is permitted to be driving.
         Dependent on rules in get_race_timing_constraints_boolean() function in common/helpers.
 
         :return: number of hours as an integer
