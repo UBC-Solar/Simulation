@@ -136,6 +136,8 @@ class Simulation:
 
         self.basic_motor = simulation.BasicMotor()
 
+        self.basic_regen = simulation.BasicRegen()
+
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, library=self.library, force_update=gis_force_update,
                                   current_coord=self.current_coord, golang=golang)
@@ -395,6 +397,7 @@ class Simulation:
         lvs_consumed_energy = self.basic_lvs.get_consumed_energy()
         motor_consumed_energy = self.basic_motor.calculate_energy_in(speed_kmh, gradients, wind_speeds, self.tick)
         array_produced_energy = self.basic_array.calculate_produced_energy(solar_irradiances, self.tick)
+        regen_produced_energy = self.basic_regen.calculate_produced_energy(self.tick, speed_kmh)
 
         not_charge = helpers.get_charge_timing_constraints_boolean(start_hour=self.start_hour,
                                                                    simulation_duration=self.simulation_duration,
@@ -404,7 +407,7 @@ class Simulation:
         pbar.update(1)
 
         consumed_energy = motor_consumed_energy + lvs_consumed_energy
-        produced_energy = array_produced_energy
+        produced_energy = array_produced_energy + regen_produced_energy
 
         # net energy added to the battery
         delta_energy = produced_energy - consumed_energy
