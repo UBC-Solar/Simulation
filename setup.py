@@ -35,5 +35,5 @@ setup(name='UBC-Solar-Simulation',
       license="MIT",
       long_description=long_description,
       long_description_content_type='text/markdown',
-      version="0.5.8"
+      version="0.5.9"
       )
