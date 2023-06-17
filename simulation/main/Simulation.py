@@ -1,4 +1,3 @@
-import json
 import sys
 import logging
 import os
@@ -9,7 +8,6 @@ from tqdm import tqdm
 from enum import Enum
 from dotenv import load_dotenv
 from simulation.common import helpers
-from simulation.config import config_directory
 from simulation.main.SimulationResult import SimulationResult
 from simulation.common.plotting import Graph, Plotting
 

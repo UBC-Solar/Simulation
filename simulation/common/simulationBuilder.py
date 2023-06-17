@@ -1,7 +1,7 @@
 from simulation.main.Simulation import Simulation, SimulationReturnType
 
 
-class SimulationState:
+class SimulationBuilder:
     """
 
     This builder class is used to easily set the parameters and conditions of Simulation.
@@ -32,6 +32,7 @@ class SimulationState:
         # Execution Parameters
         self.golang = None
         self.return_type = None
+        self.granularity = None
 
     def set_initial_conditions(self, args):
         self.origin_coord = args["origin_coord"]
@@ -65,7 +66,13 @@ class SimulationState:
     def set_return_type(self, return_type):
         self.return_type = SimulationReturnType(return_type.value)
         #                        ^^^^^^^^^^^^^^^^^^^^^^^^^
-        # Necessary as for some reason, return_type is not recognized as a SimulationReturnType.
+        # Necessary for this awkward conversion as for some reason, return_type
+        # is not recognized as a SimulationReturnType.
+
+        return self
+
+    def set_granularity(self, granularity):
+        self.granularity = granularity
 
         return self
 

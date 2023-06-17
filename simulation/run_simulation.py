@@ -9,7 +9,7 @@ from optimization.bayesian import BayesianOptimization
 from optimization.random import RandomOptimization
 from utils.InputBounds import InputBounds
 from config import config_directory
-from common import simulationState
+from common.simulationBuilder import SimulationBuilder
 
 """
 Description: Execute simulation optimization sequence. 
@@ -60,16 +60,17 @@ def run_simulation(settings):
         model_parameters = json.load(f)
 
     # Build simulation model
-    simulation_builder = simulationState.SimulationState()\
+    simulation_builder = SimulationBuilder()\
         .set_initial_conditions(initial_conditions)\
         .set_model_parameters(model_parameters, settings.race_type)\
         .set_golang(settings.golang)\
-        .set_return_type(settings.return_type)
+        .set_return_type(settings.return_type)\
+        .set_granularity(settings.granularity)
 
     simulation_model = simulation_builder.get()
 
     # Initialize a "guess" speed array
-    driving_hours = simulation_model.get_driving_hours()
+    driving_hours = simulation_model.get_driving_time_divisions()
     input_speed = np.array([30] * driving_hours)
 
     # Run simulation model with the "guess" speed array
