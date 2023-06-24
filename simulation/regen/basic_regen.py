@@ -9,6 +9,7 @@ class BasicRegen(BaseRegen):
         self.efficiency = 0.5
         self.min_decel_mag = 0
         self.vehicle_mass = 250
+        self.kmk_to_mps = 0.278
 
     def update():
         pass
@@ -26,10 +27,11 @@ class BasicRegen(BaseRegen):
 
         return self.produced_energy
     
-    def calculate_change_energy(self, speed_delta):
+    def calculate_change_energy(self, speed_delta_kmh):
         """ 
-        Calculate the chnange in kinetic energy caused by a change in speed
+        Calculate the change in kinetic energy caused by a change in speed
         :param speed_delta: an array containing the change in speeds
         """
+        speed_delta_mps = self.kmk_to_mps*speed_delta_kmh
 
-        return 0.5*self.vehicle_mass*speed_delta
+        return 0.5*self.vehicle_mass*speed_delta_mps**2
