@@ -1,12 +1,13 @@
 import pygad
 from simulation.main import Simulation
 from simulation.utils import InputBounds
-
+from simulation.common.helpers import denormalize, normalize
 
 class GeneticOptimization:
 
     def __init__(self, model: Simulation, bounds: list):
         self.model = model
+        self.bounds = bounds
 
         fitness_function = self.fitness
 
@@ -16,8 +17,8 @@ class GeneticOptimization:
         sol_per_pop = 4
         num_genes = int(bounds[0])
 
-        init_range_low = bounds[1]
-        init_range_high = bounds[2]
+        init_range_low = 0
+        init_range_high = 1
 
         parent_selection_type = "sss"
         keep_parents = 1
@@ -41,7 +42,8 @@ class GeneticOptimization:
                                     mutation_percent_genes=mutation_percent_genes)
 
     def fitness(self, ga_instance, solution, solution_idx):
-        results = self.model.run_model(solution)
+        solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
+        results = self.model.run_model(solution_denormalized)
         fitness = results
         print(f"Fitness is {fitness}.")
         return fitness
