@@ -6,6 +6,7 @@ import sys
 
 from main.Simulation import SimulationReturnType
 from optimization.bayesian import BayesianOptimization
+from optimization.genetic import GeneticOptimization
 from optimization.random import RandomOptimization
 from utils.InputBounds import InputBounds
 from config import config_directory
@@ -85,10 +86,14 @@ def run_simulation(settings):
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
 
     # Perform optimization with Bayesian optimization
-    results = optimization.maximize(init_points=3, n_iter=settings.optimization_iterations, kappa=10)
-    optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
-                                           verbose=settings.verbose,
-                                           route_visualization=settings.route_visualization)
+    # results = optimization.maximize(init_points=3, n_iter=simulation_settings.optimization_iterations, kappa=10)
+    # optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
+    #                                        verbose=simulation_settings.verbose,
+    #                                        route_visualization=simulation_settings.route_visualization)
+
+    geneticOptimization = GeneticOptimization(simulation_model, [driving_hours, 20, 60])
+    geneticOptimization.maximize()
+    exit()
 
     # Perform optimization with random optimization
     results_random = random_optimization.maximize(iterations=settings.optimization_iterations)

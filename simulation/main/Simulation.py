@@ -154,7 +154,7 @@ class Simulation:
 
         self.speed_kmh = None
 
-    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
+    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=False, verbose=False,
                   route_visualization=False, **kwargs):
         """
 
@@ -189,7 +189,7 @@ class Simulation:
             verbose = False
 
         # ----- Reshape speed array -----
-        if not kwargs:
+        if not kwargs and plot_results:
             print(f"Input speeds: {speed}\n")
         assert len(speed) == self.get_driving_time_divisions(), ("Input driving speeds array must have length equal to "
                                                                  "get_driving_time_divisions()! Current length is "
