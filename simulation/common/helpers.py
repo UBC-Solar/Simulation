@@ -903,6 +903,14 @@ def get_map_data_indices(closest_gis_indices):
     return map_data_indices
 
 
+def normalize(input_array: np.ndarray, max_value: float, min_value: float = 0) -> np.ndarray:
+    return (input_array - min_value) / (max_value - min_value)
+
+
+def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0) -> np.ndarray:
+    return input_array * (max_value - min_value) + min_value
+
+
 if __name__ == '__main__':
     out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])
 
