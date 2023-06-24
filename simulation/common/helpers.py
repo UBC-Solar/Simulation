@@ -859,12 +859,12 @@ def get_map_data_indices(closest_gis_indices):
                                 at each tick
     """
     map_data_indices = [0]
-    for n, index in enumerate(closest_gis_indices):
-        if n == 0:
+    for i in range(len(closest_gis_indices)):
+        if i == 0:
             continue
         else:
-            if not closest_gis_indices[n] == closest_gis_indices[n-1]:
-                map_data_indices.append(n)
+            if not closest_gis_indices[i] == closest_gis_indices[i-1]:
+                map_data_indices.append(i)
     return map_data_indices
 
 
