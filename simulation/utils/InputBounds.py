@@ -1,12 +1,14 @@
 class InputBounds():
     def __init__(self):
         self.bounds = []
+        self.bounds_list = []
 
     def __len__(self):
         return len(self.bounds)
 
     def add_bounds(self, number_of_bounds: int, lower_bound: float, upper_bound: float):
         self.bounds += [(lower_bound, upper_bound) for _ in range(number_of_bounds)]
+        self.bounds_list = [number_of_bounds, lower_bound, upper_bound]
         return self
 
     def add_bound(self, lower_bound: float, upper_bound: float):
@@ -25,3 +27,6 @@ class InputBounds():
 
     def get_bounds(self):
         return self.bounds
+
+    def get_bounds_list(self):
+        return self.bounds_list
