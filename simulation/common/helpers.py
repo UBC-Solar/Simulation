@@ -440,7 +440,7 @@ def calculate_path_gradients(elevations, distances):
     return gradients
 
 
-def cull_dataset(coords, cull_factor=625):  # DEPRECATED
+def cull_dataset(coords, cull_factor=625):
     """
 
     As we currently have a limited number of API calls(60) every minute with the
@@ -458,7 +458,6 @@ def cull_dataset(coords, cull_factor=625):  # DEPRECATED
     :rtype: np.ndarray
 
     """
-    logging.warning("Using deprecated function 'cull_dataset()'!")
     return coords[::cull_factor]
 
 
@@ -903,12 +902,19 @@ def get_map_data_indices(closest_gis_indices):
     return map_data_indices
 
 
-def normalize(input_array: np.ndarray, max_value: float, min_value: float = 0) -> np.ndarray:
+def normalize(input_array: np.ndarray) -> np.ndarray:
+    max_value = np.max(input_array)
+    min_value = np.min(input_array)
     return (input_array - min_value) / (max_value - min_value)
 
 
 def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0) -> np.ndarray:
     return input_array * (max_value - min_value) + min_value
+
+
+def linearly_transform(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
+    normalized_array = normalize(input_array)
+    return denormalize(normalized_array, upper_bound, lower_bound)
 
 
 if __name__ == '__main__':
