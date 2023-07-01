@@ -14,35 +14,58 @@ class GeneticOptimization(BaseOptimization):
 
         fitness_function = self.fitness
 
-        num_generations = 1
+        num_generations = 20
         num_parents_mating = 4
 
-        sol_per_pop = 4
-        num_genes = int(bounds[0])
+        sol_per_pop = 12
 
-        init_range_low = 0
-        init_range_high = 1
+        parent_selection_type = "tournament"
+        K_tournament = 4
+        keep_elitism = 2
 
-        parent_selection_type = "sss"
-        keep_parents = 1
-
-        crossover_type = "single_point"
+        crossover_type = "scattered"
 
         mutation_type = "random"
-        mutation_percent_genes = 10
+        mutation_percent_genes = 25
+
+        gene_space = {'low': 0.0, 'high': 1.0}
+        delay_after_generation = 0.0
+        mutation_max_value = 0.1
+
+        initial_population = self.generate_guess_speed_arrays(input_speed, sol_per_pop)
 
         self.ga_instance = pygad.GA(num_generations=num_generations,
+                                    initial_population=initial_population,
                                     num_parents_mating=num_parents_mating,
                                     fitness_func=fitness_function,
-                                    sol_per_pop=sol_per_pop,
-                                    num_genes=num_genes,
-                                    init_range_low=init_range_low,
-                                    init_range_high=init_range_high,
                                     parent_selection_type=parent_selection_type,
-                                    keep_parents=keep_parents,
+                                    K_tournament=K_tournament,
+                                    keep_elitism=keep_elitism,
                                     crossover_type=crossover_type,
                                     mutation_type=mutation_type,
-                                    mutation_percent_genes=mutation_percent_genes)
+                                    mutation_percent_genes=mutation_percent_genes,
+                                    gene_space=gene_space,
+                                    on_generation=lambda x: print("New generation!"),
+                                    delay_after_gen=delay_after_generation,
+                                    random_mutation_max_val=mutation_max_value)
+
+    def generate_guess_speed_arrays(self, input_speed, num_arrays_to_generate):
+        if not self.model.check_if_has_calculated(raiseException=False):
+            self.model.run_model(speed=input_speed, plot_results=True)
+        SOC = self.model.get_results(["state_of_charge"])
+        speed_arrays = []
+
+        while len(speed_arrays) < num_arrays_to_generate:
+            culled_SOC = cull_dataset(SOC, int(len(SOC) / len(input_speed)))
+            guess_speed = input_speed * linearly_transform(culled_SOC, 1.5, 0.50)[0:len(input_speed)]
+            guess_speed = linearly_transform(guess_speed, 50, 30)
+            self.model.run_model(speed=guess_speed, plot_results=True)
+            SOC = self.model.get_results(["state_of_charge"])
+            if self.model.was_successful():
+                speed_arrays.append(normalize(guess_speed))
+            input_speed = guess_speed
+        #TODO: Save these arrays to save time!
+        return speed_arrays
 
     def fitness(self, ga_instance, solution, solution_idx):
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
