@@ -1,13 +1,16 @@
+import numpy as np
 import pygad
 from simulation.main import Simulation
 from simulation.utils import InputBounds
-from simulation.common.helpers import denormalize, normalize
+from simulation.optimization.base_optimization import BaseOptimization
+from simulation.common.helpers import denormalize, cull_dataset, linearly_transform, normalize
 
-class GeneticOptimization:
 
-    def __init__(self, model: Simulation, bounds: list):
+class GeneticOptimization(BaseOptimization):
+    def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray):
+        super().__init__(bounds, model.run_model)
         self.model = model
-        self.bounds = bounds
+        self.bounds = bounds.get_bounds_list()
 
         fitness_function = self.fitness
 
@@ -43,9 +46,9 @@ class GeneticOptimization:
 
     def fitness(self, ga_instance, solution, solution_idx):
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
-        results = self.model.run_model(solution_denormalized)
-        fitness = results
-        print(f"Fitness is {fitness}.")
+        results = self.func(solution_denormalized)
+        fitness = results if self.model.was_successful() else self.model.get_distance_before_exhaustion()
+        print(f"Fitness is {fitness}, results were {results}.")
         return fitness
 
     def maximize(self):
@@ -54,7 +57,8 @@ class GeneticOptimization:
 
     def output(self):
         solution, solution_fitness, solution_idx = self.ga_instance.best_solution()
-        print("Parameters of the best solution : {solution}".format(solution=solution))
+        self.bestinput = denormalize(solution, self.bounds[2], self.bounds[1])
+        print("Parameters of the best solution : {solution}".format(solution=self.bestinput))
         print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
         self.plot_fitness()
         return self.bestinput
