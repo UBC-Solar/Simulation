@@ -40,6 +40,22 @@ def timeit(func):
     return wrapper_timer
 
 
+def simulation_property(func):
+    """
+
+    Apply this decorator to all functions that intend to get data from a Simulation model.
+
+    :param func: function that will be used to get data
+
+    """
+    @functools.wraps(func)
+    def property_wrapper(*args, **kwargs):
+        args[0].check_if_has_calculated()
+        value = func(*args, **kwargs)
+        return value
+
+    return property_wrapper
+
 def date_from_unix_timestamp(unix_timestamp):
     """
 

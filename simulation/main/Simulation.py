@@ -9,6 +9,8 @@ from enum import Enum
 from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.plotting import Graph, Plotting
+from simulation.common.exceptions import PrematureDataRecoveryError
+from simulation.common.helpers import simulation_property
 
 
 class SimulationReturnType(Enum):
@@ -154,6 +156,8 @@ class Simulation:
 
         self.speed_kmh = None
 
+        self.calculations_have_happened = False
+
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=False, verbose=False,
                   route_visualization=False, **kwargs):
         """
@@ -290,7 +294,9 @@ class Simulation:
 
         return self._model.get_results(values)
 
-    def get_driving_time_divisions(self) -> int:
+        self.calculations_have_happened = True
+
+    def get_driving_hours(self) -> int:
         """
 
         Returns the number of time divisions (based on granularity) that the car is permitted to be driving.
