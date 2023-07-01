@@ -1,9 +1,12 @@
-import numpy as np
+import os
 import pygad
+import numpy as np
+
 from simulation.main import Simulation
 from simulation.utils import InputBounds
 from simulation.optimization.base_optimization import BaseOptimization
 from simulation.common.helpers import denormalize, cull_dataset, linearly_transform, normalize
+from simulation.cache.optimization_population import population_directory
 
 
 class GeneticOptimization(BaseOptimization):
@@ -17,7 +20,7 @@ class GeneticOptimization(BaseOptimization):
         num_generations = 20
         num_parents_mating = 4
 
-        sol_per_pop = 12
+        sol_per_pop = 2
 
         parent_selection_type = "tournament"
         K_tournament = 4
@@ -50,6 +53,20 @@ class GeneticOptimization(BaseOptimization):
                                     random_mutation_max_val=mutation_max_value)
 
     def generate_guess_speed_arrays(self, input_speed, num_arrays_to_generate):
+        population_file = population_directory / "initial_population.npz"
+
+        if os.path.isfile(population_file):
+            print("Found file!")
+            with np.load(population_file) as population_data:
+                if population_data['hash_key'] == self.model.hash_key:
+                    print("Hash key matches!")
+                    initial_population = np.array(population_data['population'])
+                    return initial_population
+                else:
+                    print("Hash key did not match!")
+        else:
+            print("Didn't find file!")
+
         if not self.model.check_if_has_calculated(raiseException=False):
             self.model.run_model(speed=input_speed, plot_results=True)
         SOC = self.model.get_results(["state_of_charge"])
@@ -64,7 +81,11 @@ class GeneticOptimization(BaseOptimization):
             if self.model.was_successful():
                 speed_arrays.append(normalize(guess_speed))
             input_speed = guess_speed
-        #TODO: Save these arrays to save time!
+
+        with open(population_file, 'wb') as f:
+            print("Saving new population!")
+            np.savez(f, hash_key=self.model.hash_key, population=speed_arrays)
+
         return speed_arrays
 
     def fitness(self, ga_instance, solution, solution_idx):
