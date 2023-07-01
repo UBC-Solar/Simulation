@@ -35,7 +35,7 @@ class GeneticOptimization(BaseOptimization):
         delay_after_generation = 0.0
         mutation_max_value = 0.1
 
-        initial_population = self.generate_guess_speed_arrays(input_speed, sol_per_pop)
+        initial_population = self.get_initial_population(input_speed, sol_per_pop)
 
         self.ga_instance = pygad.GA(num_generations=num_generations,
                                     initial_population=initial_population,
@@ -52,21 +52,29 @@ class GeneticOptimization(BaseOptimization):
                                     delay_after_gen=delay_after_generation,
                                     random_mutation_max_val=mutation_max_value)
 
-    def generate_guess_speed_arrays(self, input_speed, num_arrays_to_generate):
+    def get_initial_population(self, input_speed, num_arrays_to_generate):
         population_file = population_directory / "initial_population.npz"
 
         if os.path.isfile(population_file):
-            print("Found file!")
             with np.load(population_file) as population_data:
                 if population_data['hash_key'] == self.model.hash_key:
-                    print("Hash key matches!")
+                    print("Found cached initial population!")
                     initial_population = np.array(population_data['population'])
                     return initial_population
                 else:
-                    print("Hash key did not match!")
+                    print("Hash key did not match, generating new initial population!")
         else:
-            print("Didn't find file!")
+            print("Did not find cached initial population, generating new initial population!")
 
+        new_initial_population = self.generate_valid_speed_arrays(input_speed, num_arrays_to_generate)
+
+        with open(population_file, 'wb') as f:
+            print("Caching new population!")
+            np.savez(f, hash_key=self.model.hash_key, population=new_initial_population)
+
+        return new_initial_population
+
+    def generate_valid_speed_arrays(self, input_speed, num_arrays_to_generate):
         if not self.model.check_if_has_calculated(raiseException=False):
             self.model.run_model(speed=input_speed, plot_results=True)
         SOC = self.model.get_results(["state_of_charge"])
@@ -81,10 +89,6 @@ class GeneticOptimization(BaseOptimization):
             if self.model.was_successful():
                 speed_arrays.append(normalize(guess_speed))
             input_speed = guess_speed
-
-        with open(population_file, 'wb') as f:
-            print("Saving new population!")
-            np.savez(f, hash_key=self.model.hash_key, population=speed_arrays)
 
         return speed_arrays
 
