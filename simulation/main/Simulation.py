@@ -156,13 +156,21 @@ class Simulation:
 
         # -------- Hash Key ---------
 
-        self.hash_key = self.generate_model_hash()
+        self.hash_key = self.__hash__()
 
         # --------- Results ---------
 
         self.speed_kmh = None
 
         self.calculations_have_happened = False
+
+    def __hash__(self):
+        hash_string = str(self.origin_coord) + str(self.dest_coord) + str(self.current_coord) + str(
+            self.start_hour) + str(self.initial_battery_charge)
+        for value in self.waypoints:
+            hash_string += str(value)
+        filtered_hash_string = "".join(filter(str.isnumeric, hash_string))
+        return PJWHash(filtered_hash_string)
 
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=False, verbose=False,
                   route_visualization=False, **kwargs):
