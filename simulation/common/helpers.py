@@ -10,6 +10,7 @@ import time as timer
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.plotting import figure, show, output_file
+from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from simulation.common import constants
 
@@ -48,6 +49,7 @@ def simulation_property(func):
     :param func: function that will be used to get data
 
     """
+
     @functools.wraps(func)
     def property_wrapper(*args, **kwargs):
         args[0].check_if_has_calculated()
@@ -55,6 +57,7 @@ def simulation_property(func):
         return value
 
     return property_wrapper
+
 
 def date_from_unix_timestamp(unix_timestamp):
     """
@@ -639,7 +642,8 @@ def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_
     simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
 
     if as_seconds is True:
-        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
+        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
+                                               start_hour + simulation_duration / (60 * 60)).astype(int)
         if race_type == "ASC":
             driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 20]
         else:  # FSGP
@@ -674,7 +678,8 @@ def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_
     simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
 
     if as_seconds is True:
-        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
+        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
+                                               start_hour + simulation_duration / (60 * 60)).astype(int)
         if race_type == "ASC":
             driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 20]
         else:  # FSGP
@@ -931,6 +936,23 @@ def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0)
 def linearly_transform(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
     normalized_array = normalize(input_array)
     return denormalize(normalized_array, upper_bound, lower_bound)
+
+
+#  Credits to: https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
+def PJWHash(key):
+    BitsInUnsignedInt = 4 * 8
+    ThreeQuarters = long((BitsInUnsignedInt * 3) / 4)
+    OneEighth = long(BitsInUnsignedInt / 8)
+    HighBits = 0xFFFFFFFF << (BitsInUnsignedInt - OneEighth)
+    Hash = 0
+    Test = 0
+
+    for i in range(len(key)):
+        Hash = (Hash << OneEighth) + ord(key[i])
+        Test = Hash & HighBits
+        if Test != 0:
+            Hash = ((Hash ^ (Test >> ThreeQuarters)) & (~HighBits))
+    return Hash & 0x7FFFFFFF
 
 
 if __name__ == '__main__':

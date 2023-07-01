@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.plotting import Graph, Plotting
 from simulation.common.exceptions import PrematureDataRecoveryError
-from simulation.common.helpers import simulation_property
+from simulation.common.helpers import simulation_property, PJWHash
 
 
 class SimulationReturnType(Enum):
@@ -153,6 +153,12 @@ class Simulation:
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
         self.plotting = Plotting()
+
+        # -------- Hash Key ---------
+
+        self.hash_key = self.generate_model_hash()
+
+        # --------- Results ---------
 
         self.speed_kmh = None
 
