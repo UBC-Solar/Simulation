@@ -271,9 +271,7 @@ def run_unoptimized_and_export(input_speed=None, values=None, golang=True):
     if input_speed is None:
         input_speed = np.array([30] * driving_hours)
     if values is None:
-        values = ["speed_kmh", "distances", "state_of_charge", "delta_energy", "solar_irradiances",
-                  "wind_speeds", "gis_route_elevations_at_each_tick", "cloud_covers",
-                  "distance_travelled", "time_taken", "final_soc"]
+        values = ["default"]
 
     simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False, route_visualization=False)
     results_array = simulation_model.get_results(values)

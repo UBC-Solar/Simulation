@@ -5,6 +5,7 @@ import os
 import numpy as np
 import simulation
 
+from typing import Union
 from tqdm import tqdm
 from enum import Enum
 from dotenv import load_dotenv
@@ -502,12 +503,25 @@ class Simulation:
         Dependent on rules in get_race_timing_constraints_boolean() function in common/helpers.
 
         :return: number of hours as an integer
+
         """
 
         return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
                                                            self.race_type, as_seconds=False).astype(int).sum()
 
-    def get_results(self, values):
+    def get_results(self, values: Union[np.ndarray, list, tuple, set]) -> list:
+        """
+
+        Use this function to extract data from a Simulation model.
+        For example, input ["speed_kmh","delta_energy"] to extract speed_kmh and delta_energy. Use
+        "default" to extract the properties that used to be in the SimulationResults object.
+
+        :param values: an iterable of strings that should correspond to a certain property of simulation.
+        :returns: a list of Simulation properties in the order provided.
+        :rtype: list
+
+        """
+
         simulation_results = {
             "speed_kmh": self.speed_kmh,
             "distances": self.distances,
@@ -542,6 +556,16 @@ class Simulation:
             "final_soc": self.final_soc,
             "distance_travelled": self.distance_travelled
         }
+
+        if "default" in values:
+            default_index = values.index("default")
+            values.pop(default_index)
+            default_values = ["speed_kmh", "distances", "state_of_charge", "delta_energy", "solar_irradiances",
+                              "wind_speeds", "gis_route_elevations_at_each_tick", "cloud_covers",
+                              "distance_travelled", "time_taken", "final_soc"]
+            for index, default_value in enumerate(default_values):
+                if default_value not in values:
+                    values.insert(index + default_index, default_value)
 
         results = []
         for value in values:
