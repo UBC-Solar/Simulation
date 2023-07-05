@@ -933,12 +933,13 @@ def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0)
     return input_array * (max_value - min_value) + min_value
 
 
-def linearly_transform(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
+def rescale(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
     normalized_array = normalize(input_array)
     return denormalize(normalized_array, upper_bound, lower_bound)
 
 
-#  Credits to: https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
+#  Credits to Arash Partow - 2002
+#  https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
 def PJWHash(key):
     BitsInUnsignedInt = 4 * 8
     ThreeQuarters = long((BitsInUnsignedInt * 3) / 4)
@@ -953,6 +954,10 @@ def PJWHash(key):
         if Test != 0:
             Hash = ((Hash ^ (Test >> ThreeQuarters)) & (~HighBits))
     return Hash & 0x7FFFFFFF
+
+
+def linearly_interpolate(a: np.ndarray, b: np.ndarray, t: float):
+    return a + (b-a) * t
 
 
 if __name__ == '__main__':
