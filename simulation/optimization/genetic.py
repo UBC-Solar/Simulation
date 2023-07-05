@@ -5,8 +5,25 @@ import numpy as np
 from simulation.main import Simulation
 from simulation.utils import InputBounds
 from simulation.optimization.base_optimization import BaseOptimization
-from simulation.common.helpers import denormalize, cull_dataset, linearly_transform, normalize
+from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize, linearly_interpolate
 from simulation.cache.optimization_population import population_directory
+
+
+"""
+
+See the following resources for explanations of genetic algorithms and different hyperparameters:
+1. start here:
+    https://blog.derlin.ch/genetic-algorithms-with-pygad 
+2. pygad:
+    https://pygad.readthedocs.io/en/latest/pygad.html
+3. genetic algorithm:
+    https://towardsdatascience.com/introduction-to-optimization-with-genetic-algorithm-2f5001d9964b
+4. parent selection:
+    https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)
+5. crossover types:
+    https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)
+    
+"""
 
 
 class GeneticOptimization(BaseOptimization):
@@ -17,25 +34,48 @@ class GeneticOptimization(BaseOptimization):
 
         fitness_function = self.fitness
 
-        num_generations = 20
+        # Define how many iterations that GA will run
+        num_generations = 30
+
+        # Define how many parents will be used for the creation of offspring for each subsequent generation
         num_parents_mating = 4
 
-        sol_per_pop = 2
+        # Define the size of the population (number of chromosomes)
+        # More chromosomes means a larger gene pool (should result in superior optimization) but at the cost of
+        # needing to calculate the fitness of more chromosomes.
+        self.sol_per_pop = 12
 
+        # Define how parents are selected from the population
+        # 'tournament' will result in tournament selection, 'sss' for steady-state selection,
         parent_selection_type = "tournament"
+
+        # Define number of chromosomes in each tournament
         K_tournament = 4
-        keep_elitism = 2
 
-        crossover_type = "scattered"
+        # Define the number of the best chromosomes that will be kept in the next generation
+        keep_elitism = 3
 
+        # Define the type of crossover that will be used in offspring creation
+        # 'single_point' for single-point crossover, 'two_points' for double-point, 'scattered' for scattered crossover
+        # and 'uniform' for uniform crossover.
+        crossover_type = "two_points"
+
+        # Define the type of mutation that will be used in offspring creation
         mutation_type = "random"
+
+        # Define the number of genes that will be mutated (0 <= x < 1)
         mutation_percent_genes = 25
 
-        gene_space = {'low': 0.0, 'high': 1.0}
-        delay_after_generation = 0.0
+        # Define a maximum value for gene value mutations (should be 0 < x < 1)
         mutation_max_value = 0.1
 
-        initial_population = self.get_initial_population(input_speed, sol_per_pop)
+        # Bound the value of each gene to be between 0 and 1 as chromosomes should be normalized.
+        gene_space = {'low': 0.0, 'high': 1.0}
+
+        # Add a time delay between generations (used for debug purposes)
+        delay_after_generation = 0.0
+
+        initial_population = self.get_initial_population(input_speed, self.sol_per_pop)
 
         self.ga_instance = pygad.GA(num_generations=num_generations,
                                     initial_population=initial_population,
@@ -52,19 +92,22 @@ class GeneticOptimization(BaseOptimization):
                                     delay_after_gen=delay_after_generation,
                                     random_mutation_max_val=mutation_max_value)
 
-    def get_initial_population(self, input_speed, num_arrays_to_generate):
+    def get_initial_population(self, input_speed, num_arrays_to_generate, force_new_generation=True):
         population_file = population_directory / "initial_population.npz"
 
-        if os.path.isfile(population_file):
+        if os.path.isfile(population_file) and not force_new_generation:
             with np.load(population_file) as population_data:
                 if population_data['hash_key'] == self.model.hash_key:
                     print("Found cached initial population!")
                     initial_population = np.array(population_data['population'])
-                    return initial_population
+                    if len(initial_population) == self.sol_per_pop:
+                        return initial_population
+                    else:
+                        print("Cached population size does not match, generating new initial population! ")
                 else:
                     print("Hash key did not match, generating new initial population!")
         else:
-            print("Did not find cached initial population, generating new initial population!")
+            print("Generating new initial population!")
 
         new_initial_population = self.generate_valid_speed_arrays(input_speed, num_arrays_to_generate)
 
@@ -82,8 +125,9 @@ class GeneticOptimization(BaseOptimization):
 
         while len(speed_arrays) < num_arrays_to_generate:
             culled_SOC = cull_dataset(SOC, int(len(SOC) / len(input_speed)))
-            guess_speed = input_speed * linearly_transform(culled_SOC, 1.5, 0.50)[0:len(input_speed)]
-            guess_speed = linearly_transform(guess_speed, 50, 30)
+            guess_speed = input_speed * rescale(culled_SOC, 1.5, 0.50)[0:len(input_speed)]
+            guess_speed = rescale(guess_speed, 50, 30)
+            # guess_speed = linearly_interpolate(input_speed, guess_speed, 0.5)
             self.model.run_model(speed=guess_speed, plot_results=True)
             SOC = self.model.get_results(["state_of_charge"])
             if self.model.was_successful():
