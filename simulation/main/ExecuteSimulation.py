@@ -1,10 +1,9 @@
 import numpy as np
 import json
 
-from simulation.main.Simulation import Simulation, SimulationReturnType
-from simulation.common.simulationState import SimulationState
-from simulation.main.SimulationResult import SimulationResult
-from simulation.config import settings_directory
+from simulation.main.Simulation import SimulationReturnType
+from simulation.common.simulationBuilder import SimulationBuilder
+from simulation.config import config_directory
 
 
 """
@@ -12,21 +11,40 @@ Description: Export Simulation data as a SimulationResults object.
 """
 
 
-def GetSimulationData(golang=True):
+def GetSimulationData(race_type="ASC", golang=True, granularity=1):
     """
 
     Returns a SimulationResult object with the purpose of exporting simulation data.
 
     """
 
-    input_speed = np.array([30])
+    #  ----- Load initial conditions ----- #
 
-    with open(settings_directory / "initial_conditions.json") as f:
-        args = json.load(f)
+    with open(config_directory / "initial_conditions.json") as f:
+        initial_conditions = json.load(f)
 
-    return_type = SimulationReturnType.simulation_results
-    initialSimulationConditions = SimulationState(args)
-    simulation_model = Simulation(initialSimulationConditions, return_type, race_type="ASC", golang=golang)
+    # ----- Load from settings_*.json -----
+
+    if race_type == "ASC":
+        config_path = config_directory / "settings_ASC.json"
+    else:
+        config_path = config_directory / "settings_FSGP.json"
+
+    with open(config_path) as f:
+        model_parameters = json.load(f)
+
+    # Build simulation model
+    simulation_builder = SimulationBuilder()\
+        .set_initial_conditions(initial_conditions)\
+        .set_model_parameters(model_parameters, race_type)\
+        .set_golang(golang)\
+        .set_return_type(SimulationReturnType.simulation_results)\
+        .set_granularity(granularity)
+
+    simulation_model = simulation_builder.get()
+
+    driving_hours = simulation_model.get_driving_time_divisions()
+    input_speed = np.array([30] * driving_hours)
 
     results = simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False, route_visualization=False)
     return results
