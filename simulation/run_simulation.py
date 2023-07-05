@@ -23,7 +23,7 @@ class SimulationSettings:
     This class stores settings that will be used by the simulation.
 
     """
-    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.time_taken, optimization_iterations=5, route_visualization=False, verbose=False, granularity=1):
+    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.time_taken, optimization_iterations=20, route_visualization=False, verbose=False, granularity=1):
         self.race_type = race_type
         self.optimization_iterations = optimization_iterations
         self.golang = golang
@@ -80,20 +80,26 @@ def run_simulation(settings):
                                                   route_visualization=settings.route_visualization)
 
     # Set up optimization models
+    maximum_speed = 60
+    minimum_speed = 0
+
     bounds = InputBounds()
-    bounds.add_bounds(driving_hours, 20, 60)
+    bounds.add_bounds(driving_hours, minimum_speed, maximum_speed)
+
+    # Initialize optimization methods
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
+    geneticOptimization = GeneticOptimization(simulation_model, bounds, input_speed)
 
-    # Perform optimization with Bayesian optimization
-    # results = optimization.maximize(init_points=3, n_iter=simulation_settings.optimization_iterations, kappa=10)
-    # optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
-    #                                        verbose=simulation_settings.verbose,
-    #                                        route_visualization=simulation_settings.route_visualization)
+    # Perform optimization with Genetic Optimization
+    results = geneticOptimization.maximize()
+    optimized = simulation_model.run_model(geneticOptimization.bestinput, plot_results=True)
 
-    geneticOptimization = GeneticOptimization(simulation_model, [driving_hours, 20, 60])
-    geneticOptimization.maximize()
-    exit()
+    # Perform optimization with Bayesian Optimization
+    results = optimization.maximize(init_points=5, n_iter=simulation_settings.optimization_iterations, kappa=10)
+    optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
+                                           verbose=simulation_settings.verbose,
+                                           route_visualization=simulation_settings.route_visualization)
 
     # Perform optimization with random optimization
     results_random = random_optimization.maximize(iterations=settings.optimization_iterations)
