@@ -276,8 +276,8 @@ def run_unoptimized_and_export(input_speed=None, values=None, golang=True):
     return_type = SimulationReturnType.void
     initialSimulationConditions = simulationState.SimulationState(args)
 
-    simulation_model = Simulation(initialSimulationConditions, return_type, race_type="ASC", golang=golang)
-    driving_hours = simulation_model.get_driving_hours()
+    simulation_model = Simulation(initialSimulationConditions, return_type, race_type="ASC", golang=golang, granularity=1)
+    driving_hours = simulation_model.get_driving_time_divisions()
     if input_speed is None:
         input_speed = np.array([30] * driving_hours)
     if values is None:
