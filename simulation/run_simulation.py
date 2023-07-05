@@ -257,7 +257,7 @@ def parse_commands(cmds):
         elif split_cmd[0] == '-verbose':
             simulation_settings.verbose = True if split_cmd[1] == 'True' else False
 
-        elif split_cmd[0] == '-route-visualization':
+        elif split_cmd[0] == '-route_visualization':
             simulation_settings.route_visualization = True if split_cmd[1] == 'True' else False
 
         elif split_cmd[0] == '-race_type':
@@ -271,7 +271,7 @@ def parse_commands(cmds):
     return simulation_settings
 
 
-def run_unoptimized_and_export(input_speed=None, values=None, golang=True):
+def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", granularity=1, golang=True):
     """
 
     Export simulation data.
@@ -279,6 +279,8 @@ def run_unoptimized_and_export(input_speed=None, values=None, golang=True):
     :param input_speed: defaulted to 30km/h, an array of speeds that the Simulation will use.
     :param values: defaulted to what was outputted by now-deprecated SimulationResults object, a tuple of strings that
     each correspond to a value or array that the Simulation will export. See Simulation.get_results() for valid keys.
+    :param race_type: define the race type, either "ASC" or "FSGP"
+    :param granularity: define the granularity of Simulation speed array
     :param golang: define whether GoLang
     implementations should be used.
 
@@ -291,17 +293,21 @@ def run_unoptimized_and_export(input_speed=None, values=None, golang=True):
 
     # ----- Load from settings_ASC.json -----
 
-    config_path = config_directory / "settings_ASC.json"
+    if race_type == "ASC":
+        config_path = config_directory / "settings_ASC.json"
+    else:
+        config_path = config_directory / "settings_FSGP.json"
+
     with open(config_path) as f:
         model_parameters = json.load(f)
 
     # Build simulation model
     simulation_builder = SimulationBuilder()\
         .set_initial_conditions(initial_conditions)\
-        .set_model_parameters(model_parameters, "ASC")\
+        .set_model_parameters(model_parameters, race_type)\
         .set_golang(golang)\
         .set_return_type(SimulationReturnType.void)\
-        .set_granularity(1)
+        .set_granularity(granularity)
 
     simulation_model = simulation_builder.get()
 
