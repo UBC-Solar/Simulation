@@ -190,6 +190,7 @@ class Simulation:
         self.produced_energy = None
         self.time_in_motion = None
         self.final_soc = None
+        self.map_data_indices = None
 
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
                   route_visualization=False, **kwargs):
@@ -475,6 +476,8 @@ class Simulation:
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         self.distances = self.distances.clip(0, self.max_route_distance / 1000)
 
+        self.map_data_indices = helpers.get_map_data_indices(self.closest_gis_indices)
+
         self.distance_travelled = self.distances[-1]
 
         pbar.update(1)
@@ -544,7 +547,9 @@ class Simulation:
             "produced_energy": self.produced_energy,
             "time_in_motion": self.time_in_motion,
             "final_soc": self.final_soc,
-            "distance_travelled": self.distance_travelled
+            "distance_travelled": self.distance_travelled,
+            "map_data_indices": self.map_data_indices,
+            "path_coordinates": self.gis.path
         }
 
         if "default" in values:
