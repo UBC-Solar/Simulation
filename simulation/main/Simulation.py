@@ -9,7 +9,6 @@ from tqdm import tqdm
 from enum import Enum
 from dotenv import load_dotenv
 from simulation.common import helpers
-from simulation.config import settings_directory
 from simulation.common.plotting import Graph, Plotting
 
 

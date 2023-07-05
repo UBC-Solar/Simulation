@@ -284,14 +284,29 @@ def run_unoptimized_and_export(input_speed=None, values=None, golang=True):
 
     """
 
-    with open(settings_directory / "initial_conditions.json") as f:
-        args = json.load(f)
+    #  ----- Load initial conditions ----- #
 
-    return_type = SimulationReturnType.void
-    initialSimulationConditions = simulationState.SimulationState(args)
+    with open(config_directory / "initial_conditions.json") as f:
+        initial_conditions = json.load(f)
 
-    simulation_model = Simulation(initialSimulationConditions, return_type, race_type="ASC", golang=golang, granularity=1)
+    # ----- Load from settings_ASC.json -----
+
+    config_path = config_directory / "settings_ASC.json"
+    with open(config_path) as f:
+        model_parameters = json.load(f)
+
+    # Build simulation model
+    simulation_builder = SimulationBuilder()\
+        .set_initial_conditions(initial_conditions)\
+        .set_model_parameters(model_parameters, "ASC")\
+        .set_golang(golang)\
+        .set_return_type(SimulationReturnType.void)\
+        .set_granularity(1)
+
+    simulation_model = simulation_builder.get()
+
     driving_hours = simulation_model.get_driving_time_divisions()
+
     if input_speed is None:
         input_speed = np.array([30] * driving_hours)
     if values is None:
