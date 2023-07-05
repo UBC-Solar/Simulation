@@ -456,6 +456,8 @@ class Simulation:
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         distances = distances.clip(0, max_route_distance / 1000)
 
+        map_data_indices = helpers.get_map_data_indices(closest_gis_indices)
+
         results = SimulationResult()
 
         results.arrays = [
@@ -466,7 +468,10 @@ class Simulation:
             solar_irradiances,
             wind_speeds,
             gis_route_elevations_at_each_tick,
-            cloud_covers
+            cloud_covers,
+            closest_gis_indices,
+            map_data_indices,
+            self.gis.path
         ]
 
         results.distance_travelled = distances[-1]
