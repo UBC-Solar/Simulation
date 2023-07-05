@@ -638,41 +638,6 @@ def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_
     return np.invert(np.logical_or.reduce(driving_time_boolean))
 
 
-def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_type, as_seconds=True):
-    """
-
-    Applies regulation timing constraints to an array representing when the car will be able to charge.
-
-    :param int start_hour: An integer representing the race's start hour
-    :param int simulation_duration: An integer representing simulation duration in seconds
-    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
-    :param bool as_seconds: will return an array of seconds, or hours if set to False
-    :returns: driving_time_boolean, a boolean array with charge timing constraints applied to it
-    :rtype: np.ndarray
-    :raises: ValueError is race_type is not one of "ASC" or "FSGP"
-
-    """
-
-    # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
-    # (Charge from 8am-9am and 6pm-8pm) for FSGP
-
-    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
-
-    if as_seconds is True:
-        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
-        if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 20]
-        else:  # FSGP
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 20]
-    else:
-        if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours % 24) <= 7, (simulation_hours % 24) >= 20]
-        else:  # FSGP
-            driving_time_boolean = [(simulation_hours % 24) <= 8, (simulation_hours % 24) >= 20]
-
-    return np.invert(np.logical_or.reduce(driving_time_boolean))
-
-
 def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True):
     """
 
@@ -884,6 +849,23 @@ def map_array_to_targets(input_array, target_array):
         i += 1
 
     return output_array
+
+def get_map_data_indices(closest_gis_indices):
+    """
+    gets list of indices of the data to be displayed on corresponding
+    coordinates of the client side map
+
+    :param closest_gis_indices: a list of indices of the closest gis coordinate
+                                at each tick
+    """
+    map_data_indices = [0]
+    for i in range(len(closest_gis_indices)):
+        if i == 0:
+            continue
+        else:
+            if not closest_gis_indices[i] == closest_gis_indices[i-1]:
+                map_data_indices.append(i)
+    return map_data_indices
 
 
 if __name__ == '__main__':
