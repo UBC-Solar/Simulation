@@ -7,6 +7,7 @@ from simulation.utils import InputBounds
 from simulation.optimization.base_optimization import BaseOptimization
 from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize, linearly_interpolate
 from simulation.cache.optimization_population import population_directory
+from simulation.data.results import results_directory
 
 
 """
@@ -156,4 +157,15 @@ class GeneticOptimization(BaseOptimization):
         return self.bestinput
 
     def plot_fitness(self):
-        self.ga_instance.plot_fitness(save_dir="")
+        register_file = results_directory / "register.npz"
+        x = None
+
+        with np.load(register_file) as population_data:
+            x = population_data['x']
+            x += 1
+            np.savez(register_file, x=x)
+
+        graph_title = "sequence" + str(x)
+        save_dir = results_directory / graph_title
+        self.ga_instance.plot_fitness(title=graph_title, save_dir=save_dir)
+
