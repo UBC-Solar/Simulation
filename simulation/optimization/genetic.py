@@ -102,38 +102,39 @@ class GeneticOptimization(BaseOptimization):
         if os.path.isfile(population_file) and not force_new_population_flag:
             with np.load(population_file) as population_data:
                 if population_data['hash_key'] == self.model.hash_key:
-                    print("Found cached initial population!")
                     initial_population = np.array(population_data['population'])
                     if len(initial_population) == self.sol_per_pop:
                         return initial_population
-                    else:
-                        print("Cached population size does not match, generating new initial population! ")
-                else:
-                    print("Hash key did not match, generating new initial population!")
-        else:
-            print("Generating new initial population!")
 
         new_initial_population = self.generate_valid_speed_arrays(input_speed, num_arrays_to_generate)
 
         with open(population_file, 'wb') as f:
-            print("Caching new population!")
             np.savez(f, hash_key=self.model.hash_key, population=new_initial_population)
 
         return new_initial_population
 
     def generate_valid_speed_arrays(self, input_speed, num_arrays_to_generate):
+        max_speed_kmh = 50
+        min_speed_kmh = 30
+        upper_stretch_bound = 1.5
+        lower_stretch_bound = 0.5
+
         if not self.model.check_if_has_calculated(raiseException=False):
             self.model.run_model(speed=input_speed, plot_results=True)
-        SOC = self.model.get_results(["state_of_charge"])
+        SOC = self.model.get_results(["raw_soc"])
         speed_arrays = []
 
         while len(speed_arrays) < num_arrays_to_generate:
-            culled_SOC = cull_dataset(SOC, int(len(SOC) / len(input_speed)))
-            guess_speed = input_speed * rescale(culled_SOC, 1.5, 0.50)[0:len(input_speed)]
-            guess_speed = rescale(guess_speed, 50, 30)
-            # guess_speed = linearly_interpolate(input_speed, guess_speed, 0.5)
+            # We will sample SOC at as many points as the speed array needs
+            culled_SOC = cull_dataset(SOC, int(len(SOC) / len(input_speed)))[0:len(input_speed)]
+            # Rescale SOC to obtain a "coefficient" for each speed that should roughly
+            # match whether the car should speed up or slow down given the SOC at that time
+            speed_coefficients = rescale(culled_SOC, upper_stretch_bound, lower_stretch_bound)
+            # Multiply input speed by coefficients and finally rescale the result
+            guess_speed = rescale(speed_coefficients * input_speed, max_speed_kmh, min_speed_kmh)
+
             self.model.run_model(speed=guess_speed, plot_results=True)
-            SOC = self.model.get_results(["state_of_charge"])
+            SOC = self.model.get_results(["raw_soc"])
             if self.model.was_successful():
                 speed_arrays.append(normalize(guess_speed))
             input_speed = guess_speed
