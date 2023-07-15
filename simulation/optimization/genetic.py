@@ -156,16 +156,28 @@ class GeneticOptimization(BaseOptimization):
         self.plot_fitness()
         return self.bestinput
 
-    def plot_fitness(self):
-        register_file = results_directory / "register.npz"
-        x = None
+    def plot_fitness(self, reset_register=False):
+        sequence_index = GeneticOptimization.get_sequence_index(reset_register)
 
-        with np.load(register_file) as population_data:
-            x = population_data['x']
-            x += 1
-            np.savez(register_file, x=x)
-
-        graph_title = "sequence" + str(x)
+        graph_title = "sequence" + str(sequence_index)
         save_dir = results_directory / graph_title
+
         self.ga_instance.plot_fitness(title=graph_title, save_dir=save_dir)
+
+    @staticmethod
+    def get_sequence_index(reset_register):
+        register_file = results_directory / "register.npz"
+
+        if not os.path.isfile(register_file):
+            np.savez(register_file, x=0)
+            return 0
+
+        with np.load(register_file) as register_data:
+            x = register_data['x']
+            x += 1
+            if reset_register:
+                np.savez(register_file, x=0)
+            else:
+                np.savez(register_file, x=x)
+            return x
 
