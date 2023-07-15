@@ -5,7 +5,7 @@ import numpy as np
 from simulation.main import Simulation
 from simulation.utils import InputBounds
 from simulation.optimization.base_optimization import BaseOptimization
-from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize, linearly_interpolate
+from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize
 from simulation.cache.optimization_population import population_directory
 from simulation.data.results import results_directory
 
@@ -28,7 +28,7 @@ See the following resources for explanations of genetic algorithms and different
 
 
 class GeneticOptimization(BaseOptimization):
-    def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray):
+    def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray, force_new_population_flag=True):
         super().__init__(bounds, model.run_model)
         self.model = model
         self.bounds = bounds.get_bounds_list()
@@ -76,7 +76,9 @@ class GeneticOptimization(BaseOptimization):
         # Add a time delay between generations (used for debug purposes)
         delay_after_generation = 0.0
 
-        initial_population = self.get_initial_population(input_speed, self.sol_per_pop)
+        initial_population = self.get_initial_population(input_speed, self.sol_per_pop, force_new_population_flag)
+
+        stop_criteria = "saturate_10"
 
         self.ga_instance = pygad.GA(num_generations=num_generations,
                                     initial_population=initial_population,
@@ -91,12 +93,13 @@ class GeneticOptimization(BaseOptimization):
                                     gene_space=gene_space,
                                     on_generation=lambda x: print("New generation!"),
                                     delay_after_gen=delay_after_generation,
-                                    random_mutation_max_val=mutation_max_value)
+                                    random_mutation_max_val=mutation_max_value,
+                                    stop_criteria=stop_criteria)
 
-    def get_initial_population(self, input_speed, num_arrays_to_generate, force_new_generation=True):
+    def get_initial_population(self, input_speed, num_arrays_to_generate, force_new_population_flag):
         population_file = population_directory / "initial_population.npz"
 
-        if os.path.isfile(population_file) and not force_new_generation:
+        if os.path.isfile(population_file) and not force_new_population_flag:
             with np.load(population_file) as population_data:
                 if population_data['hash_key'] == self.model.hash_key:
                     print("Found cached initial population!")
