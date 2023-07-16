@@ -1,6 +1,7 @@
 import os
 import pygad
 import numpy as np
+from enum import Enum
 
 from simulation.main import Simulation
 from simulation.utils import InputBounds
@@ -8,7 +9,6 @@ from simulation.optimization.base_optimization import BaseOptimization
 from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize
 from simulation.cache.optimization_population import population_directory
 from simulation.data.results import results_directory
-
 
 """
 
@@ -28,15 +28,29 @@ See the following resources for explanations of genetic algorithms and different
 
 
 class GeneticOptimization(BaseOptimization):
+    class Crossover_Type(Enum):
+        single_point = 0
+        two_points = 1
+        scattered = 2
+        uniform = 3
+
+    class Parent_Selection_Type(Enum):
+        sss = 0
+        tournament = 1
+        stochastic = 2
+        rank = 3
+
+    class Mutation_Type(Enum):
+        random = 0
+
     def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray, force_new_population_flag=True):
         super().__init__(bounds, model.run_model)
         self.model = model
         self.bounds = bounds.get_bounds_list()
-
         fitness_function = self.fitness
 
         # Define how many iterations that GA will run
-        num_generations = 30
+        num_generations = 1
 
         # Define how many parents will be used for the creation of offspring for each subsequent generation
         num_parents_mating = 4
@@ -48,7 +62,7 @@ class GeneticOptimization(BaseOptimization):
 
         # Define how parents are selected from the population
         # 'tournament' will result in tournament selection, 'sss' for steady-state selection,
-        parent_selection_type = "tournament"
+        parent_selection_type = GeneticOptimization.Parent_Selection_Type.tournament
 
         # Define number of chromosomes in each tournament
         K_tournament = 4
@@ -59,16 +73,16 @@ class GeneticOptimization(BaseOptimization):
         # Define the type of crossover that will be used in offspring creation
         # 'single_point' for single-point crossover, 'two_points' for double-point, 'scattered' for scattered crossover
         # and 'uniform' for uniform crossover.
-        crossover_type = "two_points"
+        crossover_type = GeneticOptimization.Crossover_Type.two_points
 
         # Define the type of mutation that will be used in offspring creation
-        mutation_type = "random"
+        mutation_type = GeneticOptimization.Mutation_Type.random
 
         # Define the number of genes that will be mutated (0 <= x < 1)
         mutation_percent_genes = 25
 
         # Define a maximum value for gene value mutations (should be 0 < x < 1)
-        mutation_max_value = 0.1
+        mutation_max_value = 0.05
 
         # Bound the value of each gene to be between 0 and 1 as chromosomes should be normalized.
         gene_space = {'low': 0.0, 'high': 1.0}
@@ -184,4 +198,3 @@ class GeneticOptimization(BaseOptimization):
             else:
                 np.savez(register_file, x=x)
             return x
-
