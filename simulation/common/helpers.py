@@ -956,8 +956,13 @@ def PJWHash(key):
     return Hash & 0x7FFFFFFF
 
 
-def linearly_interpolate(a: np.ndarray, b: np.ndarray, t: float):
+def lerp(a: np.ndarray, b: np.ndarray, t: float):
     return a + (b-a) * t
+
+
+def shift(a: np.ndarray, b: float):
+    b_array = np.full([1, len(a)], b)
+    return np.add(a, b_array)
 
 
 if __name__ == '__main__':
