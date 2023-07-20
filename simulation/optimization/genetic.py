@@ -1,7 +1,7 @@
 import os
 import pygad
 import numpy as np
-from enum import Enum
+from enum import StrEnum
 import csv
 
 from simulation.main import Simulation
@@ -28,46 +28,22 @@ See the following resources for explanations of genetic algorithms and different
 """
 
 
-class Parent_Selection_Type(Enum):
-    sss = 0
-    tournament = 1
-    stochastic = 2
-    rank = 3
-
-    def __str__(self):
-        if self.value == 0:
-            return "sss"
-        elif self.value == 1:
-            return "tournament"
-        elif self.value == 2:
-            return "stochastic"
-        else:
-            return "rank"
+class Parent_Selection_Type(StrEnum):
+    sss = "sss"
+    tournament = "tournament"
+    stochastic = "stochastic"
+    rank = "rank"
 
 
-class Mutation_Type(Enum):
-    random = 0
-
-    def __str__(self):
-        if self.value == 0:
-            return "random"
+class Mutation_Type(StrEnum):
+    random = "random"
 
 
-class Crossover_Type(Enum):
-    single_point = 0
-    two_points = 1
-    scattered = 2
-    uniform = 3
-
-    def __str__(self):
-        if self.value == 0:
-            return "single_point"
-        elif self.value == 1:
-            return "two_points"
-        elif self.value == 2:
-            return "scattered"
-        else:
-            return "uniform"
+class Crossover_Type(StrEnum):
+    single_point = "single_point"
+    two_points = "two_points"
+    scattered = "scattered"
+    uniform = "uniform"
 
 
 class OptimizationSettings:
@@ -79,7 +55,7 @@ class OptimizationSettings:
                  crossover_type=Crossover_Type.two_points,
                  elitism=3,
                  mutation_type=Mutation_Type.random,
-                 mutation_percent=25,
+                 mutation_percent=25.0,
                  max_mutation=0.05):
         self.chromosome_size: int = chromosome_size
         self.parent_selection_type: Parent_Selection_Type = parent_selection_type
@@ -97,7 +73,8 @@ class OptimizationSettings:
     def as_list(self):
         out_list: list = [str(self.chromosome_size), str(self.parent_selection_type), str(self.generation_limit),
                           str(self.num_parents), str(self.k_tournament), str(self.crossover_type),str(self.elitism),
-                          str(self.mutation_type), str(self.mutation_percent), str(self.max_mutation)]
+                          str(self.mutation_type), str(self.mutation_percent), str(self.max_mutation),
+                          str(self._fitness)]
         return out_list
 
     def set_fitness(self, fitness):
@@ -106,7 +83,8 @@ class OptimizationSettings:
 
 class GeneticOptimization(BaseOptimization):
 
-    def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray, force_new_population_flag=False, settings: OptimizationSettings = OptimizationSettings()):
+    def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray,
+                 force_new_population_flag: bool = False, settings: OptimizationSettings = OptimizationSettings()):
         super().__init__(bounds, model.run_model)
         self.model = model
         self.bounds = bounds.get_bounds_list()

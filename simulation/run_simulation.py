@@ -7,7 +7,7 @@ import csv
 
 from main.Simulation import SimulationReturnType
 from optimization.bayesian import BayesianOptimization
-from optimization.genetic import GeneticOptimization, OptimizationSettings, Crossover_Type, Parent_Selection_Type, Mutation_Type, parse_csv_into_settings
+from optimization.genetic import GeneticOptimization, parse_csv_into_settings
 from optimization.random_opt import RandomOptimization
 from utils.InputBounds import InputBounds
 from config import config_directory
