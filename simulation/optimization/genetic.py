@@ -286,6 +286,28 @@ def reset_register():
         np.savez(register_file, x=0)
 
 
+def parse_csv_into_settings(csv_reader: csv.reader) -> list:
+    settings_list = []
+
+    for row in csv_reader:
+        chromosome_size = int(row[0])
+        parent_selection_type = Parent_Selection_Type(row[1])
+        generations_limit = int(row[2])
+        num_parents = int(row[3])
+        k_tournament = int(row[4])
+        crossover_type = Crossover_Type(row[5])
+        elitism = int(row[6])
+        mutation_type = Mutation_Type(row[7])
+        mutation_percent = float(row[8])
+        max_mutation = float(row[9])
+        new_setting = OptimizationSettings(chromosome_size, parent_selection_type, generations_limit, num_parents,
+                                           k_tournament, crossover_type, elitism, mutation_type, mutation_percent,
+                                           max_mutation)
+        settings_list.append(new_setting)
+
+    return settings_list
+
+
 if __name__ == "__main__":
     reset_register()
     print(GeneticOptimization.get_sequence_index(increment_index=False))

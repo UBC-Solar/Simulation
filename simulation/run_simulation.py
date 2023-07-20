@@ -3,14 +3,16 @@ import datetime
 import numpy as np
 import json
 import sys
+import csv
 
 from main.Simulation import SimulationReturnType
 from optimization.bayesian import BayesianOptimization
-from optimization.genetic import GeneticOptimization
-from optimization.random import RandomOptimization
+from optimization.genetic import GeneticOptimization, OptimizationSettings, Crossover_Type, Parent_Selection_Type, Mutation_Type, parse_csv_into_settings
+from optimization.random_opt import RandomOptimization
 from utils.InputBounds import InputBounds
 from config import config_directory
 from common.simulationBuilder import SimulationBuilder
+from simulation.data.results import results_directory
 
 """
 Description: Execute simulation optimization sequence. 
@@ -86,6 +88,9 @@ def run_simulation(settings):
     bounds = InputBounds()
     bounds.add_bounds(driving_hours, minimum_speed, maximum_speed)
 
+    run_genetic_hyperparameter_optimization(simulation_model, bounds, input_speed)
+
+    exit()
     # Initialize optimization methods
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
@@ -337,6 +342,18 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
     results_array = simulation_model.get_results(values)
 
     return results_array
+
+
+def run_genetic_hyperparameter_optimization(model: Simulation, bounds: InputBounds, initial_speed: np.ndarray):
+    settings_file = results_directory / "settings.csv"
+    with open(settings_file, 'r') as f:
+        csv_reader = csv.reader(f, delimiter=',')
+        settings_list = parse_csv_into_settings(csv_reader)
+
+    for settings in settings_list:
+        geneticOptimization = GeneticOptimization(model, bounds, initial_speed, settings=settings)
+        geneticOptimization.maximize()
+        geneticOptimization.output_results()
 
 
 if __name__ == "__main__":
