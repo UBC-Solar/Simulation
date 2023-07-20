@@ -261,7 +261,7 @@ class GeneticOptimization(BaseOptimization):
             writer.writerow(output)
 
     @staticmethod
-    def get_sequence_index(reset_register):
+    def get_sequence_index(increment_index=True):
         register_file = results_directory / "register.npz"
 
         if not os.path.isfile(register_file):
@@ -271,8 +271,21 @@ class GeneticOptimization(BaseOptimization):
         with np.load(register_file) as register_data:
             x = register_data['x']
             x += 1
-            if reset_register:
-                np.savez(register_file, x=0)
-            else:
+            if increment_index:
                 np.savez(register_file, x=x)
             return x
+
+
+def reset_register():
+    register_file = results_directory / "register.npz"
+
+    if not os.path.isfile(register_file):
+        np.savez(register_file, x=0)
+
+    with np.load(register_file):
+        np.savez(register_file, x=0)
+
+
+if __name__ == "__main__":
+    reset_register()
+    print(GeneticOptimization.get_sequence_index(increment_index=False))
