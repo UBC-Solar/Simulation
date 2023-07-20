@@ -2,6 +2,7 @@ import logging
 import os
 from typing import Union
 
+
 import numpy as np
 import simulation
 
@@ -106,6 +107,10 @@ class Simulation:
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- GoLang library initialisation -----
+
+        # Simulation uses compiled Go libraries to speed up methods that cannot be accelerated with NumPy to achieve
+        # a significant performance increase (~75% runtime reduction) when applicable.
+
         self.golang = builder.golang
         self.library = simulation.Libraries(raiseExceptionOnFail=False)
 
@@ -157,6 +162,11 @@ class Simulation:
         # -------- Hash Key ---------
 
         self.hash_key = self.__hash__()
+
+        # All attributes ABOVE will NOT be modified when the model is simulated. All attributes BELOW this WILL be
+        # modified and written to over the course of simulation. Ensure that when you modify the behaviour of Simulation
+        # that this fact is maintained, else the stability of the optimization process WILL be threatened, as it assumes
+        # that the attributes above are independent of whether the model has been previously simulated.
 
         # --------- Results ---------
 
