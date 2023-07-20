@@ -243,8 +243,8 @@ class GeneticOptimization(BaseOptimization):
         self.settings.set_fitness(solution_fitness)
         return self.bestinput
 
-    def plot_fitness(self, reset_register=False):
-        sequence_index = GeneticOptimization.get_sequence_index(reset_register)
+    def plot_fitness(self):
+        sequence_index = GeneticOptimization.get_sequence_index()
 
         graph_title = "sequence" + str(sequence_index)
         save_dir = results_directory / graph_title
