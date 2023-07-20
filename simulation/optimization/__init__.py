@@ -1,3 +1,3 @@
 from simulation.optimization.bayesian import BayesianOptimization
 from simulation.optimization.base_optimization import BaseOptimization
-from simulation.optimization.random import RandomOptimization
+from simulation.optimization.random_opt import RandomOptimization
