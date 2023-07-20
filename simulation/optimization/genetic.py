@@ -2,6 +2,7 @@ import os
 import pygad
 import numpy as np
 from enum import Enum
+import csv
 
 from simulation.main import Simulation
 from simulation.utils import InputBounds
@@ -249,6 +250,15 @@ class GeneticOptimization(BaseOptimization):
         save_dir = results_directory / graph_title
 
         self.ga_instance.plot_fitness(title=graph_title, save_dir=save_dir)
+
+    def output_results(self):
+        results_file = results_directory / "results.csv"
+        with open(results_file, 'a') as f:
+            writer = csv.writer(f)
+            sequence_index: str = str(GeneticOptimization.get_sequence_index(increment_index=False))
+            output = list(str(sequence_index)) + list(self.settings.as_list())
+            print("Writing: " + str(output))
+            writer.writerow(output)
 
     @staticmethod
     def get_sequence_index(reset_register):
