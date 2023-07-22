@@ -1,7 +1,7 @@
 import os
 import pygad
 import numpy as np
-from enum import StrEnum
+from strenum import StrEnum
 import csv
 
 from simulation.main import Simulation
@@ -229,7 +229,7 @@ class GeneticOptimization(BaseOptimization):
 
         self.ga_instance.plot_fitness(title=graph_title, save_dir=save_dir)
 
-    def output_results(self):
+    def write_results(self):
         results_file = results_directory / "results.csv"
         with open(results_file, 'a') as f:
             writer = csv.writer(f)

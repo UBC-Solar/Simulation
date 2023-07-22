@@ -15,3 +15,4 @@ setuptools==61.2.0
 timezonefinder==6.0.1
 tqdm==4.64.0
 pygad==3.0.1
+strenum==0.4.15
