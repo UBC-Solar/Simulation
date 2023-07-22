@@ -345,15 +345,18 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
 
 
 def run_genetic_hyperparameter_optimization(model: Simulation, bounds: InputBounds, initial_speed: np.ndarray):
+    evals_per_setting: int = 2
     settings_file = results_directory / "settings.csv"
     with open(settings_file, 'r') as f:
         csv_reader = csv.reader(f, delimiter=',')
         settings_list = parse_csv_into_settings(csv_reader)
 
-    for settings in settings_list:
-        geneticOptimization = GeneticOptimization(model, bounds, initial_speed, settings=settings)
-        geneticOptimization.maximize()
-        geneticOptimization.output_results()
+    for index, settings in enumerate(settings_list):
+        print(f"Performing {index + 1}/{len(settings_list)} optimization.")
+        for _ in range(evals_per_setting):
+            geneticOptimization = GeneticOptimization(model, bounds, initial_speed, settings=settings)
+            geneticOptimization.maximize()
+            geneticOptimization.write_results()
 
 
 if __name__ == "__main__":
