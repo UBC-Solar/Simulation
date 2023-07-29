@@ -5,7 +5,8 @@ import json
 import sys
 import csv
 
-from main.Simulation import SimulationReturnType
+from tqdm import tqdm
+from main.Simulation import Simulation, SimulationReturnType
 from optimization.bayesian import BayesianOptimization
 from optimization.genetic import GeneticOptimization, parse_csv_into_settings
 from optimization.random_opt import RandomOptimization
@@ -47,22 +48,8 @@ def run_simulation(settings):
 
     """
 
-    #  ----- Load initial conditions ----- #
-
-    with open(config_directory / "initial_conditions.json") as f:
-        initial_conditions = json.load(f)
-
-    # ----- Load from settings_*.json -----
-
-    if settings.race_type == "ASC":
-        config_path = config_directory / "settings_ASC.json"
-    else:
-        config_path = config_directory / "settings_FSGP.json"
-
-    with open(config_path) as f:
-        model_parameters = json.load(f)
-
     # Build simulation model
+    initial_conditions, model_parameters = get_default_settings(settings.race_type)
     simulation_builder = SimulationBuilder()\
         .set_initial_conditions(initial_conditions)\
         .set_model_parameters(model_parameters, settings.race_type)\
@@ -303,25 +290,13 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
     :param granularity: define the granularity of Simulation speed array
     :param golang: define whether GoLang
     implementations should be used.
+    :param granularity: control how granular the time divisions of Simulation should be
+    :param race_type: whether the race is ASC or FSGP
 
     """
 
-    #  ----- Load initial conditions ----- #
-
-    with open(config_directory / "initial_conditions.json") as f:
-        initial_conditions = json.load(f)
-
-    # ----- Load from settings_ASC.json -----
-
-    if race_type == "ASC":
-        config_path = config_directory / "settings_ASC.json"
-    else:
-        config_path = config_directory / "settings_FSGP.json"
-
-    with open(config_path) as f:
-        model_parameters = json.load(f)
-
     # Build simulation model
+    initial_conditions, model_parameters = get_default_settings(race_type)
     simulation_builder = SimulationBuilder()\
         .set_initial_conditions(initial_conditions)\
         .set_model_parameters(model_parameters, race_type)\
@@ -330,9 +305,7 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
         .set_granularity(granularity)
 
     simulation_model = simulation_builder.get()
-
-    driving_hours = simulation_model.get_driving_time_divisions()
-
+    driving_hours = simulation_model.get_driving_hours()
     if input_speed is None:
         input_speed = np.array([30] * driving_hours)
     if values is None:
@@ -344,19 +317,42 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
     return results_array
 
 
-def run_genetic_hyperparameter_optimization(model: Simulation, bounds: InputBounds, initial_speed: np.ndarray):
-    evals_per_setting: int = 2
+def run_genetic_hyperparameter_optimization(simulation_model: Simulation, bounds: InputBounds, initial_speed: np.ndarray):
+    evals_per_setting: int = 3
     settings_file = results_directory / "settings.csv"
+    stop_index = 0
     with open(settings_file, 'r') as f:
         csv_reader = csv.reader(f, delimiter=',')
         settings_list = parse_csv_into_settings(csv_reader)
 
-    for index, settings in enumerate(settings_list):
-        print(f"Performing {index + 1}/{len(settings_list)} optimization.")
-        for _ in range(evals_per_setting):
-            geneticOptimization = GeneticOptimization(model, bounds, initial_speed, settings=settings)
-            geneticOptimization.maximize()
-            geneticOptimization.write_results()
+    with tqdm(total=len(settings_list)*evals_per_setting, file=sys.stdout, desc="Running hyperparameter search ") as pbar:
+        try:
+            for index, settings in enumerate(settings_list):
+                for x in range(evals_per_setting):
+                    geneticOptimization = GeneticOptimization(simulation_model, bounds, initial_speed, settings=settings)
+                    stop_index += 1
+                    geneticOptimization.maximize()
+                    pbar.update(1)
+                    geneticOptimization.write_results()
+        except KeyboardInterrupt:
+            print(f"Stopped at {stop_index}.")
+            exit()
+
+
+def get_default_settings(race_type="ASC"):
+    #  ----- Load initial conditions ----- #
+    with open(config_directory / "initial_conditions.json") as f:
+        initial_conditions = json.load(f)
+
+    if race_type == "ASC":
+        config_path = config_directory / "settings_ASC.json"
+    else:
+        config_path = config_directory / "settings_FSGP.json"
+
+    with open(config_path) as f:
+        model_parameters = json.load(f)
+
+    return initial_conditions, model_parameters
 
 
 if __name__ == "__main__":
