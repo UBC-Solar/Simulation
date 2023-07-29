@@ -234,7 +234,8 @@ class GeneticOptimization(BaseOptimization):
         with open(results_file, 'a') as f:
             writer = csv.writer(f)
             sequence_index: str = str(GeneticOptimization.get_sequence_index(increment_index=False))
-            output = list(str(sequence_index)) + list(self.settings.as_list())
+            output = list(self.settings.as_list())
+            output.insert(0, sequence_index)
             print("Writing: " + str(output))
             writer.writerow(output)
 
