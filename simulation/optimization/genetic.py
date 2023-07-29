@@ -10,6 +10,7 @@ from simulation.optimization.base_optimization import BaseOptimization
 from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize
 from simulation.cache.optimization_population import population_directory
 from simulation.data.results import results_directory
+from tqdm import tqdm
 
 """
 
@@ -84,12 +85,13 @@ class OptimizationSettings:
 class GeneticOptimization(BaseOptimization):
 
     def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray,
-                 force_new_population_flag: bool = False, settings: OptimizationSettings = OptimizationSettings()):
+                 force_new_population_flag: bool = False, settings: OptimizationSettings = None, pbar: tqdm = None):
         super().__init__(bounds, model.run_model)
         self.model = model
         self.bounds = bounds.get_bounds_list()
         fitness_function = self.fitness
-        self.settings = settings
+        self.settings = settings if settings is not None else OptimizationSettings()
+        self.pbar = pbar if pbar is not None else tqdm()
 
         # Define how many iterations that GA will run
         num_generations = self.settings.generation_limit
@@ -151,7 +153,7 @@ class GeneticOptimization(BaseOptimization):
                                     mutation_type=str(mutation_type),
                                     mutation_percent_genes=mutation_percent_genes,
                                     gene_space=gene_space,
-                                    on_generation=lambda x: print("New generation!"),
+                                    on_generation=lambda x: pbar.update(1),
                                     delay_after_gen=delay_after_generation,
                                     random_mutation_max_val=mutation_max_value,
                                     stop_criteria=stop_criteria)
@@ -164,6 +166,7 @@ class GeneticOptimization(BaseOptimization):
                 if population_data['hash_key'] == self.model.hash_key:
                     initial_population = np.array(population_data['population'])
                     if len(initial_population) == self.sol_per_pop:
+                        print("\nPrevious initial population save file is being used...")
                         return initial_population
 
         new_initial_population = self.generate_valid_speed_arrays(input_speed, num_arrays_to_generate)
