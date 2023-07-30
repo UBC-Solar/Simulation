@@ -169,6 +169,7 @@ class GeneticOptimization(BaseOptimization):
                         print("\nPrevious initial population save file is being used...")
                         return initial_population
 
+        print("\nGenerating new initial population...")
         new_initial_population = self.generate_valid_speed_arrays(input_speed, num_arrays_to_generate)
 
         with open(population_file, 'wb') as f:
@@ -196,7 +197,7 @@ class GeneticOptimization(BaseOptimization):
             # Multiply input speed by coefficients and finally rescale the result
             guess_speed = rescale(speed_coefficients * input_speed, max_speed_kmh, min_speed_kmh)
 
-            self.model.run_model(speed=guess_speed, plot_results=True)
+            self.model.run_model(speed=guess_speed, plot_results=False)
             SOC = self.model.get_results(["raw_soc"])
             if self.model.was_successful():
                 speed_arrays.append(normalize(guess_speed))
@@ -208,7 +209,7 @@ class GeneticOptimization(BaseOptimization):
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
         results = self.func(solution_denormalized)
         fitness = results if self.model.was_successful() else self.model.get_distance_before_exhaustion()
-        print(f"Fitness is {fitness}, results were {results}.")
+        # print(f"Fitness is {fitness}, results were {results}.")
         return fitness
 
     def maximize(self):
@@ -218,14 +219,14 @@ class GeneticOptimization(BaseOptimization):
     def output(self):
         solution, solution_fitness, solution_idx = self.ga_instance.best_solution()
         self.bestinput = denormalize(solution, self.bounds[2], self.bounds[1])
-        print("Parameters of the best solution : {solution}".format(solution=self.bestinput))
-        print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
+        # print("Parameters of the best solution : {solution}".format(solution=self.bestinput))
+        # print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
         self.plot_fitness()
         self.settings.set_fitness(solution_fitness)
         return self.bestinput
 
     def plot_fitness(self):
-        sequence_index = GeneticOptimization.get_sequence_index()
+        sequence_index = GeneticOptimization.get_sequence_index(increment_index=False)
 
         graph_title = "sequence" + str(sequence_index)
         save_dir = results_directory / graph_title
@@ -236,7 +237,7 @@ class GeneticOptimization(BaseOptimization):
         results_file = results_directory / "results.csv"
         with open(results_file, 'a') as f:
             writer = csv.writer(f)
-            sequence_index: str = str(GeneticOptimization.get_sequence_index(increment_index=False))
+            sequence_index: int = GeneticOptimization.get_sequence_index()
             output = list(self.settings.as_list())
             output.insert(0, sequence_index)
             print("Writing: " + str(output))
@@ -262,10 +263,10 @@ def reset_register():
     register_file = results_directory / "register.npz"
 
     if not os.path.isfile(register_file):
-        np.savez(register_file, x=0)
+        np.savez(register_file, x=15)
 
     with np.load(register_file):
-        np.savez(register_file, x=0)
+        np.savez(register_file, x=15)
 
 
 def parse_csv_into_settings(csv_reader: csv.reader) -> list:
