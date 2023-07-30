@@ -237,11 +237,11 @@ class Simulation:
                                                             self.waypoints, verbose=False)[
                              :self.simulation_duration + 1]
 
-        self.speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
-        raw_speed = speed_kmh
+        self.speed_kmh = helpers.apply_deceleration(self.speed_kmh, 20)
+        raw_speed = self.speed_kmh
 
         # ------ Run calculations and get result and modified speed array -------
-        self._model = simulation.Model(self, speed_kmh)
+        self._model = simulation.Model(self, self.speed_kmh)
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
@@ -320,7 +320,7 @@ class Simulation:
 
         self.calculations_have_happened = True
 
-    def get_driving_hours(self) -> int:
+    def get_driving_time_divisions(self) -> int:
         """
 
         Returns the number of time divisions (based on granularity) that the car is permitted to be driving.
