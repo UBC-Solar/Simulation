@@ -267,7 +267,7 @@ class Simulation:
         raw_speed = speed_kmh.copy()
 
         # ------ Run calculations and get result and modified speed array -------
-        self._model = simulation.Model(self, speed_kmh)
+        self._model = simulation.Model(self, self.speed_kmh)
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
