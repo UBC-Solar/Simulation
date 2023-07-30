@@ -12,7 +12,7 @@ from optimization.genetic import GeneticOptimization, parse_csv_into_settings
 from optimization.random_opt import RandomOptimization
 from utils.InputBounds import InputBounds
 from config import config_directory
-from common.simulationBuilder import SimulationBuilder
+from common.builder import SimulationBuilder
 from simulation.data.results import results_directory
 
 """
