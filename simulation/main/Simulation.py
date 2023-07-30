@@ -182,7 +182,7 @@ class Simulation:
         filtered_hash_string = "".join(filter(str.isnumeric, hash_string))
         return PJWHash(filtered_hash_string)
 
-    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=False, verbose=False,
+    def run_model(self, speed, plot_results=False, verbose=False,
                   route_visualization=False, **kwargs):
         """
 
