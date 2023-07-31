@@ -1,4 +1,6 @@
 import os
+import sys
+
 import pygad
 import numpy as np
 from strenum import StrEnum
@@ -7,7 +9,7 @@ import csv
 from simulation.main import Simulation
 from simulation.utils import InputBounds
 from simulation.optimization.base_optimization import BaseOptimization
-from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize
+from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize, fix_extraneous_SOC, generate_perlin_noise_vector
 from simulation.cache.optimization_population import population_directory
 from simulation.data.results import results_directory
 from tqdm import tqdm
@@ -169,39 +171,31 @@ class GeneticOptimization(BaseOptimization):
                         print("\nPrevious initial population save file is being used...")
                         return initial_population
 
-        print("\nGenerating new initial population...")
         new_initial_population = self.generate_valid_speed_arrays(input_speed, num_arrays_to_generate)
 
         with open(population_file, 'wb') as f:
+            print("\nSaving new initial population...")
             np.savez(f, hash_key=self.model.hash_key, population=new_initial_population)
 
         return new_initial_population
 
     def generate_valid_speed_arrays(self, input_speed, num_arrays_to_generate):
-        max_speed_kmh = 50
+        max_speed_kmh = 40
         min_speed_kmh = 30
-        upper_stretch_bound = 1.5
-        lower_stretch_bound = 0.5
 
         if not self.model.check_if_has_calculated(raiseException=False):
             self.model.run_model(speed=input_speed, plot_results=False)
-        SOC = self.model.get_results(["raw_soc"])
+        length = self.model.get_driving_time_divisions()
         speed_arrays = []
 
-        while len(speed_arrays) < num_arrays_to_generate:
-            # We will sample SOC at as many points as the speed array needs
-            culled_SOC = cull_dataset(SOC, int(len(SOC) / len(input_speed)))[0:len(input_speed)]
-            # Rescale SOC to obtain a "coefficient" for each speed that should roughly
-            # match whether the car should speed up or slow down given the SOC at that time
-            speed_coefficients = rescale(culled_SOC, upper_stretch_bound, lower_stretch_bound)
-            # Multiply input speed by coefficients and finally rescale the result
-            guess_speed = rescale(speed_coefficients * input_speed, max_speed_kmh, min_speed_kmh)
-
-            self.model.run_model(speed=guess_speed, plot_results=False)
-            SOC = self.model.get_results(["raw_soc"])
-            if self.model.was_successful():
-                speed_arrays.append(normalize(guess_speed))
-            input_speed = guess_speed
+        with tqdm(total=num_arrays_to_generate, file=sys.stdout, desc="Generating new initial population ", position=0, leave=True) as pbar:
+            while len(speed_arrays) < num_arrays_to_generate:
+                guess_speed = generate_perlin_noise_vector(length)
+                denormalized_speed = denormalize(guess_speed, max_speed_kmh, min_speed_kmh)
+                self.model.run_model(speed=denormalized_speed, plot_results=True)
+                if self.model.was_successful():
+                    speed_arrays.append(normalize(guess_speed))
+                    pbar.update(1)
 
         return speed_arrays
 
