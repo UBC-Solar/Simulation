@@ -277,9 +277,10 @@ class Libraries:
 
         """
 
-        output_array = array.array(Libraries.ctypes_dict[c_type], [0] * output_array_length)
-        output_array_pointer = (c_type * len(output_array)).from_buffer(output_array)
-        return output_array_pointer, output_array
+        output_array = np.array([0] * output_array_length)
+        output_array_copy = output_array.astype(c_type)
+        ptr = output_array_copy.ctypes.data_as(ctypes.POINTER(c_type))
+        return ptr, output_array_copy
 
     @staticmethod
     def generate_input_output_pointer(input_array, c_type):
