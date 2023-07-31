@@ -1,5 +1,3 @@
-import numpy as np
-
 from simulation.common.helpers import plot_graph
 
 
