@@ -693,7 +693,7 @@ def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_
     return np.invert(np.logical_or.reduce(driving_time_boolean))
 
 
-def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True):
+def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True, plot_portion: tuple[float] = (0.0, 1.0)):
     """
 
     This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
@@ -714,8 +714,20 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
     :param list array_labels: An array of strings for the individual plot titles
     :param str graph_title: A string that serves as the plot's main title
     :param bool save: Boolean flag to control whether to save an .html file
+    :param plot_portion: tuple containing beginning and end of arrays that we want to plot as percentages which is
+    useful if we only want to plot for example the second half of the race in which case we would input (0.5, 1.0).
 
     """
+
+    if plot_portion != (0.0, 1.0):
+        for index, array in enumerate(arrays_to_plot):
+            beginning_index = int(len(array) * plot_portion[0])
+            end_index = int(len(array) * plot_portion[1])
+            arrays_to_plot[index] = array[beginning_index:end_index]
+
+        beginning_index = int(len(timestamps) * plot_portion[0])
+        end_index = int(len(timestamps) * plot_portion[1])
+        timestamps = timestamps[beginning_index:end_index]
 
     compress_constant = int(timestamps.shape[0] / 5000)
 
@@ -731,12 +743,12 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
         ("data", "$y")
     ]
 
-    for (index, data_array) in enumerate(arrays_to_plot):
+    for index, data_array in enumerate(arrays_to_plot):
         # create figures and put them in list
         figures.append(figure(title=array_labels[index], x_axis_label="Time (hr)",
                               y_axis_label=array_labels[index], x_axis_type="datetime"))
 
-        # add line renderers to each figur
+        # add line renderers to each figure
         colours = (
             '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889', '#fa1b9a',
             '#F05223', '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889',
@@ -758,7 +770,7 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
     return
 
 
-def route_visualization(coords, visible=True):  # TODO: Consolidate this with Plotting module
+def route_visualization(coords, visible=True):
     """
 
     Takes in a list of coordinates and visualizes them using MapBox.

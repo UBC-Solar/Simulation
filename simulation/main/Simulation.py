@@ -2,7 +2,6 @@ import logging
 import os
 from typing import Union
 
-
 import numpy as np
 import simulation
 
@@ -65,9 +64,6 @@ class Simulation:
         assert builder.race_type in ["ASC", "FSGP"]
 
         self.race_type = builder.race_type
-
-        # ---- Granularity -----
-        self.granularity = builder.granularity
 
         # ---- Granularity -----
         self.granularity = builder.granularity
@@ -153,10 +149,6 @@ class Simulation:
 
         self.solar_calculations = simulation.SolarCalculations(library=self.library)
 
-        self.local_times = 0
-
-        self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
-
         self.plotting = Plotting()
 
         # -------- Hash Key ---------
@@ -183,7 +175,7 @@ class Simulation:
         return PJWHash(filtered_hash_string)
 
     def run_model(self, speed, plot_results=False, verbose=False,
-                  route_visualization=False, **kwargs):
+                  route_visualization=False, plot_portion=(0.0, 1.0), **kwargs):
         """
 
         Updates the model in tick increments for the entire simulation duration. Returns
@@ -205,6 +197,8 @@ class Simulation:
         :param route_visualization: Flag to control route_visualization plot visibility
         :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
+        :param plot_portion: A tuple containing the beginning and end of the portion of the array we'd
+        like to plot as percentages.
 
         """
 
@@ -286,7 +280,7 @@ class Simulation:
                 boolean_graph = Graph(boolean_arrays, boolean_labels, graph_name="Speed Boolean Operations")
                 self.plotting.add_graph_to_queue(boolean_graph)
 
-            self.plotting.plot_graphs(self.timestamps)
+            self.plotting.plot_graphs(self.timestamps, plotting_portion=plot_portion)
 
         if route_visualization:
             if self.race_type == "FSGP":
