@@ -224,6 +224,8 @@ class Simulation:
         speed_mapped_kmh = helpers.reshape_and_repeat(speed_mapped, self.simulation_duration)
         speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
         self.speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
+        if self.tick != 1:
+            self.speed_kmh = self.speed_kmh[::self.tick]
 
         if self.race_type == "ASC":
             self.speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances,
