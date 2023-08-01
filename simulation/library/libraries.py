@@ -4,6 +4,8 @@ import array
 import numpy as np
 import os
 
+from matplotlib import pyplot as plt
+
 
 class Libraries:
     """
@@ -78,6 +80,18 @@ class Libraries:
                 ctypes.c_long
             ]
 
+            self.perlin_noise_library = ctypes.cdll.LoadLibrary(f"{self.go_directory}/perlin_noise.so")
+
+            self.perlin_noise_library.generatePerlinNoise.argtypes = [
+                ctypes.POINTER(ctypes.c_float),
+                ctypes.c_float,
+                ctypes.c_int32,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_uint32
+            ]
+
     def GetGoDirectory(self):
         """
 
@@ -138,9 +152,9 @@ class Libraries:
         # Execute the Go shared library (compiled Go function) and pass it the pointers we generated
         self.main_library.closest_gis_indices_loop(
             average_distances_pointer,
-            len(average_distances_pointer),
+            len(average_distances),
             cumulative_distances_pointer,
-            len(cumulative_distances_pointer),
+            len(cumulative_distances),
             results_pointer,
             len(results),
         )
@@ -157,7 +171,8 @@ class Libraries:
         # Generate pointers to arrays to pass to a Go binary
         unix_timestamps_pointer = Libraries.generate_input_pointer(unix_timestamps, ctypes.c_double)
         dt_local_arr_pointer = Libraries.generate_input_pointer(dt_local_array, ctypes.c_double)
-        closest_time_stamp_indices_pointer, closest_time_stamp_indices = Libraries.generate_output_pointer(unix_timestamps, ctypes.c_double)
+        closest_time_stamp_indices_pointer, closest_time_stamp_indices = Libraries.generate_output_pointer(
+            unix_timestamps, ctypes.c_double)
 
         # Execute the Go shared library (compiled Go function) and pass it the pointers we generated
         self.main_library.weather_in_time_loop(
@@ -179,7 +194,8 @@ class Libraries:
         # Get pointers for GoLang
         cumulative_distances_pointer = Libraries.generate_input_pointer(cumulative_distances, ctypes.c_double)
         average_distances_pointer = Libraries.generate_input_pointer(average_distances, ctypes.c_double)
-        closest_weather_indices_pointer, closest_weather_indices = Libraries.generate_output_pointer(len(cumulative_distances), ctypes.c_long)
+        closest_weather_indices_pointer, closest_weather_indices = Libraries.generate_output_pointer(
+            len(cumulative_distances), ctypes.c_long)
 
         self.main_library.closest_weather_indices_loop(
             cumulative_distances_pointer,
@@ -187,7 +203,7 @@ class Libraries:
             average_distances_pointer,
             len(average_distances),
             closest_weather_indices_pointer,
-            len(closest_weather_indices_pointer)
+            len(closest_weather_indices)
         )
 
         return np.array(closest_weather_indices, 'i')
@@ -223,7 +239,7 @@ class Libraries:
         """
 
         # We need to flatten waypoints from a [1x7] matrix to a 1D array.
-        flattened_waypoints = np.array([0]*len(waypoints))
+        flattened_waypoints = np.array([0] * len(waypoints))
         for i in range(len(waypoints)):
             flattened_waypoints[i] = waypoints[i][0]
 
@@ -243,6 +259,29 @@ class Libraries:
 
         return np.array(new_speeds, 'd')
 
+    def golang_generate_perlin_noise(self, persistence=0.65, numLayers=4, roughness=2.85, baseRoughness=0.9, strength=0.6, randomSeed=0):
+        """
+
+        GoLang implementation of generate_perlin_noise. See parent function for details.
+
+        """
+
+        output_array = np.array([0] * (256 * 256))
+        output_array_copy = output_array.astype(ctypes.c_float)
+        ptr = output_array_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+
+        self.perlin_noise_library.generatePerlinNoise(
+            ptr,
+            persistence,
+            numLayers,
+            roughness,
+            baseRoughness,
+            strength,
+            randomSeed
+        )
+
+        return np.array(output_array_copy, 'f').reshape(256, 256)
+
     @staticmethod
     def generate_input_pointer(input_array, c_type):
         """
@@ -254,9 +293,9 @@ class Libraries:
         :return: A pointer pointing to input_array
 
         """
-        array_copy = array.array(Libraries.ctypes_dict[c_type], input_array)
-        array_copy_pointer = (c_type * len(array_copy)).from_buffer(array_copy)
-        return array_copy_pointer
+        input_array_copy = input_array.astype(c_type)
+        ptr = input_array_copy.ctypes.data_as(ctypes.POINTER(c_type))
+        return ptr
 
     @staticmethod
     def generate_output_pointer(output_array_length, c_type):
@@ -269,9 +308,10 @@ class Libraries:
         :return: A pointer pointing to output_array, and output array itself
 
         """
-        output_array = array.array(Libraries.ctypes_dict[c_type], [0] * output_array_length)
-        output_array_pointer = (c_type * len(output_array)).from_buffer(output_array)
-        return output_array_pointer, output_array
+        output_array = np.array([0] * output_array_length)
+        output_array_copy = output_array.astype(c_type)
+        ptr = output_array_copy.ctypes.data_as(ctypes.POINTER(c_type))
+        return ptr, output_array_copy
 
     @staticmethod
     def generate_input_output_pointer(input_array, c_type):
