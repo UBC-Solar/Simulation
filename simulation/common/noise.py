@@ -1,8 +1,8 @@
-from matplotlib import pyplot as plt
+import numpy as np
 
+from matplotlib import pyplot as plt
 from simulation.library.libraries import Libraries
 from perlin_noise import PerlinNoise
-import numpy as np
 from simulation.common.helpers import normalize
 
 
