@@ -52,7 +52,7 @@ class Noise:
 
         return self.noise
 
-    def display_noise(self, noise, width, length):
+    def display_noise(self, width, length):
         pic = []
         for i in range(width):
             row = []

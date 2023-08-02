@@ -9,12 +9,14 @@ import (
 	_ "image/jpeg"
 )
 
-// GOARCH=arm64 GOOS=darwin CGO_ENABLED=1 go build -o perlin_noise.so -buildmode=c-shared main.go vector.go perlinNoise.go simplexNoise.go debug.go
+// GOARCH=arm64 GOOS=darwin CGO_ENABLED=1 go build -o perlin_noise.so -buildmode=c-shared main/src
 
 //export generatePerlinNoise
 func generatePerlinNoise(resultPtr *float32,
+	width uint32,
+	height uint32,
 	persistence float32,
-	numLayers int32,
+	numLayers uint32,
 	roughness float32,
 	baseRoughness float32,
 	strength float32,
@@ -22,7 +24,7 @@ func generatePerlinNoise(resultPtr *float32,
 	defer duration(track("generatePerlinNoise"))
 
 	settings := &NoiseSettings{
-		strength:      strength,
+		Strength:      strength,
 		baseRoughness: baseRoughness,
 		roughness:     roughness,
 		centre:        v3Zero,
@@ -32,26 +34,16 @@ func generatePerlinNoise(resultPtr *float32,
 
 	noise := generateSimplexNoise(randomSeed)
 
-	result := unsafe.Slice(resultPtr, 256*256)
+	result := unsafe.Slice(resultPtr, width*height)
 
-	parallel.For(256, func(i, _ int) {
-		parallel.For(256, func(j, _ int) {
-			noiseValue := evaluatePerlinNoise(v3{float32(i) / 256.0, float32(j) / 256.0, 0}, noise, settings)
-			result[(i*256)+j] = noiseValue
+	parallel.For(int(width), func(i, _ int) {
+		parallel.For(int(height), func(j, _ int) {
+			noiseValue := evaluatePerlinNoise(v3{float32(i) / float32(width), float32(j) / float32(height), 0}, noise, settings)
+			result[(i*int(width))+j] = noiseValue
 		})
 	})
 }
 
-func evaluatePerlin(noise *Noise, noiseSettings *NoiseSettings) [256][256]uint8 {
-	defer duration(track("evaluatePerlin"))
-	var twoDArray [256][256]uint8
-
-	parallel.For(256, func(i, _ int) {
-		parallel.For(256, func(j, _ int) {
-			noiseValue := evaluatePerlinNoise(v3{float32(i) / 256.0, float32(j) / 256.0, 0}, noise, noiseSettings)
-			twoDArray[i][j] = uint8(noiseValue * 256)
-		})
-	})
-
-	return twoDArray
+func main() {
+	debug()
 }

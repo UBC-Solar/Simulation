@@ -2,6 +2,7 @@ package main
 
 type v3i = [3]int32
 type v3 = [3]float32
+type v2i = [2]int32
 
 var v3Zero = v3{0, 0, 0}
 
