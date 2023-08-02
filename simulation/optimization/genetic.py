@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -9,7 +10,7 @@ import csv
 from simulation.main import Simulation
 from simulation.utils import InputBounds
 from simulation.optimization.base_optimization import BaseOptimization
-from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize, fix_extraneous_SOC
+from simulation.common.helpers import denormalize, normalize
 
 from simulation.cache.optimization_population import population_directory
 from simulation.data.results import results_directory
@@ -88,8 +89,8 @@ class OptimizationSettings:
 
 class GeneticOptimization(BaseOptimization):
 
-    def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray, golang: bool = True,
-                 force_new_population_flag: bool = True, settings: OptimizationSettings = None, pbar: tqdm = None):
+    def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray,
+                 force_new_population_flag: bool = False, settings: OptimizationSettings = None, pbar: tqdm = None):
         super().__init__(bounds, model.run_model)
         self.model = model
         self.bounds = bounds.get_bounds_list()
@@ -140,7 +141,7 @@ class GeneticOptimization(BaseOptimization):
 
         # We must obtain or create an initial population for GA to work with.
         initial_population = self.get_initial_population(input_speed, self.sol_per_pop, force_new_population_flag)
-        exit()
+
         # This informs GA when to end the optimization sequence. If blank, it will continue until the generation
         # iterations finish. Write "saturate_x" for the sequence to end after x generations of no improvement to
         # fitness. Write "reach_x" for the sequence to end after fitness has reached x.
@@ -184,7 +185,7 @@ class GeneticOptimization(BaseOptimization):
     def generate_valid_speed_arrays(self, input_speed, num_arrays_to_generate):
         max_speed_kmh = 40
         min_speed_kmh = 30
-        noise_generator = Noise(True, self.model.library)
+        noise_generator = Noise(self.model.golang, self.model.library)
 
         if not self.model.check_if_has_calculated(raiseException=False):
             self.model.run_model(speed=input_speed, plot_results=False)
@@ -251,28 +252,44 @@ class GeneticOptimization(BaseOptimization):
 
     @staticmethod
     def get_sequence_index(increment_index=True):
-        register_file = results_directory / "register.npz"
+        register_file = results_directory / "register.json"
 
         if not os.path.isfile(register_file):
-            np.savez(register_file, x=0)
-            return 0
+            raise FileNotFoundError("Cannot find register file!")
 
-        with np.load(register_file) as register_data:
-            x = register_data['x']
-            x += 1
-            if increment_index:
-                np.savez(register_file, x=x)
-            return x
+        with open(register_file, "r") as register_file:
+            register_data = json.load(register_file)
+
+        x = register_data['x']
+        x += 1
+
+        if increment_index:
+            save_index(register_file, x)
+
+        return x
 
 
-def reset_register():
-    register_file = results_directory / "register.npz"
+def save_index(register_file, index):
+    with open(register_file, "w") as register_file:
+        register_data = {
+            "x": index
+        }
+
+        json.dump(register_data, register_file)
+
+
+def reset_register(x):
+    register_file = results_directory / "register.json"
 
     if not os.path.isfile(register_file):
-        np.savez(register_file, x=15)
+        raise FileNotFoundError("Cannot find register file!")
 
-    with np.load(register_file):
-        np.savez(register_file, x=15)
+    register = {
+        "x": x
+    }
+
+    with open(register_file, "w") as write_file:
+        json.dump(register, write_file)
 
 
 def parse_csv_into_settings(csv_reader: csv.reader) -> list:
@@ -298,5 +315,5 @@ def parse_csv_into_settings(csv_reader: csv.reader) -> list:
 
 
 if __name__ == "__main__":
-    reset_register()
+    reset_register(26)
     print(GeneticOptimization.get_sequence_index(increment_index=False))
