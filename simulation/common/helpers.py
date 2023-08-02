@@ -13,7 +13,6 @@ from bokeh.plotting import figure, show, output_file
 from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from simulation.common import constants
-from perlin_noise import PerlinNoise
 
 """
 Description: contains the simulation's helper functions.
@@ -984,29 +983,6 @@ def fix_extraneous_SOC(input_SOC):
         for index in nan_indices:
             input_SOC[index] = last_value
     return input_SOC
-
-
-def generate_perlin_noise_vector(length):
-    noise1 = PerlinNoise(octaves=3)
-    noise2 = PerlinNoise(octaves=6)
-    noise3 = PerlinNoise(octaves=12)
-    noise4 = PerlinNoise(octaves=48)
-
-    x, y = length, length
-    pic = []
-
-    for i in range(x):
-        row = []
-        for j in range(y):
-            noise_val = noise1([i / x, j / y])
-            noise_val += 0.5 * noise2([i / x, j / y])
-            noise_val += 0.25 * noise3([i / x, j / y])
-            noise_val += 0.125 * noise4([i / x, j / y])
-            row.append(noise_val)
-        pic.append(row)
-
-    row = normalize(np.array(pic[int(length / 2)]))
-    return row
 
 
 if __name__ == '__main__':

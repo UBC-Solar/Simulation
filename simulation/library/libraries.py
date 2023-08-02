@@ -259,7 +259,7 @@ class Libraries:
 
         return np.array(new_speeds, 'd')
 
-    def golang_generate_perlin_noise(self, persistence=0.65, numLayers=4, roughness=2.85, baseRoughness=0.9, strength=0.6, randomSeed=0):
+    def golang_generate_perlin_noise(self, persistence=0.4, numLayers=6, roughness=5.55, baseRoughness=1.0, strength=0.55, randomSeed=0):
         """
 
         GoLang implementation of generate_perlin_noise. See parent function for details.

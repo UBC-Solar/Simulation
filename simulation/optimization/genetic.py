@@ -9,10 +9,12 @@ import csv
 from simulation.main import Simulation
 from simulation.utils import InputBounds
 from simulation.optimization.base_optimization import BaseOptimization
-from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize, fix_extraneous_SOC, generate_perlin_noise_vector
+from simulation.common.helpers import denormalize, cull_dataset, rescale, normalize, fix_extraneous_SOC
+
 from simulation.cache.optimization_population import population_directory
 from simulation.data.results import results_directory
 from tqdm import tqdm
+from simulation.common.noise import Noise
 
 """
 
@@ -75,7 +77,7 @@ class OptimizationSettings:
 
     def as_list(self):
         out_list: list = [str(self.chromosome_size), str(self.parent_selection_type), str(self.generation_limit),
-                          str(self.num_parents), str(self.k_tournament), str(self.crossover_type),str(self.elitism),
+                          str(self.num_parents), str(self.k_tournament), str(self.crossover_type), str(self.elitism),
                           str(self.mutation_type), str(self.mutation_percent), str(self.max_mutation),
                           str(self._fitness)]
         return out_list
@@ -86,8 +88,8 @@ class OptimizationSettings:
 
 class GeneticOptimization(BaseOptimization):
 
-    def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray,
-                 force_new_population_flag: bool = False, settings: OptimizationSettings = None, pbar: tqdm = None):
+    def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray, golang: bool = True,
+                 force_new_population_flag: bool = True, settings: OptimizationSettings = None, pbar: tqdm = None):
         super().__init__(bounds, model.run_model)
         self.model = model
         self.bounds = bounds.get_bounds_list()
@@ -138,7 +140,7 @@ class GeneticOptimization(BaseOptimization):
 
         # We must obtain or create an initial population for GA to work with.
         initial_population = self.get_initial_population(input_speed, self.sol_per_pop, force_new_population_flag)
-
+        exit()
         # This informs GA when to end the optimization sequence. If blank, it will continue until the generation
         # iterations finish. Write "saturate_x" for the sequence to end after x generations of no improvement to
         # fitness. Write "reach_x" for the sequence to end after fitness has reached x.
@@ -182,15 +184,25 @@ class GeneticOptimization(BaseOptimization):
     def generate_valid_speed_arrays(self, input_speed, num_arrays_to_generate):
         max_speed_kmh = 40
         min_speed_kmh = 30
+        noise_generator = Noise(True, self.model.library)
 
         if not self.model.check_if_has_calculated(raiseException=False):
             self.model.run_model(speed=input_speed, plot_results=False)
         length = self.model.get_driving_time_divisions()
         speed_arrays = []
 
-        with tqdm(total=num_arrays_to_generate, file=sys.stdout, desc="Generating new initial population ", position=0, leave=True) as pbar:
+        with tqdm(total=num_arrays_to_generate, file=sys.stdout, desc="Generating new initial population ", position=0,
+                  leave=True) as pbar:
+            noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
+            x = 0
             while len(speed_arrays) < num_arrays_to_generate:
-                guess_speed = generate_perlin_noise_vector(length)
+                guess_speed = noise[x]
+                if x >= len(noise) - 1:
+                    noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
+                    x = 0
+                else:
+                    x += 1
+
                 denormalized_speed = denormalize(guess_speed, max_speed_kmh, min_speed_kmh)
                 self.model.run_model(speed=denormalized_speed, plot_results=False)
                 if self.model.was_successful():
