@@ -12,6 +12,8 @@ from bokeh.models import HoverTool
 from bokeh.plotting import figure, show, output_file
 from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
+from numba import jit
+
 from simulation.common import constants
 
 """
@@ -74,6 +76,7 @@ def date_from_unix_timestamp(unix_timestamp):
     return datetime.datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
+@jit(nopython=True)
 def check_for_non_consecutive_zeros(array, verbose=False):
     """
 
@@ -105,6 +108,7 @@ def check_for_non_consecutive_zeros(array, verbose=False):
         return True
 
 
+@jit(nopython=True)
 def reshape_and_repeat(input_array, reshape_length):
     """
 
@@ -141,6 +145,7 @@ def reshape_and_repeat(input_array, reshape_length):
         return result
 
 
+@jit(nopython=True)
 def generate_deceleration_array(initial_velocity, final_velocity, deceleration_interval):
     """
 
@@ -198,6 +203,7 @@ def apply_deceleration(input_speed_array, deceleration_interval):
     return input_speed_array
 
 
+@jit(nopython=True)
 def is_valid_speed_array(deceleration_interval, idx, initial_velocity, input_speed_array):
     """
 
@@ -293,6 +299,7 @@ def calculate_path_distances(coords):
     return path_distances
 
 
+@jit(nopython=True)
 def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
     """
 
@@ -313,6 +320,7 @@ def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directi
     return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
 
 
+@jit(nopython=True)
 def get_day_of_year_map(date):
     """
 
@@ -324,6 +332,7 @@ def get_day_of_year_map(date):
     return get_day_of_year(date.day, date.month, date.year)
 
 
+@jit(nopython=True)
 def get_day_of_year(day, month, year):
     """
 
@@ -341,6 +350,7 @@ def get_day_of_year(day, month, year):
     return (datetime.date(year, month, day) - datetime.date(year, 1, 1)).days + 1
 
 
+@jit(nopython=True)
 def calculate_declination_angle(day_of_year):
     """
 
@@ -360,7 +370,7 @@ def calculate_declination_angle(day_of_year):
 
 
 # ----- Calculation of Apparent Solar Time -----
-
+@jit(nopython=True)
 def calculate_eot_correction(day_of_year):
     """
 
@@ -380,6 +390,7 @@ def calculate_eot_correction(day_of_year):
     return eot
 
 
+@jit(nopython=True)
 def calculate_LSTM(time_zone_utc):
     """
 
@@ -424,6 +435,7 @@ def local_time_to_apparent_solar_time(time_zone_utc, day_of_year, local_time,
     return lst
 
 
+@jit(nopython=True)
 def calculate_path_gradients(elevations, distances):
     """
 
@@ -459,6 +471,7 @@ def calculate_path_gradients(elevations, distances):
     return gradients
 
 
+@jit(nopython=True)
 def cull_dataset(coords, cull_factor=625):
     """
 
@@ -480,6 +493,7 @@ def cull_dataset(coords, cull_factor=625):
     return coords[::cull_factor]
 
 
+@jit(nopython=True)
 def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     """
 
@@ -504,6 +518,7 @@ def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     return np.degrees(elevation_angle)
 
 
+@jit(nopython=True)
 def find_runs(x):
     """
 
@@ -540,6 +555,7 @@ def find_runs(x):
         return run_values, run_starts, run_lengths
 
 
+@jit(nopython=True)
 def find_multi_index_runs(x):
     run_values, run_starts, run_lengths = find_runs(x)
 
@@ -555,6 +571,7 @@ def find_multi_index_runs(x):
     return multi_index_run_values, multi_index_run_starts, multi_index_run_lengths
 
 
+@jit(nopython=True)
 def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, race_type, timestamps, verbose):
     """
 
@@ -607,7 +624,8 @@ def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_ty
     simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60), (1.0 / granularity))
 
     if as_seconds is True:
-        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
+        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
+                                               start_hour + simulation_duration / (60 * 60)).astype(int)
         if race_type == "ASC":
             driving_time_boolean = [(simulation_hours_by_second % 24) <= 9, (simulation_hours_by_second % 24) >= 18]
         else:  # FSGP
@@ -657,43 +675,8 @@ def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_
     return np.invert(np.logical_or.reduce(driving_time_boolean))
 
 
-def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_type, as_seconds=True):
-    """
-
-    Applies regulation timing constraints to an array representing when the car will be able to charge.
-
-    :param int start_hour: An integer representing the race's start hour
-    :param int simulation_duration: An integer representing simulation duration in seconds
-    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
-    :param bool as_seconds: will return an array of seconds, or hours if set to False
-    :returns: driving_time_boolean, a boolean array with charge timing constraints applied to it
-    :rtype: np.ndarray
-    :raises: ValueError is race_type is not one of "ASC" or "FSGP"
-
-    """
-
-    # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
-    # (Charge from 8am-9am and 6pm-8pm) for FSGP
-
-    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
-
-    if as_seconds is True:
-        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
-                                               start_hour + simulation_duration / (60 * 60)).astype(int)
-        if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 20]
-        else:  # FSGP
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 20]
-    else:
-        if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours % 24) <= 7, (simulation_hours % 24) >= 20]
-        else:  # FSGP
-            driving_time_boolean = [(simulation_hours % 24) <= 8, (simulation_hours % 24) >= 20]
-
-    return np.invert(np.logical_or.reduce(driving_time_boolean))
-
-
-def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True, plot_portion: tuple[float] = (0.0, 1.0)):
+def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
+               plot_portion: tuple[float] = (0.0, 1.0)):
     """
 
     This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
@@ -824,6 +807,7 @@ def simple_plot_graph(data, title, visible=True):
         plt.show()
 
 
+@jit(nopython=True)
 def calculate_race_completion_time(path_length, cumulative_distances):
     """
 
@@ -883,6 +867,7 @@ def plot_latitudes(coordinates):
     simple_plot_graph(coordinates[:, 1], "Latitudes")
 
 
+@jit(nopython=True)
 def map_array_to_targets(input_array, target_array):
     """
 
@@ -917,6 +902,8 @@ def map_array_to_targets(input_array, target_array):
 
     return output_array
 
+
+@jit(nopython=True)
 def get_map_data_indices(closest_gis_indices):
     """
     gets list of indices of the data to be displayed on corresponding
@@ -930,21 +917,24 @@ def get_map_data_indices(closest_gis_indices):
         if i == 0:
             continue
         else:
-            if not closest_gis_indices[i] == closest_gis_indices[i-1]:
+            if not closest_gis_indices[i] == closest_gis_indices[i - 1]:
                 map_data_indices.append(i)
     return map_data_indices
 
 
+@jit(nopython=True)
 def normalize(input_array: np.ndarray) -> np.ndarray:
     max_value = np.max(input_array)
     min_value = np.min(input_array)
     return (input_array - min_value) / (max_value - min_value)
 
 
+@jit(nopython=True)
 def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0) -> np.ndarray:
     return input_array * (max_value - min_value) + min_value
 
 
+@jit(nopython=True)
 def rescale(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
     normalized_array = normalize(input_array)
     return denormalize(normalized_array, upper_bound, lower_bound)
@@ -952,6 +942,7 @@ def rescale(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0)
 
 #  Credits to Arash Partow - 2002
 #  https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
+@jit(nopython=True)
 def PJWHash(key):
     BitsInUnsignedInt = 4 * 8
     ThreeQuarters = long((BitsInUnsignedInt * 3) / 4)
@@ -968,15 +959,18 @@ def PJWHash(key):
     return Hash & 0x7FFFFFFF
 
 
+@jit(nopython=True)
 def lerp(a: np.ndarray, b: np.ndarray, t: float):
-    return a + (b-a) * t
+    return a + (b - a) * t
 
 
+@jit(nopython=True)
 def shift(a: np.ndarray, b: float):
     b_array = np.full([1, len(a)], b)
     return np.add(a, b_array)
 
 
+@jit(nopython=True)
 def fix_extraneous_SOC(input_SOC):
     if len(nan_indices := np.argwhere(np.isnan(input_SOC))) > 0:
         last_value = input_SOC[nan_indices[0] - 1]

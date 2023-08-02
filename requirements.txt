@@ -17,3 +17,4 @@ tqdm==4.64.0
 pygad==3.0.1
 strenum==0.4.15
 perlin-noise==1.12
+numba==0.57.1
