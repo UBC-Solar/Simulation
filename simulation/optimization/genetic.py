@@ -197,7 +197,7 @@ class GeneticOptimization(BaseOptimization):
             noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
             x = 0
             while len(speed_arrays) < num_arrays_to_generate:
-                guess_speed = noise[x]
+                guess_speed = normalize(noise[x])
                 if x >= len(noise) - 1:
                     noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
                     x = 0
@@ -207,7 +207,7 @@ class GeneticOptimization(BaseOptimization):
                 denormalized_speed = denormalize(guess_speed, max_speed_kmh, min_speed_kmh)
                 self.model.run_model(speed=denormalized_speed, plot_results=False)
                 if self.model.was_successful():
-                    speed_arrays.append(normalize(guess_speed))
+                    speed_arrays.append(guess_speed)
                     pbar.update(1)
 
         return speed_arrays
