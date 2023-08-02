@@ -233,7 +233,7 @@ class GeneticOptimization(BaseOptimization):
         return self.bestinput
 
     def plot_fitness(self):
-        sequence_index = GeneticOptimization.get_sequence_index(increment_index=False)
+        sequence_index = get_sequence_index(increment_index=False)
 
         graph_title = "sequence" + str(sequence_index)
         save_dir = results_directory / graph_title
@@ -244,38 +244,38 @@ class GeneticOptimization(BaseOptimization):
         results_file = results_directory / "results.csv"
         with open(results_file, 'a') as f:
             writer = csv.writer(f)
-            sequence_index: int = GeneticOptimization.get_sequence_index()
+            sequence_index: int = get_sequence_index()
             output = list(self.settings.as_list())
             output.insert(0, sequence_index)
             print("Writing: " + str(output))
             writer.writerow(output)
 
-    @staticmethod
-    def get_sequence_index(increment_index=True):
-        register_file = results_directory / "register.json"
 
-        if not os.path.isfile(register_file):
-            raise FileNotFoundError("Cannot find register file!")
+def get_sequence_index(increment_index=True):
+    register_file = results_directory / "register.json"
 
-        with open(register_file, "r") as register_file:
-            register_data = json.load(register_file)
+    if not os.path.isfile(register_file):
+        raise FileNotFoundError("Cannot find register file!")
 
-        x = register_data['x']
-        x += 1
+    with open(register_file, "r") as file:
+        register_data = json.load(file)
 
-        if increment_index:
-            save_index(register_file, x)
+    x = register_data['x']
+    x += 1
 
-        return x
+    if increment_index:
+        save_index(register_file, x)
+
+    return x
 
 
 def save_index(register_file, index):
-    with open(register_file, "w") as register_file:
+    with open(register_file, "w") as file:
         register_data = {
             "x": index
         }
 
-        json.dump(register_data, register_file)
+        json.dump(register_data, file)
 
 
 def reset_register(x):
@@ -316,4 +316,4 @@ def parse_csv_into_settings(csv_reader: csv.reader) -> list:
 
 if __name__ == "__main__":
     reset_register(26)
-    print(GeneticOptimization.get_sequence_index(increment_index=False))
+    print(get_sequence_index(increment_index=False))
