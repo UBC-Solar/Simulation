@@ -21,7 +21,7 @@ def simulation_property(func):
 
     @functools.wraps(func)
     def property_wrapper(*args, **kwargs):
-        assert args[0] is Simulation, "simulation_property wrapper applied to non-Simulation function!"
+        assert type(args[0]) is Simulation, "simulation_property wrapper applied to non-Simulation function!"
         args[0].check_if_has_calculated()
         value = func(*args, **kwargs)
         return value
