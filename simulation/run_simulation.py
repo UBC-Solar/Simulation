@@ -193,32 +193,6 @@ def display_commands():
           ">>>python3 run_simulation.py -golang=False -optimize=time_taken -iter=3\n")
 
 
-valid_commands = ["-help", "-race_type", "-golang", "-optimize", "-iter", "-verbose", "-route_visualization", "-granularity"]
-
-
-def identify_invalid_commands(cmds):
-    """
-
-    Check to make sure that commands passed from user are valid.
-
-    :param cmds: list of commands from command line
-    :return: the first invalid command detected.
-
-    """
-
-    for cmd in cmds:
-        # Make sure is actually a command and not "python3" or "python", which we don't need to handle.
-        if not cmd[0] == '-':
-            continue
-
-        # Get the identifier of the command, not the argument of it.
-        split_cmd = cmd.split('=')
-        if not split_cmd[0] in valid_commands:
-            return split_cmd[0]
-
-    return False
-
-
 def parse_commands(cmds):
     """
 
@@ -231,14 +205,45 @@ def parse_commands(cmds):
 
     simulation_settings = SimulationSettings()
 
+    command_to_action = {
+        '-golang': lambda x: set_golang(x),
+        '-optimize': lambda x: set_return_type(x),
+        '-iter': lambda x: set_iterations(x),
+        '-verbose': lambda x: set_verbose(x),
+        '-route_visualization': lambda x: set_route_visualization(x),
+        '-race_type': lambda x: set_race_type(x),
+        '-granularity': lambda x: set_granularity(x)
+    }
+
+    def set_golang(value: str):
+        simulation_settings.golang = True if value == 'True' or 'true' else False
+
+    def set_return_type(value: str):
+        try:
+            simulation_settings.return_type = SimulationReturnType(value)
+        except ValueError:
+            raise ValueError(f"{value} could not be recognized as a SimulationReturnType!")
+
+    def set_iterations(value: str):
+        simulation_settings.optimization_iterations = int(value)
+
+    def set_verbose(value: str):
+        simulation_settings.verbose = True if value == 'True' or 'true' else False
+
+    def set_route_visualization(value: str):
+        simulation_settings.route_visualization = True if value == 'True' or 'true' else False
+
+    def set_race_type(value: str):
+        assert value in ['ASC', 'FSGP'], f"Invalid race type {value}. Please enter 'ASC' or 'FSGP'."
+        simulation_settings.race_type = value
+
+    def set_granularity(value: float):
+        simulation_settings.granularity = value
+
     # If the user has requested '-help', display list of valid commands.
     if "-help" in cmds:
         display_commands()
         exit()
-
-    # If an invalid command is detected, exit and let the user know.
-    if cmd := identify_invalid_commands(cmds):
-        raise AssertionError(f"Command '{cmd}' not found. Please use -help for list of valid commands.")
 
     # Loop through commands and parse them to assign their values to their respective parameters.
     for cmd in cmds:
@@ -247,33 +252,11 @@ def parse_commands(cmds):
 
         split_cmd = cmd.split('=')
 
-        if split_cmd[0] == '-golang':
-            simulation_settings.golang = True if split_cmd[1] == 'True' else False
-
-        elif split_cmd[0] == '-optimize':
-            if split_cmd[1] == 'distance' or split_cmd[1] == 'distance_travelled':
-                simulation_settings.return_type = SimulationReturnType.distance_travelled
-            elif split_cmd[1] == 'time_taken' or split_cmd[1] == 'time':
-                simulation_settings.return_type = SimulationReturnType.time_taken
-            else:
-                raise AssertionError(f"Parameter '{split_cmd[1]}' not identifiable.")
-
-        elif split_cmd[0] == '-iter':
-            simulation_settings.optimization_iterations = int(split_cmd[1])
-
-        elif split_cmd[0] == '-verbose':
-            simulation_settings.verbose = True if split_cmd[1] == 'True' else False
-
-        elif split_cmd[0] == '-route_visualization':
-            simulation_settings.route_visualization = True if split_cmd[1] == 'True' else False
-
-        elif split_cmd[0] == '-race_type':
-            if not split_cmd[1] in ['ASC', 'FSGP']:
-                raise AssertionError(f"Invalid race type {split_cmd[1]}. Please enter 'ASC' or 'FSGP'.")
-            simulation_settings.race_type = split_cmd[1]
-
-        elif split_cmd[0] == '-granularity':
-            simulation_settings.granularity = split_cmd[1]
+        try:
+            action = command_to_action[split_cmd[0]]
+            action(split_cmd[1])
+        except KeyError:
+            raise KeyError(f"{cmd} not identified!")
 
     return simulation_settings
 
