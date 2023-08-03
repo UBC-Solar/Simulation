@@ -29,16 +29,16 @@ def simulation_property(func):
     return property_wrapper
 
 
-class SimulationReturnType(Enum):
+class SimulationReturnType(StrEnum):
     """
 
     This enum exists to discretize different data types run_model should return.
 
     """
 
-    time_taken = 0
-    distance_travelled = 1
-    void = 2
+    time_taken = "time_taken"
+    distance_travelled = "distance_travelled"
+    void = "void"
 
 
 class Simulation:
@@ -306,14 +306,13 @@ class Simulation:
             elif self.race_type == "ASC":
                 helpers.route_visualization(self.gis.path, visible=route_visualization)
 
-        if self.return_type is SimulationReturnType.distance_travelled:
-            return float(results[2])
-        if self.return_type is SimulationReturnType.time_taken:
-            return -1 * float(results[0])
-        if self.return_type is SimulationReturnType.void:
-            pass
-        else:
-            raise TypeError("Return type not found.")
+        get_return_type = {
+            SimulationReturnType.time_taken: -1 * self.time_taken,
+            SimulationReturnType.distance_travelled: self.distance_travelled,
+            SimulationReturnType.void: None
+        }
+
+        return get_return_type[self.return_type]
 
     def get_results(self, values: Union[np.ndarray, list, tuple, set]) -> list:
         """
