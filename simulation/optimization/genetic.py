@@ -97,7 +97,6 @@ class GeneticOptimization(BaseOptimization):
         self.bounds = bounds.get_bounds_list()
         fitness_function = self.fitness
         self.settings = settings if settings is not None else OptimizationSettings()
-        self.pbar = pbar if pbar is not None else tqdm()
 
         # Define how many iterations that GA will run
         num_generations = self.settings.generation_limit
