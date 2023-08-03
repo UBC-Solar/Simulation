@@ -1,3 +1,4 @@
+import functools
 import logging
 import os
 from typing import Union
@@ -10,7 +11,26 @@ from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.plotting import Graph, Plotting
 from simulation.common.exceptions import PrematureDataRecoveryError
-from simulation.common.helpers import simulation_property, PJWHash
+from simulation.common.helpers import PJWHash
+
+
+def simulation_property(func):
+    """
+
+    Apply this decorator to all functions that intend to get data from a Simulation model.
+
+    :param func: function that will be used to get data
+
+    """
+
+    @functools.wraps(func)
+    def property_wrapper(*args, **kwargs):
+        assert args[0] is Simulation, "simulation_property wrapper applied to non-Simulation function!"
+        args[0].check_if_has_calculated()
+        value = func(*args, **kwargs)
+        return value
+
+    return property_wrapper
 
 
 class SimulationReturnType(Enum):

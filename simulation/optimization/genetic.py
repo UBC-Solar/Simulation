@@ -7,6 +7,7 @@ import numpy as np
 from strenum import StrEnum
 import csv
 
+from simulation.common.exceptions import PrematureDataRecoveryError
 from simulation.main import Simulation
 from simulation.utils import InputBounds
 from simulation.optimization.base_optimization import BaseOptimization
@@ -133,7 +134,7 @@ class GeneticOptimization(BaseOptimization):
         # Define a maximum value for gene value mutations (should be 0 < x < 1)
         mutation_max_value = self.settings.max_mutation
 
-        # Bound the value of each gene to be between 0 and 1 as chromosomes should be normalized.
+        # Bind the value of each gene to be between 0 and 1 as chromosomes should be normalized.
         gene_space = {'low': 0.0, 'high': 1.0}
 
         # Add a time delay between generations (used for debug purposes)
@@ -158,7 +159,8 @@ class GeneticOptimization(BaseOptimization):
                                     mutation_type=str(mutation_type),
                                     mutation_percent_genes=mutation_percent_genes,
                                     gene_space=gene_space,
-                                    on_generation=lambda x: pbar.update(1),
+                                    on_generation=(lambda x: pbar.update(1)) if pbar is not None else
+                                    (lambda x: print("New generation!")),
                                     delay_after_gen=delay_after_generation,
                                     random_mutation_max_val=mutation_max_value,
                                     stop_criteria=stop_criteria)
@@ -187,8 +189,11 @@ class GeneticOptimization(BaseOptimization):
         min_speed_kmh = 30
         noise_generator = Noise(self.model.golang, self.model.library)
 
-        if not self.model.check_if_has_calculated(raiseException=False):
+        try:
+            self.model.check_if_has_calculated()
+        except PrematureDataRecoveryError:
             self.model.run_model(speed=input_speed, plot_results=False)
+
         length = self.model.get_driving_time_divisions()
         speed_arrays = []
 
