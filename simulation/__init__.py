@@ -2,6 +2,8 @@ from simulation.common import Consumer
 from simulation.common import Producer
 from simulation.common import Storage
 from simulation.common import BatteryEmptyError
+from simulation.common import PrematureDataRecoveryError
+from simulation.common import Graph, Plotting
 
 from simulation.arrays import BaseArray
 from simulation.battery import BaseBattery

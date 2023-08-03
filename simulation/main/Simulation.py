@@ -1,17 +1,13 @@
+import simulation
 import functools
 import logging
 import os
-from typing import Union
-
 import numpy as np
-import simulation
 
-from enum import Enum
+from typing import Union
+from strenum import StrEnum
 from dotenv import load_dotenv
 from simulation.common import helpers
-from simulation.common.plotting import Graph, Plotting
-from simulation.common.exceptions import PrematureDataRecoveryError
-from simulation.common.helpers import PJWHash
 
 
 def simulation_property(func):
@@ -169,7 +165,7 @@ class Simulation:
 
         self.solar_calculations = simulation.SolarCalculations(library=self.library)
 
-        self.plotting = Plotting()
+        self.plotting = simulation.Plotting()
 
         # -------- Hash Key ---------
 
@@ -192,7 +188,7 @@ class Simulation:
         for value in self.waypoints:
             hash_string += str(value)
         filtered_hash_string = "".join(filter(str.isnumeric, hash_string))
-        return PJWHash(filtered_hash_string)
+        return helpers.PJWHash(filtered_hash_string)
 
     def run_model(self, speed, plot_results=False, verbose=False,
                   route_visualization=False, plot_portion=(0.0, 1.0), **kwargs):
