@@ -379,10 +379,6 @@ class WeatherForecasts:
 
         temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
 
-        # if you're wondering why or how this works, don't ask because I don't know, it just does
-        # this is what duct-taping looks like in software engineering
-        result = full_weather_forecast_at_coords[tuple((temp_0, closest_timestamp_indices))]
-
         return result
 
     @staticmethod

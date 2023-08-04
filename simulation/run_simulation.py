@@ -302,17 +302,18 @@ def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds,
         settings_list = parse_csv_into_settings(csv_reader)
 
     total_num = get_total_generations(settings_list) * evals_per_setting
-    with tqdm(total=total_num, file=sys.stdout, desc="Running hyperparameter search") as pbar:
+    with tqdm(total=total_num, file=sys.stdout, desc="Running hyperparameter search", position=0, leave=True) as pbar:
         try:
-            for index, settings in enumerate(settings_list):
+            for settings in settings_list:
                 stop_index += 1
                 for x in range(evals_per_setting):
                     geneticOptimization = GeneticOptimization(simulation_model, bounds, initial_speed, settings=settings, pbar=pbar)
                     geneticOptimization.maximize()
                     geneticOptimization.write_results()
         except KeyboardInterrupt:
-            print(f"Stopped at setting {stop_index}.")
+            print(f"Finished {stop_index - 1} setting(s), stopped while evaluating setting {stop_index}.")
             exit()
+    print("Hyperparameter search has concluded.")
 
 
 def get_total_generations(settings_list: list[OptimizationSettings] = None) -> int:
