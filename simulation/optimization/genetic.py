@@ -259,9 +259,9 @@ class GeneticOptimization(BaseOptimization):
         # Check if we can grab cached driving speed arrays
         if os.path.isfile(population_file) and not force_new_population_flag:
             with np.load(population_file) as population_data:
-                # We use the hash value of the active Simulation model because speeds that
-                # are valid for one model may not be valid for another (and the driving speed
-                # array length may also differ)
+                # We compare the hash value of the active Simulation model to the one that is cached
+                # because speeds that are valid for one model may not be valid for another (and the
+                # driving speed array length may also differ)
                 if population_data['hash_key'] == self.model.hash_key:
                     initial_population = np.array(population_data['population'])
 
@@ -412,70 +412,70 @@ class GeneticOptimization(BaseOptimization):
             print("Writing: " + str(output))
             writer.writerow(output)
 
+    @staticmethod
+    def parse_csv_into_settings(csv_reader: csv.reader) -> list:
+        settings_list = []
 
-def get_sequence_index(increment_index=True):
-    register_file = results_directory / "register.json"
+        for row in csv_reader:
+            chromosome_size = int(row[0])
+            parent_selection_type = OptimizationSettings.Parent_Selection_Type(row[1])
+            generations_limit = int(row[2])
+            num_parents = int(row[3])
+            k_tournament = int(row[4])
+            crossover_type = OptimizationSettings.Crossover_Type(row[5])
+            elitism = int(row[6])
+            mutation_type = OptimizationSettings.Mutation_Type(row[7])
+            mutation_percent = float(row[8])
+            max_mutation = float(row[9])
+            new_setting = OptimizationSettings(chromosome_size, parent_selection_type, generations_limit, num_parents,
+                                               k_tournament, crossover_type, elitism, mutation_type, mutation_percent,
+                                               max_mutation)
+            settings_list.append(new_setting)
 
-    if not os.path.isfile(register_file):
-        raise FileNotFoundError("Cannot find register file!")
+        return settings_list
 
-    with open(register_file, "r") as file:
-        register_data = json.load(file)
+    @staticmethod
+    def get_sequence_index(increment_index=True):
+        register_file = results_directory / "register.json"
 
-    x = register_data['x']
-    x += 1
+        if not os.path.isfile(register_file):
+            raise FileNotFoundError("Cannot find register file!")
 
-    if increment_index:
-        save_index(register_file, x)
+        with open(register_file, "r") as file:
+            register_data = json.load(file)
 
-    return x
+        x = register_data['x']
+        x += 1
 
+        if increment_index:
+            GeneticOptimization.save_index(register_file, x)
 
-def save_index(register_file, index):
-    with open(register_file, "w") as file:
-        register_data = {
-            "x": index
+        return x
+
+    @staticmethod
+    def save_index(register_file, index):
+        with open(register_file, "w") as file:
+            register_data = {
+                "x": index
+            }
+
+            json.dump(register_data, file)
+
+    @staticmethod
+    def reset_register(x):
+        register_file = results_directory / "register.json"
+
+        if not os.path.isfile(register_file):
+            raise FileNotFoundError("Cannot find register file!")
+
+        register = {
+            "x": x
         }
 
-        json.dump(register_data, file)
-
-
-def reset_register(x):
-    register_file = results_directory / "register.json"
-
-    if not os.path.isfile(register_file):
-        raise FileNotFoundError("Cannot find register file!")
-
-    register = {
-        "x": x
-    }
-
-    with open(register_file, "w") as write_file:
-        json.dump(register, write_file)
-
-
-def parse_csv_into_settings(csv_reader: csv.reader) -> list:
-    settings_list = []
-
-    for row in csv_reader:
-        chromosome_size = int(row[0])
-        parent_selection_type = Parent_Selection_Type(row[1])
-        generations_limit = int(row[2])
-        num_parents = int(row[3])
-        k_tournament = int(row[4])
-        crossover_type = Crossover_Type(row[5])
-        elitism = int(row[6])
-        mutation_type = Mutation_Type(row[7])
-        mutation_percent = float(row[8])
-        max_mutation = float(row[9])
-        new_setting = OptimizationSettings(chromosome_size, parent_selection_type, generations_limit, num_parents,
-                                           k_tournament, crossover_type, elitism, mutation_type, mutation_percent,
-                                           max_mutation)
-        settings_list.append(new_setting)
-
-    return settings_list
+        with open(register_file, "w") as write_file:
+            json.dump(register, write_file)
 
 
 if __name__ == "__main__":
-    reset_register(26)
-    print(get_sequence_index(increment_index=False))
+    GeneticOptimization.reset_register(26)
+    print(GeneticOptimization.get_sequence_index(increment_index=False))
