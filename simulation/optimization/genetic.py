@@ -1,22 +1,20 @@
-import json
-import os
-import sys
-
-import pygad
 import numpy as np
-from strenum import StrEnum
+import pygad
+import json
+import sys
 import csv
+import os
 
-from simulation.common.exceptions import PrematureDataRecoveryError
-from simulation.main import Simulation
-from simulation.utils import InputBounds
-from simulation.optimization.base_optimization import BaseOptimization
-from simulation.common.helpers import denormalize, normalize
+from strenum import StrEnum
+from tqdm import tqdm
 
 from simulation.cache.optimization_population import population_directory
+from simulation.optimization.base_optimization import BaseOptimization
+from simulation.common.helpers import denormalize, normalize
 from simulation.data.results import results_directory
-from tqdm import tqdm
 from simulation.common.noise import Noise
+from simulation.utils import InputBounds
+from simulation.main import Simulation
 
 """
 
