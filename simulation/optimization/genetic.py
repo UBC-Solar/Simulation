@@ -18,6 +18,10 @@ from simulation.main import Simulation
 
 """
 
+Genetic Optimization follows the following primary steps:
+
+Fitness Evaluation -> Parent Selection -> Offspring Creation -> Repeat
+
 See the following resources for explanations of genetic algorithms and different hyperparameters:
 1. start here:
     https://blog.derlin.ch/genetic-algorithms-with-pygad 
@@ -30,28 +34,62 @@ See the following resources for explanations of genetic algorithms and different
 5. crossover types:
     https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)
     
+Notable Vocabulary:
+
+1. Chromosome: a chromosome is a set of genes that describe a potential solution. In the context of UBC Solar's 
+Simulation where we are optimizing driving speeds, a chromosome is a driving speeds array.
+
+2. Gene: a gene is an element of a chromosome and genes are what will be modified through the course of optimization.
+In our context where a chromosome is an abstraction of a driving speeds array, a gene represents the value for
+a single driving speed interval. 
+
+3. Generation: a generation can be thought of as a single iteration of the optimization sequence. The members of a 
+generation will be evaluated, parents selected from, and then mated to create offspring. Depending on hyperparameters,
+some chromosomes from a given generation may proceed to be a member of the following generation.
+
+3. Population: the set of chromosomes that exist within a generation, a generation's population is 
+the possible solutions that are "participating" in the optimization process during a given generation. 
+To begin the optimization process, we create an initial population of guess solutions as a launching point.
+
+5. Offspring: the resulting chromosome from crossover and mutation of parents that have been selected following
+fitness evaluation. Usually, all offspring proceed to the next generation where they will then be evaluated, and 
+process continues.
+
+6. Convergence: in the context of GA, convergence is how quickly GA arrives at a maximum (local or global) fitness 
+value. On a Fitness vs Generation graph, convergence is the rate in which fitness plateaus. 
+
 """
 
 
-class Parent_Selection_Type(StrEnum):
-    sss = "sss"
-    tournament = "tournament"
-    stochastic = "stochastic"
-    rank = "rank"
-
-
-class Mutation_Type(StrEnum):
-    random = "random"
-
-
-class Crossover_Type(StrEnum):
-    single_point = "single_point"
-    two_points = "two_points"
-    scattered = "scattered"
-    uniform = "uniform"
-
-
 class OptimizationSettings:
+    """
+
+    This class is a container for the hyperparameters of GA.
+    See the resources listed above for a description of each hyperparameter, they are also described
+    in the constructor of GA.
+    The default parameters of this class's constructor define the default hyperparameters of GA.
+    This class also contains enums to discretize applicable, non-numeric hyperparameters.
+
+    Note: certain hyperparameters will override the behaviour of others, see
+    https://pygad.readthedocs.io/en/latest/pygad.html for detailed descriptions.
+
+    """
+
+    class Parent_Selection_Type(StrEnum):
+        sss = "sss"
+        tournament = "tournament"
+        stochastic = "stochastic"
+        rank = "rank"
+
+    class Mutation_Type(StrEnum):
+        random = "random"
+
+    class Crossover_Type(StrEnum):
+        single_point = "single_point"
+        two_points = "two_points"
+        scattered = "scattered"
+        uniform = "uniform"
+
     def __init__(self, chromosome_size=4,
                  parent_selection_type=Parent_Selection_Type.sss,
                  generation_limit=1,
@@ -63,26 +101,42 @@ class OptimizationSettings:
                  mutation_percent=25.0,
                  max_mutation=0.05):
         self.chromosome_size: int = chromosome_size
-        self.parent_selection_type: Parent_Selection_Type = parent_selection_type
+        self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = parent_selection_type
         self.generation_limit: int = generation_limit
         self.num_parents: int = num_parents
         self.k_tournament: int = k_tournament
-        self.crossover_type: Crossover_Type = crossover_type
+        self.crossover_type: OptimizationSettings.Crossover_Type = crossover_type
         self.elitism: int = elitism
-        self.mutation_type: Mutation_Type = mutation_type
+        self.mutation_type: OptimizationSettings.Mutation_Type = mutation_type
         self.mutation_percent: float = mutation_percent
         self.max_mutation: float = max_mutation
 
         self._fitness: float = 0
 
-    def as_list(self):
+    def as_list(self) -> list[str]:
+        """
+
+        Returns all optimization settings and the stored, associated fitness value as a list that
+        can be outputted as a row to a CSV spreadsheet.
+
+        :return: a list containing each hyperparameter as a string
+
+        """
         out_list: list = [str(self.chromosome_size), str(self.parent_selection_type), str(self.generation_limit),
                           str(self.num_parents), str(self.k_tournament), str(self.crossover_type), str(self.elitism),
                           str(self.mutation_type), str(self.mutation_percent), str(self.max_mutation),
                           str(self._fitness)]
         return out_list
 
-    def set_fitness(self, fitness):
+    def set_fitness(self, fitness: float) -> None:
+        """
+
+        Set the fitness value of this hyperparameter configuration.
+
+        :param float fitness: the fitness achieved by this configuration
+
+        """
+
         self._fitness = fitness
 
 
