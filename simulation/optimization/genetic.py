@@ -141,16 +141,37 @@ class OptimizationSettings:
 
 
 class GeneticOptimization(BaseOptimization):
+    """
 
-    def __init__(self, model: Simulation, bounds: InputBounds, input_speed: np.ndarray,
-                 force_new_population_flag: bool = False, settings: OptimizationSettings = None, pbar: tqdm = None):
+    GeneticOptimization uses the PyGAD module to implement a genetic algorithm-based optimization sequence.
+
+    Briefly, GA begins by evaluating an initial population, selecting parent solutions, creating offpsring
+    solutions from the parents, and repeating for a certain number of generations or until a stopping condition
+    is met.
+
+    To learn how GA works, read the resources enumerated at the top of this file.
+
+    To modify GA's default hyperparameters, modify the default parameters of OptimizationSettings' constructor.
+
+    To evaluate different hyperparameter configurations, use the "run_hyperparameter_search"
+    method in run_simulation.py. To view already evaluated hyperparameters, view the "Hyperparameter Search"
+    folder in UBC Solar's Software Google Drive.
+
+    """
+
+    def __init__(self, model: Simulation, bounds: InputBounds, force_new_population_flag: bool = False,
+                 settings: OptimizationSettings = None, pbar: tqdm = None):
+
         super().__init__(bounds, model.run_model)
         self.model = model
         self.bounds = bounds.get_bounds_list()
-        fitness_function = self.fitness
         self.settings = settings if settings is not None else OptimizationSettings()
 
-        # Define how many iterations that GA will run
+        # Define the function that will be used to determine the fitness of each chromosome
+        fitness_function = self.fitness
+
+        # Define how many generations that GA will run (sequence may end prematurely depending on
+        # if a stopping condition has been defined!)
         num_generations = self.settings.generation_limit
 
         # Define how many parents will be used for the creation of offspring for each subsequent generation
@@ -192,7 +213,9 @@ class GeneticOptimization(BaseOptimization):
         delay_after_generation = 0.0
 
         # We must obtain or create an initial population for GA to work with.
-        initial_population = self.get_initial_population(input_speed, self.sol_per_pop, force_new_population_flag)
+        # IMPORTANTLY: Chromosomes (driving speeds arrays) that compose the population of GA are
+        # assumed to be, and must be NORMALIZED.
+        initial_population = self.get_initial_population(self.sol_per_pop, force_new_population_flag)
 
         # This informs GA when to end the optimization sequence. If blank, it will continue until the generation
         # iterations finish. Write "saturate_x" for the sequence to end after x generations of no improvement to
@@ -216,80 +239,163 @@ class GeneticOptimization(BaseOptimization):
                                     random_mutation_max_val=mutation_max_value,
                                     stop_criteria=stop_criteria)
 
-    def get_initial_population(self, input_speed, num_arrays_to_generate, force_new_population_flag):
+    def get_initial_population(self, num_arrays_to_generate, force_new_population_flag) -> np.ndarray:
+        """
+
+        Acquire an array of valid driving speed arrays as a starting population for GA by either reading them
+        from cache or generating a new set.
+
+        :param num_arrays_to_generate: the number of "guess" driving speed arrays that must be obtained
+        :param force_new_population_flag: force the creation of new arrays instead of reading a cached
+        :return: an array of driving speed arrays with a length equal to `num_arrays_to_generate`
+        :rtype: np.ndarray
+
+        """
+
         population_file = population_directory / "initial_population.npz"
 
+        new_initial_population = []
+
+        # Check if we can grab cached driving speed arrays
         if os.path.isfile(population_file) and not force_new_population_flag:
             with np.load(population_file) as population_data:
+                # We use the hash value of the active Simulation model because speeds that
+                # are valid for one model may not be valid for another (and the driving speed
+                # array length may also differ)
                 if population_data['hash_key'] == self.model.hash_key:
                     initial_population = np.array(population_data['population'])
+
+                    # Check if the number of arrays needed and cached match. If we need more
+                    # arrays than are cached, we can still use the cached arrays and just generate more.
                     if len(initial_population) == self.sol_per_pop:
                         print("\nPrevious initial population save file is being used...")
                         return initial_population
+                    else:
+                        # In the case that there are more cached arrays then we need, slice off the excess.
+                        new_initial_population = population_data['population'][:num_arrays_to_generate]
 
-        new_initial_population = self.generate_valid_speed_arrays(input_speed, num_arrays_to_generate)
+        # If we need more arrays, generate the number of new arrays that we need
+        if arrays_from_cache := len(new_initial_population) < num_arrays_to_generate:
+            remaining_arrays_needed = num_arrays_to_generate - arrays_from_cache
+            additional_arrays = self.generate_valid_speed_arrays(remaining_arrays_needed)
+            new_initial_population = np.concatenate((new_initial_population, additional_arrays))
 
+        # Cache the arrays we just generated with our active model's hash key
         with open(population_file, 'wb') as f:
             print("\nSaving new initial population...")
             np.savez(f, hash_key=self.model.hash_key, population=new_initial_population)
 
         return new_initial_population
 
-    def generate_valid_speed_arrays(self, input_speed, num_arrays_to_generate):
+    def generate_valid_speed_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
+        """
+
+        Generate a set of normalized driving speeds arrays that are valid for the active Simulation model
+        using Perlin noise. Will return an array with num_arrays_to_generate valid arrays.
+
+        :param int num_arrays_to_generate:
+        :return: an array of `num_arrays_to_generate` driving speeds, valid for the active Simulation model.
+        :rtype: np.ndarray
+
+        """
+
+        # These numbers were experimentally found to generate high fitness values in guess arrays
+        # while having an acceptably low chance of not resulting in a successful simulation.
         max_speed_kmh = 40
         min_speed_kmh = 30
+
+        # We will use Perlin noise to generate our guess arrays
         noise_generator = Noise(self.model.golang, self.model.library)
 
-        try:
-            self.model.check_if_has_calculated()
-        except PrematureDataRecoveryError:
-            self.model.run_model(speed=input_speed, plot_results=False)
-
+        # Determine the length that our driving speed arrays must be
         length = self.model.get_driving_time_divisions()
         speed_arrays = []
 
         with tqdm(total=num_arrays_to_generate, file=sys.stdout, desc="Generating new initial population ", position=0,
                   leave=True) as pbar:
+            # Generate a matrix of (nearly) normalized Perlin noise of size [length, num_arrays_to_generate]
             noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
             x = 0
+
+            # and test to see if the array results in a successful Simulation.
             while len(speed_arrays) < num_arrays_to_generate:
+                # Read rows from the Perlin noise matrix as a normalized driving speed array
                 guess_speed = normalize(noise[x])
+
+                # We generate just enough noise to be able to test num_arrays_to_generate speed arrays.
+                # Thus, the following logic keeps careful track of the index because if we have even one
+                # unsuccessful array, we'll need to generate more noise.
                 if x >= len(noise) - 1:
                     noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
                     x = 0
                 else:
                     x += 1
 
+                # We must denormalize the driving speeds array before simulating it.
                 denormalized_speed = denormalize(guess_speed, max_speed_kmh, min_speed_kmh)
                 self.model.run_model(speed=denormalized_speed, plot_results=False)
+
+                # If the speed results in a successful simulation, add it to the population.
                 if self.model.was_successful():
                     speed_arrays.append(guess_speed)
                     pbar.update(1)
 
-        return speed_arrays
+        return np.array(speed_arrays)
 
-    def fitness(self, ga_instance, solution, solution_idx):
+    def fitness(self, ga_instance, solution, solution_idx) -> float:
+        """
+
+        This function is called by GA to evaluate the fitness of a given chromosome.
+        The chromosome (driving speeds array) is fed as the driving speeds array and the
+        model is simulated. The distance that can be travelled during the simulation
+        duration is returned as the fitness of the chromosome.
+        If the simulation results in
+        state of charge dropping to 0% before the end, the distance travelled up until that point is used instead.
+
+        NOTE: Once GA achieves solutions that consistently finish the race, then we must also factor in the
+        time taken instead of solely the distance travelled.
+
+        :param ga_instance: Required for GA but unused by this function
+        :param solution: the chromosome that must be evaluated
+        :param solution_idx: Required for GA but unused by this function
+        :return: the fitness value of the chromosome
+        :rtype: float
+
+        """
+
+        # Chromosomes are normalized, so must be denormalized before being fed to Simulation.
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
         results = self.func(solution_denormalized)
+
+        # If Simulation did not complete successfully (SOC dropped below 0) then return the distance when that occurred.
         fitness = results if self.model.was_successful() else self.model.get_distance_before_exhaustion()
-        # print(f"Fitness is {fitness}, results were {results}.")
+
         return fitness
 
     def maximize(self):
+        """
+
+        Begin GA's optimization sequence.
+
+        :return:
+        """
         self.ga_instance.run()
         return self.output()
 
     def output(self):
+        # Get the optimal solution that GA found and its fitness value.
         solution, solution_fitness, solution_idx = self.ga_instance.best_solution()
         self.bestinput = denormalize(solution, self.bounds[2], self.bounds[1])
+
         # print("Parameters of the best solution : {solution}".format(solution=self.bestinput))
         # print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
+        # Plot fitness compared to the generation index to how
         self.plot_fitness()
         self.settings.set_fitness(solution_fitness)
         return self.bestinput
 
     def plot_fitness(self):
-        sequence_index = get_sequence_index(increment_index=False)
+        sequence_index = GeneticOptimization.get_sequence_index(increment_index=False)
 
         graph_title = "sequence" + str(sequence_index)
         save_dir = results_directory / graph_title
@@ -300,7 +406,7 @@ class GeneticOptimization(BaseOptimization):
         results_file = results_directory / "results.csv"
         with open(results_file, 'a') as f:
             writer = csv.writer(f)
-            sequence_index: int = get_sequence_index()
+            sequence_index: int = GeneticOptimization.get_sequence_index()
             output = list(self.settings.as_list())
             output.insert(0, sequence_index)
             print("Writing: " + str(output))
