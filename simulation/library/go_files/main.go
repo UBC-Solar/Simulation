@@ -203,6 +203,49 @@ func speeds_with_waypoints_loop(speeds_inPtr *float64,
 	}
 }
 
+func process_tensor(weather_forecast_Ptr *[][]float64,
+	weather_forecasts_coords int64,
+	weather_forecasts_times int64,
+	weather_forecasts_endpoints int64,
+	indices_Ptr *int32,
+	indices_size int64,
+	dt_local_ptr *float64,
+) {
+
+	indices := unsafe.Slice(indices_Ptr, indices_size)
+	dt_local_array := unsafe.Slice(dt_local_ptr, weather_forecasts_times)
+
+	weather_forecasts := make([][][]float64, weather_forecasts_coords)
+	for i := 0; i < int(weather_forecasts_coords); i++ {
+		weather_forecasts[i] = make([][]float64, weather_forecasts_times)
+		for j := 0; j < int(weather_forecasts_times); j++ {
+			weather_forecasts[i][j] = make([]float64, weather_forecasts_endpoints)
+		}
+	}
+
+	weather_forecasts = unsafe.Slice(weather_forecast_Ptr, weather_forecasts_coords)
+
+	// Below code is just the creation of the rank-3 tensor needed
+	full_weather_forecast_at_coords := make([][][]float64, indices_size)
+	for i := 0; i < int(indices_size); i++ {
+		full_weather_forecast_at_coords[i] = make([][]float64, weather_forecasts_times)
+		for j := 0; j < int(weather_forecasts_times); j++ {
+			full_weather_forecast_at_coords[i][j] = make([]float64, weather_forecasts_endpoints)
+		}
+	}
+
+	//full_weather_forecast_at_coords = self.weather_forecast[indices]
+	for i := range indices {
+		full_weather_forecast_at_coords[i] = weather_forecasts[indices[i]]
+	}
+
+	//dt_local_array = full_weather_forecast_at_coords[0, :, 4]
+	for i := 0; i < int(weather_forecasts_times); i++ {
+		dt_local_array[i] = full_weather_forecast_at_coords[0][i][4]
+	}
+
+}
+
 //export weather_in_time_loop
 func weather_in_time_loop(unix_timestamps_inPtr *float64,
 	closest_time_stamp_indices_outPtr *float64,
@@ -226,7 +269,7 @@ func weather_in_time_loop(unix_timestamps_inPtr *float64,
 		//differences = np.abs(unix_timestamp_array - dt_local_array)
 		differences := make([]float64, dt_local_array_inPtr_size)
 		for j := range unix_timestamp_array {
-			differences[j] = math.Abs(float64(unix_timestamp_array[j] - dt_local_array[j]))
+			differences[j] = math.Abs(unix_timestamp_array[j] - dt_local_array[j])
 		}
 
 		//minimum__index = np.argmin(differences)

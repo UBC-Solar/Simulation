@@ -111,18 +111,18 @@ class Libraries:
                              os.path.isdir(os.path.join(binaries_directory, f))]
 
         # Try to find compatible binaries by checking until compatible binaries are found
-        try:
-            for binary_container in binary_containers:
-                try:
-                    ctypes.cdll.LoadLibrary(f"{binaries_directory}/{binary_container}/main.so")
-                    return f"{binaries_directory}/{binary_container}"
-                except:
-                    pass
-        except:
-            if self.raiseExceptionOnFail:
-                raise Exception("GoLang binaries not found for your operating system. "
-                                "Please either compile them for your operating system or disable GoLang usage "
-                                "in Simulation instantiation.")
+        for binary_container in binary_containers:
+            try:
+                ctypes.cdll.LoadLibrary(f"{binaries_directory}/{binary_container}/main.so")
+                return f"{binaries_directory}/{binary_container}"
+            except OSError:
+                pass
+
+        if self.raiseExceptionOnFail:
+            raise FileNotFoundError("GoLang binaries not found for your operating system. "
+                                    "Please either compile them for your operating system or disable GoLang usage "
+                                    "in Simulation instantiation.")
+        else:
             return None
 
     def found_compatible_binaries(self):
@@ -261,7 +261,8 @@ class Libraries:
 
         return np.array(new_speeds, 'd')
 
-    def golang_generate_perlin_noise(self, width=256, height=256, persistence=0.45, numLayers=8, roughness=7.5, baseRoughness=1.5, strength=1, randomSeed=0):
+    def golang_generate_perlin_noise(self, width=256, height=256, persistence=0.45, numLayers=8, roughness=7.5,
+                                     baseRoughness=1.5, strength=1, randomSeed=0):
         """
 
         GoLang implementation of generate_perlin_noise. See parent function for details.
