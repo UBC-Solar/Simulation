@@ -14,6 +14,7 @@ def simulation_property(func):
     """
 
     Apply this decorator to all functions that intend to get data from a Simulation model.
+    This protects the data from being pulled from Simulation before the model has been simulated.
 
     :param func: function that will be used to get data
 
@@ -45,6 +46,12 @@ class Simulation:
     """
 
     Attributes:
+        return_type: defines what data that run_model should return
+        race_type: string defining which race, ASC or FSGP, is being simulated
+        granularity: controls how granular (detailed) the driving speeds array is
+        initial_battery_charge: starting charge of the battery
+        golang: define whether Go implementations should be used when applicable
+        library: manages and locates Go shared libraries (if possible)
         google_api_key: API key to access GoogleMaps API. Stored in a .env file. Please ask Simulation Lead for this!
         weather_api_key: API key to access OpenWeather API. Stored in a .env file. Please ask Simulation Lead for this!
         origin_coord: array containing latitude and longitude of route start point
@@ -52,6 +59,7 @@ class Simulation:
         waypoints: array containing latitude and longitude pairs of route waypoints
         tick: length of simulation's discrete time step (in seconds)
         simulation_duration: length of simulated time (in seconds)
+        lvs_power_loss: a constant approximating the power consumption of our low-voltage components
         start_hour: describes the hour to start the simulation (typically either 7 or 9, these
         represent 7am and 9am respectively)
 
@@ -62,7 +70,7 @@ class Simulation:
 
         Instantiates a simple model of the car.
 
-        :param builder: a SimulationState object that provides settings for the Simulation
+        :param builder: a SimulationBuilder object that provides settings for the Simulation
 
         """
 
@@ -106,10 +114,6 @@ class Simulation:
 
         gis_force_update = builder.gis_force_update
         weather_force_update = builder.weather_force_update
-
-        # ----- Route Length -----
-
-        self.route_length = 0  # Tentatively set to 0
 
         # ----- API keys -----
 
@@ -194,27 +198,27 @@ class Simulation:
                   route_visualization=False, plot_portion=(0.0, 1.0), **kwargs):
         """
 
-        Updates the model in tick increments for the entire simulation duration. Returns
-        a final battery charge and a distance travelled for this duration, given an
-        initial charge, and a target speed. Also requires the current time and location.
-        This is where the magic happens.
+        Given an array of driving speeds, simulate the model by running calculations sequentially for the entire
+        simulation duration. Returns either time taken, distance travelled, or void. This function is mostly a wrapper
+        around run_simulation_calculations, which is where the magic happens, that deals with processing the driving
+        speeds array as well as plotting and handling the calculation results.
 
         Note: if the speed remains constant throughout this update, and knowing the starting
-            time, the cumulative distance at every time can be known. From the cumulative
-            distance, the GIS class updates the new location of the vehicle. From the location
-            of the vehicle at every tick, the gradients at every tick, the weather at every
-            tick, the GHI at every tick, is known.
+              time, the cumulative distance at every time can be known. From the cumulative
+              distance, the GIS class updates the new location of the vehicle. From the location
+              of the vehicle at every tick, the gradients at every tick, the weather at every
+              tick, the GHI at every tick, is known.
 
         Note 2: currently, the simulation can only be run for times during which weather data is available
 
-        :param speed: array that specifies the solar car's driving speed at each time step
-        :param plot_results: set to True to plot the results of the simulation (is True by default)
-        :param verbose: Boolean to control logging and debugging behaviour
-        :param route_visualization: Flag to control route_visualization plot visibility
+        :param np.ndarray speed: array that specifies the solar car's driving speed at each time step
+        :param bool plot_results: set to True to plot the results of the simulation (is True by default)
+        :param bool verbose: Boolean to control logging and debugging behaviour
+        :param bool route_visualization: Flag to control route_visualization plot visibility
+        :param tuple[float] plot_portion: A tuple containing the beginning and end of the portion of the array we'd
+        like to plot as percentages (0 <= plot_portion <= 1).
         :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
-        :param plot_portion: A tuple containing the beginning and end of the portion of the array we'd
-        like to plot as percentages.
 
         """
 
