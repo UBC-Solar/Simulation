@@ -379,7 +379,7 @@ class WeatherForecasts:
 
         temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
 
-        return result
+        return full_weather_forecast_at_coords[temp_0, closest_timestamp_indices]
 
     @staticmethod
     def cull_dataset(coords, reduction_factor):
