@@ -260,11 +260,10 @@ class GeneticOptimization(BaseOptimization):
                                     mutation_type=str(mutation_type),
                                     mutation_percent_genes=mutation_percent_genes,
                                     gene_space=gene_space,
-                                    on_generation=(lambda x: pbar.update(1)) if pbar is not None else
-                                    (lambda x: print("New generation!")),
+                                    on_generation=on_generation,
                                     delay_after_gen=delay_after_generation,
                                     random_mutation_max_val=mutation_max_value,
-                                    stop_criteria=stop_criteria)
+                                    stop_criteria=str(stop_criteria))
 
     def get_initial_population(self, num_arrays_to_generate, force_new_population_flag) -> np.ndarray:
         """

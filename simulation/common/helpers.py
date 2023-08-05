@@ -904,10 +904,10 @@ def get_map_data_indices(closest_gis_indices):
 
 
 @jit(nopython=True)
-def normalize(input_array: np.ndarray) -> np.ndarray:
-    max_value = np.max(input_array)
-    min_value = np.min(input_array)
-    return (input_array - min_value) / (max_value - min_value)
+def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:
+    max_value_in_array = np.max(input_array) if max_value is None else max_value
+    min_value_in_array = np.min(input_array) if min_value is None else min_value
+    return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
 
 
 @jit(nopython=True)

@@ -8,7 +8,7 @@ import csv
 from tqdm import tqdm
 from main.Simulation import Simulation, SimulationReturnType
 from optimization.bayesian import BayesianOptimization
-from optimization.genetic import GeneticOptimization, OptimizationSettings, parse_csv_into_settings
+from optimization.genetic import GeneticOptimization, OptimizationSettings
 from optimization.random_opt import RandomOptimization
 from utils.InputBounds import InputBounds
 from config import config_directory
@@ -101,7 +101,7 @@ def run_simulation(settings):
     bounds = InputBounds()
     bounds.add_bounds(driving_hours, minimum_speed, maximum_speed)
 
-    run_hyperparameter_search(simulation_model, bounds, input_speed)
+    run_hyperparameter_search(simulation_model, bounds)
 
     exit()
     # Initialize optimization methods
@@ -293,13 +293,14 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
     return results_array
 
 
-def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds, initial_speed: np.ndarray):
+def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds):
     evals_per_setting: int = 3
     settings_file = results_directory / "settings.csv"
     stop_index = 0
+
     with open(settings_file, 'r') as f:
         csv_reader = csv.reader(f, delimiter=',')
-        settings_list = parse_csv_into_settings(csv_reader)
+        settings_list = GeneticOptimization.parse_csv_into_settings(csv_reader)
 
     total_num = get_total_generations(settings_list) * evals_per_setting
     with tqdm(total=total_num, file=sys.stdout, desc="Running hyperparameter search", position=0, leave=True) as pbar:
@@ -307,7 +308,7 @@ def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds,
             for settings in settings_list:
                 stop_index += 1
                 for x in range(evals_per_setting):
-                    geneticOptimization = GeneticOptimization(simulation_model, bounds, initial_speed, settings=settings, pbar=pbar)
+                    geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=settings, pbar=pbar)
                     geneticOptimization.maximize()
                     geneticOptimization.write_results()
         except KeyboardInterrupt:
