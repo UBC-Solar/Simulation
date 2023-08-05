@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from simulation.cache.optimization_population import population_directory
 from simulation.optimization.base_optimization import BaseOptimization
-from simulation.common.helpers import denormalize, normalize
+from simulation.common.helpers import denormalize, normalize, rescale
 from simulation.data.results import results_directory
 from simulation.common.noise import Noise
 from simulation.utils import InputBounds
@@ -280,8 +280,8 @@ class GeneticOptimization(BaseOptimization):
         """
 
         population_file = population_directory / "initial_population.npz"
-
-        new_initial_population = []
+        arrays_from_cache = 0
+        new_initial_population = None
 
         # Check if we can grab cached driving speed arrays
         if os.path.isfile(population_file) and not force_new_population_flag:
@@ -300,12 +300,16 @@ class GeneticOptimization(BaseOptimization):
                     else:
                         # In the case that there are more cached arrays then we need, slice off the excess.
                         new_initial_population = population_data['population'][:num_arrays_to_generate]
+                        arrays_from_cache = len(new_initial_population)
 
         # If we need more arrays, generate the number of new arrays that we need
-        if arrays_from_cache := len(new_initial_population) < num_arrays_to_generate:
+        if arrays_from_cache < num_arrays_to_generate:
             remaining_arrays_needed = num_arrays_to_generate - arrays_from_cache
             additional_arrays = self.generate_valid_speed_arrays(remaining_arrays_needed)
-            new_initial_population = np.concatenate((new_initial_population, additional_arrays))
+            if arrays_from_cache == 0:
+                new_initial_population = additional_arrays
+            else:
+                new_initial_population = np.concatenate((new_initial_population, additional_arrays))
 
         # Cache the arrays we just generated with our active model's hash key
         with open(population_file, 'wb') as f:
@@ -328,8 +332,8 @@ class GeneticOptimization(BaseOptimization):
 
         # These numbers were experimentally found to generate high fitness values in guess arrays
         # while having an acceptably low chance of not resulting in a successful simulation.
-        max_speed_kmh = 40
-        min_speed_kmh = 30
+        max_speed_kmh: float = 40
+        min_speed_kmh: float = 30
 
         # We will use Perlin noise to generate our guess arrays
         noise_generator = Noise(self.model.golang, self.model.library)
@@ -344,7 +348,6 @@ class GeneticOptimization(BaseOptimization):
             noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
             x = 0
 
-            # and test to see if the array results in a successful Simulation.
             while len(speed_arrays) < num_arrays_to_generate:
                 # Read rows from the Perlin noise matrix as a normalized driving speed array
                 guess_speed = normalize(noise[x])
@@ -359,12 +362,12 @@ class GeneticOptimization(BaseOptimization):
                     x += 1
 
                 # We must denormalize the driving speeds array before simulating it.
-                denormalized_speed = denormalize(guess_speed, max_speed_kmh, min_speed_kmh)
-                self.model.run_model(speed=denormalized_speed, plot_results=False)
+                input_speed = rescale(guess_speed, max_speed_kmh, min_speed_kmh)
+                self.model.run_model(speed=input_speed, plot_results=False)
 
                 # If the speed results in a successful simulation, add it to the population.
                 if self.model.was_successful():
-                    speed_arrays.append(guess_speed)
+                    speed_arrays.append(normalize(input_speed, self.bounds[2], self.bounds[1]))
                     pbar.update(1)
 
         return np.array(speed_arrays)
