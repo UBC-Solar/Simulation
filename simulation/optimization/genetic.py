@@ -58,6 +58,11 @@ process continues.
 6. Convergence: in the context of GA, convergence is how quickly GA arrives at a maximum (local or global) fitness 
 value. On a Fitness vs Generation graph, convergence is the rate in which fitness plateaus. 
 
+7. "Successful Simulation": in its current state, Simulation can simulate a driving speeds array that 
+results in state of charge dropping below 0%, which is a physical impossibility. A successful simulation is 
+one where this does not occur, and a successful/valid driving speeds array is one that will result in a successful
+simulation.
+
 """
 
 
@@ -90,16 +95,35 @@ class OptimizationSettings:
         scattered = "scattered"
         uniform = "uniform"
 
-    def __init__(self, chromosome_size=4,
-                 parent_selection_type=Parent_Selection_Type.sss,
-                 generation_limit=1,
-                 num_parents=4,
-                 k_tournament=4,
-                 crossover_type=Crossover_Type.two_points,
-                 elitism=3,
-                 mutation_type=Mutation_Type.random,
-                 mutation_percent=25.0,
-                 max_mutation=0.05):
+    class Stopping_Criteria:
+        class Criteria_Type(StrEnum):
+            saturate = "saturate"
+            reach = "reach"
+
+        def __init__(self, criteria: Criteria_Type = Criteria_Type.saturate, value: int = 10, string: str = None):
+            self.string = string
+            self.criteria = criteria
+            self.value = value
+
+        def __str__(self):
+            if self.string is not None:
+                return self.string
+            return str(self.criteria) + "_" + str(self.value)
+
+        saturate: Criteria_Type = Criteria_Type.saturate
+        reach: Criteria_Type = Criteria_Type.reach
+
+    def __init__(self, chromosome_size: int = 12,
+                 parent_selection_type: Parent_Selection_Type = Parent_Selection_Type.sss,
+                 generation_limit: int = 1,
+                 num_parents: int = 4,
+                 k_tournament: int = 4,
+                 crossover_type: Crossover_Type = Crossover_Type.two_points,
+                 elitism: int = 3,
+                 mutation_type: Mutation_Type = Mutation_Type.random,
+                 mutation_percent: float = 25.0,
+                 max_mutation: float = 0.05,
+                 stopping_criteria: Stopping_Criteria = Stopping_Criteria(Stopping_Criteria.saturate, 10)):
         self.chromosome_size: int = chromosome_size
         self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = parent_selection_type
         self.generation_limit: int = generation_limit
@@ -110,6 +134,7 @@ class OptimizationSettings:
         self.mutation_type: OptimizationSettings.Mutation_Type = mutation_type
         self.mutation_percent: float = mutation_percent
         self.max_mutation: float = max_mutation
+        self.stopping_criteria: OptimizationSettings.Stopping_Criteria = stopping_criteria
 
         self._fitness: float = 0
 
@@ -122,10 +147,10 @@ class OptimizationSettings:
         :return: a list containing each hyperparameter as a string
 
         """
-        out_list: list = [str(self.chromosome_size), str(self.parent_selection_type), str(self.generation_limit),
-                          str(self.num_parents), str(self.k_tournament), str(self.crossover_type), str(self.elitism),
-                          str(self.mutation_type), str(self.mutation_percent), str(self.max_mutation),
-                          str(self._fitness)]
+        out_list: list[str] = [str(self.chromosome_size), str(self.parent_selection_type), str(self.generation_limit),
+                               str(self.num_parents), str(self.k_tournament), str(self.crossover_type),
+                               str(self.elitism), str(self.mutation_type), str(self.mutation_percent),
+                               str(self.max_mutation), str(self.stopping_criteria), str(self._fitness)]
         return out_list
 
     def set_fitness(self, fitness: float) -> None:
@@ -212,15 +237,17 @@ class GeneticOptimization(BaseOptimization):
         # Add a time delay between generations (used for debug purposes)
         delay_after_generation = 0.0
 
+        # Define a function to be run when a generation begins
+        # Here we define it to update the progress bar, if it exists
+        on_generation = (lambda x: pbar.update(1)) if pbar is not None else (lambda x: print("New generation!"))
+
         # We must obtain or create an initial population for GA to work with.
-        # IMPORTANTLY: Chromosomes (driving speeds arrays) that compose the population of GA are
-        # assumed to be, and must be NORMALIZED.
         initial_population = self.get_initial_population(self.sol_per_pop, force_new_population_flag)
 
         # This informs GA when to end the optimization sequence. If blank, it will continue until the generation
         # iterations finish. Write "saturate_x" for the sequence to end after x generations of no improvement to
         # fitness. Write "reach_x" for the sequence to end after fitness has reached x.
-        stop_criteria = "saturate_10"
+        stop_criteria = self.settings.stopping_criteria
 
         self.ga_instance = pygad.GA(num_generations=num_generations,
                                     initial_population=initial_population,
@@ -372,48 +399,97 @@ class GeneticOptimization(BaseOptimization):
 
         return fitness
 
-    def maximize(self):
+    def maximize(self) -> np.ndarray:
         """
 
-        Begin GA's optimization sequence.
+        Execute GA's maximization sequence.
 
-        :return:
+        :return: Best solution identified by GA in km/h
+        :rtype: np.ndarray
+
         """
+
         self.ga_instance.run()
         return self.output()
 
-    def output(self):
+    def output(self, plot_fitness=True) -> np.ndarray:
+        """
+
+        Get the best solution from GA.
+
+        :param bool plot_fitness: set whether the fitness over time should be plotted.
+        :return: best solution identified by GA in km/h
+        :rtype: np.ndarray
+
+        """
+
         # Get the optimal solution that GA found and its fitness value.
         solution, solution_fitness, solution_idx = self.ga_instance.best_solution()
         self.bestinput = denormalize(solution, self.bounds[2], self.bounds[1])
 
         # print("Parameters of the best solution : {solution}".format(solution=self.bestinput))
         # print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
+
         # Plot fitness compared to the generation index to how
-        self.plot_fitness()
+        if plot_fitness:
+            self.plot_fitness()
+
+        # Set the fitness value of the hyperparameter configuration
         self.settings.set_fitness(solution_fitness)
+
         return self.bestinput
 
-    def plot_fitness(self):
+    def plot_fitness(self, save_graph: bool = True) -> None:
+        """
+
+        Plot the highest fitness value of each generation's population as a Fitness vs Generation graph.
+
+        :param bool save_graph: set whether the graph should be saved to data/results directory.
+
+        """
+
+        # We keep track of the hyperparameter configuration index so that the filename matches the index
+        # of the configuration on the `Hyperparameter Search` spreadsheet.
         sequence_index = GeneticOptimization.get_sequence_index(increment_index=False)
 
         graph_title = "sequence" + str(sequence_index)
-        save_dir = results_directory / graph_title
+        save_dir = None
+
+        if save_graph:
+            save_dir = results_directory / graph_title
 
         self.ga_instance.plot_fitness(title=graph_title, save_dir=save_dir)
 
     def write_results(self):
+        """
+
+        Write the hyperparameters of the current configuration, along with the resultant fitness
+        value that the configuration achieved, to a CSV as one row.
+        To keep track of which config is which, we load the value of, and increment a counter that is saved.
+        This index will match the index of the graph that is also outputted.
+
+        """
+
         results_file = results_directory / "results.csv"
         with open(results_file, 'a') as f:
             writer = csv.writer(f)
             sequence_index: int = GeneticOptimization.get_sequence_index()
-            output = list(self.settings.as_list())
-            output.insert(0, sequence_index)
-            print("Writing: " + str(output))
+            output = self.settings.as_list()
+            output.insert(0, str(sequence_index))
             writer.writerow(output)
 
     @staticmethod
-    def parse_csv_into_settings(csv_reader: csv.reader) -> list:
+    def parse_csv_into_settings(csv_reader: csv.reader) -> list[OptimizationSettings]:
+        """
+
+        Parse data that has been read from a CSV file into hyperparameter configurations for GeneticOptimization.
+
+        :param csv_reader: CSV data to be parsed
+        :return: list of OptimizationSettings from the parsed hyperparameter configurations
+        :rtype: list[OptimizationSettings]
+
+        """
+
         settings_list = []
 
         for row in csv_reader:
@@ -427,55 +503,63 @@ class GeneticOptimization(BaseOptimization):
             mutation_type = OptimizationSettings.Mutation_Type(row[7])
             mutation_percent = float(row[8])
             max_mutation = float(row[9])
+            stopping_criteria = OptimizationSettings.Stopping_Criteria(string=row[10])
             new_setting = OptimizationSettings(chromosome_size, parent_selection_type, generations_limit, num_parents,
                                                k_tournament, crossover_type, elitism, mutation_type, mutation_percent,
-                                               max_mutation)
+                                               max_mutation, stopping_criteria)
             settings_list.append(new_setting)
 
         return settings_list
 
     @staticmethod
-    def get_sequence_index(increment_index=True):
-        register_file = results_directory / "register.json"
+    def get_sequence_index(increment_index=True) -> int:
+        """
 
-        if not os.path.isfile(register_file):
+        Get the current index saved in the counter at `data/results/register.json`.
+
+        :param increment_index: set to False in order to make this a read-only operation, otherwise the counter
+        will be incremented.
+        :return: the value stored in the counter
+        :rtype: int
+
+        """
+
+        register_filepath = results_directory / "register.json"
+
+        if not os.path.isfile(register_filepath):
             raise FileNotFoundError("Cannot find register file!")
 
-        with open(register_file, "r") as file:
+        with open(register_filepath, "r") as file:
             register_data = json.load(file)
 
         x = register_data['x']
         x += 1
 
         if increment_index:
-            GeneticOptimization.save_index(register_file, x)
+            GeneticOptimization.save_index(register_filepath, x)
 
         return x
 
     @staticmethod
-    def save_index(register_file, index):
-        with open(register_file, "w") as file:
+    def save_index(register_filepath, index) -> None:
+        """
+
+        Save a new value in the counter.
+
+        :param register_filepath: path to the register file
+        :param index: value to save
+
+        """
+
+        with open(register_filepath, "w") as file:
             register_data = {
                 "x": index
             }
 
             json.dump(register_data, file)
 
-    @staticmethod
-    def reset_register(x):
-        register_file = results_directory / "register.json"
-
-        if not os.path.isfile(register_file):
-            raise FileNotFoundError("Cannot find register file!")
-
-        register = {
-            "x": x
-        }
-
-        with open(register_file, "w") as write_file:
-            json.dump(register, write_file)
-
 
 if __name__ == "__main__":
-    GeneticOptimization.reset_register(26)
+    register_file = results_directory / "register.json"
+    GeneticOptimization.save_index(register_file, 26)
     print(GeneticOptimization.get_sequence_index(increment_index=False))
