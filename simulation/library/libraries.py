@@ -80,6 +80,17 @@ class Libraries:
                 ctypes.c_long
             ]
 
+            self.main_library.weather_in_time.argtypes = [
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_int32),
+                ctypes.c_longlong,
+                ctypes.c_longlong,
+                ctypes.c_longlong,
+                ctypes.c_longlong,
+            ]
+
             self.perlin_noise_library = ctypes.cdll.LoadLibrary(f"{self.go_directory}/perlin_noise.so")
 
             self.perlin_noise_library.generatePerlinNoise.argtypes = [
@@ -260,6 +271,31 @@ class Libraries:
         )
 
         return np.array(new_speeds, 'd')
+
+    def golang_weather_in_time(self, weather_forecast, unix_timestamps, indices, tensor_sizes):
+        """
+
+        GoLang implementation of get_weather_forecast_in_time. See parent function for details.
+
+        """
+
+        weather_forecast_ptr = Libraries.generate_input_pointer(weather_forecast, ctypes.c_double)
+        linear_results_ptr, linear_results = Libraries.generate_output_pointer(len(indices) * tensor_sizes[2], ctypes.c_double)
+        indices_ptr = Libraries.generate_input_pointer(indices, ctypes.c_int32)
+        unix_timestamps_ptr = Libraries.generate_input_pointer(unix_timestamps, ctypes.c_double)
+
+        self.main_library.weather_in_time(
+            weather_forecast_ptr,
+            linear_results_ptr,
+            unix_timestamps_ptr,
+            indices_ptr,
+            tensor_sizes[0],
+            tensor_sizes[1],
+            tensor_sizes[2],
+            len(indices),
+        )
+
+        return np.array(linear_results, 'd')
 
     def golang_generate_perlin_noise(self, width=256, height=256, persistence=0.45, numLayers=8, roughness=7.5,
                                      baseRoughness=1.5, strength=1, randomSeed=0):
