@@ -265,23 +265,22 @@ class Simulation:
         # ----- Plotting -----
 
         if plot_results:
-            arrays_to_plot = [self.speed_kmh, self.distances, self.state_of_charge, self.delta_energy,
-                              self.solar_irradiances, self.wind_speeds, self.gis_route_elevations_at_each_tick,
-                              self.cloud_covers, self.raw_soc, raw_speed]
-            y_label = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                       "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)", "Cloud cover (%)",
-                       "Raw SOC (%)", "Raw Speed (km/h)"]
+            results_arrays = self.get_results(["speed_kmh", "distances", "state_of_charge", "delta_energy",
+                                               "solar_irradiances", "wind_speeds", "gis_route_elevations_at_each_tick",
+                                               "cloud_covers", "raw_soc"]) + [raw_speed]
+            results_labels = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                              "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
+                              "Cloud cover (%)", "Raw SOC (%)", "Raw Speed (km/h)"]
 
-            self.plotting.add_graph_to_queue(Graph(arrays_to_plot, y_label, "Results"))
-            self.plotting.plot_graphs(self.timestamps)
+            self.plotting.add_graph_to_queue(Graph(results_arrays, results_labels, graph_name="Results"))
 
             if verbose:
-                indices_and_environment_graph = Graph(
-                    [self.temp, self.closest_gis_indices, self.closest_weather_indices,
-                     self.gradients, self.time_zones, self.gis_vehicle_bearings],
-                    ["speed dist (m)", "gis ind", "weather ind", "gradients (m)",
-                     "time zones",
-                     "vehicle bearings"], "Indices and Environment variables")
+                # Plot indices and environment arrays
+                env_arrays = self.get_results(["temp", "closest_gis_indices", "closest_weather_indices",
+                                               "gradients", "time_zones", "gis_vehicle_bearings"])
+                env_labels = ["speed dist (m)", "gis ind", "weather ind",
+                              "gradients (m)", "time zones", "vehicle bearings"]
+                indices_and_environment_graph = Graph(env_arrays, env_labels, graph_name="Indices and Environment")
                 self.plotting.add_graph_to_queue(indices_and_environment_graph)
 
                 speed_boolean_graph = Graph([self.speed_kmh, self.state_of_charge],
