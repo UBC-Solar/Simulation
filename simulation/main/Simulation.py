@@ -283,10 +283,19 @@ class Simulation:
                 indices_and_environment_graph = Graph(env_arrays, env_labels, graph_name="Indices and Environment")
                 self.plotting.add_graph_to_queue(indices_and_environment_graph)
 
-                speed_boolean_graph = Graph([self.speed_kmh, self.state_of_charge],
-                                            ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"],
-                                            "Speed Boolean Operations")
-                self.plotting.add_graph_to_queue(speed_boolean_graph)
+                # Plot speed boolean and SOC arrays
+                arrays_to_plot = self.get_results(["speed_kmh", "state_of_charge"])
+                logical_arrays = []
+                for arr in arrays_to_plot:
+                    speed_kmh = np.logical_and(speed_kmh, arr) * speed_kmh
+                    logical_arrays.append(speed_kmh)
+
+                boolean_arrays = arrays_to_plot + logical_arrays
+                boolean_labels = ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"]
+                boolean_graph = Graph(boolean_arrays, boolean_labels, graph_name="Speed Boolean Operations")
+                self.plotting.add_graph_to_queue(boolean_graph)
+
+                self.plotting.plot_graphs(self.timestamps)
 
         if route_visualization:
             if self.race_type == "FSGP":
