@@ -24,7 +24,7 @@ from simulation.library import Libraries
 from simulation.main import Simulation
 from simulation.main import Model
 
-__version__ = "0.5.6"
+__version__ = "0.5.9"
 
 print(f"Package 'simulation' imported. Version: {__version__}\n")
 
