@@ -35,6 +35,13 @@ class SimulationSettings:
         self.verbose = verbose
         self.granularity = granularity
 
+    def print_settings(self):
+        print("GoLang is " + str("enabled." if self.golang else "disabled."))
+        print("Verbose is " + str("on." if self.verbose else "off."))
+        print("Route visualization is " + str("on." if self.route_visualization else "off."))
+        print("Optimizing for " + str("time." if self.return_type == 0 else "distance."))
+        print(f"Will perform {self.optimization_iterations} optimization iterations.")
+
 
 def main():
     """
@@ -49,11 +56,7 @@ def main():
     cmds = sys.argv
     simulation_settings = parse_commands(cmds)
 
-    print("GoLang is " + str("enabled." if simulation_settings.golang else "disabled."))
-    print("Verbose is " + str("on." if simulation_settings.verbose else "off."))
-    print("Route visualization is " + str("on." if simulation_settings.route_visualization else "off."))
-    print("Optimizing for " + str("time." if simulation_settings.return_type == 0 else "distance."))
-    print(f"Will perform {simulation_settings.optimization_iterations} optimization iterations.")
+    simulation_settings.print_settings()
 
     #  ----- Run simulation ----- #
 
@@ -103,7 +106,6 @@ def run_simulation(settings):
 
     run_hyperparameter_search(simulation_model, bounds)
 
-    exit()
     # Initialize optimization methods
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
@@ -114,10 +116,10 @@ def run_simulation(settings):
     optimized = simulation_model.run_model(geneticOptimization.bestinput, plot_results=True)
 
     # Perform optimization with Bayesian Optimization
-    results = optimization.maximize(init_points=5, n_iter=simulation_settings.optimization_iterations, kappa=10)
+    results = optimization.maximize(init_points=5, n_iter=settings.optimization_iterations, kappa=10)
     optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
-                                           verbose=simulation_settings.verbose,
-                                           route_visualization=simulation_settings.route_visualization)
+                                           verbose=settings.verbose,
+                                           route_visualization=settings.route_visualization)
 
     # Perform optimization with random optimization
     results_random = random_optimization.maximize(iterations=settings.optimization_iterations)
@@ -127,7 +129,7 @@ def run_simulation(settings):
 
     #  ----- Output results ----- #
 
-    display_output(simulation_settings.return_type, unoptimized_time, optimized, optimized_random, results,
+    display_output(settings.return_type, unoptimized_time, optimized, optimized_random, results,
                    results_random)
 
     return unoptimized_time
@@ -193,13 +195,14 @@ def display_commands():
           ">>>python3 run_simulation.py -golang=False -optimize=time_taken -iter=3\n")
 
 
-def parse_commands(cmds):
+def parse_commands(cmds) -> SimulationSettings:
     """
 
     Parse commands from command line into parameters for the simulation.
 
     :param cmds: list of commands from to be parsed into parameters.
     :return: return a SimulationParameters object of defaulted or parsed parameters.
+    :rtype: SimulationSettings
 
     """
 
