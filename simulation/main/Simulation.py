@@ -71,7 +71,6 @@ class Simulation:
         self.lvs_power_loss = builder.lvs_power_loss  # LVS power loss is pretty small, so it is neglected
 
         self.tick = builder.tick
-        assert isinstance(self.tick, int), "Discrete tick length must be an integer!"
 
         if self.race_type == "ASC":
             race_length = builder.race_length  # Race length in days, arbitrary as ASC doesn't have a time limit
