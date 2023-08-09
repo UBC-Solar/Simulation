@@ -18,7 +18,7 @@ from simulation.main import Simulation
 
 """
 
-Genetic Optimization follows the following primary steps:
+Genetic Optimization (also known as Genetic Algorithm, or GA) follows the following primary steps:
 
 Fitness Evaluation -> Parent Selection -> Offspring Creation -> Repeat
 
@@ -75,7 +75,7 @@ class OptimizationSettings:
     The default parameters of this class's constructor define the default hyperparameters of GA.
     This class also contains enums to discretize applicable, non-numeric hyperparameters.
 
-    Note: certain hyperparameters will override the behaviour of others, see
+    Note: certain hyperparameters will override or modify the behaviour of others, see
     https://pygad.readthedocs.io/en/latest/pygad.html for detailed descriptions.
 
     """
@@ -147,6 +147,7 @@ class OptimizationSettings:
         :return: a list containing each hyperparameter as a string
 
         """
+
         out_list: list[str] = [str(self.chromosome_size), str(self.parent_selection_type), str(self.generation_limit),
                                str(self.num_parents), str(self.k_tournament), str(self.crossover_type),
                                str(self.elitism), str(self.mutation_type), str(self.mutation_percent),
@@ -170,16 +171,16 @@ class GeneticOptimization(BaseOptimization):
 
     GeneticOptimization uses the PyGAD module to implement a genetic algorithm-based optimization sequence.
 
-    Briefly, GA begins by evaluating an initial population, selecting parent solutions, creating offpsring
-    solutions from the parents, and repeating for a certain number of generations or until a stopping condition
-    is met.
+    Briefly, GA begins by evaluating an initial population, selecting certain potential solutions (chromosomes) to be
+    parents, creating offspring solutions from the parents, and repeating for a certain number of generations or
+    until a stopping condition is met.
 
-    To learn how GA works, read the resources enumerated at the top of this file.
+    To learn how GA works, read the resources enumerated at the top of this file (`genetic.py`).
 
     To modify GA's default hyperparameters, modify the default parameters of OptimizationSettings' constructor.
 
     To evaluate different hyperparameter configurations, use the "run_hyperparameter_search"
-    method in run_simulation.py. To view already evaluated hyperparameters, view the "Hyperparameter Search"
+    method in `run_simulation.py`. To view already evaluated hyperparameters, view the "Hyperparameter Search"
     folder in UBC Solar's Software Google Drive.
 
     """
@@ -215,6 +216,8 @@ class GeneticOptimization(BaseOptimization):
         K_tournament = self.settings.k_tournament
 
         # Define the number of the best chromosomes that will be kept in the next generation
+        # Importantly, GA generates as many offspring as it needs to complete the population of the subsequent
+        # generation, meaning more parents being kept means less offspring will be created.
         keep_elitism = self.settings.elitism
 
         # Define the type of crossover that will be used in offspring creation
@@ -294,7 +297,6 @@ class GeneticOptimization(BaseOptimization):
                     # Check if the number of arrays needed and cached match. If we need more
                     # arrays than are cached, we can still use the cached arrays and just generate more.
                     if len(initial_population) == self.sol_per_pop:
-                        print("\nPrevious initial population save file is being used...")
                         return initial_population
                     else:
                         # In the case that there are more cached arrays then we need, slice off the excess.
@@ -312,7 +314,6 @@ class GeneticOptimization(BaseOptimization):
 
         # Cache the arrays we just generated with our active model's hash key
         with open(population_file, 'wb') as f:
-            print("\nSaving new initial population...")
             np.savez(f, hash_key=self.model.hash_key, population=new_initial_population)
 
         return new_initial_population
@@ -467,8 +468,11 @@ class GeneticOptimization(BaseOptimization):
 
         Write the hyperparameters of the current configuration, along with the resultant fitness
         value that the configuration achieved, to a CSV as one row.
-        To keep track of which config is which, we load the value of, and increment a counter that is saved.
-        This index will match the index of the graph that is also outputted.
+
+        For the purposes of documenting the effectiveness of different hyperparameter configurations,
+        we log each configuration and the resultant fitness and save the corresponding Fitness vs Generation
+        graph. Both of the aforementioned items are saved the same hyperparameter index, which is stored
+        in `register.json` and incremented for each subsequent hyperparameter configuration we attempt.
 
         """
 
