@@ -205,7 +205,8 @@ class Simulation:
                                                        ["Speed before waypoints", " Speed after waypoints"],
                                                        "Before and After waypoints"))
 
-        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
+        if self.tick != 1:
+            speed_kmh = speed_kmh[::self.tick]
         raw_speed = speed_kmh
 
         # ------ Run calculations and get result and modified speed array -------
@@ -347,7 +348,7 @@ class Simulation:
 
         # Get the weather at every location
         weather_forecasts = self.weather.get_weather_forecast_in_time(closest_weather_indices, local_times)
-        roll_by_tick = 3600 * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
+        roll_by_tick = int(3600 / self.tick) * (24 + self.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
 
         pbar.update(2)
@@ -385,6 +386,9 @@ class Simulation:
         not_charge = helpers.get_charge_timing_constraints_boolean(start_hour=self.start_hour,
                                                                    simulation_duration=self.simulation_duration,
                                                                    race_type=self.race_type)
+        if self.tick != 1:
+            not_charge = not_charge[::self.tick]
+
         array_produced_energy = np.logical_and(array_produced_energy, not_charge) * array_produced_energy
 
         pbar.update(1)
