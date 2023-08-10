@@ -48,6 +48,9 @@ class Simulation:
 
         """
 
+        # A Model is a (mostly) immutable container for simulation calculations and results
+        self._model = None
+
         # ----- Return type -----
 
         assert builder.return_type in SimulationReturnType, "return_type must be of SimulationReturnType enum."
@@ -149,9 +152,6 @@ class Simulation:
 
         self.plotting = Plotting()
 
-        # A Model is an immutable container for results and calculations for Simulation
-        self.model = None
-
     def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
                   route_visualization=False, **kwargs):
         """
@@ -214,8 +214,8 @@ class Simulation:
         raw_speed = speed_kmh
 
         # ------ Run calculations and get result and modified speed array -------
-        self.model = simulation.Model(self, speed_kmh)
-        self.model.run_simulation_calculations()
+        self._model = simulation.Model(self, speed_kmh)
+        self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
         if not kwargs:
@@ -259,7 +259,7 @@ class Simulation:
                 boolean_graph = Graph(boolean_arrays, boolean_labels, graph_name="Speed Boolean Operations")
                 self.plotting.add_graph_to_queue(boolean_graph)
 
-                self.plotting.plot_graphs(self.timestamps)
+            self.plotting.plot_graphs(self.timestamps)
 
         if route_visualization:
             if self.race_type == "FSGP":
@@ -289,7 +289,7 @@ class Simulation:
 
         """
 
-        return self.model.get_results(values)
+        return self._model.get_results(values)
 
     def get_driving_time_divisions(self) -> int:
         """
