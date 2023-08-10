@@ -189,8 +189,8 @@ class Simulation:
         # ----- Reshape speed array -----
         if not kwargs:
             print(f"Input speeds: {speed}\n")
-        assert len(speed) == self.get_driving_time_divisions(), ("Input driving speeds array must have length equal to"
-                                                                 "get_driving_time_divisions()! Current length is"
+        assert len(speed) == self.get_driving_time_divisions(), ("Input driving speeds array must have length equal to "
+                                                                 "get_driving_time_divisions()! Current length is "
                                                                  f"{len(speed)} and length of "
                                                                  f"{self.get_driving_time_divisions()} is needed!")
         speed_boolean_array = helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
