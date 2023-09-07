@@ -219,7 +219,7 @@ def parse_commands(cmds) -> SimulationSettings:
     }
 
     def set_golang(value: str):
-        simulation_settings.golang = True if value == 'True' or 'true' else False
+        simulation_settings.golang = True if value == 'True' or value == 'true' else False
 
     def set_return_type(value: str):
         try:
@@ -231,10 +231,10 @@ def parse_commands(cmds) -> SimulationSettings:
         simulation_settings.optimization_iterations = int(value)
 
     def set_verbose(value: str):
-        simulation_settings.verbose = True if value == 'True' or 'true' else False
+        simulation_settings.verbose = True if value == 'True' or value == 'true' else False
 
     def set_route_visualization(value: str):
-        simulation_settings.route_visualization = True if value == 'True' or 'true' else False
+        simulation_settings.route_visualization = True if value == 'True' or value == 'true' else False
 
     def set_race_type(value: str):
         assert value in ['ASC', 'FSGP'], f"Invalid race type {value}. Please enter 'ASC' or 'FSGP'."
