@@ -162,14 +162,14 @@ def display_commands():
           "-golang               Define whether golang implementations\n"
           "                      will be used. \n"
           "                      (True/False)\n"
-          "\n"                   
+          "\n"
           "-optimize             Define what data the simulation\n"
           "                      should optimize. \n"
           "                      (time_taken/distance_travelled)\n"
-          "\n"                   
+          "\n"
           "-iter                 Set how many iterations of optimizations\n"
           "                      should be performed on the simulation.\n"
-          "\n"                   
+          "\n"
           "-verbose              Set whether simulation methods should\n"
           "                      execute as verbose.\n"
           "                      (True/False)\n"
@@ -268,10 +268,60 @@ def parse_commands(cmds):
         elif split_cmd[0] == '-granularity':
             simulation_settings.granularity = split_cmd[1]
 
-        elif split_cmd[0] == '-granularity':
-            simulation_settings.granularity = split_cmd[1]
-
     return simulation_settings
+
+
+def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", granularity=1, golang=True):
+    """
+
+    Export simulation data.
+
+    :param input_speed: defaulted to 30km/h, an array of speeds that the Simulation will use.
+    :param values: defaulted to what was outputted by now-deprecated SimulationResults object, a tuple of strings that
+    each correspond to a value or array that the Simulation will export. See Simulation.get_results() for valid keys.
+    :param race_type: define the race type, either "ASC" or "FSGP"
+    :param granularity: define the granularity of Simulation speed array
+    :param golang: define whether GoLang
+    implementations should be used.
+
+    """
+
+    #  ----- Load initial conditions ----- #
+
+    with open(config_directory / "initial_conditions.json") as f:
+        initial_conditions = json.load(f)
+
+    # ----- Load from settings_ASC.json -----
+
+    if race_type == "ASC":
+        config_path = config_directory / "settings_ASC.json"
+    else:
+        config_path = config_directory / "settings_FSGP.json"
+
+    with open(config_path) as f:
+        model_parameters = json.load(f)
+
+    # Build simulation model
+    simulation_builder = SimulationBuilder()\
+        .set_initial_conditions(initial_conditions)\
+        .set_model_parameters(model_parameters, race_type)\
+        .set_golang(golang)\
+        .set_return_type(SimulationReturnType.void)\
+        .set_granularity(granularity)
+
+    simulation_model = simulation_builder.get()
+
+    driving_hours = simulation_model.get_driving_time_divisions()
+
+    if input_speed is None:
+        input_speed = np.array([30] * driving_hours)
+    if values is None:
+        values = ["default"]
+
+    simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False, route_visualization=False)
+    results_array = simulation_model.get_results(values)
+
+    return results_array
 
 
 if __name__ == "__main__":

@@ -1,2 +1,2 @@
 from simulation.main.Simulation import Simulation
-from simulation.main.SimulationResult import SimulationResult
+from simulation.main.Model import Model
