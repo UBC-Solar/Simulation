@@ -21,16 +21,7 @@ class Libraries:
         ctypes.c_int: 'i'
     }
 
-    def __init__(self, raiseExceptionOnFail=True):
-        """
-
-        :param raiseExceptionOnFail: Boolean to control whether an exception should be raised if Go libraries cant be
-        found. Should not be set to false unless that scenario is handled.
-
-        """
-
-        self.raiseExceptionOnFail = raiseExceptionOnFail
-
+    def __init__(self):
         self.go_directory = self.get_go_directory()
 
         # ----- Load Go Libraries ----- #
@@ -99,19 +90,15 @@ class Libraries:
                              os.path.isdir(os.path.join(binaries_directory, f))]
 
         # Try to find compatible binaries by checking until compatible binaries are found
-        try:
-            for binary_container in binary_containers:
-                try:
-                    ctypes.cdll.LoadLibrary(f"{binaries_directory}/{binary_container}/main.so")
-                    return f"{binaries_directory}/{binary_container}"
-                except:
-                    pass
-        except LibrariesNotFound:
-            if self.raiseExceptionOnFail:
-                raise LibrariesNotFound("GoLang libraries not found for your operating system. "
-                                        "Please either compile them for your operating system or disable GoLang usage "
-                                        "in Simulation instantiation.")
-            return None
+        for binary_container in binary_containers:
+            try:
+                ctypes.cdll.LoadLibrary(f"{binaries_directory}/{binary_container}/main.so")
+                return f"{binaries_directory}/{binary_container}"
+            except OSError:
+                pass
+        raise LibrariesNotFound("Go shared libraries not found for your platform. \n"
+                                "Please either compile them for your platform or disable Go usage\n"
+                                "in Simulation instantiation.\n")
 
     def found_compatible_binaries(self):
         """
