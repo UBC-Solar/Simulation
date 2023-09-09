@@ -1,3 +1,5 @@
+import zipfile
+
 import numpy as np
 import pygad
 import json
@@ -287,21 +289,24 @@ class GeneticOptimization(BaseOptimization):
 
         # Check if we can grab cached driving speed arrays
         if os.path.isfile(population_file) and not force_new_population_flag:
-            with np.load(population_file) as population_data:
-                # We compare the hash value of the active Simulation model to the one that is cached
-                # because speeds that are valid for one model may not be valid for another (and the
-                # driving speed array length may also differ)
-                if population_data['hash_key'] == self.model.hash_key:
-                    initial_population = np.array(population_data['population'])
+            try:
+                with np.load(population_file) as population_data:
+                    # We compare the hash value of the active Simulation model to the one that is cached
+                    # because speeds that are valid for one model may not be valid for another (and the
+                    # driving speed array length may also differ)
+                    if population_data['hash_key'] == self.model.hash_key:
+                        initial_population = np.array(population_data['population'])
 
-                    # Check if the number of arrays needed and cached match. If we need more
-                    # arrays than are cached, we can still use the cached arrays and just generate more.
-                    if len(initial_population) == self.sol_per_pop:
-                        return initial_population
-                    else:
-                        # In the case that there are more cached arrays then we need, slice off the excess.
-                        new_initial_population = population_data['population'][:num_arrays_to_generate]
-                        arrays_from_cache = len(new_initial_population)
+                        # Check if the number of arrays needed and cached match. If we need more
+                        # arrays than are cached, we can still use the cached arrays and just generate more.
+                        if len(initial_population) == self.sol_per_pop:
+                            return initial_population
+                        else:
+                            # In the case that there are more cached arrays then we need, slice off the excess.
+                            new_initial_population = population_data['population'][:num_arrays_to_generate]
+                            arrays_from_cache = len(new_initial_population)
+            except zipfile.BadZipFile:
+                arrays_from_cache = 0
 
         # If we need more arrays, generate the number of new arrays that we need
         if arrays_from_cache < num_arrays_to_generate:
