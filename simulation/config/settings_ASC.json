@@ -10,7 +10,7 @@
         [42.5840, -114.4703]
     ],
 
-    "tick": 5,
+    "tick": 1,
     "simulation_duration": 43200,
     "start_hour": 7,
     "initial_battery_charge": 0.65,
