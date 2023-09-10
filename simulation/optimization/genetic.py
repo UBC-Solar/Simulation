@@ -1,8 +1,8 @@
-import zipfile
-
 import numpy as np
+import zipfile
 import pygad
 import json
+import math
 import sys
 import csv
 import os
@@ -16,7 +16,7 @@ from simulation.common.helpers import denormalize, normalize, rescale
 from simulation.data.results import results_directory
 from simulation.common.noise import Noise
 from simulation.utils import InputBounds
-from simulation.main import Simulation
+from simulation.main import Simulation, SimulationReturnType
 
 """
 
@@ -188,12 +188,17 @@ class GeneticOptimization(BaseOptimization):
     """
 
     def __init__(self, model: Simulation, bounds: InputBounds, force_new_population_flag: bool = False,
-                 settings: OptimizationSettings = None, pbar: tqdm = None):
+                 settings: OptimizationSettings = None, pbar: tqdm = None, plot_fitness: bool = False):
+
+        assert model.return_type is SimulationReturnType.distance_and_time, \
+            "Simulation Model for Genetic Optimization must have return type: SimulationReturnType.distance_and_time!"
 
         super().__init__(bounds, model.run_model)
         self.model = model
         self.bounds = bounds.get_bounds_list()
         self.settings = settings if settings is not None else OptimizationSettings()
+        self.output_hyperparameters = plot_fitness
+        self.did_finish_race = None
 
         # Define the function that will be used to determine the fitness of each chromosome
         fitness_function = self.fitness
@@ -398,14 +403,27 @@ class GeneticOptimization(BaseOptimization):
 
         """
 
+        def sigmoid(a, b):
+            return lambda x: 1 / (1 + math.exp(-(a * x + b)))
+
         # Chromosomes are normalized, so must be denormalized before being fed to Simulation.
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
-        results = self.func(solution_denormalized)
+        distance_travelled, time_taken = self.func(solution_denormalized)
 
         # If Simulation did not complete successfully (SOC dropped below 0) then return the distance when that occurred.
-        fitness = results if self.model.was_successful() else self.model.get_distance_before_exhaustion()
+        distance_travelled_real = distance_travelled if self.model.was_successful() else self.model.get_distance_before_exhaustion()
 
-        return fitness
+        self.did_finish_race = True if distance_travelled_real == distance_travelled else False
+
+        # https://www.desmos.com/calculator/kyjn0cilyc
+        # distance_travelled is scaled such that optimization REALLY prioritizes finishing the race
+        distance_scaled = distance_travelled_real * sigmoid(0.1105, -266)(distance_travelled_real)
+
+        # combined_fitness = distance travelled (km) / time_taken (days) = distance travelled per day
+        combined_fitness = distance_scaled / (time_taken / 86400)
+        print(f"Distance: {distance_travelled}\n Distance Real: {distance_travelled_real}\n Distance Scaled: {distance_scaled}\n"
+              f"Time Taken: {time_taken}\n Fitness: {combined_fitness}\n")
+        return combined_fitness
 
     def maximize(self) -> np.ndarray:
         """
@@ -420,7 +438,7 @@ class GeneticOptimization(BaseOptimization):
         self.ga_instance.run()
         return self.output()
 
-    def output(self, plot_fitness=True) -> np.ndarray:
+    def output(self) -> np.ndarray:
         """
 
         Get the best solution from GA.
@@ -439,7 +457,7 @@ class GeneticOptimization(BaseOptimization):
         # print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
 
         # Plot fitness compared to the generation index to how
-        if plot_fitness:
+        if self.output_hyperparameters:
             self.plot_fitness()
 
         # Set the fitness value of the hyperparameter configuration
@@ -487,6 +505,7 @@ class GeneticOptimization(BaseOptimization):
             sequence_index: int = GeneticOptimization.get_sequence_index()
             output = self.settings.as_list()
             output.insert(0, str(sequence_index))
+            output.append(str(self.did_finish_race))
             writer.writerow(output)
 
     @staticmethod

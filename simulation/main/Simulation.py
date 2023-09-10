@@ -39,6 +39,7 @@ class SimulationReturnType(StrEnum):
 
     time_taken = "time_taken"
     distance_travelled = "distance_travelled"
+    distance_and_time = "distance_and_time"
     void = "void"
 
 
