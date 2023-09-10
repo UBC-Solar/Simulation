@@ -4,8 +4,6 @@ import array
 import numpy as np
 import os
 
-from matplotlib import pyplot as plt
-
 
 class Libraries:
     """
@@ -47,7 +45,7 @@ class Libraries:
 
             self.main_library.weather_in_time_loop.argtypes = [
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_longlong),
                 ctypes.POINTER(ctypes.c_double),
                 ctypes.c_longlong,
                 ctypes.c_longlong
@@ -172,7 +170,7 @@ class Libraries:
             len(results),
         )
 
-        return np.array(results, 'i')
+        return results
 
     def golang_calculate_closest_timestamp_indices(self, unix_timestamps, dt_local_array):
         """
@@ -185,7 +183,7 @@ class Libraries:
         unix_timestamps_pointer = Libraries.generate_input_pointer(unix_timestamps, ctypes.c_double)
         dt_local_arr_pointer = Libraries.generate_input_pointer(dt_local_array, ctypes.c_double)
         closest_time_stamp_indices_pointer, closest_time_stamp_indices = Libraries.generate_output_pointer(
-            unix_timestamps, ctypes.c_double)
+            len(unix_timestamps), ctypes.c_longlong)
 
         # Execute the Go shared library (compiled Go function) and pass it the pointers we generated
         self.main_library.weather_in_time_loop(
@@ -195,7 +193,7 @@ class Libraries:
             len(dt_local_array),
             len(unix_timestamps))
 
-        return np.array(closest_time_stamp_indices, 'i')
+        return closest_time_stamp_indices
 
     def golang_calculate_closest_weather_indices(self, cumulative_distances, average_distances):
         """
@@ -219,7 +217,7 @@ class Libraries:
             len(closest_weather_indices)
         )
 
-        return np.array(closest_weather_indices, 'i')
+        return closest_weather_indices
 
     def golang_calculate_array_GHI_times(self, local_times):
         """
@@ -242,7 +240,7 @@ class Libraries:
             len(local_time)
         )
 
-        return np.array(day_of_year, 'd'), np.array(local_time, 'd')
+        return day_of_year, local_time
 
     def golang_speeds_with_waypoints_loop(self, speeds, distances, waypoints):
         """
@@ -270,7 +268,7 @@ class Libraries:
             len(waypoints)
         )
 
-        return np.array(new_speeds, 'd')
+        return new_speeds
 
     def golang_weather_in_time(self, weather_forecast, unix_timestamps, indices, tensor_sizes):
         """
@@ -295,7 +293,7 @@ class Libraries:
             len(indices),
         )
 
-        return np.array(linear_results, 'd')
+        return linear_results
 
     def golang_generate_perlin_noise(self, width=256, height=256, persistence=0.45, numLayers=8, roughness=7.5,
                                      baseRoughness=1.5, strength=1, randomSeed=0):
@@ -339,7 +337,7 @@ class Libraries:
         return ptr
 
     @staticmethod
-    def generate_output_pointer(output_array_length, c_type):
+    def generate_output_pointer(output_array_length: int, c_type):
         """
 
         Generate an array and a pointer to that array for a Go binary to write to.
@@ -349,10 +347,9 @@ class Libraries:
         :return: A pointer pointing to output_array, and output array itself
 
         """
-        output_array = np.array([0] * output_array_length)
-        output_array_copy = output_array.astype(c_type)
-        ptr = output_array_copy.ctypes.data_as(ctypes.POINTER(c_type))
-        return ptr, output_array_copy
+        output_array = np.array([0] * output_array_length, dtype=c_type)
+        ptr = output_array.ctypes.data_as(ctypes.POINTER(c_type))
+        return ptr, output_array
 
     @staticmethod
     def generate_input_output_pointer(input_array, c_type):

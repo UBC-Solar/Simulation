@@ -245,7 +245,7 @@ func weather_in_time(weather_forecast_Ptr *float64,
 	}
 
 	//closest_timestamp_indices = self.lib.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
-	closest_timestamp_indices := make([]float64, simulation_duration)
+	closest_timestamp_indices := make([]int64, simulation_duration)
 	weather_in_time_loop(&unix_timestamps[0], &closest_timestamp_indices[0], &dt_local_array[0], weather_times, simulation_duration)
 
 	//temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
@@ -257,7 +257,7 @@ func weather_in_time(weather_forecast_Ptr *float64,
 	//result = full_weather_forecast_at_coords[temp_0, closest_timestamp_indices]
 	result := make([][]float64, simulation_duration)
 	for i := range result {
-		result[i] = full_weather_forecast_at_coords[temp_0[i]][int64(closest_timestamp_indices[i])]
+		result[i] = full_weather_forecast_at_coords[temp_0[i]][closest_timestamp_indices[i]]
 	}
 
 	for i := 0; i < int(simulation_duration); i++ {
@@ -269,7 +269,7 @@ func weather_in_time(weather_forecast_Ptr *float64,
 
 //export weather_in_time_loop
 func weather_in_time_loop(unix_timestamps_inPtr *float64,
-	closest_time_stamp_indices_outPtr *float64,
+	closest_time_stamp_indices_outPtr *int64,
 	dt_local_array_inPtr *float64,
 	dt_local_array_inPtr_size int64,
 	io_ptr_size int64) {
@@ -304,7 +304,7 @@ func weather_in_time_loop(unix_timestamps_inPtr *float64,
 			}
 		}
 		//closest_time_stamp_indices.append(minimum_index)
-		closest_time_stamp_indices_out[index] = float64(min_index)
+		closest_time_stamp_indices_out[index] = int64(min_index)
 	}
 }
 
