@@ -9,6 +9,7 @@ from simulation.common import helpers
 
 
 class Model:
+    __Empty = np.array([0])
     """
     Models should be considered to be immutable. Instantiate a new model when you want to run a different simulation.
     """
@@ -20,7 +21,7 @@ class Model:
 
         # --------- Results ---------
 
-        self.distances = None
+        self.distances: np.ndarray = Model.__Empty
         self.state_of_charge = None
         self.delta_energy = None
         self.solar_irradiances = None
@@ -34,6 +35,7 @@ class Model:
 
         # --------- Calculations ---------
 
+        self.timestamps = None
         self.tick_array = None
         self.time_zones = None
         self.distances = None
@@ -78,7 +80,8 @@ class Model:
 
         # ----- Tick array -----
 
-        self.tick_array = np.diff(self.simulation.timestamps)
+        self.timestamps = np.arange(0, self.simulation.simulation_duration + self.simulation.tick, self.simulation.tick)
+        self.tick_array = np.diff(self.timestamps)
         self.tick_array = np.insert(self.tick_array, 0, 0)
 
         # ----- Expected distance estimate -----
@@ -126,7 +129,7 @@ class Model:
         self.time_zones = self.simulation.gis.get_time_zones(self.closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = helpers.adjust_timestamps_to_local_times(self.simulation.timestamps,
+        local_times = helpers.adjust_timestamps_to_local_times(self.timestamps,
                                                                self.simulation.time_of_initialization,
                                                                self.time_zones)
 
@@ -185,7 +188,7 @@ class Model:
         # ----- Array initialisation -----
 
         # used to calculate the time the car was in motion
-        self.tick_array = np.full_like(self.simulation.timestamps, fill_value=self.simulation.tick, dtype='f4')
+        self.tick_array = np.full_like(self.timestamps, fill_value=self.simulation.tick, dtype='f4')
         self.tick_array[0] = 0
 
         # ----- Array calculations -----
@@ -249,6 +252,7 @@ class Model:
             "route_length": self.route_length,
             "time_taken": self.time_taken,
             "tick_array": self.tick_array,
+            "timestamps": self.timestamps,
             "time_zones": self.time_zones,
             "cumulative_distances": self.cumulative_distances,
             "temp": self.temp,

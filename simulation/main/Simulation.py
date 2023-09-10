@@ -50,6 +50,10 @@ class SimulationReturnType(StrEnum):
 class Simulation:
     """
 
+    Note: The first time that run_model is called will be SIGNIFICANTLY slower than future calls. This is because
+    Simulation components contain many Numba JIT targets, which must be compiled at runtime the first time they are
+    called.
+
     Attributes:
         return_type: defines what data that run_model should return
         race_type: string defining which race, ASC or FSGP, is being simulated
@@ -75,12 +79,12 @@ class Simulation:
 
         Instantiates a simple model of the car.
 
+        Do NOT call this constructor directly. Please create a SimulationBuilder and use
+        SimulationBuilder.get() after setting parameters and initial conditions.
+
         :param builder: a SimulationBuilder object that provides settings for the Simulation
 
         """
-
-        # A Model is a (mostly) immutable container for simulation calculations and results
-        self._model = None
 
         # ----- Return type -----
 
@@ -176,20 +180,17 @@ class Simulation:
 
         self.plotting = simulation.Plotting()
 
-        self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
-
         # -------- Hash Key ---------
 
         self.hash_key = self.__hash__()
 
         # All attributes ABOVE will NOT be modified when the model is simulated. All attributes BELOW this WILL be
-        # modified and written to over the course of simulation. Ensure that when you modify the behaviour of Simulation
-        # that this fact is maintained, else the stability of the optimization process WILL be threatened, as it assumes
+        # mutated over the course of simulation. Ensure that when you modify the behaviour of Simulation that this
+        # fact is maintained, else the stability of the optimization process WILL be threatened, as it assumes
         # that the attributes above are independent of whether the model has been previously simulated.
 
-        # --------- Results ---------
-
-        self.speed_kmh = None
+        # A Model is a (mostly) immutable container for simulation calculations and results
+        self._model = None
 
     def __hash__(self):
         hash_string = str(self.origin_coord) + str(self.dest_coord) + str(self.current_coord) + str(
@@ -251,21 +252,20 @@ class Simulation:
         speed_mapped = helpers.map_array_to_targets(speed, speed_boolean_array)
         speed_mapped_kmh = helpers.reshape_and_repeat(speed_mapped, self.simulation_duration)
         speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
-        self.speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
+        speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
         if self.tick != 1:
-            self.speed_kmh = self.speed_kmh[::self.tick]
-
+            speed_kmh = speed_kmh[::self.tick]
+        # TODO: There are STILL issues with tick changes not being accounted for! Still!!
         if self.race_type == "ASC":
-            self.speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances,
-                                                            self.speed_kmh / 3.6,
-                                                            self.waypoints, verbose=False)[
-                             :self.simulation_duration + 1]
+            speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances,
+                                                       speed_kmh / 3.6,
+                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
 
-        self.speed_kmh = helpers.apply_deceleration(self.speed_kmh, 20)
-        raw_speed = self.speed_kmh
+        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
+        raw_speed = speed_kmh.copy()
 
         # ------ Run calculations and get result and modified speed array -------
-        self._model = simulation.Model(self, self.speed_kmh)
+        self._model = simulation.Model(self, speed_kmh)
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
@@ -312,7 +312,7 @@ class Simulation:
                 boolean_graph = Graph(boolean_arrays, boolean_labels, graph_name="Speed Boolean Operations")
                 self.plotting.add_graph_to_queue(boolean_graph)
 
-            self.plotting.plot_graphs(self.timestamps, plotting_portion=plot_portion)
+            self.plotting.plot_graphs(self.get_results(["timestamps"])[0], plotting_portion=plot_portion)
 
         if route_visualization:
             if self.race_type == "FSGP":
