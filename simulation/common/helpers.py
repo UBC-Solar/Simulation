@@ -301,7 +301,6 @@ def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directi
     return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
 
 
-@jit(nopython=True)
 def get_day_of_year_map(date):
     """
 
@@ -313,7 +312,6 @@ def get_day_of_year_map(date):
     return get_day_of_year(date.day, date.month, date.year)
 
 
-@jit(nopython=True)
 def get_day_of_year(day, month, year):
     """
 
