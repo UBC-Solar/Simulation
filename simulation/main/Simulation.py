@@ -314,6 +314,7 @@ class Simulation:
         get_return_type = {
             SimulationReturnType.time_taken: -1 * self.time_taken,
             SimulationReturnType.distance_travelled: self.distance_travelled,
+            SimulationReturnType.distance_and_time: (self.distance_travelled, self.time_taken),
             SimulationReturnType.void: None
         }
 

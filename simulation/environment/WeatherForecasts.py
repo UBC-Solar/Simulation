@@ -268,6 +268,7 @@ class WeatherForecasts:
         Furthermore, once we have chosen a week's worth of weather forecasts for a specific coordinate, we must isolate
         a single weather forecast depending on what time the car is at the coordinate (10, 20). That is the job of the
         `get_weather_forecast_in_time()` method.
+        
         """
 
         # if racing FSGP, there is no need for distance calculations. We will return only the origin coordinate

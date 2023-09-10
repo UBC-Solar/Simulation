@@ -290,7 +290,8 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
     if values is None:
         values = ["default"]
 
-    simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False, route_visualization=False)
+    simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False, route_visualization=False,
+                               plot_portion=(0.0/8.0, 8.0/8.0))
     results_array = simulation_model.get_results(values)
 
     return results_array
@@ -311,7 +312,7 @@ def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds)
             for settings in settings_list:
                 stop_index += 1
                 for x in range(evals_per_setting):
-                    geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=settings, pbar=pbar)
+                    geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=settings, pbar=pbar, plot_fitness=True)
                     geneticOptimization.maximize()
                     geneticOptimization.write_results()
         except KeyboardInterrupt:
