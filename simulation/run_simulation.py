@@ -93,10 +93,11 @@ def run_simulation(settings):
     input_speed = np.array([30] * driving_hours)
 
     # Run simulation model with the "guess" speed array
-    unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=True,
+    unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=False,
                                                   verbose=settings.verbose,
                                                   route_visualization=settings.route_visualization)
 
+    exit()
     # Set up optimization models
     maximum_speed = 60
     minimum_speed = 0
@@ -109,7 +110,7 @@ def run_simulation(settings):
     # Initialize optimization methods
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
-    geneticOptimization = GeneticOptimization(simulation_model, bounds, input_speed)
+    geneticOptimization = GeneticOptimization(simulation_model, bounds)
 
     # Perform optimization with Genetic Optimization
     results = geneticOptimization.maximize()

@@ -443,7 +443,6 @@ class GeneticOptimization(BaseOptimization):
 
         Get the best solution from GA.
 
-        :param bool plot_fitness: set whether the fitness over time should be plotted.
         :return: best solution identified by GA in km/h
         :rtype: np.ndarray
 
