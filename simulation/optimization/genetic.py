@@ -417,12 +417,12 @@ class GeneticOptimization(BaseOptimization):
 
         # https://www.desmos.com/calculator/kyjn0cilyc
         # distance_travelled is scaled such that optimization REALLY prioritizes finishing the race
+        # TODO: These numbers are optimized for a race length of 2466km. This MUST be automated.
         distance_scaled = distance_travelled_real * sigmoid(0.1105, -266)(distance_travelled_real)
 
         # combined_fitness = distance travelled (km) / time_taken (days) = distance travelled per day
         combined_fitness = distance_scaled / (time_taken / 86400)
-        print(f"Distance: {distance_travelled}\n Distance Real: {distance_travelled_real}\n Distance Scaled: {distance_scaled}\n"
-              f"Time Taken: {time_taken}\n Fitness: {combined_fitness}\n")
+
         return combined_fitness
 
     def maximize(self) -> np.ndarray:

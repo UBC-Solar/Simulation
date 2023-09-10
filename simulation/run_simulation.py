@@ -97,7 +97,6 @@ def run_simulation(settings):
                                                   verbose=settings.verbose,
                                                   route_visualization=settings.route_visualization)
 
-    exit()
     # Set up optimization models
     maximum_speed = 60
     minimum_speed = 0

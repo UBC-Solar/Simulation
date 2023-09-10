@@ -171,6 +171,8 @@ class Model:
                                                                         simulation_duration=self.simulation.
                                                                         simulation_duration,
                                                                         race_type=self.simulation.race_type)
+        if self.simulation.tick != 1:
+            self.not_charge = self.not_charge[::self.simulation.tick]
         self.array_produced_energy = np.logical_and(self.array_produced_energy,
                                                     self.not_charge) * self.array_produced_energy
 

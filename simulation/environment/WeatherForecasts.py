@@ -87,15 +87,15 @@ class WeatherForecasts:
                     start_time = helpers.date_from_unix_timestamp(start_time_unix)
                     end_time = helpers.date_from_unix_timestamp(end_time_unix)
 
-                    print("----- Weather save file information -----\n")
-                    print(f"--- Data time range ---")
-                    print(f"Start time (UTC)f: {start_time} [{start_time_unix:.0f}]\n"
-                          f"End time (UTC): {end_time} [{end_time_unix:.0f}]\n")
-
-                    print("--- Array information ---")
-                    for key in weather_data:
-                        print(f"> {key}: {weather_data[key].shape}")
-                    print()
+                    # print("----- Weather save file information -----\n")
+                    # print(f"--- Data time range ---")
+                    # print(f"Start time (UTC)f: {start_time} [{start_time_unix:.0f}]\n"
+                    #       f"End time (UTC): {end_time} [{end_time_unix:.0f}]\n")
+                    #
+                    # print("--- Array information ---")
+                    # for key in weather_data:
+                    #     print(f"> {key}: {weather_data[key].shape}")
+                    # print()
 
         if api_call_required or force_update:
             print("Different weather data requested and/or weather file does not exist. "

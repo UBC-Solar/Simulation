@@ -65,12 +65,12 @@ class GIS:
 
                     api_call_required = False
 
-                    print("Previous route save file is being used...\n")
-
-                    print("----- Route save file information -----")
-                    for key in route_data:
-                        print(f"> {key}: {route_data[key].shape}")
-                    print()
+                    # print("Previous route save file is being used...\n")
+                    #
+                    # print("----- Route save file information -----")
+                    # for key in route_data:
+                    #     print(f"> {key}: {route_data[key].shape}")
+                    # print()
 
                     self.path = route_data['path']
                     self.launch_point = route_data['path'][0]

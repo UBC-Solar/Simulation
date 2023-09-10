@@ -810,6 +810,7 @@ def calculate_race_completion_time(path_length, cumulative_distances):
 
     # Create a boolean array to encode whether the vehicle has completed or not completed the route at a given timestamp
     # This is based on the assumption that each index represents a single timestamp of one second
+    # TODO: ASSUMPTION HERE!!!!                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     crossed_finish_line = np.where(cumulative_distances >= path_length, 1, 0)
 
     # Based on the boolean encoding, identify the first index which the vehicle has completed the route
