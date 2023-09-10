@@ -587,6 +587,13 @@ class GeneticOptimization(BaseOptimization):
 
             json.dump(register_data, file)
 
+    @staticmethod
+    def get_total_generations(settings_list: list[OptimizationSettings] = None) -> int:
+        total: int = 0
+        for settings in settings_list:
+            total += settings.generation_limit
+        return total
+
 
 if __name__ == "__main__":
     register_file = results_directory / "register.json"

@@ -8,7 +8,7 @@ import csv
 from tqdm import tqdm
 from main.Simulation import Simulation, SimulationReturnType
 from optimization.bayesian import BayesianOptimization
-from optimization.genetic import GeneticOptimization, OptimizationSettings
+from optimization.genetic import GeneticOptimization
 from optimization.random_opt import RandomOptimization
 from utils.InputBounds import InputBounds
 from config import config_directory
@@ -26,7 +26,9 @@ class SimulationSettings:
     This class stores settings that will be used by the simulation.
 
     """
-    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.distance_and_time, optimization_iterations=20, route_visualization=False, verbose=False, granularity=1):
+
+    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.distance_and_time,
+                 optimization_iterations=20, route_visualization=False, verbose=False, granularity=1):
         self.race_type = race_type
         self.optimization_iterations = optimization_iterations
         self.golang = golang
@@ -35,12 +37,12 @@ class SimulationSettings:
         self.verbose = verbose
         self.granularity = granularity
 
-    def print_settings(self):
-        print("GoLang is " + str("enabled." if self.golang else "disabled."))
-        print("Verbose is " + str("on." if self.verbose else "off."))
-        print("Route visualization is " + str("on." if self.route_visualization else "off."))
-        print("Optimizing for " + str("time." if self.return_type == 0 else "distance."))
-        print(f"Will perform {self.optimization_iterations} optimization iterations.")
+    def __str__(self):
+        return (f"GoLang is {str('enabled.' if self.golang else 'disabled.')}\n"
+                f"Verbose is {str('on.' if self.verbose else 'off.')}\n"
+                f"Route visualization is {str('on.' if self.route_visualization else 'off.')}\n"
+                f"Optimizing for {str('time.' if self.return_type == 0 else 'distance.')}\n"
+                f"Will perform {self.optimization_iterations} optimization iterations.\n")
 
 
 def main():
@@ -56,7 +58,7 @@ def main():
     cmds = sys.argv
     simulation_settings = parse_commands(cmds)
 
-    simulation_settings.print_settings()
+    print(str(simulation_settings))
 
     #  ----- Run simulation ----- #
 
@@ -79,11 +81,11 @@ def run_simulation(settings):
 
     # Build simulation model
     initial_conditions, model_parameters = get_default_settings(settings.race_type)
-    simulation_builder = SimulationBuilder()\
-        .set_initial_conditions(initial_conditions)\
-        .set_model_parameters(model_parameters, settings.race_type)\
-        .set_golang(settings.golang)\
-        .set_return_type(settings.return_type)\
+    simulation_builder = SimulationBuilder() \
+        .set_initial_conditions(initial_conditions) \
+        .set_model_parameters(model_parameters, settings.race_type) \
+        .set_golang(settings.golang) \
+        .set_return_type(settings.return_type) \
         .set_granularity(settings.granularity)
 
     simulation_model = simulation_builder.get()
@@ -93,7 +95,7 @@ def run_simulation(settings):
     input_speed = np.array([30] * driving_hours)
 
     # Run simulation model with the "guess" speed array
-    unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=False,
+    unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=True,
                                                   verbose=settings.verbose,
                                                   route_visualization=settings.route_visualization)
 
@@ -138,11 +140,14 @@ def run_simulation(settings):
 def display_output(return_type, unoptimized, optimized, optimized_random, results, results_random):
     if return_type is SimulationReturnType.time_taken:
         print(
-            f'TimeSimulation results. Time Taken: {-1 * unoptimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * unoptimized)))})')
+            f'TimeSimulation results. Time Taken: {-1 * unoptimized} seconds, '
+            f'({str(datetime.timedelta(seconds=int(-1 * unoptimized)))})')
         print(
-            f'Optimized results. Time taken: {-1 * optimized} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized)))})')
+            f'Optimized results. Time taken: {-1 * optimized} seconds, '
+            f'({str(datetime.timedelta(seconds=int(-1 * optimized)))})')
         print(
-            f'Random results. Time taken: {-1 * optimized_random} seconds, ({str(datetime.timedelta(seconds=int(-1 * optimized_random)))})')
+            f'Random results. Time taken: {-1 * optimized_random} seconds, '
+            f'({str(datetime.timedelta(seconds=int(-1 * optimized_random)))})')
 
     elif return_type is SimulationReturnType.distance_travelled:
         print(f'Distance travelled: {unoptimized}')
@@ -164,8 +169,8 @@ def display_commands():
 
     print("------------------------COMMANDS-----------------------\n"
           "-help                 Display list of valid commands.\n"
-          "\n"                   
-          "-race_type            Define which race should be simulated. \n"     
+          "\n"
+          "-race_type            Define which race should be simulated. \n"
           "                      (ASC/FSGP)\n"
           "\n"
           "-golang               Define whether golang implementations\n"
@@ -182,7 +187,7 @@ def display_commands():
           "-verbose              Set whether simulation methods should\n"
           "                      execute as verbose.\n"
           "                      (True/False)\n"
-          "\n"                  
+          "\n"
           "-route_visualization   Define whether the simulation route\n"
           "                      should be plotted and visualized.\n"
           "                      (True/False)\n"
@@ -291,7 +296,7 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
         values = ["default"]
 
     simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False, route_visualization=False,
-                               plot_portion=(0.0/8.0, 8.0/8.0))
+                               plot_portion=(0.0 / 8.0, 8.0 / 8.0))
     results_array = simulation_model.get_results(values)
 
     return results_array
@@ -306,26 +311,20 @@ def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds)
         csv_reader = csv.reader(f, delimiter=',')
         settings_list = GeneticOptimization.parse_csv_into_settings(csv_reader)
 
-    total_num = get_total_generations(settings_list) * evals_per_setting
+    total_num = GeneticOptimization.get_total_generations(settings_list) * evals_per_setting
     with tqdm(total=total_num, file=sys.stdout, desc="Running hyperparameter search", position=0, leave=True) as pbar:
         try:
             for settings in settings_list:
                 stop_index += 1
                 for x in range(evals_per_setting):
-                    geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=settings, pbar=pbar, plot_fitness=True)
+                    geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=settings, pbar=pbar,
+                                                              plot_fitness=True)
                     geneticOptimization.maximize()
                     geneticOptimization.write_results()
         except KeyboardInterrupt:
             print(f"Finished {stop_index - 1} setting(s), stopped while evaluating setting {stop_index}.")
             exit()
     print("Hyperparameter search has concluded.")
-
-
-def get_total_generations(settings_list: list[OptimizationSettings] = None) -> int:
-    total: int = 0
-    for settings in settings_list:
-        total += settings.generation_limit
-    return total
 
 
 def get_default_settings(race_type: str = "ASC") -> tuple[dict, dict]:
@@ -347,11 +346,11 @@ def get_default_settings(race_type: str = "ASC") -> tuple[dict, dict]:
 
 def build_basic_model(race_type: str = "ASC", golang: bool = True, granularity: float = 1) -> Simulation:
     initial_conditions, model_parameters = get_default_settings(race_type)
-    simulation_builder = SimulationBuilder()\
-        .set_initial_conditions(initial_conditions)\
-        .set_model_parameters(model_parameters, race_type)\
-        .set_golang(golang)\
-        .set_return_type(SimulationReturnType.void)\
+    simulation_builder = SimulationBuilder() \
+        .set_initial_conditions(initial_conditions) \
+        .set_model_parameters(model_parameters, race_type) \
+        .set_golang(golang) \
+        .set_return_type(SimulationReturnType.void) \
         .set_granularity(granularity)
     return simulation_builder.get()
 
