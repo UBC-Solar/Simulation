@@ -14,6 +14,10 @@ class Noise:
         self.randomSeed = 0
 
     def generate_perlin_noise(self, length, width, buffer):
+        # Notably, compared to other Go implementations, the Go implementation of generate_perlin_noise and the
+        # Pythonic version have rather different functionalities, but both will return results that are valid
+        # for our use case despite their differences.
+
         if self.golang and self.lib is not None:
             self.noise = self.lib.golang_generate_perlin_noise(randomSeed=self.randomSeed)
             self.randomSeed += 1
