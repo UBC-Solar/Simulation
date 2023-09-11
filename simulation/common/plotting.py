@@ -41,8 +41,8 @@ class Plotting:
                        array_labels=graph.plot_titles,
                        graph_title=graph.graph_name)
 
-            # Remove every graph from the queue after they've been graphed.
-            self.graph_queue.remove(graph)
+        # Remove every graph from the queue after they've been graphed.
+        self.graph_queue.clear()
 
     def add_graph_to_queue(self, new_graph):
         """
