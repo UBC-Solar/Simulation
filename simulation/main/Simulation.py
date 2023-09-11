@@ -256,14 +256,13 @@ class Simulation:
         speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
         if self.tick != 1:
             speed_kmh = speed_kmh[::self.tick]
-        # TODO: There are STILL issues with tick changes not being accounted for! Still!!
-        if self.race_type == "ASC":
-            speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances,
-                                                       speed_kmh / 3.6,
-                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
 
-        if self.tick != 1:
-            speed_kmh = speed_kmh[::self.tick]
+        # NOTE: If we want to enable this functionality, length of a tick must be considered in its calculations
+        # if self.race_type == "ASC":
+        #     speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances,
+        #                                                speed_kmh / 3.6,
+        #                                                self.waypoints, verbose=False)[:self.simulation_duration + 1]
+
         raw_speed = speed_kmh.copy()
 
         # ------ Run calculations and get result and modified speed array -------
@@ -293,6 +292,12 @@ class Simulation:
             self.plotting.add_graph_to_queue(Graph(results_arrays, results_labels, graph_name="Results"))
 
             if verbose:
+                # Plot energy arrays
+                energy_arrays = self.get_results(["motor_consumed_energy", "array_produced_energy", "delta_energy"])
+                energy_labels = ["Motor Consumed Energy (J)", "Array Produced Energy (J)", "Delta Energy (J)"]
+                energy_graph = Graph(energy_arrays, energy_labels, graph_name="Energy Calculations")
+                self.plotting.add_graph_to_queue(energy_graph)
+
                 # Plot indices and environment arrays
                 env_arrays = self.get_results(["temp", "closest_gis_indices", "closest_weather_indices",
                                                "gradients", "time_zones", "gis_vehicle_bearings"])
