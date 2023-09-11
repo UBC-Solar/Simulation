@@ -73,6 +73,7 @@ class Simulation:
         self.lvs_power_loss = builder.lvs_power_loss  # LVS power loss is pretty small, so it is neglected
 
         self.tick = builder.tick
+        assert isinstance(self.tick, int), "Discrete tick length must be an integer!"
 
         if self.race_type == "ASC":
             race_length = builder.race_length  # Race length in days, arbitrary as ASC doesn't have a time limit
@@ -210,7 +211,8 @@ class Simulation:
                                                        ["Speed before waypoints", " Speed after waypoints"],
                                                        "Before and After waypoints"))
 
-        speed_kmh = helpers.apply_deceleration(speed_kmh, 20)
+        if self.tick != 1:
+            speed_kmh = speed_kmh[::self.tick]
         raw_speed = speed_kmh
 
         # ------ Run calculations and get result and modified speed array -------
