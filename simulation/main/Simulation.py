@@ -312,7 +312,7 @@ class Simulation:
                 boolean_graph = Graph(boolean_arrays, boolean_labels, graph_name="Speed Boolean Operations")
                 self.plotting.add_graph_to_queue(boolean_graph)
 
-            self.plotting.plot_graphs(self.get_results(["timestamps"])[0], plotting_portion=plot_portion)
+            self.plotting.plot_graphs(self.get_results("timestamps"), plotting_portion=plot_portion)
 
         if route_visualization:
             if self.race_type == "FSGP":
@@ -350,7 +350,7 @@ class Simulation:
 
     @simulation_property
     def was_successful(self):
-        state_of_charge = self.get_results(["state_of_charge"])
+        state_of_charge = self.get_results("state_of_charge")
         if np.min(np.abs(state_of_charge)) < 1e-03:
             return False
         return True

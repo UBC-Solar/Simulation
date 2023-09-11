@@ -7,12 +7,15 @@ import numpy as np
 from typing import Union
 from simulation.common import helpers
 
+Iterable = Union[np.ndarray, list, set, tuple]
+
 
 class Model:
     __Empty = np.array([0])
     """
     Models should be considered to be immutable. Instantiate a new model when you want to run a different simulation.
     """
+
     def __init__(self, simulation, speed_kmh):
         self.simulation = simulation
         self.speed_kmh = speed_kmh
@@ -137,7 +140,7 @@ class Model:
         weather_forecasts = self.simulation.weather.get_weather_forecast_in_time(self.closest_weather_indices,
                                                                                  local_times)
         roll_by_tick = 3600 * (
-                    24 + self.simulation.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
+                24 + self.simulation.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
 
         absolute_wind_speeds = weather_forecasts[:, 5]
@@ -226,16 +229,29 @@ class Model:
 
         self.calculations_have_happened = True
 
-    def get_results(self, values: Union[np.ndarray, list, tuple, set]) -> list:
+    def get_results(self, requested_properties: Union[Iterable, str]) -> Union[list, np.ndarray, float]:
         """
 
-        Use this function to extract data from a Simulation model.
-        For example, input ["speed_kmh","delta_energy"] to extract speed_kmh and delta_energy. Use
-        "default" to extract the properties that used to be in the SimulationResults object.
+        Extract data from a Simulation model.
 
-        :param values: an iterable of strings that should correspond to a certain property of simulation.
-        :returns: a list of Simulation properties in the order provided.
-        :rtype: list
+        For example, input ["speed_kmh","delta_energy"] to extract speed_kmh and delta_energy. Use
+        "default" to extract the properties that used to be in the deprecated SimulationResults object.
+
+        Note: Multiple properties are returned as a list. If a single property is requested, it will be returned
+        without being wrapped in a list.
+
+        Valid Keywords:
+            speed_kmh, distances, state_of_charge, delta_energy, solar_irradiances, wind_speeds,
+            gis_route_elevations_at_each_tick, cloud_covers, distance, route_length, time_taken,
+            tick_array, timestamps, time_zones, cumulative_distances, temp, closest_gis_indices,
+            closest_weather_indices, path_distances, max_route_distance, gis_vehicle_bearings,
+            gradients, absolute_wind_speeds, wind_directions, lvs_consumed_energy, motor_consumed_energy,
+            array_produced_energy, not_charge, consumed_energy, produced_energy, time_in_motion, final_soc,
+            distance_travelled, map_data_indices, path_coordinates, raw_soc
+
+        :param requested_properties: an iterable of strings, or a single string equal to a valid keyword.
+        :returns: the Simulation properties requested, in the order provided.
+        :rtype: Union[list, np.ndarray, float]
 
         """
 
@@ -278,17 +294,30 @@ class Model:
             "raw_soc": self.raw_soc
         }
 
-        if "default" in values:
-            default_index = values.index("default")
-            values.pop(default_index)
-            default_values = ["speed_kmh", "distances", "state_of_charge", "delta_energy", "solar_irradiances",
-                              "wind_speeds", "gis_route_elevations_at_each_tick", "cloud_covers",
-                              "distance_travelled", "time_taken", "final_soc"]
-            for index, default_value in enumerate(default_values):
-                if default_value not in values:
-                    values.insert(index + default_index, default_value)
+        if "default" in requested_properties or requested_properties == "default":
+            # If just "default" was provided, replace values with a list containing the default values
+            if isinstance(requested_properties, str):
+                requested_properties = ["speed_kmh", "distances", "state_of_charge", "delta_energy",
+                                        "solar_irradiances",
+                                        "wind_speeds", "gis_route_elevations_at_each_tick", "cloud_covers",
+                                        "distance_travelled", "time_taken", "final_soc"]
+            else:
+                # If default was instead an element in a list of requested properties, insert the default properties
+                # where "default" is in the request
+                default_index = requested_properties.index("default")
+                requested_properties.pop(default_index)
+                default_values = ["speed_kmh", "distances", "state_of_charge", "delta_energy", "solar_irradiances",
+                                  "wind_speeds", "gis_route_elevations_at_each_tick", "cloud_covers",
+                                  "distance_travelled", "time_taken", "final_soc"]
+                for index, default_value in enumerate(default_values):
+                    if default_value not in requested_properties:
+                        requested_properties.insert(index + default_index, default_value)
+
+        # If just a single value was requested, return it without wrapping it in a list
+        if isinstance(requested_properties, str) and requested_properties != "default":
+            return simulation_results[requested_properties]
 
         results = []
-        for value in values:
+        for value in requested_properties:
             results.append(simulation_results[value])
         return results

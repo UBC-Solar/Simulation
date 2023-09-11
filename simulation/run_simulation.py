@@ -293,7 +293,7 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
     if input_speed is None:
         input_speed = np.array([30] * driving_hours)
     if values is None:
-        values = ["default"]
+        values = "default"
 
     simulation_model.run_model(speed=input_speed, plot_results=True, verbose=False, route_visualization=False,
                                plot_portion=(0.0 / 8.0, 8.0 / 8.0))
