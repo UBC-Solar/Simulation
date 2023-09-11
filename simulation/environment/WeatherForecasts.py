@@ -369,18 +369,26 @@ class WeatherForecasts:
 
         """
 
-        # each element is the weather forecast for all available times at that coordinate
+        if self.golang:
+            return self.golang_get_weather_in_time(unix_timestamps, indices)
+        else:
+            return self.python_get_weather_in_time(unix_timestamps, indices)
+
+    def golang_get_weather_in_time(self, unix_timestamps, indices):
+        tensor_sizes = self.weather_forecast.shape
+        linearized_length = tensor_sizes[0] * tensor_sizes[1] * tensor_sizes[2]
+        linearized_weather_forecasts = self.weather_forecast.reshape([linearized_length])
+        return self.lib.golang_weather_in_time(linearized_weather_forecasts, unix_timestamps, indices, tensor_sizes)
+
+    def python_get_weather_in_time(self, unix_timestamps, indices):
         full_weather_forecast_at_coords = self.weather_forecast[indices]
         dt_local_array = full_weather_forecast_at_coords[0, :, 4]
 
-        if self.golang:
-            closest_timestamp_indices = self.lib.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
-        else:
-            closest_timestamp_indices = self.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
-
         temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
+        closest_timestamp_indices = self.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
 
         return full_weather_forecast_at_coords[temp_0, closest_timestamp_indices]
+
 
     @staticmethod
     def cull_dataset(coords, reduction_factor):

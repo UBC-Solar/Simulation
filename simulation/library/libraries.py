@@ -277,14 +277,17 @@ class Libraries:
 
         """
 
+        # Using custom pointer generation instead of generate_output_pointer as results is a matrix, not an array
+        results = np.zeros([len(indices), tensor_sizes[2]], dtype=ctypes.c_double)
+        results_ptr = results.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+
         weather_forecast_ptr = Libraries.generate_input_pointer(weather_forecast, ctypes.c_double)
-        linear_results_ptr, linear_results = Libraries.generate_output_pointer(len(indices) * tensor_sizes[2], ctypes.c_double)
         indices_ptr = Libraries.generate_input_pointer(indices, ctypes.c_int32)
         unix_timestamps_ptr = Libraries.generate_input_pointer(unix_timestamps, ctypes.c_double)
 
         self.main_library.weather_in_time(
             weather_forecast_ptr,
-            linear_results_ptr,
+            results_ptr,
             unix_timestamps_ptr,
             indices_ptr,
             tensor_sizes[0],
@@ -293,7 +296,7 @@ class Libraries:
             len(indices),
         )
 
-        return linear_results
+        return results
 
     def golang_generate_perlin_noise(self, width=256, height=256, persistence=0.45, numLayers=8, roughness=7.5,
                                      baseRoughness=1.5, strength=1, randomSeed=0):
