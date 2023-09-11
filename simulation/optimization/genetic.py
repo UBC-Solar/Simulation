@@ -203,6 +203,13 @@ class GeneticOptimization(BaseOptimization):
         # Define the function that will be used to determine the fitness of each chromosome
         fitness_function = self.fitness
 
+        # https://www.desmos.com/calculator/gvknyspywa
+        def sigmoid(a, c, race_length):
+            return lambda x: 1 / (1 + math.exp(-(a * x + (-(math.log(1 / c - 1) + a * race_length)))))
+
+        # coefficients 0.085 and 0.985 are numbers chosen to generate the function curve desired: see the Desmos graph
+        self.fitness_sigmoid = sigmoid(0.085, 0.985, self.model.get_race_length()/1000.0)
+
         # Define how many generations that GA will run (sequence may end prematurely depending on
         # if a stopping condition has been defined!)
         num_generations = self.settings.generation_limit
@@ -403,9 +410,6 @@ class GeneticOptimization(BaseOptimization):
 
         """
 
-        def sigmoid(a, b):
-            return lambda x: 1 / (1 + math.exp(-(a * x + b)))
-
         # Chromosomes are normalized, so must be denormalized before being fed to Simulation.
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
         distance_travelled, time_taken = self.func(solution_denormalized)
@@ -415,10 +419,8 @@ class GeneticOptimization(BaseOptimization):
 
         self.did_finish_race = True if distance_travelled_real == distance_travelled else False
 
-        # https://www.desmos.com/calculator/kyjn0cilyc
         # distance_travelled is scaled such that optimization REALLY prioritizes finishing the race
-        # TODO: These numbers are optimized for a race length of 2466km. This MUST be automated.
-        distance_scaled = distance_travelled_real * sigmoid(0.1105, -266)(distance_travelled_real)
+        distance_scaled = distance_travelled_real * self.fitness_sigmoid(distance_travelled_real)
 
         # combined_fitness = distance travelled (km) / time_taken (days) = distance travelled per day
         combined_fitness = distance_scaled / (time_taken / 86400)

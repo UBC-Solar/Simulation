@@ -381,3 +381,15 @@ class Simulation:
         return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
                                                            self.race_type, self.granularity,
                                                            as_seconds=False).sum().astype(int)
+
+    def get_race_length(self):
+        try:
+            value = self.get_results("max_route_distance")
+        except simulation.PrematureDataRecoveryError:
+            speed_kmh = np.array([30] * self.get_driving_time_divisions())
+            if self._model is None:
+                self._model = simulation.Model(self, speed_kmh)
+            self._model.run_simulation_calculations()
+            value = self.get_results("max_route_distance")
+
+        return value
