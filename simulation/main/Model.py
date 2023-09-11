@@ -11,7 +11,6 @@ Iterable = Union[np.ndarray, list, set, tuple]
 
 
 class Model:
-    __Empty = np.array([0])
     """
     Models should be considered to be immutable. Instantiate a new model when you want to run a different simulation.
     """
@@ -24,7 +23,7 @@ class Model:
 
         # --------- Results ---------
 
-        self.distances: np.ndarray = Model.__Empty
+        self.distances = None
         self.state_of_charge = None
         self.delta_energy = None
         self.solar_irradiances = None
@@ -139,8 +138,7 @@ class Model:
         # Get the weather at every location
         weather_forecasts = self.simulation.weather.get_weather_forecast_in_time(self.closest_weather_indices,
                                                                                  local_times)
-        roll_by_tick = 3600 * (
-                24 + self.simulation.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
+        roll_by_tick = int(3600 / self.simulation.tick) * (24 + self.simulation.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
 
         absolute_wind_speeds = weather_forecasts[:, 5]
@@ -179,6 +177,7 @@ class Model:
                                                                         race_type=self.simulation.race_type)
         if self.simulation.tick != 1:
             self.not_charge = self.not_charge[::self.simulation.tick]
+
         self.array_produced_energy = np.logical_and(self.array_produced_energy,
                                                     self.not_charge) * self.array_produced_energy
 
