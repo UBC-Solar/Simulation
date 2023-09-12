@@ -207,8 +207,13 @@ class GeneticOptimization(BaseOptimization):
         def sigmoid(a, c, race_length):
             return lambda x: 1 / (1 + math.exp(-(a * x + (-(math.log(1 / c - 1) + a * race_length)))))
 
+        # https://www.desmos.com/calculator/uncbg8hnvq
+        def amplifier(race_length):
+            return lambda x: math.pow(math.sqrt(3) * (race_length - x) / (-x), 2) + 1
+
         # coefficients 0.085 and 0.985 are numbers chosen to generate the function curve desired: see the Desmos graph
-        self.fitness_sigmoid = sigmoid(0.085, 0.985, self.model.get_race_length()/1000.0)
+        self.fitness_sigmoid = sigmoid(0.03, 0.985, self.model.get_race_length() / 1000.0)
+        self.fitness_amplifier = amplifier(self.model.simulation_duration)
 
         # Define how many generations that GA will run (sequence may end prematurely depending on
         # if a stopping condition has been defined!)
@@ -421,9 +426,11 @@ class GeneticOptimization(BaseOptimization):
 
         # distance_travelled is scaled such that optimization REALLY prioritizes finishing the race
         distance_scaled = distance_travelled_real * self.fitness_sigmoid(distance_travelled_real)
+        # optimization really likes even small reductions in time taken
+        time_taken_scaled = time_taken / self.fitness_amplifier(time_taken)
 
         # combined_fitness = distance travelled (km) / time_taken (days) = distance travelled per day
-        combined_fitness = distance_scaled / (time_taken / 86400)
+        combined_fitness = distance_scaled / (time_taken_scaled / 86400)
 
         return combined_fitness
 
