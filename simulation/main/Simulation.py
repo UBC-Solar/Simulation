@@ -201,8 +201,7 @@ class Simulation:
         filtered_hash_string = "".join(filter(str.isnumeric, hash_string))
         return helpers.PJWHash(filtered_hash_string)
 
-    @helpers.timeit
-    def run_model(self, speed, plot_results=False, verbose=False,
+    def run_model(self, speed=None, plot_results=False, verbose=False,
                   route_visualization=False, plot_portion=(0.0, 1.0), **kwargs):
         """
 
@@ -231,6 +230,9 @@ class Simulation:
         like to plot as percentages.
 
         """
+
+        if speed is None:
+            speed = np.array([30] * self.get_driving_time_divisions())
 
         # Used by the optimization function as it passes values as keyword arguments instead of a numpy array
         if kwargs:
@@ -340,7 +342,7 @@ class Simulation:
         return self._model.calculations_have_happened
 
     @simulation_property
-    def get_results(self, values: Union[np.ndarray, list, tuple, set]) -> list:
+    def get_results(self, values: Union[np.ndarray, list, tuple, set, str]) -> Union[list, np.ndarray, float]:
         """
 
         Use this function to extract data from a Simulation model.
