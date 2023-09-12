@@ -222,8 +222,7 @@ class Model:
         self.distance_travelled = self.distances[-1]
 
         if self.distance_travelled >= self.route_length:
-            self.time_taken = helpers.calculate_race_completion_time(
-                self.route_length, self.distances)
+            self.time_taken = self.timestamps[helpers.calculate_completion_index(self.route_length, self.distances)]
         else:
             self.time_taken = self.simulation.simulation_duration
 

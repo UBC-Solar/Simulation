@@ -9,7 +9,7 @@ def test_calculate_race_completion_time1():
     test_path_length = 10
     test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
 
-    result = helpers.calculate_race_completion_time(
+    result = helpers.calculate_completion_index(
         test_path_length, test_cumulative_distances)
     assert result == 8
 
@@ -21,7 +21,7 @@ def test_calculate_race_completion_time2():
     test_path_length = 100
     test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
 
-    result = helpers.calculate_race_completion_time(
+    result = helpers.calculate_completion_index(
         test_path_length, test_cumulative_distances)
     assert result == 10
 
@@ -33,7 +33,7 @@ def test_calculate_race_completion_time3():
     test_path_length = 0
     test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
 
-    result = helpers.calculate_race_completion_time(
+    result = helpers.calculate_completion_index(
         test_path_length, test_cumulative_distances)
     assert result == 0
 
@@ -45,7 +45,7 @@ def test_calculate_race_completion_time4():
     test_path_length = 3
     test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
 
-    result = helpers.calculate_race_completion_time(
+    result = helpers.calculate_completion_index(
         test_path_length, test_cumulative_distances)
     assert result == 5
 
