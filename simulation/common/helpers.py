@@ -771,11 +771,11 @@ def simple_plot_graph(data, title, visible=True):
         plt.show()
 
 
-def calculate_race_completion_time(path_length, cumulative_distances):
+def calculate_completion_index(path_length, cumulative_distances):
     """
 
-    This function uses the maximum path distance and cumulative distances travelled
-    during the simulation to identify how long the car takes to finish travelling the route.
+    This function identifies the index of cumulative_distances where the route has been completed.
+    Indexing timestamps with the result of this function will return the time taken to complete the race.
 
     This problem, although framed in the context of the Simulation, is just to find the array position of the first
     value that is greater or equal to a target value
@@ -787,7 +787,7 @@ def calculate_race_completion_time(path_length, cumulative_distances):
         path_length and cumulative_distances may be in any length unit, but they must share the same length unit
         Each index of the cumulative_distances array represents one second of the simulation
 
-    :returns: The number of seconds the vehicle requires to travel the full path length. If vehicle does not travel the full path length, returns
+    :returns: First index of cumulative_distances where the route has been completed
     :rtype: int
 
     """
