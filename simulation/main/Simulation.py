@@ -41,9 +41,10 @@ class SimulationReturnType(StrEnum):
 
     """
 
-    time_taken = 0
-    distance_travelled = 1
-    void = 2
+    time_taken = "time_taken"
+    distance_travelled = "distance_travelled"
+    distance_and_time = "distance_and_time"
+    void = "void"
 
 
 class Simulation:
@@ -170,7 +171,9 @@ class Simulation:
 
         self.solar_calculations = simulation.SolarCalculations(library=self.library)
 
-        self.local_times = 0
+        self.plotting = simulation.Plotting()
+
+        # -------- Hash Key ---------
 
         self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
 
@@ -255,7 +258,8 @@ class Simulation:
 
         if plot_results:
             results_arrays = self.get_results(["speed_kmh", "distances", "state_of_charge", "delta_energy",
-                                               "solar_irradiances", "wind_speeds", "gis_route_elevations_at_each_tick",
+                                               "solar_irradiances", "wind_speeds",
+                                               "gis_route_elevations_at_each_tick",
                                                "cloud_covers", "raw_soc"]) + [raw_speed]
             results_labels = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                               "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
@@ -264,6 +268,12 @@ class Simulation:
             self.plotting.add_graph_to_queue(Graph(results_arrays, results_labels, graph_name="Results"))
 
             if verbose:
+                # Plot energy arrays
+                energy_arrays = self.get_results(["motor_consumed_energy", "array_produced_energy", "delta_energy"])
+                energy_labels = ["Motor Consumed Energy (J)", "Array Produced Energy (J)", "Delta Energy (J)"]
+                energy_graph = Graph(energy_arrays, energy_labels, graph_name="Energy Calculations")
+                self.plotting.add_graph_to_queue(energy_graph)
+
                 # Plot indices and environment arrays
                 env_arrays = self.get_results(["temp", "closest_gis_indices", "closest_weather_indices",
                                                "gradients", "time_zones", "gis_vehicle_bearings"])
@@ -276,6 +286,7 @@ class Simulation:
                 arrays_to_plot = self.get_results(["speed_kmh", "state_of_charge"])
                 logical_arrays = []
                 for arr in arrays_to_plot:
+                    speed_kmh = arrays_to_plot[0]
                     speed_kmh = np.logical_and(speed_kmh, arr) * speed_kmh
                     logical_arrays.append(speed_kmh)
 
@@ -284,7 +295,7 @@ class Simulation:
                 boolean_graph = Graph(boolean_arrays, boolean_labels, graph_name="Speed Boolean Operations")
                 self.plotting.add_graph_to_queue(boolean_graph)
 
-            self.plotting.plot_graphs(self.timestamps)
+            self.plotting.plot_graphs(self.get_results("timestamps"), plot_portion=plot_portion)
 
         if route_visualization:
             if self.race_type == "FSGP":
