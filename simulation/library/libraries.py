@@ -45,7 +45,7 @@ class Libraries:
 
             self.main_library.weather_in_time_loop.argtypes = [
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.POINTER(ctypes.c_longlong),
+                ctypes.POINTER(ctypes.c_double),
                 ctypes.POINTER(ctypes.c_double),
                 ctypes.c_longlong,
                 ctypes.c_longlong
@@ -78,31 +78,6 @@ class Libraries:
                 ctypes.c_long
             ]
 
-            self.main_library.weather_in_time.argtypes = [
-                ctypes.POINTER(ctypes.c_double),
-                ctypes.POINTER(ctypes.c_double),
-                ctypes.POINTER(ctypes.c_double),
-                ctypes.POINTER(ctypes.c_int32),
-                ctypes.c_longlong,
-                ctypes.c_longlong,
-                ctypes.c_longlong,
-                ctypes.c_longlong,
-            ]
-
-            self.perlin_noise_library = ctypes.cdll.LoadLibrary(f"{self.go_directory}/perlin_noise.so")
-
-            self.perlin_noise_library.generatePerlinNoise.argtypes = [
-                ctypes.POINTER(ctypes.c_float),
-                ctypes.c_uint32,
-                ctypes.c_uint32,
-                ctypes.c_float,
-                ctypes.c_uint32,
-                ctypes.c_float,
-                ctypes.c_float,
-                ctypes.c_float,
-                ctypes.c_uint32
-            ]
-
     def GetGoDirectory(self):
         """
 
@@ -120,18 +95,18 @@ class Libraries:
                              os.path.isdir(os.path.join(binaries_directory, f))]
 
         # Try to find compatible binaries by checking until compatible binaries are found
-        for binary_container in binary_containers:
-            try:
-                ctypes.cdll.LoadLibrary(f"{binaries_directory}/{binary_container}/main.so")
-                return f"{binaries_directory}/{binary_container}"
-            except OSError:
-                pass
-
-        if self.raiseExceptionOnFail:
-            raise FileNotFoundError("GoLang binaries not found for your operating system. "
-                                    "Please either compile them for your operating system or disable GoLang usage "
-                                    "in Simulation instantiation.")
-        else:
+        try:
+            for binary_container in binary_containers:
+                try:
+                    ctypes.cdll.LoadLibrary(f"{binaries_directory}/{binary_container}/main.so")
+                    return f"{binaries_directory}/{binary_container}"
+                except:
+                    pass
+        except:
+            if self.raiseExceptionOnFail:
+                raise Exception("GoLang binaries not found for your operating system. "
+                                "Please either compile them for your operating system or disable GoLang usage "
+                                "in Simulation instantiation.")
             return None
 
     def found_compatible_binaries(self):
@@ -163,14 +138,14 @@ class Libraries:
         # Execute the Go shared library (compiled Go function) and pass it the pointers we generated
         self.main_library.closest_gis_indices_loop(
             average_distances_pointer,
-            len(average_distances),
+            len(average_distances_pointer),
             cumulative_distances_pointer,
-            len(cumulative_distances),
+            len(cumulative_distances_pointer),
             results_pointer,
             len(results),
         )
 
-        return results
+        return np.array(results, 'i')
 
     def golang_calculate_closest_timestamp_indices(self, unix_timestamps, dt_local_array):
         """
@@ -182,8 +157,7 @@ class Libraries:
         # Generate pointers to arrays to pass to a Go binary
         unix_timestamps_pointer = Libraries.generate_input_pointer(unix_timestamps, ctypes.c_double)
         dt_local_arr_pointer = Libraries.generate_input_pointer(dt_local_array, ctypes.c_double)
-        closest_time_stamp_indices_pointer, closest_time_stamp_indices = Libraries.generate_output_pointer(
-            len(unix_timestamps), ctypes.c_longlong)
+        closest_time_stamp_indices_pointer, closest_time_stamp_indices = Libraries.generate_output_pointer(unix_timestamps, ctypes.c_double)
 
         # Execute the Go shared library (compiled Go function) and pass it the pointers we generated
         self.main_library.weather_in_time_loop(
@@ -193,7 +167,7 @@ class Libraries:
             len(dt_local_array),
             len(unix_timestamps))
 
-        return closest_time_stamp_indices
+        return np.array(closest_time_stamp_indices, 'i')
 
     def golang_calculate_closest_weather_indices(self, cumulative_distances, average_distances):
         """
@@ -205,8 +179,7 @@ class Libraries:
         # Get pointers for GoLang
         cumulative_distances_pointer = Libraries.generate_input_pointer(cumulative_distances, ctypes.c_double)
         average_distances_pointer = Libraries.generate_input_pointer(average_distances, ctypes.c_double)
-        closest_weather_indices_pointer, closest_weather_indices = Libraries.generate_output_pointer(
-            len(cumulative_distances), ctypes.c_long)
+        closest_weather_indices_pointer, closest_weather_indices = Libraries.generate_output_pointer(len(cumulative_distances), ctypes.c_long)
 
         self.main_library.closest_weather_indices_loop(
             cumulative_distances_pointer,
@@ -214,10 +187,10 @@ class Libraries:
             average_distances_pointer,
             len(average_distances),
             closest_weather_indices_pointer,
-            len(closest_weather_indices)
+            len(closest_weather_indices_pointer)
         )
 
-        return closest_weather_indices
+        return np.array(closest_weather_indices, 'i')
 
     def golang_calculate_array_GHI_times(self, local_times):
         """
@@ -240,7 +213,7 @@ class Libraries:
             len(local_time)
         )
 
-        return day_of_year, local_time
+        return np.array(day_of_year, 'd'), np.array(local_time, 'd')
 
     def golang_speeds_with_waypoints_loop(self, speeds, distances, waypoints):
         """
@@ -250,7 +223,7 @@ class Libraries:
         """
 
         # We need to flatten waypoints from a [1x7] matrix to a 1D array.
-        flattened_waypoints = np.array([0] * len(waypoints))
+        flattened_waypoints = np.array([0]*len(waypoints))
         for i in range(len(waypoints)):
             flattened_waypoints[i] = waypoints[i][0]
 
@@ -268,61 +241,7 @@ class Libraries:
             len(waypoints)
         )
 
-        return new_speeds
-
-    def golang_weather_in_time(self, weather_forecast, unix_timestamps, indices, tensor_sizes):
-        """
-
-        GoLang implementation of get_weather_forecast_in_time. See parent function for details.
-
-        """
-
-        # Using custom pointer generation instead of generate_output_pointer as results is a matrix, not an array
-        results = np.zeros([len(indices), tensor_sizes[2]], dtype=ctypes.c_double)
-        results_ptr = results.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-
-        weather_forecast_ptr = Libraries.generate_input_pointer(weather_forecast, ctypes.c_double)
-        indices_ptr = Libraries.generate_input_pointer(indices, ctypes.c_int32)
-        unix_timestamps_ptr = Libraries.generate_input_pointer(unix_timestamps, ctypes.c_double)
-
-        self.main_library.weather_in_time(
-            weather_forecast_ptr,
-            results_ptr,
-            unix_timestamps_ptr,
-            indices_ptr,
-            tensor_sizes[0],
-            tensor_sizes[1],
-            tensor_sizes[2],
-            len(indices),
-        )
-
-        return results
-
-    def golang_generate_perlin_noise(self, width=256, height=256, persistence=0.45, numLayers=8, roughness=7.5,
-                                     baseRoughness=1.5, strength=1, randomSeed=0):
-        """
-
-        GoLang implementation of generate_perlin_noise. See parent function for details.
-
-        """
-
-        output_array = np.array([0] * (width * height))
-        output_array_copy = output_array.astype(ctypes.c_float)
-        ptr = output_array_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-
-        self.perlin_noise_library.generatePerlinNoise(
-            ptr,
-            width,
-            height,
-            persistence,
-            numLayers,
-            roughness,
-            baseRoughness,
-            strength,
-            randomSeed
-        )
-
-        return np.array(output_array_copy, 'f').reshape(width, height)
+        return np.array(new_speeds, 'd')
 
     @staticmethod
     def generate_input_pointer(input_array, c_type):
@@ -335,12 +254,12 @@ class Libraries:
         :return: A pointer pointing to input_array
 
         """
-        input_array_copy = input_array.astype(c_type)
-        ptr = input_array_copy.ctypes.data_as(ctypes.POINTER(c_type))
-        return ptr
+        array_copy = array.array(Libraries.ctypes_dict[c_type], input_array)
+        array_copy_pointer = (c_type * len(array_copy)).from_buffer(array_copy)
+        return array_copy_pointer
 
     @staticmethod
-    def generate_output_pointer(output_array_length: int, c_type):
+    def generate_output_pointer(output_array_length, c_type):
         """
 
         Generate an array and a pointer to that array for a Go binary to write to.
@@ -350,9 +269,9 @@ class Libraries:
         :return: A pointer pointing to output_array, and output array itself
 
         """
-        output_array = np.array([0] * output_array_length, dtype=c_type)
-        ptr = output_array.ctypes.data_as(ctypes.POINTER(c_type))
-        return ptr, output_array
+        output_array = array.array(Libraries.ctypes_dict[c_type], [0] * output_array_length)
+        output_array_pointer = (c_type * len(output_array)).from_buffer(output_array)
+        return output_array_pointer, output_array
 
     @staticmethod
     def generate_input_output_pointer(input_array, c_type):
