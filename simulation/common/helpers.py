@@ -793,7 +793,6 @@ def calculate_completion_index(path_length, cumulative_distances):
     """
 
     # Create a boolean array to encode whether the vehicle has completed or not completed the route at a given timestamp
-    # This is based on the assumption that each index represents a single timestamp of one second
     crossed_finish_line = np.where(cumulative_distances >= path_length, 1, 0)
 
     # Based on the boolean encoding, identify the first index which the vehicle has completed the route
@@ -803,6 +802,7 @@ def calculate_completion_index(path_length, cumulative_distances):
         return completion_index[0][0]
     else:
         return len(cumulative_distances) + 1
+
 
 
 def plot_longitudes(coordinates):
@@ -863,6 +863,7 @@ def map_array_to_targets(input_array, target_array):
         i += 1
 
     return output_array
+
 
 def get_map_data_indices(closest_gis_indices):
     """
