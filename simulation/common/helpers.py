@@ -882,6 +882,24 @@ def get_map_data_indices(closest_gis_indices):
     return map_data_indices
 
 
+#  Credits to Arash Partow - 2002
+#  https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
+def PJWHash(key):
+    BitsInUnsignedInt = 4 * 8
+    ThreeQuarters = long((BitsInUnsignedInt * 3) / 4)
+    OneEighth = long(BitsInUnsignedInt / 8)
+    HighBits = 0xFFFFFFFF << (BitsInUnsignedInt - OneEighth)
+    Hash = 0
+    Test = 0
+
+    for i in range(len(key)):
+        Hash = (Hash << OneEighth) + ord(key[i])
+        Test = Hash & HighBits
+        if Test != 0:
+            Hash = ((Hash ^ (Test >> ThreeQuarters)) & (~HighBits))
+    return Hash & 0x7FFFFFFF
+
+
 if __name__ == '__main__':
     out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])
 

@@ -183,15 +183,26 @@ class Simulation:
 
         # -------- Hash Key ---------
 
-        self.timestamps = np.arange(0, self.simulation_duration + self.tick, self.tick)
+        self.hash_key = self.__hash__()
 
         # All attributes ABOVE will NOT be modified when the model is simulated. All attributes BELOW this WILL be
         # mutated over the course of simulation. Ensure that when you modify the behaviour of Simulation that this
         # fact is maintained, else the stability of the optimization process WILL be threatened, as it assumes
         # that the attributes above are independent of whether the model has been previously simulated.
 
-    def run_model(self, speed=np.array([20, 20, 20, 20, 20, 20, 20, 20]), plot_results=True, verbose=False,
-                  route_visualization=False, **kwargs):
+        # A Model is a (mostly) immutable container for simulation calculations and results
+        self._model = None
+
+    def __hash__(self):
+        hash_string = str(self.origin_coord) + str(self.dest_coord) + str(self.current_coord) + str(
+            self.start_hour) + str(self.initial_battery_charge) + str(self.tick) + str(self.simulation_duration)
+        for value in self.waypoints:
+            hash_string += str(value)
+        filtered_hash_string = "".join(filter(str.isnumeric, hash_string))
+        return helpers.PJWHash(filtered_hash_string)
+
+    def run_model(self, speed=None, plot_results=False, verbose=False,
+                  route_visualization=False, plot_portion=(0.0, 1.0), **kwargs):
         """
 
         Given an array of driving speeds, simulate the model by running calculations sequentially for the entire
