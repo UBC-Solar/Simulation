@@ -1,7 +1,7 @@
 from simulation.common import Consumer
 from simulation.common import Producer
 from simulation.common import Storage
-from simulation.common import BatteryEmptyError
+from simulation.common import BatteryEmptyError, PrematureDataRecoveryError
 
 from simulation.arrays import BaseArray
 from simulation.battery import BaseBattery
@@ -20,6 +20,7 @@ from simulation.environment.SolarCalculations import SolarCalculations
 from simulation.environment.WeatherForecasts import WeatherForecasts
 
 from simulation.library import Libraries
+from simulation.utils.Plotting import Plotting
 
 from simulation.main import Simulation
 from simulation.main import Model
