@@ -231,6 +231,9 @@ class Simulation:
 
         """
 
+        if speed is None:
+            speed = np.array([30] * self.get_driving_time_divisions())
+
         # Used by the optimization function as it passes values as keyword arguments instead of a numpy array
         if kwargs:
             speed = np.fromiter(kwargs.values(), dtype=float)
@@ -253,19 +256,16 @@ class Simulation:
         speed_mapped_kmh = helpers.reshape_and_repeat(speed_mapped, self.simulation_duration)
         speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
         speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
-
-        if self.race_type == "ASC":
-            speed_kmh_without_checkpoints = speed_kmh
-            speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
-                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
-            if verbose:
-                self.plotting.add_graph_to_queue(Graph([speed_kmh_without_checkpoints, speed_kmh],
-                                                       ["Speed before waypoints", " Speed after waypoints"],
-                                                       "Before and After waypoints"))
-
         if self.tick != 1:
             speed_kmh = speed_kmh[::self.tick]
-        raw_speed = speed_kmh
+
+        # NOTE: If we want to enable this functionality, length of a tick must be considered in its calculations
+        # if self.race_type == "ASC":
+        #     speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances,
+        #                                                speed_kmh / 3.6,
+        #                                                self.waypoints, verbose=False)[:self.simulation_duration + 1]
+
+        raw_speed = speed_kmh.copy()
 
         # ------ Run calculations and get result and modified speed array -------
         self._model = simulation.Model(self, speed_kmh)
@@ -329,14 +329,14 @@ class Simulation:
             elif self.race_type == "ASC":
                 helpers.route_visualization(self.gis.path, visible=route_visualization)
 
-        if self.return_type is SimulationReturnType.distance_travelled:
-            return float(results[2])
-        if self.return_type is SimulationReturnType.time_taken:
-            return -1 * float(results[0])
-        if self.return_type is SimulationReturnType.void:
-            pass
-        else:
-            raise TypeError("Return type not found.")
+        get_return_type = {
+            SimulationReturnType.time_taken: -1 * results[0],
+            SimulationReturnType.distance_travelled: results[2],
+            SimulationReturnType.distance_and_time: (results[2], results[0]),
+            SimulationReturnType.void: None
+        }
+
+        return get_return_type[self.return_type]
 
     def calculations_have_happened(self):
         return self._model.calculations_have_happened
