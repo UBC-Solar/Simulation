@@ -1,17 +1,40 @@
+import simulation
+import functools
 import logging
 import os
-from typing import Union
-
 import numpy as np
-import simulation
 
-from enum import Enum
+from typing import Union
+from strenum import StrEnum
 from dotenv import load_dotenv
+
 from simulation.common import helpers
-from simulation.common.plotting import Graph, Plotting
+from simulation.utils.Plotting import Graph
 
 
-class SimulationReturnType(Enum):
+def simulation_property(func):
+    """
+
+    Apply this decorator to all functions that intend to get data from a Simulation model.
+    This protects the data from being pulled from Simulation before the model has been simulated.
+
+    :param func: function that will be used to get data
+
+    """
+
+    @functools.wraps(func)
+    def property_wrapper(*args, **kwargs):
+        assert isinstance(args[0], Simulation), "simulation_property wrapper applied to non-Simulation function!"
+        if not args[0].calculations_have_happened():
+            raise simulation.PrematureDataRecoveryError("You are attempting to collect information before simulation "
+                                                        "model calculations have completed.")
+        value = func(*args, **kwargs)
+        return value
+
+    return property_wrapper
+
+
+class SimulationReturnType(StrEnum):
     """
 
     This enum exists to discretize different data types run_model should return.
@@ -278,7 +301,11 @@ class Simulation:
         else:
             raise TypeError("Return type not found.")
 
-    def get_results(self, values: Union[np.ndarray, list, tuple, set]) -> list:
+    def calculations_have_happened(self):
+        return self._model.calculations_have_happened
+
+    @simulation_property
+    def get_results(self, values: Union[np.ndarray, list, tuple, set, str]) -> Union[list, np.ndarray, float]:
         """
 
         Use this function to extract data from a Simulation model.
@@ -293,6 +320,19 @@ class Simulation:
 
         return self._model.get_results(values)
 
+    @simulation_property
+    def was_successful(self):
+        state_of_charge = self.get_results("state_of_charge")
+        if np.min(np.abs(state_of_charge)) < 1e-03:
+            return False
+        return True
+
+    @simulation_property
+    def get_distance_before_exhaustion(self):
+        state_of_charge, distances = self.get_results(["state_of_charge", "distances"])
+        index = np.argmax(np.abs(state_of_charge) < 1e-03)
+        return distances[index]
+
     def get_driving_time_divisions(self) -> int:
         """
 
@@ -306,3 +346,15 @@ class Simulation:
         return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
                                                            self.race_type, self.granularity,
                                                            as_seconds=False).sum().astype(int)
+
+    def get_race_length(self):
+        try:
+            value = self.get_results("max_route_distance")
+        except simulation.PrematureDataRecoveryError:
+            speed_kmh = np.array([30] * self.get_driving_time_divisions())
+            if self._model is None:
+                self._model = simulation.Model(self, speed_kmh)
+            self._model.run_simulation_calculations()
+            value = self.get_results("max_route_distance")
+
+        return value
