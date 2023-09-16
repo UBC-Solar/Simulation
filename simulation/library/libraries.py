@@ -78,6 +78,20 @@ class Libraries:
                 ctypes.c_long
             ]
 
+            self.perlin_noise_library = ctypes.cdll.LoadLibrary(f"{self.go_directory}/perlin_noise.so")
+
+            self.perlin_noise_library.generatePerlinNoise.argtypes = [
+                ctypes.POINTER(ctypes.c_float),
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_float,
+                ctypes.c_uint32,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_uint32
+            ]
+
     def GetGoDirectory(self):
         """
 
@@ -242,6 +256,32 @@ class Libraries:
         )
 
         return np.array(new_speeds, 'd')
+
+    def golang_generate_perlin_noise(self, width=256, height=256, persistence=0.45, numLayers=8, roughness=7.5,
+                                     baseRoughness=1.5, strength=1, randomSeed=0):
+        """
+
+        GoLang implementation of generate_perlin_noise. See parent function for details.
+
+        """
+
+        output_array = np.array([0] * (width * height))
+        output_array_copy = output_array.astype(ctypes.c_float)
+        ptr = output_array_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+
+        self.perlin_noise_library.generatePerlinNoise(
+            ptr,
+            width,
+            height,
+            persistence,
+            numLayers,
+            roughness,
+            baseRoughness,
+            strength,
+            randomSeed
+        )
+
+        return np.array(output_array_copy, 'f').reshape(width, height)
 
     @staticmethod
     def generate_input_pointer(input_array, c_type):
