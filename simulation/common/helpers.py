@@ -9,7 +9,6 @@ import time as timer
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.plotting import figure, show, output_file
-from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from simulation.common import constants
 
@@ -639,8 +638,7 @@ def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_
     return np.invert(np.logical_or.reduce(driving_time_boolean))
 
 
-def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
-               plot_portion: tuple[float] = (0.0, 1.0)):
+def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True):
     """
 
     This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
@@ -661,20 +659,8 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
     :param list array_labels: An array of strings for the individual plot titles
     :param str graph_title: A string that serves as the plot's main title
     :param bool save: Boolean flag to control whether to save an .html file
-    :param plot_portion: tuple containing beginning and end of arrays that we want to plot as percentages which is
-    useful if we only want to plot for example the second half of the race in which case we would input (0.5, 1.0).
 
     """
-
-    if plot_portion != (0.0, 1.0):
-        for index, array in enumerate(arrays_to_plot):
-            beginning_index = int(len(array) * plot_portion[0])
-            end_index = int(len(array) * plot_portion[1])
-            arrays_to_plot[index] = array[beginning_index:end_index]
-
-        beginning_index = int(len(timestamps) * plot_portion[0])
-        end_index = int(len(timestamps) * plot_portion[1])
-        timestamps = timestamps[beginning_index:end_index]
 
     compress_constant = int(timestamps.shape[0] / 5000)
 
@@ -690,7 +676,7 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
         ("data", "$y")
     ]
 
-    for index, data_array in enumerate(arrays_to_plot):
+    for (index, data_array) in enumerate(arrays_to_plot):
         # create figures and put them in list
         figures.append(figure(title=array_labels[index], x_axis_label="Time (hr)",
                               y_axis_label=array_labels[index], x_axis_type="datetime"))
@@ -715,6 +701,7 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
     show(grid)
 
     return
+
 
 
 def route_visualization(coords, visible=True):
@@ -863,6 +850,7 @@ def map_array_to_targets(input_array, target_array):
 
     return output_array
 
+
 def get_map_data_indices(closest_gis_indices):
     """
     gets list of indices of the data to be displayed on corresponding
@@ -885,50 +873,6 @@ def normalize(input_array: np.ndarray, max_value: float = None, min_value: float
     max_value_in_array = np.max(input_array) if max_value is None else max_value
     min_value_in_array = np.min(input_array) if min_value is None else min_value
     return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
-
-
-def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0) -> np.ndarray:
-    return input_array * (max_value - min_value) + min_value
-
-
-def rescale(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
-    normalized_array = normalize(input_array)
-    return denormalize(normalized_array, upper_bound, lower_bound)
-
-
-#  Credits to Arash Partow - 2002
-#  https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
-def PJWHash(key):
-    BitsInUnsignedInt = 4 * 8
-    ThreeQuarters = long((BitsInUnsignedInt * 3) / 4)
-    OneEighth = long(BitsInUnsignedInt / 8)
-    HighBits = 0xFFFFFFFF << (BitsInUnsignedInt - OneEighth)
-    Hash = 0
-    Test = 0
-
-    for i in range(len(key)):
-        Hash = (Hash << OneEighth) + ord(key[i])
-        Test = Hash & HighBits
-        if Test != 0:
-            Hash = ((Hash ^ (Test >> ThreeQuarters)) & (~HighBits))
-    return Hash & 0x7FFFFFFF
-
-
-def lerp(a: np.ndarray, b: np.ndarray, t: float):
-    return a + (b - a) * t
-
-
-def shift(a: np.ndarray, b: float):
-    b_array = np.full([1, len(a)], b)
-    return np.add(a, b_array)
-
-
-def fix_extraneous_SOC(input_SOC):
-    if len(nan_indices := np.argwhere(np.isnan(input_SOC))) > 0:
-        last_value = input_SOC[nan_indices[0] - 1]
-        for index in nan_indices:
-            input_SOC[index] = last_value
-    return input_SOC
 
 
 if __name__ == '__main__':
