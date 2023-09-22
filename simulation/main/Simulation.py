@@ -9,7 +9,7 @@ from strenum import StrEnum
 from dotenv import load_dotenv
 
 from simulation.common import helpers
-from simulation.utils.Plotting import Graph
+from simulation.utils.Plotting import GraphPage
 
 
 def simulation_property(func):
@@ -285,22 +285,22 @@ class Simulation:
                               "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
                               "Cloud cover (%)", "Raw SOC (%)", "Raw Speed (km/h)"]
 
-            self.plotting.add_graph_to_queue(Graph(results_arrays, results_labels, graph_name="Results"))
+            self.plotting.add_graph_page_to_queue(GraphPage(results_arrays, results_labels, page_name="Results"))
 
             if verbose:
                 # Plot energy arrays
                 energy_arrays = self.get_results(["motor_consumed_energy", "array_produced_energy", "delta_energy"])
                 energy_labels = ["Motor Consumed Energy (J)", "Array Produced Energy (J)", "Delta Energy (J)"]
-                energy_graph = Graph(energy_arrays, energy_labels, graph_name="Energy Calculations")
-                self.plotting.add_graph_to_queue(energy_graph)
+                energy_graph = GraphPage(energy_arrays, energy_labels, page_name="Energy Calculations")
+                self.plotting.add_graph_page_to_queue(energy_graph)
 
                 # Plot indices and environment arrays
                 env_arrays = self.get_results(["temp", "closest_gis_indices", "closest_weather_indices",
                                                "gradients", "time_zones", "gis_vehicle_bearings"])
                 env_labels = ["speed dist (m)", "gis ind", "weather ind",
                               "gradients (m)", "time zones", "vehicle bearings"]
-                indices_and_environment_graph = Graph(env_arrays, env_labels, graph_name="Indices and Environment")
-                self.plotting.add_graph_to_queue(indices_and_environment_graph)
+                indices_and_environment_graph = GraphPage(env_arrays, env_labels, page_name="Indices and Environment")
+                self.plotting.add_graph_page_to_queue(indices_and_environment_graph)
 
                 # Plot speed boolean and SOC arrays
                 arrays_to_plot = self.get_results(["speed_kmh", "state_of_charge"])
@@ -312,10 +312,10 @@ class Simulation:
 
                 boolean_arrays = arrays_to_plot + logical_arrays
                 boolean_labels = ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"]
-                boolean_graph = Graph(boolean_arrays, boolean_labels, graph_name="Speed Boolean Operations")
-                self.plotting.add_graph_to_queue(boolean_graph)
+                boolean_graph = GraphPage(boolean_arrays, boolean_labels, page_name="Speed Boolean Operations")
+                self.plotting.add_graph_page_to_queue(boolean_graph)
 
-            self.plotting.plot_graphs(self.get_results("timestamps"), plot_portion=plot_portion)
+            self.plotting.plot_graph_pages(self.get_results("timestamps"), plot_portion=plot_portion)
 
         if route_visualization:
             if self.race_type == "FSGP":
