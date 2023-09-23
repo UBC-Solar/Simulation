@@ -9,6 +9,7 @@ from strenum import StrEnum
 from dotenv import load_dotenv
 
 from simulation.common import helpers
+from simulation.common.exceptions import LibrariesNotFound
 from simulation.utils.Plotting import GraphPage
 
 
@@ -132,21 +133,23 @@ class Simulation:
         self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
-        # ----- GoLang library initialisation -----
+        # ----- Go library initialisation -----
 
         # Simulation uses compiled Go libraries to speed up methods that cannot be accelerated with NumPy to achieve
         # a significant performance increase (~75% runtime reduction) when applicable.
 
         self.golang = builder.golang
-        self.library = simulation.Libraries(raiseExceptionOnFail=False)
-
-        if self.golang and self.library.found_compatible_binaries() is False:
-            # If compatible GoLang binaries weren't found, disable GoLang usage.
-            self.golang = False
-            logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
-                            "To use GoLang implementations, see COMPILING_HOWTO about "
-                            "compiling GoLang for your operating system.")
-
+        if self.golang:
+            try:
+                self.library = simulation.Libraries()
+            except LibrariesNotFound:
+                # If compatible Go binaries weren't found, disable GoLang usage.
+                self.golang = False
+                logging.warning("Go binaries not found ==> Go usage has been disabled. \n"
+                                "To use Go implementations, see simulation/libraries/COMPILING_HOWTO.md \n"
+                                "about compiling GoLang for your operating system.\n")
+        else:
+            self.library = None
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()
@@ -177,7 +180,7 @@ class Simulation:
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations(library=self.library)
+        self.solar_calculations = simulation.SolarCalculations(golang=self.golang, library=self.library)
 
         self.plotting = simulation.Plotting()
 
