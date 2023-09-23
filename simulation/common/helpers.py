@@ -460,7 +460,6 @@ def cull_dataset(coords, cull_factor=625):  # DEPRECATED
     :rtype: np.ndarray
 
     """
-    logging.warning("Using deprecated function 'cull_dataset()'!")
     return coords[::cull_factor]
 
 
@@ -591,7 +590,8 @@ def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_ty
     simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60), (1.0 / granularity))
 
     if as_seconds is True:
-        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
+        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
+                                               start_hour + simulation_duration / (60 * 60)).astype(int)
         if race_type == "ASC":
             driving_time_boolean = [(simulation_hours_by_second % 24) <= 9, (simulation_hours_by_second % 24) >= 18]
         else:  # FSGP
@@ -626,7 +626,8 @@ def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_
     simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
 
     if as_seconds is True:
-        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600), start_hour + simulation_duration / (60 * 60)).astype(int)
+        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
+                                               start_hour + simulation_duration / (60 * 60)).astype(int)
         if race_type == "ASC":
             driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 20]
         else:  # FSGP
@@ -718,7 +719,8 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
     return
 
 
-def route_visualization(coords, visible=True):  # TODO: Consolidate this with Plotting module
+
+def route_visualization(coords, visible=True):
     """
 
     Takes in a list of coordinates and visualizes them using MapBox.
@@ -879,7 +881,7 @@ def get_map_data_indices(closest_gis_indices):
         if i == 0:
             continue
         else:
-            if not closest_gis_indices[i] == closest_gis_indices[i-1]:
+            if not closest_gis_indices[i] == closest_gis_indices[i - 1]:
                 map_data_indices.append(i)
     return map_data_indices
 
@@ -915,6 +917,12 @@ def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
     return Hash & 0x7FFFFFFF
 
 
+def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:
+    max_value_in_array = np.max(input_array) if max_value is None else max_value
+    min_value_in_array = np.min(input_array) if min_value is None else min_value
+    return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
+
+
 if __name__ == '__main__':
     out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])
 
@@ -924,4 +932,3 @@ if __name__ == '__main__':
     expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
     expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
     expanded_speed_array = apply_deceleration(expanded_speed_array, 20)
-    print(expanded_speed_array)
