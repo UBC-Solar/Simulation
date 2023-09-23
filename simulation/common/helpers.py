@@ -885,4 +885,3 @@ if __name__ == '__main__':
     expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
     expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
     expanded_speed_array = apply_deceleration(expanded_speed_array, 20)
-    print(expanded_speed_array)
