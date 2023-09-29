@@ -1,6 +1,7 @@
 import datetime
 import functools
 import logging
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -883,9 +884,22 @@ def get_map_data_indices(closest_gis_indices):
     return map_data_indices
 
 
-#  Credits to Arash Partow - 2002
-#  https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
-def PJWHash(key):
+def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
+    """
+    Hashes a given `key` using the PJW hash function.
+    See: https://en.wikipedia.org/wiki/PJW_hash_function
+
+    This function is used to generate a hash to identify `Simulation` objects as representing the same situation, or not.
+
+    Python implementation by Arash Partow - 2002:
+    https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
+
+    :param key: Sequence that will be hashed. Should be an iterable of values that can be added with integers.
+    :return: Returns the generated hash
+    :rtype: int
+
+    """
+
     BitsInUnsignedInt = 4 * 8
     ThreeQuarters = long((BitsInUnsignedInt * 3) / 4)
     OneEighth = long(BitsInUnsignedInt / 8)
