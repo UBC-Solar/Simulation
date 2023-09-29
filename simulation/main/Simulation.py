@@ -113,6 +113,7 @@ class Simulation:
             except LibrariesNotFound:
                 # If compatible Go binaries weren't found, disable GoLang usage.
                 self.golang = False
+                self.library = None
                 logging.warning("Go binaries not found ==> Go usage has been disabled. \n"
                                 "To use Go implementations, see simulation/libraries/COMPILING_HOWTO.md \n"
                                 "about compiling GoLang for your operating system.\n")
