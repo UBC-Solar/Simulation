@@ -34,7 +34,7 @@ class Libraries:
                 ctypes.c_long,
                 ctypes.POINTER(ctypes.c_double),
                 ctypes.c_long,
-                ctypes.POINTER(ctypes.c_int64),
+                ctypes.POINTER(ctypes.c_longlong),
                 ctypes.c_long,
             ]
 
@@ -138,7 +138,7 @@ class Libraries:
         # Generate pointers to arrays to pass to a Go binary
         average_distances_pointer = Libraries.generate_input_pointer(average_distances, ctypes.c_double)
         cumulative_distances_pointer = Libraries.generate_input_pointer(cumulative_distances, ctypes.c_double)
-        results_pointer, results = Libraries.generate_output_pointer(len(cumulative_distances), ctypes.c_long)
+        results_pointer, results = Libraries.generate_output_pointer(len(cumulative_distances), ctypes.c_longlong)
 
         # Execute the Go shared library (compiled Go function) and pass it the pointers we generated
         self.main_library.closest_gis_indices_loop(
