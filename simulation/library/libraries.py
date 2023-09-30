@@ -87,7 +87,8 @@ class Libraries:
                 ctypes.c_uint
             ]
 
-    def get_go_directory(self):
+    @staticmethod
+    def get_go_directory():
         """
 
         Will get the directory to compatible Go libraries else return None/raise an exception.
@@ -107,12 +108,14 @@ class Libraries:
         for binary_container in binary_containers:
             try:
                 ctypes.cdll.LoadLibrary(f"{binaries_directory}/{binary_container}/main.so")
+                ctypes.cdll.LoadLibrary(f"{binaries_directory}/{binary_container}/perlin_noise.so")
                 return f"{binaries_directory}/{binary_container}"
             except OSError:
                 pass
         raise LibrariesNotFound("Go shared libraries not found for your platform. \n"
                                 "Please either compile them for your platform or disable Go usage\n"
-                                "in Simulation instantiation.\n")
+                                "in Simulation instantiation. \n"
+                                "Verify that you have both main.so and perlin_noise.so compiled. \n")
 
     def found_compatible_binaries(self):
         """
