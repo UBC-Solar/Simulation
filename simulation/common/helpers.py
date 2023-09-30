@@ -1,13 +1,13 @@
 import datetime
 import functools
 import logging
-from typing import Union
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import time as timer
 
+from typing import Union
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.plotting import figure, show, output_file
@@ -916,44 +916,13 @@ def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
             Hash = ((Hash ^ (Test >> ThreeQuarters)) & (~HighBits))
     return Hash & 0x7FFFFFFF
 
-
+  
 def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:
     max_value_in_array = np.max(input_array) if max_value is None else max_value
     min_value_in_array = np.min(input_array) if min_value is None else min_value
     return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
 
-
-def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
-    """
-    Hashes a given `key` using the PJW hash function.
-    See: https://en.wikipedia.org/wiki/PJW_hash_function
-
-    This function is used to generate a hash to identify `Simulation` objects as representing the same situation, or not.
-
-    Python implementation by Arash Partow - 2002:
-    https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
-
-    :param key: Sequence that will be hashed. Should be an iterable of values that can be added with integers.
-    :return: Returns the generated hash
-    :rtype: int
-
-    """
-
-    BitsInUnsignedInt = 4 * 8
-    ThreeQuarters = long((BitsInUnsignedInt * 3) / 4)
-    OneEighth = long(BitsInUnsignedInt / 8)
-    HighBits = 0xFFFFFFFF << (BitsInUnsignedInt - OneEighth)
-    Hash = 0
-    Test = 0
-
-    for i in range(len(key)):
-        Hash = (Hash << OneEighth) + ord(key[i])
-        Test = Hash & HighBits
-        if Test != 0:
-            Hash = ((Hash ^ (Test >> ThreeQuarters)) & (~HighBits))
-    return Hash & 0x7FFFFFFF
-
-
+  
 if __name__ == '__main__':
     out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])
 

@@ -9,8 +9,8 @@ from strenum import StrEnum
 from dotenv import load_dotenv
 
 from simulation.common import helpers
-from simulation.utils.Plotting import GraphPage
 from simulation.common.exceptions import LibrariesNotFound
+from simulation.utils.Plotting import GraphPage
 
 
 def simulation_property(func):
