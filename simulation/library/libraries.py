@@ -31,11 +31,11 @@ class Libraries:
 
             self.main_library.closest_gis_indices_loop.argtypes = [
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long,
+                ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long,
+                ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_longlong),
-                ctypes.c_long,
+                ctypes.c_longlong,
             ]
 
             self.main_library.weather_in_time_loop.argtypes = [
@@ -51,40 +51,40 @@ class Libraries:
                 ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_double),
                 ctypes.c_longlong,
-                ctypes.POINTER(ctypes.c_int64),
-                ctypes.c_long
+                ctypes.POINTER(ctypes.c_longlong),
+                ctypes.c_longlong
             ]
 
             self.main_library.calculate_array_GHI_times.argtypes = [
-                ctypes.POINTER(ctypes.c_long),
-                ctypes.c_long,
+                ctypes.POINTER(ctypes.c_longlong),
+                ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long,
+                ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long
+                ctypes.c_longlong
             ]
 
             self.main_library.speeds_with_waypoints_loop.argtypes = [
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long,
+                ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long,
-                ctypes.POINTER(ctypes.c_long),
-                ctypes.c_long
+                ctypes.c_longlong,
+                ctypes.POINTER(ctypes.c_longlong),
+                ctypes.c_longlong
             ]
             
             self.perlin_noise_library = ctypes.cdll.LoadLibrary(f"{self.go_directory}/perlin_noise.so")
 
             self.perlin_noise_library.generatePerlinNoise.argtypes = [
                 ctypes.POINTER(ctypes.c_float),
-                ctypes.c_uint32,
-                ctypes.c_uint32,
+                ctypes.c_uint,
+                ctypes.c_uint,
                 ctypes.c_float,
-                ctypes.c_uint32,
+                ctypes.c_uint,
                 ctypes.c_float,
                 ctypes.c_float,
                 ctypes.c_float,
-                ctypes.c_uint32
+                ctypes.c_uint
             ]
 
     def get_go_directory(self):
