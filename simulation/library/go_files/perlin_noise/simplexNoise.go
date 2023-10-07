@@ -86,8 +86,6 @@ func UnpackLittleUint32(value uint32) [4]byte {
 }
 
 func randomize(randomSeed uint32) []int32 {
-	defer duration(track("randomize"))
-
 	var _random = make([]int32, RandomSize*2)
 
 	if randomSeed != 0 {
