@@ -98,6 +98,7 @@ class GIS:
             self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
             self.path_elevations = self.calculate_path_elevations(self.path)
             self.path_time_zones = self.calculate_time_zones(self.path)
+            self.launch_point = self.path[0]
 
             with open(route_file, 'wb') as f:
                 np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
