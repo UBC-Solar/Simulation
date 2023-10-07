@@ -240,7 +240,7 @@ class Libraries:
         # Get pointers for GoLang
         new_speeds_pointer, new_speeds = Libraries.generate_input_output_pointer(speeds, ctypes.c_double)
         distances_pointer = Libraries.generate_input_pointer(distances, ctypes.c_double)
-        waypoints_pointer = Libraries.generate_input_pointer(flattened_waypoints, ctypes.c_long)
+        waypoints_pointer = Libraries.generate_input_pointer(flattened_waypoints, ctypes.c_longlong)
 
         self.main_library.speeds_with_waypoints_loop(
             new_speeds_pointer,
