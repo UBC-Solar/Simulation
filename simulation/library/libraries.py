@@ -210,7 +210,7 @@ class Libraries:
         """
 
         # Get pointers for GoLang
-        local_times_pointer = Libraries.generate_input_pointer(local_times, ctypes.c_long)
+        local_times_pointer = Libraries.generate_input_pointer(local_times, ctypes.c_longlong)
         day_of_year_pointer, day_of_year = Libraries.generate_output_pointer(len(local_times), ctypes.c_double)
         local_time_pointer, local_time = Libraries.generate_output_pointer(len(local_times), ctypes.c_double)
 
