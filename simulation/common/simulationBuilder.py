@@ -53,7 +53,6 @@ class SimulationBuilder:
         self.race_type = race_type
         self.lvs_power_loss = args['lvs_power_loss']
         self.tick = args['tick']
-        self.race_length = args['race_length']
         self.simulation_duration = args['simulation_duration']
 
         return self

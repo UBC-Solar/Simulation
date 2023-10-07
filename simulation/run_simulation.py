@@ -46,7 +46,12 @@ def run_simulation(settings):
 
     #  ----- Load initial conditions ----- #
 
-    with open(config_directory / "initial_conditions.json") as f:
+    if settings.race_type == "ASC":
+        initial_conditions_path = config_directory / "initial_conditions_ASC.json"
+    else:
+        initial_conditions_path = config_directory / "initial_conditions_FSGP.json"
+
+    with open(initial_conditions_path) as f:
         initial_conditions = json.load(f)
 
     # ----- Load from settings_*.json -----
@@ -288,7 +293,12 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
 
     #  ----- Load initial conditions ----- #
 
-    with open(config_directory / "initial_conditions.json") as f:
+    if race_type == "ASC":
+        initial_conditions_path = config_directory / "initial_conditions_ASC.json"
+    else:
+        initial_conditions_path = config_directory / "initial_conditions_FSGP.json"
+
+    with open(initial_conditions_path) as f:
         initial_conditions = json.load(f)
 
     # ----- Load from settings_ASC.json -----

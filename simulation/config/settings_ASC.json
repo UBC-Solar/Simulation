@@ -1,6 +1,5 @@
 {
     "race_type": "ASC",
-    "race_length": 8,
 
     "origin_coord": [39.0918, -94.4172],
     "dest_coord": [43.6142, -116.2080],
@@ -11,7 +10,7 @@
     ],
 
     "tick": 1,
-    "simulation_duration": 43200,
+    "simulation_duration": 691200,
     "start_hour": 7,
     "initial_battery_charge": 0.65,
     "lvs_power_loss": 0,

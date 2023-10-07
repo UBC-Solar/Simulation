@@ -76,12 +76,7 @@ class Simulation:
         self.tick = builder.tick
         assert isinstance(self.tick, int), "Discrete tick length must be an integer!"
 
-        if self.race_type == "ASC":
-            race_length = builder.race_length  # Race length in days, arbitrary as ASC doesn't have a time limit
-            self.simulation_duration = race_length * 24 * 60 * 60
-        elif self.race_type == "FSGP":
-            self.simulation_duration = builder.simulation_duration
-
+        self.simulation_duration = builder.simulation_duration
         self.initial_battery_charge = builder.initial_battery_charge
 
         self.start_hour = builder.start_hour
