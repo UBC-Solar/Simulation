@@ -189,7 +189,7 @@ class Libraries:
         cumulative_distances_pointer = Libraries.generate_input_pointer(cumulative_distances, ctypes.c_double)
         average_distances_pointer = Libraries.generate_input_pointer(average_distances, ctypes.c_double)
         closest_weather_indices_pointer, closest_weather_indices = Libraries.generate_output_pointer(
-            len(cumulative_distances), ctypes.c_long)
+            len(cumulative_distances), ctypes.c_longlong)
 
         self.main_library.closest_weather_indices_loop(
             cumulative_distances_pointer,
