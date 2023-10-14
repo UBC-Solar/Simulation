@@ -51,6 +51,7 @@ class Model:
         self.lvs_consumed_energy = None
         self.motor_consumed_energy = None
         self.array_produced_energy = None
+        self.regen_produced_energy = None
         self.raw_soc = None
         self.not_charge = None
         self.consumed_energy = None
@@ -166,6 +167,9 @@ class Model:
         self.array_produced_energy = self.simulation.basic_array.calculate_produced_energy(self.solar_irradiances,
                                                                                            self.simulation.tick)
 
+        self.regen_produced_energy = self.simulation.basic_regen.calculate_produced_energy(self.speed_kmh,
+                                                                                           self.gis_route_elevations_at_each_tick)
+
         self.not_charge = helpers.get_charge_timing_constraints_boolean(start_hour=self.simulation.start_hour,
                                                                         simulation_duration=self.simulation.
                                                                         simulation_duration,
@@ -177,7 +181,7 @@ class Model:
                                                     self.not_charge) * self.array_produced_energy
 
         self.consumed_energy = self.motor_consumed_energy + self.lvs_consumed_energy
-        self.produced_energy = self.array_produced_energy
+        self.produced_energy = self.array_produced_energy + self.regen_produced_energy
 
         # net energy added to the battery
         self.delta_energy = self.produced_energy - self.consumed_energy
@@ -263,6 +267,7 @@ class Model:
             "lvs_consumed_energy": self.lvs_consumed_energy,
             "motor_consumed_energy": self.motor_consumed_energy,
             "array_produced_energy": self.array_produced_energy,
+            "regen_produced_energy": self.regen_produced_energy,
             "not_charge": self.not_charge,
             "consumed_energy": self.consumed_energy,
             "produced_energy": self.produced_energy,
