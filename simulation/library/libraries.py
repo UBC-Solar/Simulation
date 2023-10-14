@@ -31,11 +31,11 @@ class Libraries:
 
             self.main_library.closest_gis_indices_loop.argtypes = [
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long,
+                ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long,
-                ctypes.POINTER(ctypes.c_int64),
-                ctypes.c_long,
+                ctypes.c_longlong,
+                ctypes.POINTER(ctypes.c_longlong),
+                ctypes.c_longlong,
             ]
 
             self.main_library.weather_in_time_loop.argtypes = [
@@ -51,43 +51,44 @@ class Libraries:
                 ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_double),
                 ctypes.c_longlong,
-                ctypes.POINTER(ctypes.c_int64),
-                ctypes.c_long
+                ctypes.POINTER(ctypes.c_longlong),
+                ctypes.c_longlong
             ]
 
             self.main_library.calculate_array_GHI_times.argtypes = [
-                ctypes.POINTER(ctypes.c_long),
-                ctypes.c_long,
+                ctypes.POINTER(ctypes.c_longlong),
+                ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long,
+                ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long
+                ctypes.c_longlong
             ]
 
             self.main_library.speeds_with_waypoints_loop.argtypes = [
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long,
+                ctypes.c_longlong,
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.c_long,
-                ctypes.POINTER(ctypes.c_long),
-                ctypes.c_long
+                ctypes.c_longlong,
+                ctypes.POINTER(ctypes.c_longlong),
+                ctypes.c_longlong
             ]
             
             self.perlin_noise_library = ctypes.cdll.LoadLibrary(f"{self.go_directory}/perlin_noise.so")
 
             self.perlin_noise_library.generatePerlinNoise.argtypes = [
                 ctypes.POINTER(ctypes.c_float),
-                ctypes.c_uint32,
-                ctypes.c_uint32,
+                ctypes.c_uint,
+                ctypes.c_uint,
                 ctypes.c_float,
-                ctypes.c_uint32,
+                ctypes.c_uint,
                 ctypes.c_float,
                 ctypes.c_float,
                 ctypes.c_float,
-                ctypes.c_uint32
+                ctypes.c_uint
             ]
 
-    def get_go_directory(self):
+    @staticmethod
+    def get_go_directory():
         """
 
         Will get the directory to compatible Go libraries else return None/raise an exception.
@@ -107,12 +108,14 @@ class Libraries:
         for binary_container in binary_containers:
             try:
                 ctypes.cdll.LoadLibrary(f"{binaries_directory}/{binary_container}/main.so")
+                ctypes.cdll.LoadLibrary(f"{binaries_directory}/{binary_container}/perlin_noise.so")
                 return f"{binaries_directory}/{binary_container}"
             except OSError:
                 pass
         raise LibrariesNotFound("Go shared libraries not found for your platform. \n"
                                 "Please either compile them for your platform or disable Go usage\n"
-                                "in Simulation instantiation.\n")
+                                "in Simulation instantiation. \n"
+                                "Verify that you have both main.so and perlin_noise.so compiled. \n")
 
     def found_compatible_binaries(self):
         """
@@ -138,7 +141,7 @@ class Libraries:
         # Generate pointers to arrays to pass to a Go binary
         average_distances_pointer = Libraries.generate_input_pointer(average_distances, ctypes.c_double)
         cumulative_distances_pointer = Libraries.generate_input_pointer(cumulative_distances, ctypes.c_double)
-        results_pointer, results = Libraries.generate_output_pointer(len(cumulative_distances), ctypes.c_long)
+        results_pointer, results = Libraries.generate_output_pointer(len(cumulative_distances), ctypes.c_longlong)
 
         # Execute the Go shared library (compiled Go function) and pass it the pointers we generated
         self.main_library.closest_gis_indices_loop(
@@ -186,7 +189,7 @@ class Libraries:
         cumulative_distances_pointer = Libraries.generate_input_pointer(cumulative_distances, ctypes.c_double)
         average_distances_pointer = Libraries.generate_input_pointer(average_distances, ctypes.c_double)
         closest_weather_indices_pointer, closest_weather_indices = Libraries.generate_output_pointer(
-            len(cumulative_distances), ctypes.c_long)
+            len(cumulative_distances), ctypes.c_longlong)
 
         self.main_library.closest_weather_indices_loop(
             cumulative_distances_pointer,
@@ -207,7 +210,7 @@ class Libraries:
         """
 
         # Get pointers for GoLang
-        local_times_pointer = Libraries.generate_input_pointer(local_times, ctypes.c_long)
+        local_times_pointer = Libraries.generate_input_pointer(local_times, ctypes.c_longlong)
         day_of_year_pointer, day_of_year = Libraries.generate_output_pointer(len(local_times), ctypes.c_double)
         local_time_pointer, local_time = Libraries.generate_output_pointer(len(local_times), ctypes.c_double)
 
@@ -237,7 +240,7 @@ class Libraries:
         # Get pointers for GoLang
         new_speeds_pointer, new_speeds = Libraries.generate_input_output_pointer(speeds, ctypes.c_double)
         distances_pointer = Libraries.generate_input_pointer(distances, ctypes.c_double)
-        waypoints_pointer = Libraries.generate_input_pointer(flattened_waypoints, ctypes.c_long)
+        waypoints_pointer = Libraries.generate_input_pointer(flattened_waypoints, ctypes.c_longlong)
 
         self.main_library.speeds_with_waypoints_loop(
             new_speeds_pointer,
