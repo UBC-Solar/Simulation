@@ -44,5 +44,5 @@
   ],
   "tick": 1,
   "simulation_duration": 259200,
-  "lvs_power_loss": 0,
+  "lvs_power_loss": 0
 }
