@@ -11,10 +11,5 @@
 
     "tick": 1,
     "simulation_duration": 691200,
-    "start_hour": 7,
-    "initial_battery_charge": 0.65,
     "lvs_power_loss": 0,
-
-    "gis_force_update":  false,
-    "weather_force_update": false
 }
