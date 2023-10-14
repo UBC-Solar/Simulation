@@ -162,6 +162,8 @@ class Simulation:
 
         self.route_coords = self.gis.get_path()
 
+        self.basic_regen = simulation.BasicRegen()
+
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
@@ -277,12 +279,11 @@ class Simulation:
 
         if plot_results:
             results_arrays = self.get_results(["speed_kmh", "distances", "state_of_charge", "delta_energy",
-                                               "solar_irradiances", "wind_speeds",
-                                               "gis_route_elevations_at_each_tick",
-                                               "cloud_covers", "raw_soc"]) + [raw_speed]
+                                               "solar_irradiances", "wind_speeds", "gis_route_elevations_at_each_tick",
+                                               "cloud_covers", "raw_soc", "regen_produced_energy"]) + [raw_speed]
             results_labels = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                               "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
-                              "Cloud cover (%)", "Raw SOC (%)", "Raw Speed (km/h)"]
+                              "Cloud cover (%)", "Raw SOC (%)", "Regen Energy Produced(J)", "Raw Speed (km/h)"]
 
             self.plotting.add_graph_page_to_queue(GraphPage(results_arrays, results_labels, page_name="Results"))
 
