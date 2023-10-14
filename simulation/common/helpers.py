@@ -788,24 +788,16 @@ def calculate_completion_index(path_length, cumulative_distances):
 
     Pre-Conditions:
         path_length and cumulative_distances may be in any length unit, but they must share the same length unit
-        Each index of the cumulative_distances array represents one second of the simulation
 
     :returns: First index of cumulative_distances where the route has been completed
     :rtype: int
 
     """
 
-    # Create a boolean array to encode whether the vehicle has completed or not completed the route at a given timestamp
-    crossed_finish_line = np.where(cumulative_distances >= path_length, 1, 0)
+    # Identify the first index which the vehicle has completed the route
+    completion_index = np.where(cumulative_distances >= path_length)[0][0]
 
-    # Based on the boolean encoding, identify the first index which the vehicle has completed the route
-    completion_index = np.where(crossed_finish_line == 1)
-
-    if len(completion_index[0]) > 0:
-        return completion_index[0][0]
-    else:
-        return len(cumulative_distances) + 1
-
+    return completion_index
 
 
 def plot_longitudes(coordinates):
