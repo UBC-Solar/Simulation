@@ -1,6 +1,7 @@
 from simulation.main.Simulation import Simulation, SimulationReturnType
 from abc import ABC
 
+
 class SimulationBuilder:
     """
 

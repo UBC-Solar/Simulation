@@ -1,14 +1,17 @@
 import datetime
 import functools
+import logging
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import time as timer
 
+from typing import Union
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.plotting import figure, show, output_file
+from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from simulation.common import constants
 
@@ -638,7 +641,8 @@ def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_
     return np.invert(np.logical_or.reduce(driving_time_boolean))
 
 
-def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True):
+def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
+               plot_portion: tuple[float] = (0.0, 1.0)):
     """
 
     This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
@@ -659,8 +663,20 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
     :param list array_labels: An array of strings for the individual plot titles
     :param str graph_title: A string that serves as the plot's main title
     :param bool save: Boolean flag to control whether to save an .html file
+    :param plot_portion: tuple containing beginning and end of arrays that we want to plot as percentages which is
+    useful if we only want to plot for example the second half of the race in which case we would input (0.5, 1.0).
 
     """
+
+    if plot_portion != (0.0, 1.0):
+        for index, array in enumerate(arrays_to_plot):
+            beginning_index = int(len(array) * plot_portion[0])
+            end_index = int(len(array) * plot_portion[1])
+            arrays_to_plot[index] = array[beginning_index:end_index]
+
+        beginning_index = int(len(timestamps) * plot_portion[0])
+        end_index = int(len(timestamps) * plot_portion[1])
+        timestamps = timestamps[beginning_index:end_index]
 
     compress_constant = max(int(timestamps.shape[0] / 5000), 1)
 
@@ -676,7 +692,7 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True)
         ("data", "$y")
     ]
 
-    for (index, data_array) in enumerate(arrays_to_plot):
+    for index, data_array in enumerate(arrays_to_plot):
         # create figures and put them in list
         figures.append(figure(title=array_labels[index], x_axis_label="Time (hr)",
                               y_axis_label=array_labels[index], x_axis_type="datetime"))
@@ -758,11 +774,11 @@ def simple_plot_graph(data, title, visible=True):
         plt.show()
 
 
-def calculate_race_completion_time(path_length, cumulative_distances):
+def calculate_completion_index(path_length, cumulative_distances):
     """
 
-    This function uses the maximum path distance and cumulative distances travelled
-    during the simulation to identify how long the car takes to finish travelling the route.
+    This function identifies the index of cumulative_distances where the route has been completed.
+    Indexing timestamps with the result of this function will return the time taken to complete the race.
 
     This problem, although framed in the context of the Simulation, is just to find the array position of the first
     value that is greater or equal to a target value
@@ -772,24 +788,16 @@ def calculate_race_completion_time(path_length, cumulative_distances):
 
     Pre-Conditions:
         path_length and cumulative_distances may be in any length unit, but they must share the same length unit
-        Each index of the cumulative_distances array represents one second of the simulation
 
-    :returns: The number of seconds the vehicle requires to travel the full path length. If vehicle does not travel the full path length, returns
+    :returns: First index of cumulative_distances where the route has been completed
     :rtype: int
 
     """
 
-    # Create a boolean array to encode whether the vehicle has completed or not completed the route at a given timestamp
-    # This is based on the assumption that each index represents a single timestamp of one second
-    crossed_finish_line = np.where(cumulative_distances >= path_length, 1, 0)
+    # Identify the first index which the vehicle has completed the route
+    completion_index = np.where(cumulative_distances >= path_length)[0][0]
 
-    # Based on the boolean encoding, identify the first index which the vehicle has completed the route
-    completion_index = np.where(crossed_finish_line == 1)
-
-    if len(completion_index[0]) > 0:
-        return completion_index[0][0]
-    else:
-        return len(cumulative_distances) + 1
+    return completion_index
 
 
 def plot_longitudes(coordinates):
@@ -868,6 +876,37 @@ def get_map_data_indices(closest_gis_indices):
             if not closest_gis_indices[i] == closest_gis_indices[i - 1]:
                 map_data_indices.append(i)
     return map_data_indices
+
+
+def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
+    """
+    Hashes a given `key` using the PJW hash function.
+    See: https://en.wikipedia.org/wiki/PJW_hash_function
+
+    This function is used to generate a hash to identify `Simulation` objects as representing the same situation, or not.
+
+    Python implementation by Arash Partow - 2002:
+    https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
+
+    :param key: Sequence that will be hashed. Should be an iterable of values that can be added with integers.
+    :return: Returns the generated hash
+    :rtype: int
+
+    """
+
+    BitsInUnsignedInt = 4 * 8
+    ThreeQuarters = long((BitsInUnsignedInt * 3) / 4)
+    OneEighth = long(BitsInUnsignedInt / 8)
+    HighBits = 0xFFFFFFFF << (BitsInUnsignedInt - OneEighth)
+    Hash = 0
+    Test = 0
+
+    for i in range(len(key)):
+        Hash = (Hash << OneEighth) + ord(key[i])
+        Test = Hash & HighBits
+        if Test != 0:
+            Hash = ((Hash ^ (Test >> ThreeQuarters)) & (~HighBits))
+    return Hash & 0x7FFFFFFF
 
 
 def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:

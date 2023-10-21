@@ -9,3 +9,6 @@ class BatteryEmptyError(Exception):
 
 class LibrariesNotFound(Exception):
     pass
+
+class PrematureDataRecoveryError(Exception):
+    pass
