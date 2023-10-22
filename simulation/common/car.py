@@ -1,14 +1,38 @@
-from abc import ABC, abstractmethod
-import numpy as np
+from simulation.config import config_directory
+import os
+import json
 
-class Car(ABC):
-    def __init__(self, array, battery, lvs, motor):
-        self.array = array
-        self.battery = battery
-        self.lvs = lvs
-        self.motor = motor
+"""
+This Singleton stores constants for UBC Solar's vehicles such as 
+"""
 
-    def update(self, tick, array_energy, battery_energy, lvs_energy, motor_energy):
-        delta_energy = array_energy + battery_energy + lvs_energy + motor_energy
-        cumulative_delta_energy = np.cumsum(delta_energy)
-        battery_variables_array = self.battery.update_array(cumulative_delta_energy)
+
+class CarMetaclass(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
+
+
+class DayBreak(metaclass=CarMetaclass):
+    def __init__(self):
+        config_path = os.path.join(config_directory, f"DayBreak.json")
+
+        with open(config_path) as f:
+            car_constants = json.load(f)
+
+        self.panel_efficiency = car_constants["panel_efficiency"]
+        self.panel_size = car_constants["panel_size"]
+        self.max_voltage = car_constants["max_voltage"]
+        self.min_voltage = car_constants["min_voltage"]
+        self.max_current_capacity = car_constants["max_current_capacity"]
+        self.max_energy_capacity = car_constants["max_energy_capacity"]
+        self.vehicle_mass = car_constants["vehicle_mass"]
+        self.road_friction = car_constants["road_friction"]
+        self.tire_radius = car_constants["tire_radius"]
+        self.air_density = car_constants["air_density"]
+        self.vehicle_frontal_area = car_constants["vehicle_frontal_area"]
+        self.drag_coefficient = car_constants["drag_coefficient"]
