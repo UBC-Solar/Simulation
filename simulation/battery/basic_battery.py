@@ -2,6 +2,7 @@ import numpy as np
 from numpy.polynomial import Polynomial
 
 from simulation.battery.base_battery import BaseBattery
+from simulation.common import DayBreak
 
 
 class BasicBattery(BaseBattery):
@@ -28,13 +29,14 @@ class BasicBattery(BaseBattery):
         :param float state_of_charge: initial battery state of charge
 
         """
+        daybreak = DayBreak()
 
         # ----- DayBreak battery constants -----
 
-        self.max_voltage = 117.6
-        self.min_voltage = 75.6
-        self.max_current_capacity = 48.9
-        self.max_energy_capacity = 4723.74
+        self.max_voltage = daybreak.max_voltage
+        self.min_voltage = daybreak.min_voltage
+        self.max_current_capacity = daybreak.max_current_capacity
+        self.max_energy_capacity = daybreak.max_energy_capacity
 
         # ----- DayBreak battery equations -----
 

@@ -2,6 +2,8 @@ import math
 import numpy as np
 
 from simulation.motor.base_motor import BaseMotor
+from simulation.common import DayBreak
+from simulation.common import constants
 
 
 class BasicMotor(BaseMotor):
@@ -15,16 +17,18 @@ class BasicMotor(BaseMotor):
         # Instantaneous current supplied by the battery to the motor controller
         self.dc_i = 0
 
+        daybreak = DayBreak()
+
         # TODO: organize this mess
         self.input_power = 0
-        self.vehicle_mass = 250
-        self.acceleration_g = 9.81
-        self.road_friction = 0.0055
-        self.tire_radius = 0.2032
+        self.vehicle_mass = daybreak.vehicle_mass
+        self.acceleration_g = constants.ACCELERATION_G
+        self.road_friction = daybreak.road_friction
+        self.tire_radius = daybreak.tire_radius
 
-        self.air_density = 1.225
-        self.vehicle_frontal_area = 0.952
-        self.drag_coefficient = 0.223
+        self.air_density = daybreak.air_density
+        self.vehicle_frontal_area = daybreak.vehicle_frontal_area
+        self.drag_coefficient = daybreak.drag_coefficient
 
         self.friction_force = (self.vehicle_mass * self.acceleration_g * self.road_friction)
 
