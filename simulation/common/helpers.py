@@ -19,6 +19,8 @@ from simulation.common import constants
 Description: contains the simulation's helper functions.
 """
 
+MAX_DECELERATION = 6  # km/h/s
+MAX_ACCELERATION = 6  # km/h/s
 
 def timeit(func):
     """
@@ -124,85 +126,101 @@ def reshape_and_repeat(input_array, reshape_length):
         return result
 
 
-def generate_deceleration_array(initial_velocity, final_velocity, deceleration_interval):
+def apply_deceleration(input_speed_array, tick):
     """
 
-    Create an array where each element represents a step in the deceleration from initial_velocity to final_velocity.
+    Remove sudden drops in speed from input_speed_array
 
-    :param float initial_velocity: the velocity at which deceleration occurs for the first time (km/h)
-    :param float final_velocity: the target velocity that is being decelerated to (km/h)
-    :param int deceleration_interval: the time it will take to decelerate from initial velocity to final velocity (s)
-    :return: an array of the velocities between initial_velocity and final_velocity
+    The modified input_speed_array stays as close to the target speeds as possible such that:
+        1. The decrease between any two consecutive speed values cannot exceed MAX_DECELERATION*tick km/h
+        2. Values of 0km/h remain 0km/h
+
+    :param np.ndarray input_speed_array: array to be modified
+    :param int tick: time interval between each value in input_speed_array
+    :return: modified array
     :rtype: np.ndarray
 
     """
-
-    deceleration_instance_size = (final_velocity - initial_velocity) / (deceleration_interval + 1)
-    return np.arange(initial_velocity, final_velocity, deceleration_instance_size)[1:(deceleration_interval + 1)]
-
-
-def apply_deceleration(input_speed_array, deceleration_interval):
-    """
-
-    Replace instances of instant deceleration in a velocity array with uniform changes in velocity that are spread
-    over the deceleration_interval.
-
-    The distance travelled by the simulation will be reduced by a negligible amount.
-
-    :param np.ndarray input_speed_array: the velocity array (km/h)
-    :param int deceleration_interval: the duration of the deceleration intervals (s)
-    :return: a speed array with uniform deceleration (km/h)
-    :rtype: np.ndarray
-
-    """
+    max_deceleration_per_tick = MAX_DECELERATION*tick
 
     if input_speed_array is None:
         return np.array([])
-    if deceleration_interval <= 0:
-        return input_speed_array
 
-    input_speed_array = input_speed_array.astype(float)
-    # Prepending 0 to align acceleration_instances
-    acceleration_instances = np.diff(input_speed_array, prepend=[0])
-    # array with speed_array
-    # [0] must be added because np.where returns an
-    deceleration_instances = np.where(acceleration_instances < 0)[0]
-    # array with only one element
+    # start at the second to last element since the last element can be any speed
+    for i in range(len(input_speed_array) - 2, 0, -1):
 
-    for idx in deceleration_instances:
-        initial_velocity = input_speed_array[idx - 1]
-        final_velocity = input_speed_array[idx]
+        # if the car wants to decelerate more than it can, maximize deceleration
+        if input_speed_array[i] - input_speed_array[i + 1] > max_deceleration_per_tick:
+            input_speed_array[i] = input_speed_array[i + 1] + max_deceleration_per_tick
 
-        if is_valid_speed_array(deceleration_interval, idx, initial_velocity, input_speed_array):
-            deceleration_array = generate_deceleration_array(
-                initial_velocity, final_velocity, deceleration_interval)
-            input_speed_array[idx -
-                              deceleration_interval:idx] = deceleration_array
     return input_speed_array
 
 
-def is_valid_speed_array(deceleration_interval, idx, initial_velocity, input_speed_array):
+def apply_acceleration(input_speed_array, tick):
     """
 
-    Check that the specified speed array is valid in relation to the chosen deceleration interval.
+    Remove sudden increases in speed from input_speed_array
 
-    :param int deceleration_interval: the duration of the deceleration intervals (s)
-    :param int idx: the index used to check our deceleration interval
-    :param float initial_velocity: the velocity at the beginning of the deceleration period
-    :param np.ndarray input_speed_array: the speed array
-    :return: True if the array is valid, False if it is not
-    :rtype: bool
+    The modified input_speed_array stays as close to the target speeds as possible such that:
+        1. The increase between any two consecutive speed values cannot exceed MAX_ACCELERATION*tick km/h
+        2. Values of 0km/h remain 0km/h
+        3. The first element cannot exceed MAX_ACCELERATION km/h since the car starts at rest
+
+    :param np.ndarray input_speed_array: array to be modified
+    :param int tick: time interval between each value in input_speed_array
+    :return: modified array
+    :rtype: np.ndarray
 
     """
-    if deceleration_interval > len(input_speed_array) - 1:  # Check that the speed array isn't smaller than the
-        # deceleration interval
-        return False
+    max_acceleration_per_tick = MAX_ACCELERATION*tick
 
-    # Check that the speed is constant over the deceleration interval
-    for i in range(0, deceleration_interval):
-        if initial_velocity != input_speed_array[idx - i - 1]:
-            return False
-    return True
+    if input_speed_array is None:
+        return np.array([])
+
+    for i in range(0, len(input_speed_array)):
+
+        # prevent the car from starting the race at an unattainable speed
+        if i == 0 and input_speed_array[i] > max_acceleration_per_tick:
+            input_speed_array[i] = max_acceleration_per_tick
+
+        # if the car wants to accelerate more than it can, maximize acceleration
+        elif input_speed_array[i] - input_speed_array[i - 1] > max_acceleration_per_tick:
+            input_speed_array[i] = input_speed_array[i - 1] + max_acceleration_per_tick
+
+    return input_speed_array
+
+
+def reshape_speed_array(start_hour, simulation_duration, race_type, speed, granularity, tick=1):
+    """
+
+    Modify the speed array to reflect:
+        - race regulations
+        - race length
+        - reasonable acceleration
+        - reasonable deceleration
+        - tick length (time interval between speed array values in seconds)
+
+    :param np.ndarray speed: A NumPy array representing the speed at each timestamp in km/h
+    :param int start_hour: An integer representing the race's start hour
+    :param int simulation_duration: An integer representing simulation duration in seconds
+    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
+    :param float granularity: how granular the time divisions for Simulation's speed array should be,
+                              where 1 is hourly and 0.5 is twice per hour.
+    :param int tick: The time interval in seconds between each speed in the speed array
+    :return: A modified speed array which reflects race constraints and the car's acceleration/deceleration
+    :rtype: np.ndarray
+
+    """
+    speed_boolean_array = get_race_timing_constraints_boolean(start_hour, simulation_duration,
+                                                              race_type, as_seconds=False,
+                                                              granularity=granularity).astype(int)
+    speed_mapped = map_array_to_targets(speed, speed_boolean_array)
+
+    reshaped_tick_count = simulation_duration/tick
+    speed_mapped_per_tick = np.insert(reshape_and_repeat(speed_mapped, reshaped_tick_count), 0, 0)
+    speed_smoothed_kmh = apply_deceleration(apply_acceleration(speed_mapped_per_tick, tick), tick)
+
+    return speed_smoothed_kmh
 
 
 def hour_from_unix_timestamp(unix_timestamp):
@@ -913,14 +931,3 @@ def normalize(input_array: np.ndarray, max_value: float = None, min_value: float
     max_value_in_array = np.max(input_array) if max_value is None else max_value
     min_value_in_array = np.min(input_array) if min_value is None else min_value
     return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
-
-
-if __name__ == '__main__':
-    out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])
-
-    # speed_array input
-    speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
-
-    expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
-    expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
-    expanded_speed_array = apply_deceleration(expanded_speed_array, 20)
