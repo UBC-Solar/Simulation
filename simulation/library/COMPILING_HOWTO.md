@@ -2,10 +2,10 @@
 
 
 ## Guidelines
-To achieve an extraordinary performance improvement, Simulation uses
+To achieve a significant performance improvement, Simulation uses
 multiple Go implementations of Pythonic functions that cannot be sped up 
 with NumPy. However, Go shared libraries are platform and architecture dependent so 
-you may need to build the shared libraries if they do not already exist.
+you may need to build the shared libraries for your platform if they do not already exist.
 Begin by building `main.so` from `main.go` in the `go_files` folder. 
 Next, build the `perlin_noise.so` module from the four `.go` files in `go_files/perlin_noise`.
 

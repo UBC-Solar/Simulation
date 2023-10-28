@@ -21,7 +21,6 @@ func generatePerlinNoise(resultPtr *float32,
 	baseRoughness float32,
 	strength float32,
 	randomSeed uint32) {
-	defer duration(track("generatePerlinNoise"))
 
 	settings := &NoiseSettings{
 		Strength:      strength,
@@ -45,5 +44,5 @@ func generatePerlinNoise(resultPtr *float32,
 }
 
 func main() {
-	debug()
+
 }

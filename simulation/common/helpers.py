@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 import time as timer
 
+from typing import Union
 from bokeh.layouts import gridplot
 from bokeh.models import HoverTool
 from bokeh.plotting import figure, show, output_file
@@ -581,7 +582,7 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
     return constrained_speed_kmh, not_charging_array
 
 
-def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type, granularity, as_seconds=True):
+def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type, granularity=1, as_seconds=True):
     """
 
     Applies regulation timing constraints to a speed array.
@@ -801,23 +802,16 @@ def calculate_completion_index(path_length, cumulative_distances):
 
     Pre-Conditions:
         path_length and cumulative_distances may be in any length unit, but they must share the same length unit
-        Each index of the cumulative_distances array represents one second of the simulation
 
     :returns: First index of cumulative_distances where the route has been completed
     :rtype: int
 
     """
 
-    # Create a boolean array to encode whether the vehicle has completed or not completed the route at a given timestamp
-    crossed_finish_line = np.where(cumulative_distances >= path_length, 1, 0)
+    # Identify the first index which the vehicle has completed the route
+    completion_index = np.where(cumulative_distances >= path_length)[0][0]
 
-    # Based on the boolean encoding, identify the first index which the vehicle has completed the route
-    completion_index = np.where(crossed_finish_line == 1)
-
-    if len(completion_index[0]) > 0:
-        return completion_index[0][0]
-    else:
-        return len(cumulative_distances) + 1
+    return completion_index
 
 
 def plot_longitudes(coordinates):
@@ -900,28 +894,22 @@ def get_map_data_indices(closest_gis_indices):
     return map_data_indices
 
 
-@jit(nopython=True)
-def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:
-    max_value_in_array = np.max(input_array) if max_value is None else max_value
-    min_value_in_array = np.min(input_array) if min_value is None else min_value
-    return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
+def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
+    """
+    Hashes a given `key` using the PJW hash function.
+    See: https://en.wikipedia.org/wiki/PJW_hash_function
 
+    This function is used to generate a hash to identify `Simulation` objects as representing the same situation, or not.
 
-@jit(nopython=True)
-def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0) -> np.ndarray:
-    return input_array * (max_value - min_value) + min_value
+    Python implementation by Arash Partow - 2002:
+    https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
 
+    :param key: Sequence that will be hashed. Should be an iterable of values that can be added with integers.
+    :return: Returns the generated hash
+    :rtype: int
 
-@jit(nopython=True)
-def rescale(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
-    normalized_array = normalize(input_array)
-    return denormalize(normalized_array, upper_bound, lower_bound)
+    """
 
-
-#  Credits to Arash Partow - 2002
-#  https://github.com/JamzyWang/HashCollector/blob/master/GeneralHashFunctions_Python/GeneralHashFunctions.py
-@jit(nopython=True)
-def PJWHash(key):
     BitsInUnsignedInt = 4 * 8
     ThreeQuarters = long((BitsInUnsignedInt * 3) / 4)
     OneEighth = long(BitsInUnsignedInt / 8)
@@ -937,33 +925,16 @@ def PJWHash(key):
     return Hash & 0x7FFFFFFF
 
 
-@jit(nopython=True)
-def lerp(a: np.ndarray, b: np.ndarray, t: float):
-    return a + (b - a) * t
-
-
-@jit(nopython=True)
-def shift(a: np.ndarray, b: float):
-    b_array = np.full([1, len(a)], b)
-    return np.add(a, b_array)
-
-
-@jit(nopython=True)
-def fix_extraneous_SOC(input_SOC):
-    if len(nan_indices := np.argwhere(np.isnan(input_SOC))) > 0:
-        last_value = input_SOC[nan_indices[0] - 1]
-        for index in nan_indices:
-            input_SOC[index] = last_value
-    return input_SOC
+def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:
+    max_value_in_array = np.max(input_array) if max_value is None else max_value
+    min_value_in_array = np.min(input_array) if min_value is None else min_value
+    return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
 
 
 if __name__ == '__main__':
-    out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])
-
     # speed_array input
     speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
 
     expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
     expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
     expanded_speed_array = apply_deceleration(expanded_speed_array, 20)
-    print(expanded_speed_array)

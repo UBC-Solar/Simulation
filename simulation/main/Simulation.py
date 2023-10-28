@@ -9,7 +9,8 @@ from strenum import StrEnum
 from dotenv import load_dotenv
 
 from simulation.common import helpers
-from simulation.common.plotting import Graph
+from simulation.common.exceptions import LibrariesNotFound
+from simulation.utils.Plotting import GraphPage
 
 
 def simulation_property(func):
@@ -132,21 +133,24 @@ class Simulation:
         self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
-        # ----- GoLang library initialisation -----
+        # ----- Go library initialisation -----
 
         # Simulation uses compiled Go libraries to speed up methods that cannot be accelerated with NumPy to achieve
         # a significant performance increase (~75% runtime reduction) when applicable.
 
         self.golang = builder.golang
-        self.library = simulation.Libraries(raiseExceptionOnFail=False)
-
-        if self.golang and self.library.found_compatible_binaries() is False:
-            # If compatible GoLang binaries weren't found, disable GoLang usage.
-            self.golang = False
-            logging.warning("GoLang binaries not found --> GoLang usage has been disabled. "
-                            "To use GoLang implementations, see COMPILING_HOWTO about "
-                            "compiling GoLang for your operating system.")
-
+        if self.golang:
+            try:
+                self.library = simulation.Libraries()
+            except LibrariesNotFound:
+                # If compatible Go binaries weren't found, disable GoLang usage.
+                self.golang = False
+                self.library = None
+                logging.warning("Go binaries not found ==> Go usage has been disabled. \n"
+                                "To use Go implementations, see simulation/libraries/COMPILING_HOWTO.md \n"
+                                "about compiling GoLang for your operating system.\n")
+        else:
+            self.library = None
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()
@@ -163,6 +167,8 @@ class Simulation:
 
         self.route_coords = self.gis.get_path()
 
+        self.basic_regen = simulation.BasicRegen()
+
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
@@ -177,7 +183,7 @@ class Simulation:
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations(library=self.library)
+        self.solar_calculations = simulation.SolarCalculations(golang=self.golang, library=self.library)
 
         self.plotting = simulation.Plotting()
 
@@ -259,12 +265,6 @@ class Simulation:
         if self.tick != 1:
             speed_kmh = speed_kmh[::self.tick]
 
-        # NOTE: If we want to enable this functionality, length of a tick must be considered in its calculations
-        # if self.race_type == "ASC":
-        #     speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances,
-        #                                                speed_kmh / 3.6,
-        #                                                self.waypoints, verbose=False)[:self.simulation_duration + 1]
-
         raw_speed = speed_kmh.copy()
 
         # ------ Run calculations and get result and modified speed array -------
@@ -291,22 +291,22 @@ class Simulation:
                               "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
                               "Cloud cover (%)", "Raw SOC (%)", "Raw Speed (km/h)"]
 
-            self.plotting.add_graph_to_queue(Graph(results_arrays, results_labels, graph_name="Results"))
+            self.plotting.add_graph_page_to_queue(GraphPage(results_arrays, results_labels, page_name="Results"))
 
             if verbose:
                 # Plot energy arrays
                 energy_arrays = self.get_results(["motor_consumed_energy", "array_produced_energy", "delta_energy"])
                 energy_labels = ["Motor Consumed Energy (J)", "Array Produced Energy (J)", "Delta Energy (J)"]
-                energy_graph = Graph(energy_arrays, energy_labels, graph_name="Energy Calculations")
-                self.plotting.add_graph_to_queue(energy_graph)
+                energy_graph = GraphPage(energy_arrays, energy_labels, page_name="Energy Calculations")
+                self.plotting.add_graph_page_to_queue(energy_graph)
 
                 # Plot indices and environment arrays
                 env_arrays = self.get_results(["temp", "closest_gis_indices", "closest_weather_indices",
                                                "gradients", "time_zones", "gis_vehicle_bearings"])
                 env_labels = ["speed dist (m)", "gis ind", "weather ind",
                               "gradients (m)", "time zones", "vehicle bearings"]
-                indices_and_environment_graph = Graph(env_arrays, env_labels, graph_name="Indices and Environment")
-                self.plotting.add_graph_to_queue(indices_and_environment_graph)
+                indices_and_environment_graph = GraphPage(env_arrays, env_labels, page_name="Indices and Environment")
+                self.plotting.add_graph_page_to_queue(indices_and_environment_graph)
 
                 # Plot speed boolean and SOC arrays
                 arrays_to_plot = self.get_results(["speed_kmh", "state_of_charge"])
@@ -318,10 +318,10 @@ class Simulation:
 
                 boolean_arrays = arrays_to_plot + logical_arrays
                 boolean_labels = ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"]
-                boolean_graph = Graph(boolean_arrays, boolean_labels, graph_name="Speed Boolean Operations")
-                self.plotting.add_graph_to_queue(boolean_graph)
+                boolean_graph = GraphPage(boolean_arrays, boolean_labels, page_name="Speed Boolean Operations")
+                self.plotting.add_graph_page_to_queue(boolean_graph)
 
-            self.plotting.plot_graphs(self.get_results("timestamps"), plotting_portion=plot_portion)
+            self.plotting.plot_graph_pages(self.get_results("timestamps"), plot_portion=plot_portion)
 
         if route_visualization:
             if self.race_type == "FSGP":

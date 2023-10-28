@@ -1,4 +1,4 @@
-bayesian_optimization==1.2.0
+bayesian_optimization==1.4.3
 bokeh==2.3.3
 matplotlib==3.5.1
 numpy==1.21.5
@@ -14,8 +14,8 @@ scikit_learn==1.2.2
 setuptools==61.2.0
 timezonefinder==6.0.1
 tqdm==4.64.0
-pygad==3.0.1
 strenum==0.4.15
 perlin-noise==1.12
+pygad==3.0.1
 numba==0.57.1
 cffi==1.15.1

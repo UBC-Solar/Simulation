@@ -12,7 +12,7 @@ from optimization.genetic import GeneticOptimization
 from optimization.random_opt import RandomOptimization
 from utils.InputBounds import InputBounds
 from config import config_directory
-from common.builder import SimulationBuilder
+from utils.SimulationBuilder import SimulationBuilder
 from simulation.data.results import results_directory
 
 """
@@ -27,7 +27,7 @@ class SimulationSettings:
 
     """
 
-    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.distance_and_time,
+    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.distance_travelled,
                  optimization_iterations=20, route_visualization=False, verbose=False, granularity=1):
         self.race_type = race_type
         self.optimization_iterations = optimization_iterations
