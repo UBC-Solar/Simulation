@@ -191,32 +191,28 @@ class Simulation:
             plot_results = False
             verbose = False
 
-        # ----- Reshape speed array -----
         if not kwargs:
             print(f"Input speeds: {speed}\n")
         assert len(speed) == self.get_driving_time_divisions(), ("Input driving speeds array must have length equal to "
                                                                  "get_driving_time_divisions()! Current length is "
                                                                  f"{len(speed)} and length of "
                                                                  f"{self.get_driving_time_divisions()} is needed!")
-        speed_boolean_array = helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
-                                                                          self.race_type, as_seconds=False,
-                                                                          granularity=self.granularity).astype(int)
-        speed_mapped = helpers.map_array_to_targets(speed, speed_boolean_array)
-        speed_mapped_kmh = helpers.reshape_and_repeat(speed_mapped, self.simulation_duration)
-        speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
-        speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
 
+        # ----- Reshape speed array -----
+        speed_kmh = helpers.reshape_speed_array(self.start_hour, self.simulation_duration, self.race_type,
+                                                speed, self.granularity, self.tick)
+
+        # ----- Plot changes resulting from adding waypoints -----
         if self.race_type == "ASC":
             speed_kmh_without_checkpoints = speed_kmh
             speed_kmh = self.gis.speeds_with_waypoints(self.gis.path, self.gis.path_distances, speed_kmh / 3.6,
-                                                       self.waypoints, verbose=False)[:self.simulation_duration + 1]
+                                                  self.waypoints, verbose=False)[:self.simulation_duration + 1]
             if verbose:
                 self.plotting.add_graph_to_queue(Graph([speed_kmh_without_checkpoints, speed_kmh],
-                                                       ["Speed before waypoints", " Speed after waypoints"],
-                                                       "Before and After waypoints"))
+                                                  ["Speed before waypoints", " Speed after waypoints"],
+                                                  "Before and After waypoints"))
 
-        if self.tick != 1:
-            speed_kmh = speed_kmh[::self.tick]
+        # ----- Preserve raw speed -----
         raw_speed = speed_kmh
 
         # ------ Run calculations and get result and modified speed array -------
