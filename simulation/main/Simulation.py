@@ -167,6 +167,8 @@ class Simulation:
 
         self.route_coords = self.gis.get_path()
 
+        self.basic_regen = simulation.BasicRegen()
+
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
