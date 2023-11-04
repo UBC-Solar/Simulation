@@ -1,8 +1,7 @@
 import numpy as np
-from numpy.polynomial import Polynomial
 
 from simulation.battery.base_battery import BaseBattery
-from simulation.common import DayBreak
+from simulation.common import DayBreak, DayBreakEquations as equations
 
 
 class BasicBattery(BaseBattery):
@@ -39,15 +38,15 @@ class BasicBattery(BaseBattery):
 
         # ----- DayBreak battery equations -----
 
-        self.calculate_voltage_from_discharge_capacity = Polynomial([117.6, -0.858896])  # -0.8589x + 117.6
+        self.calculate_voltage_from_discharge_capacity = equations.calculate_voltage_from_discharge_capacity()
 
-        self.calculate_energy_from_discharge_capacity = Polynomial([0, 117.6, -0.429448])  # -0.4294x^2 + 117.6x
+        self.calculate_energy_from_discharge_capacity = equations.calculate_energy_from_discharge_capacity()
 
-        self.calculate_soc_from_discharge_capacity = Polynomial([1, -1 / self.max_current_capacity])
+        self.calculate_soc_from_discharge_capacity = equations.calculate_soc_from_discharge_capacity(self.max_current_capacity)
 
-        self.calculate_discharge_capacity_from_soc = Polynomial([self.max_current_capacity, -self.max_current_capacity])
+        self.calculate_discharge_capacity_from_soc = equations.calculate_discharge_capacity_from_soc(self.max_current_capacity)
 
-        self.calculate_discharge_capacity_from_energy = lambda x: 136.92 - np.sqrt(18747.06027 - 2.32857 * x)
+        self.calculate_discharge_capacity_from_energy = equations.calculate_discharge_capacity_from_energy()
 
         # ----- DayBreak battery variables -----
 
