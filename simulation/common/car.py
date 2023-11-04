@@ -1,14 +1,13 @@
 from simulation.config import config_directory
-from simulation.utils import Singleton
 import os
 import json
 
 """
-This Singleton stores constants for UBC Solar's vehicles.
+This class stores constants for UBC Solar's vehicles.
 """
 
 
-class Car(metaclass=Singleton):
+class Car:
     def __init__(self, name: str):
         config_path = os.path.join(config_directory, f"{name}.json")
 

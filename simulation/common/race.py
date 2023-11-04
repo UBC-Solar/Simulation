@@ -1,10 +1,9 @@
 from simulation.config import config_directory
-from simulation.utils import Singleton
 import os
 import json
 
 
-class Race(metaclass=Singleton):
+class Race:
     def __init__(self, name: str):
         config_path = os.path.join(config_directory, f"{name}.json")
 
