@@ -49,5 +49,15 @@
   "initial_battery_charge": 1.0,
   "lvs_power_loss": 0,
   "gis_force_update": false,
-  "weather_force_update": false
+  "weather_force_update": false,
+
+  "charging_begin" : 8,
+  "charging_end": 20,
+  "driving_begin": 9,
+  "driving_end": 18,
+  "tiling": 300,
+
+  "start_year": 2021,
+  "start_month": 7,
+  "start_day": 31
 }
