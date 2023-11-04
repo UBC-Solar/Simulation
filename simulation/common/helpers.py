@@ -12,7 +12,7 @@ from bokeh.models import HoverTool
 from bokeh.plotting import figure, show, output_file
 from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
-from simulation.common import constants
+from simulation.common import constants, ASC, FSGP
 
 """
 Description: contains the simulation's helper functions.
