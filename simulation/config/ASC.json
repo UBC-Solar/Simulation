@@ -2,5 +2,10 @@
   "charging_begin" : 7,
   "charging_end": 20,
   "driving_begin": 9,
-  "driving_end": 18
+  "driving_end": 18,
+  "tiling": 0,
+
+  "start_year": 2021,
+  "start_month": 8,
+  "start_day": 4
 }

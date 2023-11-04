@@ -44,6 +44,7 @@
   ],
   "tick": 1,
   "simulation_duration": 259200,
+  "race_length": 0,
   "start_hour": 7,
   "initial_battery_charge": 1.0,
   "lvs_power_loss": 0,
