@@ -11,7 +11,7 @@ Next, build the `perlin_noise.so` module from the four `.go` files in `go_files/
 
 ````bash
 cd go_files
-go build -o main.so buildmode=c-shared main.go
+go build -o main.so -buildmode=c-shared main.go
 cd perlin_noise
 go build -o perlin_noise.so -buildmode=c-shared main.go vector.go perlinNoise.go simplexNoise.go
 ````

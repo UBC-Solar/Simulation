@@ -248,23 +248,18 @@ class Simulation:
             plot_results = False
             verbose = False
 
-        # ----- Reshape speed array -----
-        # if not kwargs and plot_results:
-        #     print(f"Input speeds: {speed}\n")
+        if not kwargs:
+            print(f"Input speeds: {speed}\n")
         assert len(speed) == self.get_driving_time_divisions(), ("Input driving speeds array must have length equal to "
                                                                  "get_driving_time_divisions()! Current length is "
                                                                  f"{len(speed)} and length of "
                                                                  f"{self.get_driving_time_divisions()} is needed!")
-        speed_boolean_array = helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
-                                                                          self.race_type, as_seconds=False,
-                                                                          granularity=self.granularity).astype(int)
-        speed_mapped = helpers.map_array_to_targets(speed, speed_boolean_array)
-        speed_mapped_kmh = helpers.reshape_and_repeat(speed_mapped, self.simulation_duration)
-        speed_mapped_kmh = np.insert(speed_mapped_kmh, 0, 0)
-        speed_kmh = helpers.apply_deceleration(speed_mapped_kmh, 20)
-        if self.tick != 1:
-            speed_kmh = speed_kmh[::self.tick]
 
+        # ----- Reshape speed array -----
+        speed_kmh = helpers.reshape_speed_array(self.start_hour, self.simulation_duration, self.race_type,
+                                                speed, self.granularity, self.tick)
+
+        # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
 
         # ------ Run calculations and get result and modified speed array -------
@@ -272,13 +267,13 @@ class Simulation:
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
-        # if not kwargs:
-        #     print(f"Simulation successful!\n"
-        #           f"Time taken: {results[0]}\n"
-        #           f"Route length: {results[1]:.2f}km\n"
-        #           f"Maximum distance traversable: {results[2]:.2f}km\n"
-        #           f"Average speed: {np.average(results[3]):.2f}km/h\n"
-        #           f"Final battery SOC: {results[4]:.2f}%\n")
+        if not kwargs:
+            print(f"Simulation successful!\n"
+                  f"Time taken: {results[0]}\n"
+                  f"Route length: {results[1]:.2f}km\n"
+                  f"Maximum distance traversable: {results[2]:.2f}km\n"
+                  f"Average speed: {np.average(results[3]):.2f}km/h\n"
+                  f"Final battery SOC: {results[4]:.2f}%\n")
 
         # ----- Plotting -----
 
