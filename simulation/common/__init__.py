@@ -3,4 +3,7 @@ from simulation.common.exceptions import BatteryEmptyError, PrematureDataRecover
 from simulation.common.helpers import timeit
 from simulation.common.producer import Producer
 from simulation.common.storage import Storage
-from simulation.common.car import DayBreak
+from simulation.common.car import Car
+
+DayBreak = Car('DayBreak')
+BrightSide = Car('BrightSide')

@@ -3,7 +3,7 @@ import os
 import json
 
 """
-This Singleton stores constants for UBC Solar's vehicles such as 
+This Singleton stores constants for UBC Solar's vehicles.
 """
 
 
@@ -17,9 +17,9 @@ class CarMetaclass(type):
         return cls._instances[cls]
 
 
-class DayBreak(metaclass=CarMetaclass):
-    def __init__(self):
-        config_path = os.path.join(config_directory, f"DayBreak.json")
+class Car(metaclass=CarMetaclass):
+    def __init__(self, name: str):
+        config_path = os.path.join(config_directory, f"{name}.json")
 
         with open(config_path) as f:
             car_constants = json.load(f)
@@ -33,6 +33,5 @@ class DayBreak(metaclass=CarMetaclass):
         self.vehicle_mass = car_constants["vehicle_mass"]
         self.road_friction = car_constants["road_friction"]
         self.tire_radius = car_constants["tire_radius"]
-        self.air_density = car_constants["air_density"]
         self.vehicle_frontal_area = car_constants["vehicle_frontal_area"]
         self.drag_coefficient = car_constants["drag_coefficient"]

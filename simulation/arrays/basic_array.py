@@ -8,13 +8,12 @@ class BasicArray(BaseArray):
     # incident_sunlight:
     def __init__(self):
         super().__init__()
-        daybreak = DayBreak()
 
         # solar cell efficiency
-        self.panel_efficiency = daybreak.panel_efficiency
+        self.panel_efficiency = DayBreak.panel_efficiency
 
         # solar panel size in m^2
-        self.panel_size = daybreak.panel_size
+        self.panel_size = DayBreak.panel_size
 
         # please do not use this.
         self.solar_irradiance = 1200

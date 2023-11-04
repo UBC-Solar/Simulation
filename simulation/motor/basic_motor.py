@@ -17,18 +17,16 @@ class BasicMotor(BaseMotor):
         # Instantaneous current supplied by the battery to the motor controller
         self.dc_i = 0
 
-        daybreak = DayBreak()
-
         # TODO: organize this mess
         self.input_power = 0
-        self.vehicle_mass = daybreak.vehicle_mass
+        self.vehicle_mass = DayBreak.vehicle_mass
         self.acceleration_g = constants.ACCELERATION_G
-        self.road_friction = daybreak.road_friction
-        self.tire_radius = daybreak.tire_radius
+        self.road_friction = DayBreak.road_friction
+        self.tire_radius = DayBreak.tire_radius
 
-        self.air_density = daybreak.air_density
-        self.vehicle_frontal_area = daybreak.vehicle_frontal_area
-        self.drag_coefficient = daybreak.drag_coefficient
+        self.air_density = constants.AIR_DENSITY
+        self.vehicle_frontal_area = DayBreak.vehicle_frontal_area
+        self.drag_coefficient = DayBreak.drag_coefficient
 
         self.friction_force = (self.vehicle_mass * self.acceleration_g * self.road_friction)
 

@@ -29,14 +29,13 @@ class BasicBattery(BaseBattery):
         :param float state_of_charge: initial battery state of charge
 
         """
-        daybreak = DayBreak()
 
         # ----- DayBreak battery constants -----
 
-        self.max_voltage = daybreak.max_voltage
-        self.min_voltage = daybreak.min_voltage
-        self.max_current_capacity = daybreak.max_current_capacity
-        self.max_energy_capacity = daybreak.max_energy_capacity
+        self.max_voltage = DayBreak.max_voltage
+        self.min_voltage = DayBreak.min_voltage
+        self.max_current_capacity = DayBreak.max_current_capacity
+        self.max_energy_capacity = DayBreak.max_energy_capacity
 
         # ----- DayBreak battery equations -----
 

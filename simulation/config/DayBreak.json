@@ -10,7 +10,6 @@
   "vehicle_mass": 250,
   "road_friction": 0.0055,
   "tire_radius": 0.2032,
-  "air_density": 1.225,
   "vehicle_frontal_area": 0.952,
   "drag_coefficient": 0.223
 }
