@@ -3,7 +3,7 @@ import os
 import json
 
 """
-This class stores constants for UBC Solar's vehicles.
+This class stores constants for UBC Solar's solar-powered vehicles.
 """
 
 

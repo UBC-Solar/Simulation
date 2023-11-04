@@ -1,7 +1,8 @@
 import numpy as np
 from numpy.polynomial import Polynomial
+
 """
-This file stores equations that have been generated through curve fitting to datasheets.
+This class stores equations that have been generated through curve fitting to datasheets.
 """
 
 

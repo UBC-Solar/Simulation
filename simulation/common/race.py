@@ -2,10 +2,14 @@ from simulation.config import config_directory
 import os
 import json
 
+"""
+This class collects the constants that are related to a specific competition.
+"""
+
 
 class Race:
     def __init__(self, name: str):
-        config_path = os.path.join(config_directory, f"{name}.json")
+        config_path = os.path.join(config_directory, f"settings_{name}.json")
 
         with open(config_path) as f:
             race_constants = json.load(f)
