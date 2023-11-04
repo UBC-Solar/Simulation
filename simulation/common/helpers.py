@@ -1,6 +1,5 @@
 import datetime
 import functools
-import logging
 
 import numpy as np
 import pandas as pd
@@ -908,13 +907,13 @@ def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
             Hash = ((Hash ^ (Test >> ThreeQuarters)) & (~HighBits))
     return Hash & 0x7FFFFFFF
 
-  
+
 def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:
     max_value_in_array = np.max(input_array) if max_value is None else max_value
     min_value_in_array = np.min(input_array) if min_value is None else min_value
     return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
 
-  
+
 if __name__ == '__main__':
     out = map_array_to_targets([90, 60, 10], [0, 1, 1, 1, 0])
 
