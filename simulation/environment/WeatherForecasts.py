@@ -9,7 +9,7 @@ import requests
 import sys
 
 from simulation.cache.weather import weather_directory
-from simulation.common import helpers
+from simulation.common import helpers, constants
 from tqdm import tqdm
 
 
@@ -62,7 +62,7 @@ class WeatherForecasts:
         assert race_type in ["ASC", "FSGP"]
 
         if self.race_type == "ASC":
-            self.coords = self.cull_dataset(coords, reduction_factor=625)
+            self.coords = coords[::constants.REDUCTION_FACTOR]
             weather_file = weather_directory / "weather_data.npz"
         else:
             self.coords = np.array([coords[0], coords[-1]])
@@ -384,28 +384,6 @@ class WeatherForecasts:
         result = full_weather_forecast_at_coords[tuple((temp_0, closest_timestamp_indices))]
 
         return result
-
-    @staticmethod
-    def cull_dataset(coords, reduction_factor):
-        """
-        
-        As we currently have a limited number of API calls(60) every minute with the
-        current Weather API, we must shrink the dataset significantly. As the
-        OpenWeatherAPI models have a resolution of between 2.5 - 70 km, we will
-        go for a resolution of 25km. Assuming we travel at 100km/h for 12 hours,
-        1200 kilometres/25 = 48 API calls
-
-        As the Google Maps API has a resolution of around 40m between points,
-        for ASC, we must cull at 625:1 (because 25,000m / 40m = 625)
-        
-        :param np.ndarray coords: array to be reduced
-        :param int reduction_factor: the factor in which the array will be reduced
-        :return: reduced array
-        :rtype: np.ndarray
-        
-        """
-
-        return coords[::reduction_factor]
 
     @staticmethod
     def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):

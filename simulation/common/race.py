@@ -14,3 +14,5 @@ class Race:
         self.charging_end = race_constants["charging_end"]
         self.driving_begin = race_constants["driving_begin"]
         self.driving_end = race_constants["driving_end"]
+        self.tiling = race_constants["tiling"]
+        self.date = (race_constants["start_year"], race_constants["start_month"], race_constants["start_day"])
