@@ -2,9 +2,7 @@ import math
 import numpy as np
 
 from simulation.motor.base_motor import BaseMotor
-from simulation.common import DayBreak
-from simulation.common import constants
-from simulation.common import DayBreakEquations
+from simulation.common import DayBreak, constants, DayBreakEquations
 
 
 class BasicMotor(BaseMotor):
