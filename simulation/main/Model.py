@@ -11,7 +11,6 @@ Iterable = Union[np.ndarray, list, set, tuple]
 
 
 class Model:
-    __Empty = np.array([0])
     """
     Models should be considered to be immutable. Instantiate a new model when you want to run a different simulation.
     """
@@ -24,7 +23,7 @@ class Model:
 
         # --------- Results ---------
 
-        self.distances: np.ndarray = Model.__Empty
+        self.distances = None
         self.state_of_charge = None
         self.delta_energy = None
         self.solar_irradiances = None
