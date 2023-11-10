@@ -337,3 +337,28 @@ class SolarCalculations:
                                  day_of_year, local_time, elevations, cloud_covers)
 
         return ghi
+
+
+def test_zenith_angle():
+    from matplotlib import pyplot
+
+    hours = np.arange(8766) # number of hours in a year
+
+    sc = SolarCalculations()
+
+    # determine and plot the zenith angle at every hour in a year
+    zenith_angles = sc.calculate_zenith_angle(np.full(8766, 49.26114545494209),
+                                              np.full(8766, -123.24811214765937),
+                                              -7,
+                                              hours/24,
+                                              hours % 24)
+
+    print(zenith_angles)
+    pyplot.plot(hours, zenith_angles)
+    pyplot.show()
+
+
+if __name__ == "__main__":
+    test_zenith_angle()
+
+
