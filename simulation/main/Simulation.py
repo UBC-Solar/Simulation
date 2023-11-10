@@ -265,7 +265,7 @@ class Simulation:
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
-        if not kwargs:
+        if not kwargs and verbose:
             print(f"Simulation successful!\n"
                   f"Time taken: {results[0]}\n"
                   f"Route length: {results[1]:.2f}km\n"
