@@ -8,7 +8,7 @@ import csv
 from tqdm import tqdm
 from main.Simulation import Simulation, SimulationReturnType
 from optimization.bayesian import BayesianOptimization
-from optimization.genetic import GeneticOptimization
+from optimization.genetic import GeneticOptimization, OptimizationSettings
 from optimization.random_opt import RandomOptimization
 from utils.InputBounds import InputBounds
 from config import config_directory
@@ -109,10 +109,12 @@ def run_simulation(settings):
     # Initialize optimization methods
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
-    geneticOptimization = GeneticOptimization(simulation_model, bounds)
 
     # Perform optimization with Genetic Optimization
-    results_genetic = geneticOptimization.maximize()
+    optimization_settings: OptimizationSettings = OptimizationSettings()
+    with tqdm(total=optimization_settings.generation_limit, file=sys.stdout, desc="Optimizing driving speeds", position=0, leave=True) as pbar:
+        geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=optimization_settings, pbar=pbar)
+        results_genetic = geneticOptimization.maximize()
     optimized_genetic = simulation_model.run_model(geneticOptimization.bestinput, plot_results=True)
 
     # Perform optimization with Bayesian Optimization
