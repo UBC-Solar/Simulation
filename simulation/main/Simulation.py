@@ -248,8 +248,6 @@ class Simulation:
             plot_results = False
             verbose = False
 
-        if not kwargs:
-            print(f"Input speeds: {speed}\n")
         assert len(speed) == self.get_driving_time_divisions(), ("Input driving speeds array must have length equal to "
                                                                  "get_driving_time_divisions()! Current length is "
                                                                  f"{len(speed)} and length of "
