@@ -92,7 +92,6 @@ def check_for_non_consecutive_zeros(array, verbose=False):
         return True
 
 
-@jit(nopython=True)
 def reshape_and_repeat(input_array, reshape_length):
     """
 
@@ -129,7 +128,6 @@ def reshape_and_repeat(input_array, reshape_length):
         return result
 
 
-@jit(nopython=True)
 def apply_deceleration(input_speed_array, tick):
     """
 
