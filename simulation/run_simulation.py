@@ -27,7 +27,7 @@ class SimulationSettings:
 
     """
 
-    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.distance_travelled,
+    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.distance_and_time,
                  optimization_iterations=20, route_visualization=False, verbose=False, granularity=1):
         self.race_type = race_type
         self.optimization_iterations = optimization_iterations
@@ -106,22 +106,20 @@ def run_simulation(settings):
     bounds = InputBounds()
     bounds.add_bounds(driving_hours, minimum_speed, maximum_speed)
 
-    run_hyperparameter_search(simulation_model, bounds)
-
     # Initialize optimization methods
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
     geneticOptimization = GeneticOptimization(simulation_model, bounds)
 
     # Perform optimization with Genetic Optimization
-    results = geneticOptimization.maximize()
-    optimized = simulation_model.run_model(geneticOptimization.bestinput, plot_results=True)
+    results_genetic = geneticOptimization.maximize()
+    optimized_genetic = simulation_model.run_model(geneticOptimization.bestinput, plot_results=True)
 
     # Perform optimization with Bayesian Optimization
-    results = optimization.maximize(init_points=5, n_iter=settings.optimization_iterations, kappa=10)
-    optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
-                                           verbose=settings.verbose,
-                                           route_visualization=settings.route_visualization)
+    results_bayesian = optimization.maximize(init_points=5, n_iter=settings.optimization_iterations, kappa=10)
+    optimized_bayesian = simulation_model.run_model(speed=np.fromiter(results_bayesian, dtype=float), plot_results=True,
+                                                    verbose=settings.verbose,
+                                                    route_visualization=settings.route_visualization)
 
     # Perform optimization with random optimization
     results_random = random_optimization.maximize(iterations=settings.optimization_iterations)
@@ -131,7 +129,7 @@ def run_simulation(settings):
 
     #  ----- Output results ----- #
 
-    display_output(settings.return_type, unoptimized_time, optimized, optimized_random, results,
+    display_output(settings.return_type, unoptimized_time, optimized_bayesian, optimized_random, results_bayesian,
                    results_random)
 
     return unoptimized_time
