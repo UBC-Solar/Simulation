@@ -115,17 +115,17 @@ class OptimizationSettings:
         saturate: Criteria_Type = Criteria_Type.saturate
         reach: Criteria_Type = Criteria_Type.reach
 
-    def __init__(self, chromosome_size: int = 12,
-                 parent_selection_type: Parent_Selection_Type = Parent_Selection_Type.sss,
-                 generation_limit: int = 1,
-                 num_parents: int = 4,
-                 k_tournament: int = 4,
-                 crossover_type: Crossover_Type = Crossover_Type.two_points,
-                 elitism: int = 3,
+    def __init__(self, chromosome_size: int = 24,
+                 parent_selection_type: Parent_Selection_Type = Parent_Selection_Type.tournament,
+                 generation_limit: int = 30,
+                 num_parents: int = 12,
+                 k_tournament: int = 5,
+                 crossover_type: Crossover_Type = Crossover_Type.single_point,
+                 elitism: int = 8,
                  mutation_type: Mutation_Type = Mutation_Type.random,
                  mutation_percent: float = 25.0,
                  max_mutation: float = 0.05,
-                 stopping_criteria: Stopping_Criteria = Stopping_Criteria(Stopping_Criteria.saturate, 10)):
+                 stopping_criteria: Stopping_Criteria = Stopping_Criteria(Stopping_Criteria.saturate, 15)):
         self.chromosome_size: int = chromosome_size
         self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = parent_selection_type
         self.generation_limit: int = generation_limit
