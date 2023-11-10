@@ -469,28 +469,6 @@ def calculate_path_gradients(elevations, distances):
 
 
 @jit(nopython=True)
-def cull_dataset(coords, cull_factor=625):
-    """
-
-    As we currently have a limited number of API calls(60) every minute with the
-        current Weather API, we must shrink the dataset significantly. As the
-        OpenWeatherAPI models have a resolution of between 2.5 - 70 km, we will
-        go for a resolution of 25km. Assuming we travel at 100km/h for 12 hours,
-        1200 kilometres/25 = 48 API calls
-
-    As the Google Maps API has a resolution of around 40m between points,
-        we must cull at 625:1 (because 25,000m / 40m = 625)
-
-    :param int cull_factor: factor in which the input array should be culled, default is 625.
-    :param np.ndarray coords: array to be culled
-    :returns: culled array
-    :rtype: np.ndarray
-
-    """
-    return coords[::cull_factor]
-
-
-@jit(nopython=True)
 def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     """
 
@@ -942,7 +920,29 @@ def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
     return Hash & 0x7FFFFFFF
 
 
+@jit(nopython=True)
 def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:
     max_value_in_array = np.max(input_array) if max_value is None else max_value
     min_value_in_array = np.min(input_array) if min_value is None else min_value
     return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
+
+
+@jit(nopython=True)
+def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0) -> np.ndarray:
+    return input_array * (max_value - min_value) + min_value
+
+
+@jit(nopython=True)
+def rescale(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
+    normalized_array = normalize(input_array)
+    return denormalize(normalized_array, upper_bound, lower_bound)
+
+
+
+if __name__ == '__main__':
+    # speed_array input
+    speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
+
+    expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
+    expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
+    expanded_speed_array = apply_deceleration(expanded_speed_array, 20)
