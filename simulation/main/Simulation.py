@@ -208,7 +208,7 @@ class Simulation:
         return helpers.PJWHash(filtered_hash_string)
 
     def run_model(self, speed=None, plot_results=False, verbose=False,
-                  route_visualization=False, plot_portion=(0.0, 1.0), **kwargs):
+                  route_visualization=False, plot_portion=(0.0, 1.0), is_optimizer: bool = False, **kwargs):
         """
 
         Given an array of driving speeds, simulate the model by running calculations sequentially for the entire
@@ -225,24 +225,26 @@ class Simulation:
         Note 2: currently, the simulation can only be run for times during which weather data is available
 
         :param np.ndarray speed: array that specifies the solar car's driving speed at each time step
-        :param bool plot_results: set to True to plot the results of the simulation (is True by default)
+        :param bool plot_results: set to True to plot the results of the simulation
         :param bool verbose: Boolean to control logging and debugging behaviour
         :param bool route_visualization: Flag to control route_visualization plot visibility
         :param tuple[float] plot_portion: A tuple containing the beginning and end of the portion of the array we'd
-        like to plot as percentages (0 <= plot_portion <= 1).
+        like to plot, as percentages (0 <= plot_portion <= 1).
         :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
         :param plot_portion: A tuple containing the beginning and end of the portion of the array we'd
         like to plot as percentages.
-
+        :param bool is_optimizer: flag to set whether this method is being run by an optimizer. Reduces verbosity
+            when true.
         """
 
         if speed is None:
             speed = np.array([30] * self.get_driving_time_divisions())
 
         # Used by the optimization function as it passes values as keyword arguments instead of a numpy array
-        if kwargs:
-            speed = np.fromiter(kwargs.values(), dtype=float)
+        if kwargs or is_optimizer:
+            if kwargs:
+                speed = np.fromiter(kwargs.values(), dtype=float)
 
             # Don't plot results since this code is run by the optimizer
             plot_results = False
@@ -265,7 +267,7 @@ class Simulation:
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
-        if not kwargs and verbose:
+        if not kwargs and not is_optimizer:
             print(f"Simulation successful!\n"
                   f"Time taken: {results[0]}\n"
                   f"Route length: {results[1]:.2f}km\n"

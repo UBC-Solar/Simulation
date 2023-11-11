@@ -417,10 +417,11 @@ class GeneticOptimization(BaseOptimization):
 
         # Chromosomes are normalized, so must be denormalized before being fed to Simulation.
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
-        distance_travelled, time_taken = self.func(solution_denormalized)
+        distance_travelled, time_taken = self.func(speed=solution_denormalized, is_optimizer=True)
 
         # If Simulation did not complete successfully (SOC dropped below 0) then return the distance when that occurred.
-        distance_travelled_real = distance_travelled if self.model.was_successful() else self.model.get_distance_before_exhaustion()
+        distance_travelled_real = distance_travelled if self.model.was_successful() \
+            else self.model.get_distance_before_exhaustion()
 
         self.did_finish_race = True if distance_travelled_real == distance_travelled else False
 
