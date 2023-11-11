@@ -1,0 +1,9 @@
+{
+    "current_coord": [38.9281815, -95.677021],
+
+    "start_hour": 7,
+    "initial_battery_charge": 0.65,
+
+    "gis_force_update":  false,
+    "weather_force_update": false
+}

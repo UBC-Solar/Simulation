@@ -584,7 +584,7 @@ def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_ty
     :param int simulation_duration: An integer representing simulation duration in seconds
     :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
     :param bool as_seconds: will return an array of seconds, or hours if set to False
-    :param float granularity: how granular the time divisions for Simulation's speed array should be, where 1 is hourly and 0.5 is twice per hour.
+    :param float granularity: how granular the time divisions for Simulation's speed array should be, where 1 is hourly and 2 is twice per hour.
     :returns: driving_time_boolean, a boolean array with race timing constraints applied to it
     :rtype: np.ndarray
     :raises: ValueError is race_type is not one of "ASC" or "FSGP"
@@ -685,7 +685,17 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
         end_index = int(len(timestamps) * plot_portion[1])
         timestamps = timestamps[beginning_index:end_index]
 
-    compress_constant = int(timestamps.shape[0] / 5000)
+    if plot_portion != (0.0, 1.0):
+        for index, array in enumerate(arrays_to_plot):
+            beginning_index = int(len(array) * plot_portion[0])
+            end_index = int(len(array) * plot_portion[1])
+            arrays_to_plot[index] = array[beginning_index:end_index]
+
+        beginning_index = int(len(timestamps) * plot_portion[0])
+        end_index = int(len(timestamps) * plot_portion[1])
+        timestamps = timestamps[beginning_index:end_index]
+
+    compress_constant = max(int(timestamps.shape[0] / 5000), 1)
 
     for index, array in enumerate(arrays_to_plot):
         arrays_to_plot[index] = array[::compress_constant]
