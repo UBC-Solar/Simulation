@@ -355,13 +355,14 @@ class SolarCalculations:
         zenith_angle = self.calculate_zenith_angle(latitude, longitude,
                                                    time_zone_utc, day_of_year, local_time)
 
-        # Determine minimum difference in angle between the zenith and the array tilt
-        closest_angle = np.min(np.abs(array_angles - zenith_angle))
+        # Calculate the absolute differences
+        differences = np.abs(zenith_angle[:, np.newaxis] - array_angles)
 
-        print("The best angle is at "+array_angles[np.argmin(np.abs(array_angles - zenith_angle))])
-        print("Where the zenith is", zenith_angle)
-        print("And the difference is", closest_angle)
+        # Find the minimum difference for each element in zenith_angle
+        effective_zenith = np.min(differences, axis=1)
 
-        GHI = DNI * np.cos(np.radians(closest_angle)) + DHI
+        # Now effective_zenith contains the minimum absolute difference for each element in zenith_angle
+
+        GHI = DNI * np.cos(np.radians(effective_zenith)) + DHI
 
         return self.apply_cloud_cover(GHI=GHI, cloud_cover=cloud_cover)
