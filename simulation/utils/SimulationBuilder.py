@@ -27,7 +27,6 @@ class SimulationBuilder:
         self.race_type = None
         self.lvs_power_loss = None
         self.tick = None
-        self.race_length = None
         self.simulation_duration = None
 
         # Execution Parameters
@@ -36,10 +35,7 @@ class SimulationBuilder:
         self.granularity = None
 
     def set_initial_conditions(self, args):
-        self.origin_coord = args["origin_coord"]
-        self.dest_coord = args["dest_coord"]
         self.current_coord = args["current_coord"]
-        self.waypoints = args["waypoints"]
 
         self.start_hour = args["start_hour"]
 
@@ -51,10 +47,13 @@ class SimulationBuilder:
         return self
 
     def set_model_parameters(self, args, race_type):
+        self.origin_coord = args["origin_coord"]
+        self.dest_coord = args["dest_coord"]
+        self.waypoints = args["waypoints"]
+
         self.race_type = race_type
         self.lvs_power_loss = args['lvs_power_loss']
         self.tick = args['tick']
-        self.race_length = args['race_length']
         self.simulation_duration = args['simulation_duration']
 
         return self

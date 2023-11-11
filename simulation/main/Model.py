@@ -178,7 +178,7 @@ class Model:
         self.not_charge = helpers.get_charge_timing_constraints_boolean(start_hour=self.simulation.start_hour,
                                                                         simulation_duration=self.simulation.
                                                                         simulation_duration,
-                                                                        race_type=self.simulation.race_type)
+                                                                        race_type=self.simulation.race_type)[:self.simulation.simulation_duration + 1]
         if self.simulation.tick != 1:
             self.not_charge = self.not_charge[::self.simulation.tick]
 
