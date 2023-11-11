@@ -696,6 +696,16 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
         end_index = int(len(timestamps) * plot_portion[1])
         timestamps = timestamps[beginning_index:end_index]
 
+    if plot_portion != (0.0, 1.0):
+        for index, array in enumerate(arrays_to_plot):
+            beginning_index = int(len(array) * plot_portion[0])
+            end_index = int(len(array) * plot_portion[1])
+            arrays_to_plot[index] = array[beginning_index:end_index]
+
+        beginning_index = int(len(timestamps) * plot_portion[0])
+        end_index = int(len(timestamps) * plot_portion[1])
+        timestamps = timestamps[beginning_index:end_index]
+
     compress_constant = max(int(timestamps.shape[0] / 5000), 1)
 
     for index, array in enumerate(arrays_to_plot):

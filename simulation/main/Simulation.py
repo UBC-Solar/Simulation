@@ -276,7 +276,8 @@ class Simulation:
 
         if plot_results:
             results_arrays = self.get_results(["speed_kmh", "distances", "state_of_charge", "delta_energy",
-                                               "solar_irradiances", "wind_speeds", "gis_route_elevations_at_each_tick",
+                                               "solar_irradiances", "wind_speeds",
+                                               "gis_route_elevations_at_each_tick",
                                                "cloud_covers", "raw_soc"]) + [raw_speed]
             results_labels = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                               "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
