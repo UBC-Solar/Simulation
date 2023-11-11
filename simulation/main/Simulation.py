@@ -108,12 +108,7 @@ class Simulation:
         self.tick = builder.tick
         assert isinstance(self.tick, int), "Discrete tick length must be an integer!"
 
-        if self.race_type == "ASC":
-            race_length = builder.race_length  # Race length in days, arbitrary as ASC doesn't have a time limit
-            self.simulation_duration = race_length * 24 * 60 * 60
-        elif self.race_type == "FSGP":
-            self.simulation_duration = builder.simulation_duration
-
+        self.simulation_duration = builder.simulation_duration
         self.initial_battery_charge = builder.initial_battery_charge
 
         self.start_hour = builder.start_hour
@@ -160,6 +155,8 @@ class Simulation:
         self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)
 
         self.basic_motor = simulation.BasicMotor()
+
+        self.basic_regen = simulation.BasicRegen()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, library=self.library, force_update=gis_force_update,
