@@ -106,16 +106,17 @@ def run_simulation(settings):
     bounds = InputBounds()
     bounds.add_bounds(driving_hours, minimum_speed, maximum_speed)
 
-    # Initialize optimization methods
-    optimization = BayesianOptimization(bounds, simulation_model.run_model)
-    random_optimization = RandomOptimization(bounds, simulation_model.run_model)
-
     # Perform optimization with Genetic Optimization
     optimization_settings: OptimizationSettings = OptimizationSettings()
-    with tqdm(total=optimization_settings.generation_limit, file=sys.stdout, desc="Optimizing driving speeds", position=0, leave=True) as pbar:
+    with tqdm(total=optimization_settings.generation_limit, file=sys.stdout, desc="Optimizing driving speeds",
+              position=0, leave=True, unit="Generation", smoothing=1.0) as pbar:
         geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=optimization_settings, pbar=pbar)
         results_genetic = geneticOptimization.maximize()
     optimized_genetic = simulation_model.run_model(geneticOptimization.bestinput, plot_results=True)
+
+    # Initialize optimization methods
+    optimization = BayesianOptimization(bounds, simulation_model.run_model)
+    random_optimization = RandomOptimization(bounds, simulation_model.run_model)
 
     # Perform optimization with Bayesian Optimization
     results_bayesian = optimization.maximize(init_points=5, n_iter=settings.optimization_iterations, kappa=10)
