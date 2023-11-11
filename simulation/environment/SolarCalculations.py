@@ -339,27 +339,29 @@ class SolarCalculations:
 
         return ghi
 
-
-def test_zenith_angle():
-    from matplotlib import pyplot
-
-    hours = np.arange(8766) # number of hours in a year
-
-    sc = SolarCalculations()
-
-    # determine and plot the zenith angle at every hour in a year
-    zenith_angles = sc.calculate_zenith_angle(np.full(8766, 49.26114545494209),
-                                              np.full(8766, -123.24811214765937),
-                                              -7,
-                                              hours/24,
-                                              hours % 24)
-
-    print(zenith_angles)
-    pyplot.plot(hours, zenith_angles)
-    pyplot.show()
+    def calculate_angled_irradiance(self, latitude, longitude, time_zone_utc, day_of_year,
+                                    local_time, elevation, cloud_cover, array_angles=np.array([0, 15, 30, 45])):
+        """
 
 
-if __name__ == "__main__":
-    test_zenith_angle()
+        """
 
+        DHI = self.calculate_DHI(latitude, longitude, time_zone_utc, day_of_year,
+                                 local_time, elevation)
 
+        DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
+                                 local_time, elevation)
+
+        zenith_angle = self.calculate_zenith_angle(latitude, longitude,
+                                                   time_zone_utc, day_of_year, local_time)
+
+        # Determine minimum difference in angle between the zenith and the array tilt
+        closest_angle = np.min(np.abs(array_angles - zenith_angle))
+
+        print("The best angle is at "+array_angles[np.argmin(np.abs(array_angles - zenith_angle))])
+        print("Where the zenith is", zenith_angle)
+        print("And the difference is", closest_angle)
+
+        GHI = DNI * np.cos(np.radians(closest_angle)) + DHI
+
+        return self.apply_cloud_cover(GHI=GHI, cloud_cover=cloud_cover)
