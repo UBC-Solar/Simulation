@@ -189,13 +189,14 @@ class SolarCalculations:
                                                    time_zone_utc, day_of_year, local_time)
         a = 0.14
 
+        # https://www.pveducation.org/pvcdrom/properties-of-sunlight/air-mass
         # air_mass = 1 / (math.cos(math.radians(zenith_angle)) + \
         #            0.50572*pow((96.07995 - zenith_angle), -1.6364))
 
         air_mass = np.float_(1) / np.float_(np.cos(np.radians(zenith_angle)))
         with np.errstate(over="ignore"):
-            DNI = self.S_0 * ((1 - a * elevation * 0.001) * np.power(np.power(0.7, air_mass),
-                                                                     0.678) + a * elevation * 0.001)
+            DNI = self.S_0 * ((1 - a * elevation * 0.001) * np.power(0.7, np.power(air_mass, 0.678))
+                              + a * elevation * 0.001)
         return np.where(zenith_angle > 90, 0, DNI)
 
     def calculate_DHI(self, latitude, longitude, time_zone_utc, day_of_year,
