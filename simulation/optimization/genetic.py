@@ -385,7 +385,7 @@ class GeneticOptimization(BaseOptimization):
 
                 # We must denormalize the driving speeds array before simulating it.
                 input_speed = rescale(guess_speed, max_speed_kmh, min_speed_kmh)
-                self.model.run_model(speed=input_speed, plot_results=False)
+                self.model.run_model(speed=input_speed, plot_results=False, is_optimizer=True)
 
                 # If the speed results in a successful simulation, add it to the population.
                 if self.model.was_successful():
