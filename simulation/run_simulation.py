@@ -330,14 +330,13 @@ def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds)
 
 def get_default_settings(race_type: str = "ASC") -> tuple[dict, dict]:
     #  ----- Load initial conditions -----
-    with open(config_directory / "initial_conditions.json") as f:
+    assert race_type in ["ASC", "FSGP"]
+
+    with open(config_directory / f"initial_conditions_{race_type}.json") as f:
         initial_conditions = json.load(f)
 
     #  ----- Load model parameters -----
-    if race_type == "ASC":
-        config_path = config_directory / "settings_ASC.json"
-    else:
-        config_path = config_directory / "settings_FSGP.json"
+    config_path = config_directory / f"settings_{race_type}.json"
 
     with open(config_path) as f:
         model_parameters = json.load(f)
