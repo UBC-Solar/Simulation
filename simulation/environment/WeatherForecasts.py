@@ -32,7 +32,8 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, golang=False, library=None, weather_data_frequency="daily", force_update=False, origin_coord=None):
+    def __init__(self, api_key, coords, duration, race_type, golang=False, library=None, weather_data_frequency="daily",
+                 force_update=False, origin_coord=None, hash_key=None):
         """
 
         Initializes the instance of a WeatherForecast class
@@ -45,6 +46,7 @@ class WeatherForecasts:
         :param duration: amount of time simulated (in hours)
         :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
         :param golang: boolean determining whether to use faster GoLang implementations when available
+        :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
         self.race_type = race_type
@@ -73,9 +75,7 @@ class WeatherForecasts:
         # if the file exists, load path from file
         if os.path.isfile(weather_file) and force_update is False:
             with np.load(weather_file) as weather_data:
-                if np.array_equal(weather_data['origin_coord'], self.origin_coord) and \
-                        np.array_equal(weather_data['dest_coord'], self.dest_coord):
-
+                if weather_data['hash'] == hash_key:
                     api_call_required = False
 
                     print("Previous weather save file is being used...\n")
@@ -95,6 +95,9 @@ class WeatherForecasts:
                     print("--- Array information ---")
                     for key in weather_data:
                         print(f"> {key}: {weather_data[key].shape}")
+                with open(weather_file, 'wb') as f:
+                    np.savez(f, weather_forecast=self.weather_forecast, origin_coord=self.origin_coord,
+                             dest_coord=self.dest_coord, hash=hash_key)
 
         if api_call_required or force_update:
             print("Different weather data requested and/or weather file does not exist. "

@@ -146,6 +146,11 @@ class Simulation:
                                 "about compiling GoLang for your operating system.\n")
         else:
             self.library = None
+
+        # -------- Hash Key ---------
+
+        self.hash_key = self.__hash__()
+
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()
@@ -160,7 +165,7 @@ class Simulation:
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, library=self.library, force_update=gis_force_update,
-                                  current_coord=self.current_coord, golang=self.golang)
+                                  current_coord=self.current_coord, golang=self.golang, hash_key=self.hash_key)
 
         self.route_coords = self.gis.get_path()
 
@@ -175,7 +180,8 @@ class Simulation:
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update,
                                                    origin_coord=self.gis.launch_point,
-                                                   golang=self.golang)
+                                                   golang=self.golang,
+                                                   hash_key=self.hash_key)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
@@ -183,10 +189,6 @@ class Simulation:
         self.solar_calculations = simulation.SolarCalculations(golang=self.golang, library=self.library)
 
         self.plotting = simulation.Plotting()
-
-        # -------- Hash Key ---------
-
-        self.hash_key = self.__hash__()
 
         # All attributes ABOVE will NOT be modified when the model is simulated. All attributes BELOW this WILL be
         # mutated over the course of simulation. Ensure that when you modify the behaviour of Simulation that this
