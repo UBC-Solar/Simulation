@@ -197,8 +197,7 @@ class Simulation:
         self._model = None
 
     def __hash__(self):
-        hash_string = str(self.origin_coord) + str(self.dest_coord) + str(self.current_coord) + str(
-            self.start_hour) + str(self.initial_battery_charge) + str(self.tick) + str(self.simulation_duration)
+        hash_string = str(self.origin_coord) + str(self.dest_coord)
         for value in self.waypoints:
             hash_string += str(value)
         filtered_hash_string = "".join(filter(str.isnumeric, hash_string))
