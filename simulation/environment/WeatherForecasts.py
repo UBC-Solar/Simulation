@@ -95,9 +95,6 @@ class WeatherForecasts:
                     print("--- Array information ---")
                     for key in weather_data:
                         print(f"> {key}: {weather_data[key].shape}")
-                with open(weather_file, 'wb') as f:
-                    np.savez(f, weather_forecast=self.weather_forecast, origin_coord=self.origin_coord,
-                             dest_coord=self.dest_coord, hash=hash_key)
 
         if api_call_required or force_update:
             print("Different weather data requested and/or weather file does not exist. "
@@ -106,7 +103,7 @@ class WeatherForecasts:
 
             with open(weather_file, 'wb') as f:
                 np.savez(f, weather_forecast=self.weather_forecast, origin_coord=self.origin_coord,
-                         dest_coord=self.dest_coord)
+                         dest_coord=self.dest_coord, hash=hash_key)
 
         self.last_updated_time = self.weather_forecast[0, 0, 2]
 
