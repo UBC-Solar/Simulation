@@ -334,8 +334,15 @@ class SolarCalculations:
         else:
             day_of_year, local_time = self.lib.golang_calculate_array_GHI_times(local_times)
 
+        # TODO: use calculate_angled_irradiance() instead of calculate GHI during stationary charging times
+
         ghi = self.calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
                                  day_of_year, local_time, elevations, cloud_covers)
+
+        stationary_irradiance = self.calculate_angled_irradiance(coords[:, 0], coords[:, 1], time_zones, day_of_year,
+                                                                 local_time, elevations, cloud_covers)
+
+        # TODO: create a mask of stationary charging times
 
         return ghi
 
@@ -343,6 +350,23 @@ class SolarCalculations:
                                     local_time, elevation, cloud_cover, array_angles=np.array([0, 15, 30, 45])):
         """
 
+        Determine the direct and diffuse irradiance on an array which can be mounted at different angles.
+        During stationary charging, the car can mount the array at different angles, resulting in a higher
+        component of direct irradiance captured.
+
+        Uses the GHI formula, GHI = DNI*cos(zenith)+DHI but with an 'effective zenith',
+        the angle between the mounted panel's normal and the sun.
+
+        :param np.ndarray latitude: The latitude of a location on Earth
+        :param np.ndarray longitude: The longitude of a location on Earth
+        :param np.ndarray time_zone_utc: The UTC time zone of your area in hours of UTC offset, without including the effects of Daylight Savings Time. For example, Vancouver has time_zone_utc = -8 year-round.
+        :param np.ndarray day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+        :param np.ndarray local_time: The local time in hours from midnight.
+        :param np.ndarray elevation: The local elevation of a location in metres
+        :param np.ndarray cloud_cover: A NumPy array representing cloud cover as a percentage from 0 to 100
+        :param np.ndarray array_angles: An array containing the discrete angles on which the array can be mounted
+        :returns: The "effective Global Horizontal Irradiance" in W/m^2
+        :rtype: np.ndarray
 
         """
 
