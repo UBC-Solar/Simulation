@@ -8,7 +8,7 @@ A class to perform calculation and approximations for obtaining quantities
 import datetime
 import numpy as np
 
-from simulation.common import helpers
+from simulation.common import helpers, constants
 
 
 class SolarCalculations:
@@ -24,7 +24,7 @@ class SolarCalculations:
         """
 
         # Solar Constant in W/m2
-        self.S_0 = 1353
+        self.S_0 = constants.SOLAR_IRRADIANCE
 
         self.golang = golang
         self.lib = library
@@ -301,7 +301,7 @@ class SolarCalculations:
 
         Convert a date into local time.
 
-        :param datetime.date date: date to be converted
+        :param datetime.datetime date: date to be converted
         :return: a date converted into local time.
         :rtype: int
 
