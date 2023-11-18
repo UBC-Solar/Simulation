@@ -24,9 +24,6 @@ class BaseBattery(Storage):
         else:
             self.empty = True
 
-    def update(self, tick):
-        raise NotImplementedError
-
     def charge(self, energy):
         # handles the possibility that adding energy exceeds the max capacity of the battery
         if self.stored_energy + energy >= self.max_energy_capacity:
