@@ -9,8 +9,8 @@ import pytz
 import requests
 import sys
 from simulation.cache.route import route_directory
+from simulation.common import helpers, ASC, FSGP
 from dotenv import load_dotenv
-from simulation.common import helpers
 from timezonefinder import TimezoneFinder
 from tqdm import tqdm
 from sklearn.neighbors import BallTree
@@ -107,9 +107,9 @@ class GIS:
 
         if race_type == "FSGP":
             self.single_lap_path = self.path
-            self.path = np.tile(self.path, (300, 1))
+            self.path = np.tile(self.path, (FSGP.tiling, 1))
             self.single_lap_path_elevations = self.path_elevations
-            self.path_elevations = np.tile(self.path_elevations, 300)
+            self.path_elevations = np.tile(self.path_elevations, FSGP.tiling)
             self.path_time_zones = self.calculate_time_zones(self.path)
 
         self.path_distances = helpers.calculate_path_distances(self.path)
@@ -181,10 +181,10 @@ class GIS:
 
         if self.race_type == "FSGP":
             # this is when FSGP 2021 starts
-            dt = datetime.datetime(2021, 7, 31)
+            dt = datetime.datetime(*FSGP.date)
         else:
             # this is when ASC 2021 starts
-            dt = datetime.datetime(2021, 8, 4)
+            dt = datetime.datetime(*ASC.date)
 
         with tqdm(total=len(coords), file=sys.stdout, desc="Calculating Time Zones") as pbar:
             for index, coord in enumerate(coords):

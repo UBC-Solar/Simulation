@@ -2,6 +2,7 @@ import math
 import numpy as np
 
 from simulation.motor.base_motor import BaseMotor
+from simulation.common import DayBreak, constants, DayBreakEquations
 
 
 class BasicMotor(BaseMotor):
@@ -17,14 +18,14 @@ class BasicMotor(BaseMotor):
 
         # TODO: organize this mess
         self.input_power = 0
-        self.vehicle_mass = 250
-        self.acceleration_g = 9.81
-        self.road_friction = 0.0055
-        self.tire_radius = 0.2032
+        self.vehicle_mass = DayBreak.vehicle_mass
+        self.acceleration_g = constants.ACCELERATION_G
+        self.road_friction = DayBreak.road_friction
+        self.tire_radius = DayBreak.tire_radius
 
-        self.air_density = 1.225
-        self.vehicle_frontal_area = 0.952
-        self.drag_coefficient = 0.223
+        self.air_density = constants.AIR_DENSITY
+        self.vehicle_frontal_area = DayBreak.vehicle_frontal_area
+        self.drag_coefficient = DayBreak.drag_coefficient
 
         self.friction_force = (self.vehicle_mass * self.acceleration_g * self.road_friction)
 
@@ -129,12 +130,7 @@ class BasicMotor(BaseMotor):
 
         revolutions_per_minute = motor_angular_speed * rads_rpm_conversion_factor
 
-        e_m = 0.7382 - (6.281e-5 * motor_output_power) + (6.708e-4 * revolutions_per_minute) \
-              - (2.89e-8 * motor_output_power ** 2) + (2.416e-7 * motor_output_power * revolutions_per_minute) \
-              - (8.672e-7 * revolutions_per_minute ** 2) + (5.653e-12 * motor_output_power ** 3) \
-              - (1.74e-11 * motor_output_power ** 2 * revolutions_per_minute) \
-              - (7.322e-11 * motor_output_power * revolutions_per_minute ** 2) \
-              + (3.263e-10 * revolutions_per_minute ** 3)
+        e_m = DayBreakEquations.calculate_motor_efficiency(motor_output_power, revolutions_per_minute)
 
         e_m[e_m < 0.7382] = 0.7382
         e_m[e_m > 1] = 1
@@ -170,16 +166,7 @@ class BasicMotor(BaseMotor):
 
         np.seterr(divide='warn', invalid='warn')
 
-        e_mc = 0.7694 + (0.007818 * motor_angular_speed) + (0.007043 * motor_torque_array) \
-               - (1.658e-4 * motor_angular_speed ** 2) - (1.806e-5 * motor_torque_array * motor_angular_speed) \
-               - (1.909e-4 * motor_torque_array ** 2) + (1.602e-6 * motor_angular_speed ** 3) \
-               + (4.236e-7 * motor_angular_speed ** 2 * motor_torque_array) \
-               - (2.306e-7 * motor_angular_speed * motor_torque_array ** 2) \
-               + (2.122e-06 * motor_torque_array ** 3) - (5.701e-09 * motor_angular_speed ** 4) \
-               - (2.054e-9 * motor_angular_speed ** 3 * motor_torque_array) \
-               - (3.126e-10 * motor_angular_speed ** 2 * motor_torque_array ** 2) \
-               + (1.708e-09 * motor_angular_speed * motor_torque_array ** 3) \
-               - (8.094e-09 * motor_torque_array ** 4)
+        e_mc = DayBreakEquations.calculate_motor_controller_efficiency(motor_angular_speed, motor_torque_array)
 
         e_mc[e_mc < 0.9] = 0.9
         e_mc[e_mc > 1] = 1

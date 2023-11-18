@@ -1,6 +1,5 @@
 import datetime
 import functools
-import logging
 
 import numpy as np
 import pandas as pd
@@ -13,7 +12,7 @@ from bokeh.models import HoverTool
 from bokeh.plotting import figure, show, output_file
 from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
-from simulation.common import constants
+from simulation.common import constants, ASC, FSGP
 
 """
 Description: contains the simulation's helper functions.
@@ -611,14 +610,14 @@ def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_ty
         simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
                                                start_hour + simulation_duration / (60 * 60)).astype(int)
         if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= 9, (simulation_hours_by_second % 24) >= 18]
+            driving_time_boolean = [(simulation_hours_by_second % 24) <= ASC.driving_begin, (simulation_hours_by_second % 24) >= ASC.driving_end]
         else:  # FSGP
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= 9, (simulation_hours_by_second % 24) >= 18]
+            driving_time_boolean = [(simulation_hours_by_second % 24) <= FSGP.driving_begin, (simulation_hours_by_second % 24) >= FSGP.driving_end]
     else:
         if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours % 24) <= 9, (simulation_hours % 24) >= 18]
+            driving_time_boolean = [(simulation_hours % 24) <= ASC.driving_begin, (simulation_hours % 24) >= ASC.driving_end]
         else:  # FSGP
-            driving_time_boolean = [(simulation_hours % 24) <= 9, (simulation_hours % 24) >= 18]
+            driving_time_boolean = [(simulation_hours % 24) <= FSGP.driving_begin, (simulation_hours % 24) >= FSGP.driving_end]
 
     return np.invert(np.logical_or.reduce(driving_time_boolean))
 
@@ -647,14 +646,14 @@ def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_
         simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
                                                start_hour + simulation_duration / (60 * 60)).astype(int)
         if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= 7, (simulation_hours_by_second % 24) >= 20]
+            driving_time_boolean = [(simulation_hours_by_second % 24) <= ASC.charging_begin, (simulation_hours_by_second % 24) >= ASC.charging_end]
         else:  # FSGP
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= 8, (simulation_hours_by_second % 24) >= 20]
+            driving_time_boolean = [(simulation_hours_by_second % 24) <= FSGP.charging_begin, (simulation_hours_by_second % 24) >= FSGP.charging_end]
     else:
         if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours % 24) <= 7, (simulation_hours % 24) >= 20]
+            driving_time_boolean = [(simulation_hours % 24) <= ASC.charging_begin, (simulation_hours % 24) >= ASC.charging_end]
         else:  # FSGP
-            driving_time_boolean = [(simulation_hours % 24) <= 8, (simulation_hours % 24) >= 20]
+            driving_time_boolean = [(simulation_hours % 24) <= FSGP.charging_begin, (simulation_hours % 24) >= FSGP.charging_end]
 
     return np.invert(np.logical_or.reduce(driving_time_boolean))
 

@@ -1,14 +1,27 @@
-from abc import ABC, abstractmethod
-import numpy as np
+from simulation.config import config_directory
+import os
+import json
 
-class Car(ABC):
-    def __init__(self, array, battery, lvs, motor):
-        self.array = array
-        self.battery = battery
-        self.lvs = lvs
-        self.motor = motor
+"""
+This class stores constants for UBC Solar's solar-powered vehicles.
+"""
 
-    def update(self, tick, array_energy, battery_energy, lvs_energy, motor_energy):
-        delta_energy = array_energy + battery_energy + lvs_energy + motor_energy
-        cumulative_delta_energy = np.cumsum(delta_energy)
-        battery_variables_array = self.battery.update_array(cumulative_delta_energy)
+
+class Car:
+    def __init__(self, name: str):
+        config_path = os.path.join(config_directory, f"{name}.json")
+
+        with open(config_path) as f:
+            car_constants = json.load(f)
+
+        self.panel_efficiency = car_constants["panel_efficiency"]
+        self.panel_size = car_constants["panel_size"]
+        self.max_voltage = car_constants["max_voltage"]
+        self.min_voltage = car_constants["min_voltage"]
+        self.max_current_capacity = car_constants["max_current_capacity"]
+        self.max_energy_capacity = car_constants["max_energy_capacity"]
+        self.vehicle_mass = car_constants["vehicle_mass"]
+        self.road_friction = car_constants["road_friction"]
+        self.tire_radius = car_constants["tire_radius"]
+        self.vehicle_frontal_area = car_constants["vehicle_frontal_area"]
+        self.drag_coefficient = car_constants["drag_coefficient"]

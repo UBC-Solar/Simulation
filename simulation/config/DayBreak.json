@@ -1,0 +1,15 @@
+{
+  "panel_efficiency": 0.2,
+  "panel_size": 6.0,
+
+  "max_voltage": 117.6,
+  "min_voltage": 75.6,
+  "max_current_capacity": 48.9,
+  "max_energy_capacity": 4723.74,
+
+  "vehicle_mass": 250,
+  "road_friction": 0.0055,
+  "tire_radius": 0.2032,
+  "vehicle_frontal_area": 0.952,
+  "drag_coefficient": 0.223
+}
