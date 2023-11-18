@@ -16,10 +16,3 @@ class Consumer(ABC):
     def get_consumed_energy(self):
         return self.consumed_energy
 
-    def set_consumed_energy(self, value):
-        self.consumed_energy = value
-
-    def update_consumed_energy(self):
-        energy = self.get_consumed_energy()
-        self.set_consumed_energy(0)
-        return energy
