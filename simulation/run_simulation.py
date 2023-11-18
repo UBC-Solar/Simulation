@@ -292,7 +292,7 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
 
 def get_default_settings(race_type: str = "ASC") -> tuple[dict, dict]:
     #  ----- Load initial conditions -----
-    with open(config_directory / "initial_conditions.json") as f:
+    with open(config_directory / "initial_conditions_ASC.json") as f:
         initial_conditions = json.load(f)
 
     #  ----- Load model parameters -----
