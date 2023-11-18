@@ -8,12 +8,12 @@ A class to perform calculation and approximations for obtaining quantities
 import datetime
 import numpy as np
 
-from simulation.common import helpers, constants
+from simulation.common import helpers, constants, ASC, FSGP
 
 
 class SolarCalculations:
 
-    def __init__(self, golang=True, library=None):
+    def __init__(self, golang=True, library=None, race_type="ASC"):
         """
 
         Initializes the instance of a SolarCalculations class
@@ -28,6 +28,7 @@ class SolarCalculations:
 
         self.golang = golang
         self.lib = library
+        self.race_type = race_type
 
     # ----- Calculation of solar position in the sky -----
 
@@ -338,17 +339,31 @@ class SolarCalculations:
         else:
             day_of_year, local_time = self.lib.golang_calculate_array_GHI_times(local_times)
 
-        # TODO: use calculate_angled_irradiance() instead of calculate GHI during stationary charging times
-
         ghi = self.calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
                                  day_of_year, local_time, elevations, cloud_covers)
 
         stationary_irradiance = self.calculate_angled_irradiance(coords[:, 0], coords[:, 1], time_zones, day_of_year,
                                                                  local_time, elevations, cloud_covers)
 
-        # TODO: create a mask of stationary charging times
+        if self.race_type == "ASC":
+            driving_begin = ASC.driving_begin
+            driving_end = ASC.driving_end
+        elif self.race_type == "FSGP":
+            driving_begin = FSGP.driving_begin
+            driving_end = FSGP.driving_end
+        else:
+            driving_begin = 0
+            driving_end = 24
 
-        return ghi
+        # Use stationary irradiance when the car is not driving
+        effective_irradiance = np.where(
+            np.logical_or(
+                (local_time < driving_begin),
+                (driving_end < local_time)),
+            stationary_irradiance,
+            ghi)
+
+        return effective_irradiance
 
     def calculate_angled_irradiance(self, latitude, longitude, time_zone_utc, day_of_year,
                                     local_time, elevation, cloud_cover, array_angles=np.array([0, 15, 30, 45])):
