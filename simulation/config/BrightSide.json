@@ -11,5 +11,8 @@
   "road_friction": 0.0055,
   "tire_radius": 0.2032,
   "vehicle_frontal_area": 0.952,
-  "drag_coefficient": 0.223
+  "drag_coefficient": 0.223,
+
+  "max_acceleration_kmh_per_s": 6,
+  "max_deceleration_kmh_per_s": 6
 }

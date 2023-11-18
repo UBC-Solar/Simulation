@@ -25,3 +25,5 @@ class Car:
         self.tire_radius = car_constants["tire_radius"]
         self.vehicle_frontal_area = car_constants["vehicle_frontal_area"]
         self.drag_coefficient = car_constants["drag_coefficient"]
+        self.max_acceleration_kmh_per_s = car_constants["max_acceleration_kmh_per_s"]
+        self.max_deceleration_kmh_per_s = car_constants["max_deceleration_kmh_per_s"]
