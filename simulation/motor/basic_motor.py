@@ -95,18 +95,6 @@ class BasicMotor(BaseMotor):
 
         self.input_power = motor_input_power / self.e_mc
 
-    def update(self, tick):
-        """
-
-        For the motor, the update tick calculates a value for the energy expended in a period
-            of time.
-        
-        :param int tick: length of 1 update cycle in seconds
-
-        """
-
-        self.consumed_energy = self.input_power * tick
-
     @staticmethod
     def calculate_motor_efficiency(motor_angular_speed, motor_output_energy, tick):
         """

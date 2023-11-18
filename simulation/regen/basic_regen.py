@@ -12,9 +12,6 @@ class BasicRegen(BaseRegen):
         self.vehicle_mass = 250
         self.kmh_to_mps = 0.278
 
-    def update():
-        pass
-
     def calculate_produced_energy(self, speed_kmh, gis_route_elevations):
         """
         Returns a numpy array containing the energy produced by regen

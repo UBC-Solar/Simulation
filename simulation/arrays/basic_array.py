@@ -39,20 +39,6 @@ class BasicArray(BaseArray):
 
         return produced_power
 
-    def update(self, tick):
-        """
-
-        Updates solar array model for a single tick
-
-        :param float tick: the length of time for the tick (in seconds)
-
-        note: do not use this please. Use calculate_produced_energy instead.
-        """
-
-        # Assume constant sunlight in this simple model.
-        self.produced_energy = self.calculate_produced_power(self.solar_irradiance,
-                                                             self.panel_efficiency, self.panel_size) * tick
-
     def calculate_produced_energy(self, solar_irradiance, tick):
         """
 

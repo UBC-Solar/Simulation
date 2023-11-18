@@ -162,8 +162,6 @@ class Model:
 
         # ----- Energy Calculations -----
 
-        self.simulation.basic_lvs.update(self.simulation.tick)
-
         self.lvs_consumed_energy = self.simulation.basic_lvs.get_consumed_energy()
         self.motor_consumed_energy = self.simulation.basic_motor.calculate_energy_in(self.speed_kmh,
                                                                                      self.gradients,
