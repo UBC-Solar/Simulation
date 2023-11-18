@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Simulation"
+authors = [
+    {name = "Fisher Xue"},
+    {name = "Mihir Nimgade"},
+    {name = "Chris Chang"},
+    {name = "David Widjaja"},
+    {name = "Justin Hua"},
+    {name = "Ilya Veksler"},
+    {name = "Renu Rajamagmesh"},
+    {name = "Ritchie Xia"},
+    {name = "Erik Langille"},
+    {name = "Chris Aung"},
+    {name = "Ishaan Trivedi"},
+    {name = "Jason Liang"},
+    {name = "Felix Toft"},
+    {name = "Mack Wilson"},
+    {name = "Jonah Lee"},
+    {name = "Tamzeed Quazi"},
+    {name = "Joshua Riefman"}
+]
+maintainers = [
+    {name = "Joshua Riefman", email = "joshuariefman@gmail.com"},
+    {name = "Renu Rajamagmesh"},
+    {name = "Felix Toft"},
+    {name = "Mack Wilson"},
+    {name = "Jonah Lee"},
+    {name = "Tamzeed Quazi"},
+]
+description = "UBC Solar's Simulation Environment"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["car", "simulation", "solar"]
+license = { file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Natural Language :: English",
+    "Topic :: Scientific/Engineering :: Physics"
+]
+version = "1.0"
+
+[project.urls]
+Homepage = "https://ubcsolar.com"
+Repository = "https://github.com/UBC-Solar/Simulation"
+Documentation = "https://wiki.ubcsolar.com"
+
+[project.scripts]
+run_simulation = "simulation.run_simulation:main"
