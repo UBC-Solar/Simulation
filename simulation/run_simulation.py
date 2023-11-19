@@ -3,12 +3,13 @@ import datetime
 import numpy as np
 import json
 import sys
-from main.Simulation import Simulation, SimulationReturnType
-from optimization.bayesian import BayesianOptimization
-from optimization.random_opt import RandomOptimization
-from utils.InputBounds import InputBounds
-from config import config_directory
-from utils.SimulationBuilder import SimulationBuilder
+
+from simulation.main import Simulation, SimulationReturnType
+from simulation.optimization.bayesian import BayesianOptimization
+from simulation.optimization.random_opt import RandomOptimization
+from simulation.utils.InputBounds import InputBounds
+from simulation.config import config_directory
+from simulation.utils.SimulationBuilder import SimulationBuilder
 
 """
 Description: Execute simulation optimization sequence. 

@@ -3,15 +3,16 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Simulation"
+name = "UBC-Solar-Simulation"
 authors = [
+    {name = "UBC Solar", email = "software@ubcsolar.com"},
     {name = "Fisher Xue"},
     {name = "Mihir Nimgade"},
     {name = "Chris Chang"},
     {name = "David Widjaja"},
     {name = "Justin Hua"},
     {name = "Ilya Veksler"},
-    {name = "Renu Rajamagmesh"},
+    {name = "Renu Rajamagesh"},
     {name = "Ritchie Xia"},
     {name = "Erik Langille"},
     {name = "Chris Aung"},
@@ -24,6 +25,7 @@ authors = [
     {name = "Joshua Riefman"}
 ]
 maintainers = [
+    {name = "UBC Solar", email = "software@ubcsolar.com"},
     {name = "Joshua Riefman", email = "joshuariefman@gmail.com"},
     {name = "Renu Rajamagmesh"},
     {name = "Felix Toft"},
