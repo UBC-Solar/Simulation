@@ -1,5 +1,6 @@
 import numpy as np
 from simulation.arrays.base_array import BaseArray
+from simulation.common import DayBreak
 
 
 class BasicArray(BaseArray):
@@ -9,10 +10,10 @@ class BasicArray(BaseArray):
         super().__init__()
 
         # solar cell efficiency
-        self.panel_efficiency = 0.2
+        self.panel_efficiency = DayBreak.panel_efficiency
 
         # solar panel size in m^2
-        self.panel_size = 6
+        self.panel_size = DayBreak.panel_size
 
         # please do not use this.
         self.solar_irradiance = 1200
