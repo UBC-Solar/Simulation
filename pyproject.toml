@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools", "setuptools-scm", "setuptools-git-versioning"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -43,12 +43,15 @@ classifiers = [
     "Natural Language :: English",
     "Topic :: Scientific/Engineering :: Physics"
 ]
-version = "1.0"
+dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://ubcsolar.com"
 Repository = "https://github.com/UBC-Solar/Simulation"
 Documentation = "https://wiki.ubcsolar.com"
+
+[tool.setuptools-git-versioning]
+enabled = true
 
 [project.scripts]
 run_simulation = "simulation.run_simulation:main"
