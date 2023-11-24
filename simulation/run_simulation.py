@@ -292,15 +292,11 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
 
 def get_default_settings(race_type: str = "ASC") -> tuple[dict, dict]:
     #  ----- Load initial conditions -----
-    with open(config_directory / "initial_conditions_ASC.json") as f:
+    with open(config_directory / f"initial_conditions_{race_type}.json") as f:
         initial_conditions = json.load(f)
 
     #  ----- Load model parameters -----
-    if race_type == "ASC":
-        config_path = config_directory / "settings_ASC.json"
-    else:
-        config_path = config_directory / "settings_FSGP.json"
-
+    config_path = config_directory / f"settings_{race_type}.json"
     with open(config_path) as f:
         model_parameters = json.load(f)
 
