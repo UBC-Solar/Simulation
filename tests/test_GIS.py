@@ -24,7 +24,8 @@ def gis():
     dest_coord = np.array([43.6142, -116.2080])
 
     location_system = simulation.environment.GIS(api_key=google_api_key, origin_coord=origin_coord,
-                                                 waypoints=waypoints, dest_coord=dest_coord, race_type="ASC")
+                                                 waypoints=waypoints, dest_coord=dest_coord, race_type="ASC",
+                                                 golang=False)
 
     return location_system
 
