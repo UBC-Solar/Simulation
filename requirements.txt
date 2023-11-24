@@ -16,4 +16,4 @@ timezonefinder==6.0.1
 tqdm==4.64.0
 strenum==0.4.15
 perlin-noise==1.12
-cffi=1.15.1
+cffi==1.15.1
