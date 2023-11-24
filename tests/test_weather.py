@@ -40,3 +40,23 @@ def weather():
                                                                    library=library)
 
     return weather_calculations
+
+
+def test_compare_golang_python_get_weather_in_time(weather):
+    """
+
+    Unit test for WeatherForecasts.golang_calculate_closest_timestamp_indices and
+    WeatherForecasts.python_calculate_closest_timestamp_indices.
+    Checks to see if the results are the same format and equal element-wise
+
+    """
+
+    dt_local_array = [1.6463088e+09, 1.6463952e+09, 1.6464816e+09,
+                      1.6465680e+09, 1.6466544e+09, 1.6467408e+09, 1.6468272e+09, 1.6469136e+09]
+    unix_timestamps = [i for i in range(1646377200, 1646636400 + 1)]
+
+    go_gwit_result = weather.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
+
+    python_gwit_result = weather.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
+
+    assert np.all(go_gwit_result == python_gwit_result)
