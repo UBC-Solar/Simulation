@@ -173,7 +173,7 @@ class BasicMotor(BaseMotor):
 
         return e_mc
 
-    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, tick):
+    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, wind_directions, tick):
         """
 
         Create a function which takes in array of elevation, array of wind speed, required
@@ -183,6 +183,7 @@ class BasicMotor(BaseMotor):
         :param np.ndarray gradients: (float[N]) gradient at parts of the road
         :param np.ndarray wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
         :param int tick: length of 1 update cycle in seconds
+        :param np.ndarray wind_directions: (float[N])
         :returns: (float[N]) energy expended by the motor at every tick
         :rtype: np.ndarray
 
@@ -212,6 +213,39 @@ class BasicMotor(BaseMotor):
         motor_controller_input_energies = motor_output_energies / (e_m * e_mc)
 
         return motor_controller_input_energies
+
+    @staticmethod
+    def calculate_drag_coefficients(wind_speeds, wind_angles):
+        drag_coefficients = np.zeros_like(wind_angles, dtype=float)
+        #Lookup table mapping wind angle to drag coefficient for a wind speed of 60 km/hr
+        #Source: https://docs.google.com/spreadsheets/d/17Kdt6rm0MFuab7QkUzZPXoEv4qlpFJS2aJyk_ABtHRI/edit#gid=0
+        angle_to_drag_coefficient = {
+            0: 23.41,
+            18: 39.73,
+            36: 101.51,
+            54: 208.35,
+            72: 316.84,
+            90: 411.29,
+            108: 352.76,
+            126: 270.13,
+            144: 94.67,
+            162: 36.43,
+            180: 23.58
+        }
+
+        for index, wind_angle in enumerate(wind_angles):
+            # potentially check for wind angles larger then 180 degrees, not sure if this is a possibility
+            rounded_wind_angle = round(wind_angle / 18) * 18
+            unscaled_drag = angle_to_drag_coefficient[rounded_wind_angle]
+
+            # data from lookup table corresponds to wind speed of 60 km/hr
+            # this calculation assumes that the drag increases linearly with wind speed
+            scaled_drag = wind_speeds[index] * unscaled_drag / 60
+            drag_coefficients[index] = scaled_drag
+
+        return drag_coefficients
+
+
 
     def __str__(self):
         return (f"Tire radius: {self.tire_radius}m\n"
