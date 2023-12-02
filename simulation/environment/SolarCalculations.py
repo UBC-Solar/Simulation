@@ -228,7 +228,7 @@ class SolarCalculations:
         DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
                                  local_time, elevation)
 
-        DHI = 0.1 * DNI
+        DHI = 0.08 * DNI
 
         return DHI
 
@@ -338,6 +338,8 @@ class SolarCalculations:
             day_of_year, local_time = self.python_calculate_array_GHI_times(local_times)
         else:
             day_of_year, local_time = self.lib.golang_calculate_array_GHI_times(local_times)
+
+        from simulation.environment import noaa_array_calc
 
         ghi = self.calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
                                  day_of_year, local_time, elevations, cloud_covers)

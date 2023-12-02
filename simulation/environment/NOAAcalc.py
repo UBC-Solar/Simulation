@@ -1,13 +1,17 @@
-from math import cos, sin, tan, radians, degrees, acos, asin, atan
+from math import cos, sin, tan, radians, degrees, acos, asin, atan, floor
+
+
+def get_excel_date(gmt_unix_time):
+    # Excel date format is in days since 1900
+    return floor((gmt_unix_time / 86400) + 25569)  # convert to days, then add 70 years
 
 
 class NoaaCalc:
-    def __init__(self, latitude, longitude, time_zone, excel_date, local_time_past_midnight):
-        print("2. Initialize the new instance of Point.")
+    def __init__(self, latitude, longitude, time_zone, unix_time, local_time_past_midnight):
         self.latitude = latitude
         self.longitude = longitude
         self.time_zone = time_zone
-        self.excel_date = excel_date
+        self.excel_date = get_excel_date(unix_time)
         self.local_time_past_midnight = local_time_past_midnight
 
     def julian_day(self):
@@ -195,14 +199,41 @@ class NoaaCalc:
         )
 
 
-if __name__ == "__main__":
-
-    eg_latitude = 40
-    eg_longitude = -105
+def testSunriseSunset():
+    eg_latitude = 39.0918
+    eg_longitude = -94.4172
     eg_time_zone = -6
-    eg_excel_date = 40350.00  # days since 1900
-    eg_local_time_past_midnight = 0.1/24  # in days (e.g. 12pm is 0.5)
+    eg_unix_time = 1612080000  # 7am PST, Jan 31 2021
+    eg_local_time_past_midnight = 0.31
 
-    testDate = NoaaCalc(eg_latitude, eg_longitude, eg_time_zone, eg_excel_date, eg_local_time_past_midnight)
+    testDate = NoaaCalc(eg_latitude, eg_longitude, eg_time_zone, eg_unix_time, eg_local_time_past_midnight)
 
-    print(testDate.solar_zenith_angle())
+    sunrise_hours = testDate.sunrise_time() * 24
+    sunset_hours = testDate.sunset_time() * 24
+    sunrise_minutes = (sunrise_hours % 1) * 60
+    sunset_minutes = (sunset_hours % 1) * 60
+    sunrise_seconds = (sunrise_minutes % 1) * 60
+    sunset_seconds = (sunset_minutes % 1) * 60
+
+    print(f"Sunrise: {floor(sunrise_hours)}:{floor(sunrise_minutes)}:{floor(sunrise_seconds)}")
+    print(f"Sunset: {floor(sunset_hours)}:{floor(sunset_minutes)}:{floor(sunset_seconds)}")
+
+
+def print_all():
+    eg_latitude = 39.0918
+    eg_longitude = -94.4172
+    eg_time_zone = -6
+    eg_unix_time = 1612080000  # 7am PST, Jan 31 2021
+    eg_local_time_past_midnight = 0.31
+
+    test_date = NoaaCalc(eg_latitude, eg_longitude, eg_time_zone, eg_unix_time, eg_local_time_past_midnight)
+
+    for method_name in dir(NoaaCalc):
+        if callable(getattr(NoaaCalc, method_name)) and not method_name.startswith("__"):
+            method = getattr(NoaaCalc, method_name)
+            result = method(test_date)
+            print(f"{method_name}: {result}")
+
+
+if __name__ == "__main__":
+    print_all()
