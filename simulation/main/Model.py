@@ -188,11 +188,6 @@ class Model:
         self.consumed_energy = np.where(self.not_charge,
                                         self.motor_consumed_energy + self.lvs_consumed_energy, 0)
 
-        print("LVS Consumed Energy: ", self.lvs_consumed_energy)
-        print("Motor Consumed Energy: ", self.motor_consumed_energy[self.motor_consumed_energy != 0])
-        print("Tick: ", self.simulation.tick)
-        print("Total Consumed Energy: ", self.consumed_energy[self.consumed_energy != 0])
-
         self.produced_energy = self.array_produced_energy + self.regen_produced_energy
 
         # net energy added to the battery
