@@ -161,10 +161,9 @@ class Model:
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
         # ----- Energy Calculations -----
-
         self.simulation.basic_lvs.update(self.simulation.tick)
 
-        self.lvs_consumed_energy = self.simulation.basic_lvs.get_consumed_energy()
+        self.lvs_consumed_energy = self.simulation.basic_lvs.get_consumed_energy(self.simulation.tick)
         self.motor_consumed_energy = self.simulation.basic_motor.calculate_energy_in(self.speed_kmh,
                                                                                      self.gradients,
                                                                                      self.wind_speeds,
@@ -185,7 +184,15 @@ class Model:
         self.array_produced_energy = np.logical_and(self.array_produced_energy,
                                                     self.not_charge) * self.array_produced_energy
 
-        self.consumed_energy = self.motor_consumed_energy + self.lvs_consumed_energy
+        # Apply not charge mask to only consume energy when we are racing else 0
+        self.consumed_energy = np.where(self.not_charge,
+                                        self.motor_consumed_energy + self.lvs_consumed_energy, 0)
+
+        print("LVS Consumed Energy: ", self.lvs_consumed_energy)
+        print("Motor Consumed Energy: ", self.motor_consumed_energy[self.motor_consumed_energy != 0])
+        print("Tick: ", self.simulation.tick)
+        print("Total Consumed Energy: ", self.consumed_energy[self.consumed_energy != 0])
+
         self.produced_energy = self.array_produced_energy + self.regen_produced_energy
 
         # net energy added to the battery

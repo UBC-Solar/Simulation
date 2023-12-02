@@ -18,6 +18,8 @@ class Car:
         self.panel_size = car_constants["panel_size"]
         self.max_voltage = car_constants["max_voltage"]
         self.min_voltage = car_constants["min_voltage"]
+        self.lvs_voltage = car_constants["lvs_voltage"]
+        self.lvs_current = car_constants["lvs_current"]
         self.max_current_capacity = car_constants["max_current_capacity"]
         self.max_energy_capacity = car_constants["max_energy_capacity"]
         self.vehicle_mass = car_constants["vehicle_mass"]
