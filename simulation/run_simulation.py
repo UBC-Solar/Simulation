@@ -343,7 +343,7 @@ def health_check():
 
 def execute_build_script():
     try:
-        subprocess.run(["python", "../build.py"], check=True)
+        subprocess.run(["python", "build.py"], check=True)
 
     except subprocess.CalledProcessError:
         exit(1)
