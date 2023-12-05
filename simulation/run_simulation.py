@@ -319,5 +319,26 @@ def build_basic_model(race_type: str = "ASC", golang: bool = True, granularity: 
     return simulation_builder.get()
 
 
+def health_check():
+    """
+
+    This is the entry point to Simulation.
+    First, parse command line arguments, then execute simulation optimization sequence.
+
+    """
+
+    simulation_model = build_basic_model()
+
+    # Initialize a "guess" speed array
+    input_speed = np.array([30] * simulation_model.get_driving_time_divisions())
+
+    # Run simulation model with the "guess" speed array
+    simulation_model.run_model(speed=input_speed, plot_results=False,
+                               verbose=False,
+                               route_visualization=False)
+
+    print("Simulation was successful!")
+
+
 if __name__ == "__main__":
     main()

@@ -77,3 +77,4 @@ enabled = true
 
 [project.scripts]
 run_simulation = "simulation.run_simulation:main"
+simulation_health_check = "simulation.run_simulation:health_check"
