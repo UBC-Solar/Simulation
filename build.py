@@ -2,8 +2,7 @@ import subprocess
 import pathlib
 import ctypes
 import sys
-
-from tqdm import tqdm
+import tqdm
 
 """
 
@@ -269,7 +268,7 @@ def _move(filename: str):
 
 def main():
     global pbar
-    pbar = tqdm(total=15, file=sys.stdout, desc="Building libraries", position=0, leave=True)
+    pbar = tqdm.tqdm(total=15, file=sys.stdout, desc="Building libraries", position=0, leave=True)
 
     try:
         print(MSG_BEGIN_BUILD)
@@ -307,12 +306,14 @@ def main():
 
         else:
             print(MSG_FOUND_LIBRARIES)
-            exit(EXIT_GRACEFUL)
 
     except SystemExit as e:
         print(MSG_ABORT)
         exit(e.code)
 
+    pbar.n = 15
+    pbar.refresh()
+    pbar.close()
     print(MSG_SUCCESS)
 
 
