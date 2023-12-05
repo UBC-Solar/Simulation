@@ -67,7 +67,6 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-
 [project.urls]
 Homepage = "https://ubcsolar.com"
 Repository = "https://github.com/UBC-Solar/Simulation"
@@ -81,5 +80,5 @@ packages = ["simulation"]
 
 [project.scripts]
 run_simulation = "simulation.run_simulation:main"
-simulation_health_check = "simulation.run_simulation:health_check"
-build_simulation = "simulation.run_simulation:execute_build_script"
+simulation_health_check = "simulation.run_simulation:_health_check"
+build_simulation = "simulation.run_simulation:_execute_build_script"

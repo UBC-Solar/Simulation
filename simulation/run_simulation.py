@@ -320,11 +320,10 @@ def build_basic_model(race_type: str = "ASC", golang: bool = True, granularity: 
     return simulation_builder.get()
 
 
-def health_check():
+def _health_check() -> None:
     """
 
-    This is the entry point to Simulation.
-    First, parse command line arguments, then execute simulation optimization sequence.
+    This is an entrypoint to run Simulation to validate the installation and that no errors will be raised.
 
     """
 
@@ -341,7 +340,12 @@ def health_check():
     print("Simulation was successful!")
 
 
-def execute_build_script():
+def _execute_build_script() -> None:
+    """
+
+    This is an entrypoint to execute the build script.
+
+    """
     try:
         subprocess.run(["python", "build.py"], check=True)
 
