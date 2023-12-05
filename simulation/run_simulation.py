@@ -1,4 +1,5 @@
 import datetime
+import subprocess
 
 import numpy as np
 import json
@@ -338,6 +339,14 @@ def health_check():
                                route_visualization=False)
 
     print("Simulation was successful!")
+
+
+def execute_build_script():
+    try:
+        subprocess.run(["python", "../build.py"], check=True)
+
+    except subprocess.CalledProcessError:
+        exit(1)
 
 
 if __name__ == "__main__":

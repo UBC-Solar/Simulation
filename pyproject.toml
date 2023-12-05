@@ -82,3 +82,4 @@ packages = ["simulation"]
 [project.scripts]
 run_simulation = "simulation.run_simulation:main"
 simulation_health_check = "simulation.run_simulation:health_check"
+build_simulation = "simulation.run_simulation:execute_build_script"
