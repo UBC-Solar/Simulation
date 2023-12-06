@@ -347,7 +347,7 @@ def _execute_build_script() -> None:
 
     """
     try:
-        subprocess.run(["python", "build.py"], check=True)
+        subprocess.run(["python", "compile.py"], check=True)
 
     except subprocess.CalledProcessError:
         exit(1)
