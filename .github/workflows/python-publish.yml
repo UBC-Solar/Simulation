@@ -31,6 +31,7 @@ jobs:
       run: |
         python3 -m pip install --upgrade pip
         pip install .
+        pip install build
         build_simulation
         python3 -m build
     - name: Build package
