@@ -45,6 +45,9 @@ def create_new_patch_release():
     else:
         new_version_number = bump_patch_number(last_version_number)
 
+    subprocess.run(["git", "tag", new_version_number])
+    subprocess.run(["git", "push", "origin", "--tags"])
+
     subprocess.run(["gh", "release", "create", "--generate-notes", new_version_number], check=True)
 
 
