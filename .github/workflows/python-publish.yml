@@ -32,7 +32,6 @@ jobs:
         python3 -m pip install --upgrade pip
         pip install .
         pip install build
-        python3 -m build
     - name: Build package
       run: python -m build
     - name: Publish package
