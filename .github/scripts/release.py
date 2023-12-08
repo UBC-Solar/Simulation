@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+# ADAPTED FROM https://github.com/seanh/gha-python-packaging-demo/blob/main/.github/scripts/release.py
+
 import json
 import subprocess
 
