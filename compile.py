@@ -21,34 +21,6 @@ CMD_GET_DEPENDENCY = "go get "
 CMD_MAKE_DIR_UNIX = "mkdir "
 CMD_MAKE_DIR_WINDOWS = "lmkdir "
 
-# < ---- Messages ---- >
-
-MSG_BEGIN_BUILD = "Beginning build of Go libraries...\n"
-MSG_BEGIN_IDENTIFY = "Trying to find Go compiler...\n"
-MSG_FOUND_COMPILER = "Found Go compiler!\n"
-MSG_ABORT = "Aborting compilation of libraries!\n"
-MSG_COMPILER_NOT_FOUND = "Go compiler is not found or not installed.\n"
-MSG_ERROR_WHILE_FINDING_COMPILER = "Error occurred while checking for Go compiler"
-MSG_ERROR_WHILE_FINDING_ARCHITECTURE = "Error occurred while finding target architecture"
-MSG_BEGIN_ARCH_FIND = "Identifying target architecture...\n"
-MSG_FAILED_FIND_ARCH = "Could not identify architecture!\n"
-MSG_FOUND_ARCH = "Identified architecture as: "
-MSG_SEARCHING_FOR_LIBRARIES = "Searching for compatible libraries in "
-MSG_FOUND_LIBRARIES = "Found compatible libraries! Compilation is not necessary.\n"
-MSG_DIDNT_FIND_LIBRARIES = "Did not find compatible libraries in "
-MSG_BEGIN_COMPILE = "Beginning to compile libraries!\n"
-MSG_COMPILATION_FAILED = "Compilation has failed"
-MSG_COMPILATION_SUCCESS = "Compilation successful!\n"
-MSG_BEGIN_MOVE = "Beginning move to library directory...\n"
-MSG_MOVED = "Moved "
-MSG_GET_DEPENDENCIES = "Acquiring dependencies...\n"
-MSG_GOT_DEPENDENCIES = "Dependencies acquired!\n"
-MSG_FAILED_DEPENDENCY = "Could not acquire dependency "
-MSG_FAILED_MOVE = "Failed while moving "
-MSG_FAILED_DIRECTORY_CREATION = "Failed to create directory "
-MSG_MOVE_SUCCESS = "Moved libraries to directory!"
-MSG_SUCCESS = "Build successful!"
-
 # < ---- Exit Codes ---- >
 
 EXIT_GRACEFUL = 0  # Exit code for when the script has completed successfully
@@ -63,13 +35,37 @@ EXIT_DEPENDENCY_FAILURE = 6  # Exit code for when acquiring a dependency fails
 go_parallel = "github.com/dgravesa/go-parallel/parallel"
 DEPENDENCIES: list[str] = [go_parallel]
 
+# < ---- Globals ---- >
+
+pbar: tqdm.tqdm
+os_type: str
+arch_type: str
+is_windows: bool
+libraries_directory: str
+
 
 def _build_compile_lib_cmd() -> str:
+    """
+
+    Obtain the command to build main libraries, automatically resolving file paths.
+
+    :return: command to build main libraries as a string.
+
+    """
+
     cmd = CMD_BUILD_LIB + f"{pathlib.Path(__file__).parent}/simulation/library/go_files/main.go"
     return cmd
 
 
 def _build_compile_perlin_noise_cmd() -> str:
+    """
+
+    Obtain the command to build Perlin noise libraries, automatically resolving file paths.
+
+    :return: command to build Perlin noise libraries as a string.
+
+    """
+
     cmd = CMD_BUILD_PERLIN + f"{pathlib.Path(__file__).parent}/simulation/library/go_files/perlin_noise/main.go "
     cmd += f"{pathlib.Path(__file__).parent}/simulation/library/go_files/perlin_noise/perlinNoise.go "
     cmd += f"{pathlib.Path(__file__).parent}/simulation/library/go_files/perlin_noise/vector.go "
@@ -78,11 +74,28 @@ def _build_compile_perlin_noise_cmd() -> str:
 
 
 def _str_to_cmd(cmd: str) -> list[str]:
+    """
+
+    Transform a string representing a command into a format that can be used by Subprocess.Run.
+
+    :param cmd: the command to be converted
+    :return: a list of strings
+
+    """
+
     return cmd.split()
 
 
 def _check_go_compiler() -> bool:
-    print(MSG_BEGIN_IDENTIFY)
+    """
+
+    Verify that the Go compiler is installed and accessible.
+
+    :return: a boolean indicating whether the Go compiler is available.
+
+    """
+
+    print("Trying to find Go compiler...\n")
     try:
         # Check if the 'go' command is available by running 'go version'
         result = subprocess.run(_str_to_cmd(CMD_GET_COMPILER), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -91,17 +104,26 @@ def _check_go_compiler() -> bool:
         return True
 
     except FileNotFoundError:
-        print(MSG_COMPILER_NOT_FOUND)
+        print("Go compiler is not found or not installed.\n")
         return False
 
     except subprocess.CalledProcessError as e:
-        print(f"{MSG_ERROR_WHILE_FINDING_COMPILER}: {e}")
+        print(f"Error occurred while checking for Go compiler: {e}")
         return False
 
 
-def _compile(keypair: tuple[str, str]) -> bool:
-    print(MSG_BEGIN_COMPILE)
+def _compile() -> bool:
+    """
 
+    Compile main and Perlin noise libraries.
+
+    :return: a boolean indicating success or failure
+
+    """
+
+    print("Beginning to compile libraries!\n")
+
+    # Get build commands
     cmd_build_lib = _build_compile_lib_cmd()
     cmd_build_perlin_lib = _build_compile_perlin_noise_cmd()
     pbar.update(1)
@@ -110,6 +132,8 @@ def _compile(keypair: tuple[str, str]) -> bool:
     pbar.update(1)
 
     try:
+        # Try to compile
+        # check=True is intentionally missing because we don't want to throw an error right away
         result_lib = subprocess.run(cmd_build_lib, shell=True)
         pbar.update(1)
 
@@ -120,8 +144,10 @@ def _compile(keypair: tuple[str, str]) -> bool:
             return True
 
         else:
-            cmd_build_lib = f"GOOS={keypair[0]} GOARCH={keypair[1]}" + cmd_build_lib
-            cmd_build_perlin_lib = f"GOOS={keypair[0]} GOARCH={keypair[1]}" + cmd_build_perlin_lib
+            # Try adding os_type and arch_type specifiers
+            cmd_build_lib = f"GOOS={os_type} GOARCH={arch_type}" + cmd_build_lib
+            cmd_build_perlin_lib = f"GOOS={os_type} GOARCH={arch_type}" + cmd_build_perlin_lib
+
             result_lib = subprocess.run(cmd_build_lib, shell=True)
             pbar.update(1)
 
@@ -132,70 +158,94 @@ def _compile(keypair: tuple[str, str]) -> bool:
                 return True
 
             else:
+                # Try adding CGO_ENABLED=1
+                # check=True is enabled here because we do want to throw an error – we've got nothing else to try
                 cmd_build_lib = "CGO_ENABLED=1" + cmd_build_lib
                 cmd_build_perlin_lib = "CGO_ENABLED=1" + cmd_build_perlin_lib
 
-                result_lib = subprocess.run(cmd_build_lib, shell=True)
+                result_lib = subprocess.run(cmd_build_lib, shell=True, check=True)
                 pbar.update(1)
 
-                result_perlin = subprocess.run(cmd_build_perlin_lib, shell=True)
+                result_perlin = subprocess.run(cmd_build_perlin_lib, shell=True, check=True)
                 pbar.update(1)
 
                 return result_lib.returncode == 0 and result_perlin == 0
 
     except subprocess.CalledProcessError as e:
-        print(f"{MSG_COMPILATION_FAILED}: {e}\n")
+        print(f"Compilation has failed: {e}\n")
         exit(EXIT_COMPILATION_FAILED_ERROR)
 
 
-def _get_dependencies():
-    print(MSG_GET_DEPENDENCIES)
+def _get_dependencies() -> None:
+    """
+
+    Install Go dependencies.
+
+    """
+
+    print("Acquiring dependencies...\n")
     try:
         for dependency in DEPENDENCIES:
             subprocess.run(_str_to_cmd(CMD_GET_DEPENDENCY + dependency), check=True)
             pbar.update(1)
 
     except subprocess.CalledProcessError as e:
-        print(f"{MSG_FAILED_DEPENDENCY}: {e}\n")
+        print(f"Could not acquire dependency: {e}\n")
         exit(EXIT_DEPENDENCY_FAILURE)
 
-    print(MSG_GOT_DEPENDENCIES)
+    print("Dependencies acquired!\n")
 
 
 def _get_keypair() -> tuple[str, str]:
-    print(MSG_BEGIN_ARCH_FIND)
+    """
+
+    Obtain the platform and CPU architecture that we are operating from.
+
+    :return: a tuple of two strings, the first indicating the platform, and the second the CPU architecture
+
+    """
+
+    print("Identifying target architecture...\n")
     try:
         result = subprocess.run(_str_to_cmd(CMD_GET_COMPILER), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 check=True, text=True)
         pbar.update(1)
 
-        out: str = result.stdout
-        out_split: list[str] = out.split()
+        out: list[str] = result.stdout.split()
 
         try:
-            keypair = out_split[3]
+            # The third word should be the two strings we need
+            keypair = out[3]
             keys = keypair.split('/')
-            print(MSG_FOUND_ARCH + f" {keys[0]}_{keys[1]}\n")
+            print(f"Identified architecture as: {keys[0]}_{keys[1]}\n")
             pbar.update(1)
 
             return keys[0], keys[1]
 
         except IndexError:
-            print(MSG_FAILED_FIND_ARCH)
+            print("Could not identify architecture!\n")
             exit(EXIT_COMPATIBILITY_ERROR)
 
     except subprocess.CalledProcessError as e:
-        print(f"{MSG_ERROR_WHILE_FINDING_ARCHITECTURE}: {e}.\n")
+        print(f"Error occurred while finding target architecture: {e}.\n")
         exit(EXIT_PROCESS_ERROR)
 
 
-def _search_for_libraries(keypair: tuple[str, str]) -> bool:
-    print(MSG_SEARCHING_FOR_LIBRARIES + keypair[0] + "_" + keypair[1] + "...\n")
+def _search_for_libraries() -> bool:
+    """
+
+    Search the appropriate directory to check whether compatible libraries already exist.
+
+    :return: a boolean indicating if compatible binaries were found or not
+
+    """
+
+    print(f"Searching for compatible libraries in {os_type}_{arch_type}...\n")
     try:
-        # Get the directory of potential libraries
+        # Get the directory where compatible libraries should be located
         path_to_libraries: str = libraries_directory
 
-        # Check if they exist and are compatible
+        # Check if they exist and are compatible, throwing an OSError if either is not true
         ctypes.cdll.LoadLibrary(f"{path_to_libraries}/main.so")
         pbar.update(1)
 
@@ -209,26 +259,53 @@ def _search_for_libraries(keypair: tuple[str, str]) -> bool:
         return False
 
 
-def _get_libraries_directory(keypair: tuple[str, str]) -> str:
-    return f"{pathlib.Path(__file__).parent}/simulation/library/binaries/{keypair[0]}_{keypair[1]}"
+def _get_libraries_directory() -> str:
+    """
+
+    Obtain the path to the directory where compatible libraries should be located.
+
+    :return: a string representing a filepath from ~/ to the appropriate directory.
+
+    """
+
+    return f"{pathlib.Path(__file__).parent}/simulation/library/binaries/{os_type}_{arch_type}"
 
 
-def _make_destination_directory():
+def _make_destination_directory() -> bool:
+    """
+
+    Create the directory for compatible binaries to be stored.
+
+    Will benignly fail if the directory already exists.
+
+    :return: True if the directory already exists or was created
+
+    """
+
     cmd: str = CMD_MAKE_DIR_WINDOWS if is_windows else CMD_MAKE_DIR_UNIX + libraries_directory
 
     try:
+        # Desirably, directory already existing will NOT cause an error to be thrown which
+        # means we do not have to explicitly handle that case.
         subprocess.run(_str_to_cmd(cmd))
         pbar.update(1)
 
     except subprocess.CalledProcessError as e:
-        print(f"{MSG_FAILED_DIRECTORY_CREATION}: {e}.\n")
+        print(f"Failed to create directory: {e}.\n")
         exit(EXIT_OS_ERROR)
 
     return True
 
 
 def _move_to_directory() -> bool:
-    print(MSG_BEGIN_MOVE)
+    """
+
+    Move the newly compiled libraries into their destination directory.
+
+    :return: boolean indicating success or failure, where True indicates success
+
+    """
+    print("Beginning move to library directory...\n")
 
     if not _make_destination_directory():
         return False
@@ -249,6 +326,14 @@ def _move_to_directory() -> bool:
 
 
 def _move(filename: str):
+    """
+
+    Move a file to its destination directory.
+
+    :param filename: file to be moved. Must include filetype extension!
+
+    """
+
     if is_windows:
         cmd = CMD_MOVE_WINDOWS
     else:
@@ -262,7 +347,7 @@ def _move(filename: str):
         print(f"Moved {filename}!\n")
 
     except subprocess.CalledProcessError as e:
-        print(f"{MSG_FAILED_MOVE}: {e}")
+        print(f"Failed while moving: {e}")
         exit(EXIT_OS_ERROR)
 
 
@@ -271,50 +356,60 @@ def main():
     pbar = tqdm.tqdm(total=15, file=sys.stdout, desc="Building libraries", position=0, leave=True)
 
     try:
-        print(MSG_BEGIN_BUILD)
+        print("Beginning build of Go libraries...\n")
         pbar.update(1)
 
+        # Verify that we can compile Go
         if _check_go_compiler():
-            print(MSG_FOUND_COMPILER)
+            print("Found Go compiler!\n")
             pbar.update(1)
 
+        global os_type
+        global arch_type
         os_type, arch_type = _get_keypair()
 
         global is_windows
         is_windows = os_type == "windows"
 
         global libraries_directory
-        libraries_directory = _get_libraries_directory((os_type, arch_type))
+        libraries_directory = _get_libraries_directory()
         pbar.update(1)
 
-        if not _search_for_libraries((os_type, arch_type)):
-            print(MSG_DIDNT_FIND_LIBRARIES + os_type + "_" + arch_type + ".\n")
+        if not _search_for_libraries():
+            print(f"Did not find compatible libraries in {os_type}_{arch_type}.\n")
 
-            if not _compile((os_type, arch_type)):
-                print(MSG_COMPILATION_FAILED)
+            if not _compile():
+                print("Compilation has failed!")
                 exit(EXIT_COMPILATION_FAILED_ERROR)
 
             else:
-                print(MSG_COMPILATION_SUCCESS)
+                print("Compilation successful!\n")
 
             if not _move_to_directory():
-                print(MSG_FAILED_MOVE)
+                print("Failed to move libraries to directory!")
                 exit(EXIT_OS_ERROR)
 
             else:
-                print(MSG_MOVE_SUCCESS)
+                print("Moved libraries to directory!")
 
         else:
-            print(MSG_FOUND_LIBRARIES)
+            print("Found compatible libraries! Compilation is not necessary.\n")
 
     except SystemExit as e:
-        print(MSG_ABORT)
+        print("Aborting compilation of libraries!\n")
         exit(e.code)
 
     pbar.n = 15
     pbar.refresh()
     pbar.close()
-    print(MSG_SUCCESS)
+
+    del libraries_directory
+    del is_windows
+    del arch_type
+    del os_type
+    del pbar
+
+    print("Build successful!")
 
 
 if __name__ == "__main__":

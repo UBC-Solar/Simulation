@@ -346,6 +346,7 @@ def _execute_build_script() -> None:
     This is an entrypoint to execute the build script.
 
     """
+
     try:
         subprocess.run(["python", "compile.py"], check=True)
 
