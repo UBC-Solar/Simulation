@@ -145,14 +145,16 @@ def apply_deceleration(input_speed_array, tick):
     if input_speed_array is None:
         return np.array([])
 
+    int_speed_array = input_speed_array.astype(int)
+
     # start at the second to last element since the last element can be any speed
-    for i in range(len(input_speed_array) - 2, 0, -1):
+    for i in range(len(int_speed_array) - 2, 0, -1):
 
         # if the car wants to decelerate more than it can, maximize deceleration
-        if input_speed_array[i] - input_speed_array[i + 1] > max_deceleration_per_tick:
-            input_speed_array[i] = input_speed_array[i + 1] + max_deceleration_per_tick
+        if int_speed_array[i] - int_speed_array[i + 1] > max_deceleration_per_tick:
+            int_speed_array[i] = int_speed_array[i + 1] + max_deceleration_per_tick
 
-    return input_speed_array
+    return int_speed_array.astype(np.float64)
 
 
 def apply_acceleration(input_speed_array, tick):
@@ -171,22 +173,24 @@ def apply_acceleration(input_speed_array, tick):
     :rtype: np.ndarray
 
     """
-    max_acceleration_per_tick = MAX_ACCELERATION*tick
+    max_acceleration_per_tick = MAX_ACCELERATION * tick
 
     if input_speed_array is None:
         return np.array([])
 
-    for i in range(0, len(input_speed_array)):
+    int_speed_array = input_speed_array.astype(int)
+
+    for i in range(0, len(int_speed_array)):
 
         # prevent the car from starting the race at an unattainable speed
-        if i == 0 and input_speed_array[i] > max_acceleration_per_tick:
-            input_speed_array[i] = max_acceleration_per_tick
+        if i == 0 and int_speed_array[i] > max_acceleration_per_tick:
+            int_speed_array[i] = max_acceleration_per_tick
 
         # if the car wants to accelerate more than it can, maximize acceleration
-        elif input_speed_array[i] - input_speed_array[i - 1] > max_acceleration_per_tick:
-            input_speed_array[i] = input_speed_array[i - 1] + max_acceleration_per_tick
+        elif int_speed_array[i] - int_speed_array[i - 1] > max_acceleration_per_tick:
+            int_speed_array[i] = int_speed_array[i - 1] + max_acceleration_per_tick
 
-    return input_speed_array
+    return int_speed_array.astype(np.float64)
 
 
 def reshape_speed_array(start_hour, simulation_duration, race_type, speed, granularity, tick=1):
