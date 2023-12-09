@@ -145,6 +145,7 @@ def apply_deceleration(input_speed_array, tick):
     if input_speed_array is None:
         return np.array([])
 
+    # cast to int for performance
     int_speed_array = input_speed_array.astype(int)
 
     # start at the second to last element since the last element can be any speed
@@ -178,6 +179,7 @@ def apply_acceleration(input_speed_array, tick):
     if input_speed_array is None:
         return np.array([])
 
+    # cast to int for performance
     int_speed_array = input_speed_array.astype(int)
 
     for i in range(0, len(int_speed_array)):

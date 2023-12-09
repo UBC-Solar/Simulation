@@ -244,5 +244,32 @@ func weather_in_time_loop(unix_timestamps_inPtr *float64,
 	}
 }
 
+//export apply_acceleration
+func apply_acceleration(input_speed_array_inPtr *float64, input_speed_array_ptrSize int64,tick int64 ){
+    /*
+
+    max_acceleration_per_tick = MAX_ACCELERATION * tick
+
+    if input_speed_array is None:
+        return np.array([])
+
+    # cast to int for performance
+    int_speed_array = input_speed_array.astype(int)
+
+    for i in range(0, len(int_speed_array)):
+
+        # prevent the car from starting the race at an unattainable speed
+        if i == 0 and int_speed_array[i] > max_acceleration_per_tick:
+            int_speed_array[i] = max_acceleration_per_tick
+
+        # if the car wants to accelerate more than it can, maximize acceleration
+        elif int_speed_array[i] - int_speed_array[i - 1] > max_acceleration_per_tick:
+            int_speed_array[i] = int_speed_array[i - 1] + max_acceleration_per_tick
+
+    return int_speed_array.astype(np.float64)
+
+    */
+}
+
 func main() {
 }
