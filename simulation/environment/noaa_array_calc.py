@@ -2,12 +2,20 @@ import numpy as np
 
 
 class NoaaCalc:
-    def __init__(self, latitude, longitude, time_zone, unix_time, local_time_past_midnight):
+    def __init__(self, latitude, longitude, time_zone, unix_time):
+
+        """
+        :param np.ndarray latitude: Array of latitudes
+        :param np.ndarray longitude: Array of longitudes
+        :param np.ndarray time_zone: Array of UTC time zone offsets in hours, e.g. -5
+        :param np.ndarray unix_time: Unix timestamps used to find date and time
+        """
+
         self.latitude = latitude
         self.longitude = longitude
         self.time_zone = time_zone
         self.excel_date = np.floor((unix_time / 86400) + 25569)  # convert to days, then add 70 years
-        self.local_time_past_midnight = local_time_past_midnight
+        self.local_time_past_midnight = (unix_time / 86400) % 1
 
     def julian_day(self):
         return self.excel_date + 2415018.5 + self.local_time_past_midnight - self.time_zone / 24

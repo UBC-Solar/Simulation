@@ -180,9 +180,6 @@ class Simulation:
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations(golang=self.golang, library=self.library,
-                                                               race_type=self.race_type)
-
         self.plotting = simulation.Plotting()
 
         # -------- Hash Key ---------

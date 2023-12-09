@@ -6,6 +6,7 @@ import numpy as np
 
 from typing import Union
 from simulation.common import helpers
+from simulation.environment import SolarCalculations
 
 Iterable = Union[np.ndarray, list, set, tuple]
 
@@ -152,11 +153,14 @@ class Model:
                                                                     self.wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time
-        self.solar_irradiances = self.simulation.solar_calculations.calculate_array_GHI(
+        solar_calculations = SolarCalculations(
             self.simulation.route_coords[self.closest_gis_indices],
             self.time_zones, local_times,
             self.gis_route_elevations_at_each_tick,
-            self.cloud_covers)
+            self.cloud_covers,
+            golang=self.simulation.golang, library=self.simulation.library, race_type=self.simulation.race_type)
+
+        self.solar_irradiances = solar_calculations.calculate_effective_GHI()
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
