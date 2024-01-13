@@ -24,38 +24,6 @@ class BaseBattery(Storage):
         else:
             self.empty = True
 
-    def charge(self, energy):
-        # handles the possibility that adding energy exceeds the max capacity of the battery
-        if self.stored_energy + energy >= self.max_energy_capacity:
-            self.stored_energy = self.max_energy_capacity
-        else:
-            self.stored_energy += energy
-
-    def discharge(self, energy):
-        # in the case that the required energy is more than what the battery currently stores
-        if self.stored_energy - energy <= 0:
-            # currently the remaining energy in the battery just evaporates but this should be changed in the future
-            self.stored_energy = 0
-            self.empty = True
-
-            # TODO: consider removing exception
-            raise BatteryEmptyError("ERROR: Battery is empty.\n")
-        else:
-            self.stored_energy -= energy
-            return energy
-
-    def is_empty(self):
-        return self.empty
-
-    def get_stored_energy(self):
-        return self.stored_energy
-
-    def get_state_of_charge(self):
-        return self.state_of_charge
-
-    def get_output_voltage(self):
-        return self.voltage
-
     def __str__(self):
         return (f"Battery stored energy: {self.stored_energy:.2f}Wh\n"
                 f"Battery state of charge: {self.state_of_charge * 100:.1f}%\n"
