@@ -138,6 +138,10 @@ class BasicMotor(BaseMotor):
 
         motor_controller_input_energies = motor_output_energies / (e_m * e_mc)
 
+        # Filter out and replace negative energy consumption as 0
+        motor_controller_input_energies = np.where(motor_controller_input_energies > 0,
+                                                   motor_controller_input_energies, 0)
+
         return motor_controller_input_energies
 
     def __str__(self):
