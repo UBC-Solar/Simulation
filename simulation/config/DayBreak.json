@@ -10,8 +10,6 @@
   "lvs_voltage": 12,
   "lvs_current": 2.25,
 
-  "motor_current": 10,
-
   "vehicle_mass": 250,
   "road_friction": 0.0055,
   "tire_radius": 0.2032,
