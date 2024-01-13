@@ -161,9 +161,9 @@ class Model:
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
         # ----- Energy Calculations -----
-        self.simulation.basic_lvs.update(self.simulation.tick)
 
         self.lvs_consumed_energy = self.simulation.basic_lvs.get_consumed_energy(self.simulation.tick)
+
         self.motor_consumed_energy = self.simulation.basic_motor.calculate_energy_in(self.speed_kmh,
                                                                                      self.gradients,
                                                                                      self.wind_speeds,

@@ -18,41 +18,6 @@ class BasicArray(BaseArray):
         # please do not use this.
         self.solar_irradiance = 1200
 
-    @staticmethod
-    def calculate_produced_power(solar_irradiance, panel_efficiency, panel_size):
-        """
-
-        Returns the power produced by a solar panel in Watts
-
-        :param solar_irradiance: (float) a value for global horizontal irradiance (GHI)
-            in W/m2
-        :param panel_efficiency: (float) the efficiency of the solar cells as a number
-            between 0 and 1, in atmosphere and with sunlight.
-        :param panel_size: (float) the area of the solar panels in m2
-        
-        :returns: the power produced by a solar panel in W
-        :rtype: float
-
-        """
-
-        produced_power = solar_irradiance * panel_efficiency * panel_size
-
-        return produced_power
-
-    def update(self, tick):
-        """
-
-        Updates solar array model for a single tick
-
-        :param float tick: the length of time for the tick (in seconds)
-
-        note: do not use this please. Use calculate_produced_energy instead.
-        """
-
-        # Assume constant sunlight in this simple model.
-        self.produced_energy = self.calculate_produced_power(self.solar_irradiance,
-                                                             self.panel_efficiency, self.panel_size) * tick
-
     def calculate_produced_energy(self, solar_irradiance, tick):
         """
 
