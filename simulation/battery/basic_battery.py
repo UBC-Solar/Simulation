@@ -67,46 +67,6 @@ class BasicBattery(BaseBattery):
         super().__init__(self.stored_energy, self.max_current_capacity, self.max_energy_capacity,
                          self.max_voltage, self.min_voltage, self.voltage, self.state_of_charge)
 
-    def update(self, tick):
-        """
-
-        Updates battery variables according to energy changes.
-
-        :param float tick: time interval (in seconds) for battery variable update (dt)
-
-        """
-
-        energy_discharged = self.max_energy_capacity - self.stored_energy
-
-        self.discharge_capacity = self.calculate_discharge_capacity_from_energy(energy_discharged)
-        self.state_of_charge = self.calculate_soc_from_discharge_capacity(self.discharge_capacity)
-        self.voltage = self.calculate_voltage_from_discharge_capacity(self.discharge_capacity)
-
-    def charge(self, energy):
-        """
-
-        Adds energy to the battery.
-
-        :param float energy: energy (in joules) to be added to battery.
-
-        """
-
-        # divide by 3600 to convert from joules to watt-hours
-        super().charge(energy / 3600)
-
-    def discharge(self, energy):
-        """
-
-        Takes energy from the battery.
-
-        :param energy: energy (in joules) to be taken from battery.
-        
-        :return discharged_energy: energy (in joules) removed from the battery.
-
-        """
-
-        return super().discharge(energy / 3600)
-
     def update_array(self, cumulative_energy_array):
         """
         Performs energy calculations with NumPy arrays

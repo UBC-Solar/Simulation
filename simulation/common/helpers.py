@@ -12,14 +12,11 @@ from bokeh.models import HoverTool
 from bokeh.plotting import figure, show, output_file
 from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
-from simulation.common import constants, ASC, FSGP
+from simulation.common import constants, ASC, FSGP, DayBreak
 
 """
 Description: contains the simulation's helper functions.
 """
-
-MAX_DECELERATION = 6  # km/h/s
-MAX_ACCELERATION = 6  # km/h/s
 
 def timeit(func):
     """
@@ -131,7 +128,7 @@ def apply_deceleration(input_speed_array, tick):
     Remove sudden drops in speed from input_speed_array
 
     The modified input_speed_array stays as close to the target speeds as possible such that:
-        1. The decrease between any two consecutive speed values cannot exceed MAX_DECELERATION*tick km/h
+        1. The decrease between any two consecutive speed values cannot exceed max_deceleration_per_tick km/h
         2. Values of 0km/h remain 0km/h
 
     :param np.ndarray input_speed_array: array to be modified
@@ -140,7 +137,7 @@ def apply_deceleration(input_speed_array, tick):
     :rtype: np.ndarray
 
     """
-    max_deceleration_per_tick = MAX_DECELERATION*tick
+    max_deceleration_per_tick = DayBreak.max_deceleration_kmh_per_s*tick
 
     if input_speed_array is None:
         return np.array([])
@@ -161,7 +158,7 @@ def apply_acceleration(input_speed_array, tick):
     Remove sudden increases in speed from input_speed_array
 
     The modified input_speed_array stays as close to the target speeds as possible such that:
-        1. The increase between any two consecutive speed values cannot exceed MAX_ACCELERATION*tick km/h
+        1. The increase between any two consecutive speed values cannot exceed max_acceleration_per_tick km/h
         2. Values of 0km/h remain 0km/h
         3. The first element cannot exceed MAX_ACCELERATION km/h since the car starts at rest
 
@@ -171,7 +168,7 @@ def apply_acceleration(input_speed_array, tick):
     :rtype: np.ndarray
 
     """
-    max_acceleration_per_tick = MAX_ACCELERATION*tick
+    max_acceleration_per_tick = DayBreak.max_acceleration_kmh_per_s*tick
 
     if input_speed_array is None:
         return np.array([])
