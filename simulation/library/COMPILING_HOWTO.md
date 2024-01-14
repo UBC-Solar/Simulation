@@ -1,5 +1,6 @@
-# Compiling binaries for your OS
+# Compiling libraries for your OS
 
+This document describes how to manually compile Go libraries. You should attempt to build automatically with `build.py` script first.
 
 ## Guidelines
 To achieve a significant performance improvement, Simulation uses
@@ -24,7 +25,8 @@ See https://www.digitalocean.com/community/tutorials/building-go-applications-fo
 for a list of keypairs for different operating systems and architectures and how to find yours.
 
 Once `.so` and `.h` files have been compiled, they should be placed into a new folder inside of `library/binaries` 
-so that Simulation can find them. Name the folder according to your OS and architecture.
+so that Simulation can find them. Name the folder according to your OS and architecture. As an example, libraries 
+compiled for MacOS (`darwin`) on Apple Silicon (`arm64`) should live in `library/binaries/darwin_arm64`.
 
 ## Example
 Compiling on Apple Silicon Mac requires the following commands to compile `go_files/main.go`:\

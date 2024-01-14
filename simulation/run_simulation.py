@@ -1,14 +1,16 @@
 import datetime
+import subprocess
 
 import numpy as np
 import json
 import sys
-from main.Simulation import Simulation, SimulationReturnType
-from optimization.bayesian import BayesianOptimization
-from optimization.random_opt import RandomOptimization
-from utils.InputBounds import InputBounds
-from config import config_directory
-from utils.SimulationBuilder import SimulationBuilder
+
+from simulation.main import Simulation, SimulationReturnType
+from simulation.optimization.bayesian import BayesianOptimization
+from simulation.optimization.random_opt import RandomOptimization
+from simulation.utils.InputBounds import InputBounds
+from simulation.config import config_directory
+from simulation.utils.SimulationBuilder import SimulationBuilder
 
 """
 Description: Execute simulation optimization sequence. 
@@ -312,6 +314,40 @@ def build_basic_model(race_type: str = "ASC", golang: bool = True, granularity: 
         .set_return_type(SimulationReturnType.void) \
         .set_granularity(granularity)
     return simulation_builder.get()
+
+
+def _health_check() -> None:
+    """
+
+    This is an entrypoint to run Simulation to validate the installation and that no errors will be raised.
+
+    """
+
+    simulation_model = build_basic_model()
+
+    # Initialize a "guess" speed array
+    input_speed = np.array([30] * simulation_model.get_driving_time_divisions())
+
+    # Run simulation model with the "guess" speed array
+    simulation_model.run_model(speed=input_speed, plot_results=False,
+                               verbose=False,
+                               route_visualization=False)
+
+    print("Simulation was successful!")
+
+
+def _execute_build_script() -> None:
+    """
+
+    This is an entrypoint to execute the build script.
+
+    """
+
+    try:
+        subprocess.run(["python", "compile.py"], check=True)
+
+    except subprocess.CalledProcessError:
+        exit(1)
 
 
 if __name__ == "__main__":
