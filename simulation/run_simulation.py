@@ -24,7 +24,7 @@ class SimulationSettings:
 
     """
 
-    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.distance_travelled,
+    def __init__(self, race_type="FSGP", golang=True, return_type=SimulationReturnType.distance_travelled,
                  optimization_iterations=20, route_visualization=False, verbose=False, granularity=1):
         self.race_type = race_type
         self.optimization_iterations = optimization_iterations
