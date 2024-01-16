@@ -15,6 +15,7 @@ from timezonefinder import TimezoneFinder
 from tqdm import tqdm
 from sklearn.neighbors import BallTree
 from math import radians
+from xml.dom import minidom
 
 
 class GIS:
@@ -95,7 +96,10 @@ class GIS:
             logging.warning(
                 "The GIS class is collecting data from a Google API. Set force_update to false to prevent this and "
                 "read data from disk instead. This should improve performance. \n")
-            self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
+            if race_type == "ASC":
+                self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
+            else:
+                self.path = GIS.load_path()
             self.path_elevations = self.calculate_path_elevations(self.path)
             self.path_time_zones = self.calculate_time_zones(self.path)
             self.launch_point = self.path[0]
@@ -115,6 +119,15 @@ class GIS:
         self.path_distances = helpers.calculate_path_distances(self.path)
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
                                                                self.path_distances)
+
+    @staticmethod
+    def load_path():
+        route_file = route_directory / "FSGP.kml"
+        with open(route_file) as f:
+            data = minidom.parse(f)
+            kml_coordinates = data.getElementsByTagName("coordinates")[0].childNodes[0].data
+            coordinates = helpers.parse_coordinates_from_kml(kml_coordinates)
+            return coordinates
 
     def calculate_closest_gis_indices(self, cumulative_distances):
         """

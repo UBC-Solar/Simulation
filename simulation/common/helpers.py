@@ -933,7 +933,7 @@ def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
     return Hash & 0x7FFFFFFF
 
 
-def parse_coordinates_from_xml(coords_str: str) -> np.ndarray:
+def parse_coordinates_from_kml(coords_str: str) -> np.ndarray:
     """
 
     Parse a coordinates string from a XML (KML) file into a list of coordinates (2D vectors).
