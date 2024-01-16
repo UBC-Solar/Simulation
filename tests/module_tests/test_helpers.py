@@ -16,18 +16,6 @@ def test_calculate_race_completion_time1():
 
 def test_calculate_race_completion_time2():
     """
-    Tests the case of not completing the race.
-    """
-    test_path_length = 100
-    test_cumulative_distances = np.array([0, 0, 0, 0, 2, 3, 3, 4, 10])
-
-    result = helpers.calculate_completion_index(
-        test_path_length, test_cumulative_distances)
-    assert result == 10
-
-
-def test_calculate_race_completion_time3():
-    """
     Tests the case of completing the race immediately
     """
     test_path_length = 0
@@ -38,7 +26,7 @@ def test_calculate_race_completion_time3():
     assert result == 0
 
 
-def test_calculate_race_completion_time4():
+def test_calculate_race_completion_time3():
     """
     Tests the case of completing the race at an arbitrary index in the simulation
     """

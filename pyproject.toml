@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm", "setuptools-git-versioning"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "UBC-Solar-Simulation"
+authors = [
+    {name = "UBC Solar", email = "software@ubcsolar.com"},
+    {name = "Fisher Xue"},
+    {name = "Mihir Nimgade"},
+    {name = "Chris Chang"},
+    {name = "David Widjaja"},
+    {name = "Justin Hua"},
+    {name = "Ilya Veksler"},
+    {name = "Renu Rajamagesh"},
+    {name = "Ritchie Xia"},
+    {name = "Erik Langille"},
+    {name = "Chris Aung"},
+    {name = "Nicolas Ric"},
+    {name = "Ishaan Trivedi"},
+    {name = "Jason Liang"},
+    {name = "Felix Toft"},
+    {name = "Mack Wilson"},
+    {name = "Jonah Lee"},
+    {name = "Tamzeed Quazi"},
+    {name = "Joshua Riefman"}
+]
+maintainers = [
+    {name = "UBC Solar", email = "software@ubcsolar.com"},
+    {name = "Joshua Riefman", email = "joshuariefman@gmail.com"},
+    {name = "Renu Rajamagmesh"},
+    {name = "Felix Toft"},
+    {name = "Mack Wilson"},
+    {name = "Jonah Lee"},
+    {name = "Tamzeed Quazi"},
+]
+description = "UBC Solar's Simulation Environment"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["car", "simulation", "solar"]
+license = { file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Natural Language :: English",
+    "Topic :: Scientific/Engineering :: Physics"
+]
+dependencies = [
+    "bayesian_optimization==1.4.3",
+    "bokeh==2.3.3",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "Pillow==9.4.0",
+    "plotly==5.6.0",
+    "polyline==1.4.0",
+    "pytest==7.1.1",
+    "python-dotenv==1.0.0",
+    "pytz==2021.3",
+    "requests==2.26.0",
+    "scikit_learn==1.2.2",
+    "setuptools==61.2.0 ",
+    "timezonefinder==6.0.1",
+    "tqdm==4.64.0",
+    "strenum==0.4.15",
+    "perlin-noise==1.12",
+    "cffi==1.15.1"
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://ubcsolar.com"
+Repository = "https://github.com/UBC-Solar/Simulation"
+Documentation = "https://wiki.ubcsolar.com"
+
+[tool.setuptools-git-versioning]
+enabled = true
+
+[tool.setuptools]
+packages = ["simulation"]
+
+[project.scripts]
+run_simulation = "simulation.run_simulation:main"
+simulation_health_check = "simulation.run_simulation:_health_check"
+build_simulation = "simulation.run_simulation:_execute_build_script"

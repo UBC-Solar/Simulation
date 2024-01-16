@@ -2,9 +2,9 @@
 
 [![Build Status](https://app.travis-ci.com/UBC-Solar/Simulation.svg?branch=master)](https://app.travis-ci.com/UBC-Solar/Simulation)
 
-Welcome to UBC Solar's race strategy simulation environment! The objectve of this simulation is to guide UBC Solar's race strategy by creating a model to predict the performance of the UBC Solar cars in the American Solar Challenge (ASC) and Formula Sun Grand Prix (FSGP). 
+Welcome to UBC Solar's race strategy simulation environment! The objective of this simulation is to guide UBC Solar's race strategy by creating a model to predict the performance of the UBC Solar cars in the American Solar Challenge (ASC) and Formula Sun Grand Prix (FSGP). 
 
-This document contains information on how to getting started with using the simulation framework. 
+This document contains information on how to get setup with the Simulation framework. 
 
 For more detailed information on the inner workings of the simulation please refer to the [wiki](https://github.com/UBC-Solar/Simulation/wiki).
 
@@ -34,7 +34,7 @@ python --version
 
 NOTE: Any Python version before 3.8 is not supported so please make sure that your Python version is in the format 3.8.x or above.
 
-### Installing the simulation package
+## Installation
 
 - Clone the simulation repository into any directory of your choosing by running: 
 
@@ -51,34 +51,51 @@ NOTE: Any Python version before 3.8 is not supported so please make sure that yo
 - To install the simulation package, run the following:
 
     ```bash
-    pip install -e .
+    pip install .
     ```
 
     If the above command doesn't work, try the one below:
 
     ```bash
-    pip3 install -e .
+    pip3 install .
     ```
 
     If neither work, you either do not have pip installed or are not in the correct directory.
 
-- If all the commands worked, you should then be able to import the simulation module in your Python (.py) scripts and use the simulation objects as shown below:
-
-    ```python
-    import simulation
-
-    # creates a battery object
-    battery = simulation.BasicBattery(0.90)
+- Next, run the build command to complete the build which will attempt to compile a few libraries to improve performance.
+    ```bash
+    build_simulation
+    ```
+  You can also run the script directly by navigating to the "Simulation" project root directory. 
+    ```bash
+    python build.py
     ```
 
-### Run Simulation
+    If the above command doesn't work, try the one below:
 
-To run Simulation, you can either run the main Python script directly from your IDE or you can run it from your terminal. 
-The following instructions are for running it from your terminal.
+    ```bash
+    python3 build.py
+    ```
 
-Before running the following commands make sure you have navigated to the "Simulation" folder on your terminal or the commands will not work. Please note support those in `examples` and `examples/archive` has discontinued.
+- If all the commands worked, you should then be able to run the command `simulation_health_check`, which will ensure everything is working properly.
 
-#### Ubuntu/MacOS
+```bash
+simulation_health_check
+```
+  You should see a dump of information ending with a "Simulation was successful!", indicating that everything worked properly.
+
+## Run Simulation
+
+To run Simulation, you can run the command `run_simulation`. This section covers command-line usage; to use Simulation as a part of a project, review the [wiki](https://github.com/UBC-Solar/Simulation/wiki).
+
+```bash
+run_simulation
+```
+
+#### Windows
+Or, you can run the script directly. Before running the following commands make sure you have navigated to the "Simulation" directory. Please note support those in `examples` and `examples/archive` has discontinued.
+
+#### Unix
 
 ```bash
 python3 simulation/run_simulation.py
@@ -90,10 +107,10 @@ python .\simulation\run_simulation.py
 ```
 
 ### Arguments
-
+In both cases, you can pass a set of execution parameters.
 You can view a list of valid arguments and settings that Simulation can accept with the `-help` command.
 
-#### Ubuntu/MacOS
+#### Unix
 
 ```bash
 python3 simulation/run_simulation.py -help

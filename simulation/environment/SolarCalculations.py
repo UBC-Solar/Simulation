@@ -8,12 +8,12 @@ A class to perform calculation and approximations for obtaining quantities
 import datetime
 import numpy as np
 
-from simulation.common import helpers, constants
+from simulation.common import helpers, constants, ASC, FSGP
 
 
 class SolarCalculations:
 
-    def __init__(self, golang=True, library=None):
+    def __init__(self, golang=True, library=None, race_type="ASC"):
         """
 
         Initializes the instance of a SolarCalculations class
@@ -28,6 +28,7 @@ class SolarCalculations:
 
         self.golang = golang
         self.lib = library
+        self.race_type = race_type
 
     # ----- Calculation of solar position in the sky -----
 
@@ -189,13 +190,18 @@ class SolarCalculations:
                                                    time_zone_utc, day_of_year, local_time)
         a = 0.14
 
+        # https://www.pveducation.org/pvcdrom/properties-of-sunlight/air-mass
         # air_mass = 1 / (math.cos(math.radians(zenith_angle)) + \
         #            0.50572*pow((96.07995 - zenith_angle), -1.6364))
 
-        air_mass = np.float_(1) / np.float_(np.cos(np.radians(zenith_angle)))
+        with np.errstate(invalid="ignore"):
+            air_mass = np.float_(1) / (np.float_(np.cos(np.radians(zenith_angle)))
+                                       + 0.50572*np.power((96.07995 - zenith_angle), -1.6364))
+
         with np.errstate(over="ignore"):
-            DNI = self.S_0 * ((1 - a * elevation * 0.001) * np.power(np.power(0.7, air_mass),
-                                                                     0.678) + a * elevation * 0.001)
+            DNI = self.S_0 * ((1 - a * elevation * 0.001) * np.power(0.7, np.power(air_mass, 0.678))
+                                  + a * elevation * 0.001)
+
         return np.where(zenith_angle > 90, 0, DNI)
 
     def calculate_DHI(self, latitude, longitude, time_zone_utc, day_of_year,
@@ -336,4 +342,70 @@ class SolarCalculations:
         ghi = self.calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
                                  day_of_year, local_time, elevations, cloud_covers)
 
-        return ghi
+        stationary_irradiance = self.calculate_angled_irradiance(coords[:, 0], coords[:, 1], time_zones, day_of_year,
+                                                                 local_time, elevations, cloud_covers)
+
+        if self.race_type == "ASC":
+            driving_begin = ASC.driving_begin
+            driving_end = ASC.driving_end
+        elif self.race_type == "FSGP":
+            driving_begin = FSGP.driving_begin
+            driving_end = FSGP.driving_end
+        else:
+            driving_begin = 0
+            driving_end = 24
+
+        # Use stationary irradiance when the car is not driving
+        effective_irradiance = np.where(
+            np.logical_or(
+                (local_time < driving_begin),
+                (driving_end < local_time)),
+            stationary_irradiance,
+            ghi)
+
+        return effective_irradiance
+
+    def calculate_angled_irradiance(self, latitude, longitude, time_zone_utc, day_of_year,
+                                    local_time, elevation, cloud_cover, array_angles=np.array([0, 15, 30, 45])):
+        """
+
+        Determine the direct and diffuse irradiance on an array which can be mounted at different angles.
+        During stationary charging, the car can mount the array at different angles, resulting in a higher
+        component of direct irradiance captured.
+
+        Uses the GHI formula, GHI = DNI*cos(zenith)+DHI but with an 'effective zenith',
+        the angle between the mounted panel's normal and the sun.
+
+        :param np.ndarray latitude: The latitude of a location on Earth
+        :param np.ndarray longitude: The longitude of a location on Earth
+        :param np.ndarray time_zone_utc: The UTC time zone of your area in hours of UTC offset, without including the effects of Daylight Savings Time. For example, Vancouver has time_zone_utc = -8 year-round.
+        :param np.ndarray day_of_year: The number of the day of the current year, with January 1 being the first day of the year.
+        :param np.ndarray local_time: The local time in hours from midnight.
+        :param np.ndarray elevation: The local elevation of a location in metres
+        :param np.ndarray cloud_cover: A NumPy array representing cloud cover as a percentage from 0 to 100
+        :param np.ndarray array_angles: An array containing the discrete angles on which the array can be mounted
+        :returns: The "effective Global Horizontal Irradiance" in W/m^2
+        :rtype: np.ndarray
+
+        """
+
+        DHI = self.calculate_DHI(latitude, longitude, time_zone_utc, day_of_year,
+                                 local_time, elevation)
+
+        DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
+                                 local_time, elevation)
+
+        zenith_angle = self.calculate_zenith_angle(latitude, longitude,
+                                                   time_zone_utc, day_of_year, local_time)
+
+        # Calculate the absolute differences
+        differences = np.abs(zenith_angle[:, np.newaxis] - array_angles)
+
+        # Find the minimum difference for each element in zenith_angle
+        effective_zenith = np.min(differences, axis=1)
+
+        # Now effective_zenith contains the minimum absolute difference for each element in zenith_angle
+
+        GHI = DNI * np.cos(np.radians(effective_zenith)) + DHI
+
+        return self.apply_cloud_cover(GHI=GHI, cloud_cover=cloud_cover)

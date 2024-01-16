@@ -25,8 +25,3 @@ from simulation.utils.Plotting import Plotting
 
 from simulation.main import Simulation
 from simulation.main import Model
-
-__version__ = "0.5.10"
-
-print(f"Package 'simulation' imported. Version: {__version__}\n")
-
