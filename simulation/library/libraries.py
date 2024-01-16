@@ -73,8 +73,6 @@ class Libraries:
                 ctypes.c_longlong
             ]
 
-            self.perlin_noise_library = ctypes.cdll.LoadLibrary(f"{self.go_directory}/perlin_noise.so")
-
             self.main_library.weather_in_time.argtypes = [
                 ctypes.POINTER(ctypes.c_double),
                 ctypes.POINTER(ctypes.c_double),
