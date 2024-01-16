@@ -1,9 +1,9 @@
-import datetime
-import subprocess
-
 import numpy as np
+import subprocess
+import datetime
 import json
 import sys
+import csv
 
 from simulation.main import Simulation, SimulationReturnType
 from simulation.optimization.bayesian import BayesianOptimization
@@ -11,17 +11,9 @@ from simulation.optimization.random_opt import RandomOptimization
 from simulation.utils.InputBounds import InputBounds
 from simulation.config import config_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
-import csv
-
-from tqdm import tqdm
-from main.Simulation import Simulation, SimulationReturnType
-from optimization.bayesian import BayesianOptimization
-from optimization.genetic import GeneticOptimization, OptimizationSettings
-from optimization.random_opt import RandomOptimization
-from utils.InputBounds import InputBounds
-from config import config_directory
-from utils.SimulationBuilder import SimulationBuilder
+from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
 from simulation.data.results import results_directory
+from tqdm import tqdm
 
 """
 Description: Execute simulation optimization sequence. 
