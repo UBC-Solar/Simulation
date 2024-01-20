@@ -487,7 +487,6 @@ def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     return np.degrees(elevation_angle)
 
 
-@jit(nopython=True)
 def find_runs(x):
     """
 
@@ -524,7 +523,6 @@ def find_runs(x):
         return run_values, run_starts, run_lengths
 
 
-@jit(nopython=True)
 def find_multi_index_runs(x):
     run_values, run_starts, run_lengths = find_runs(x)
 
