@@ -58,9 +58,13 @@ class GIS:
         api_call_required = True
 
         # if the file exists, load path from file
+        print(f"Force update: {force_update}")
         if os.path.isfile(route_file) and force_update is False:
+            print("Route file exists!")
             with np.load(route_file) as route_data:
+                print("Loaded!")
                 if route_data['hash'] == hash_key:
+                    print("Hash matches!")
                     api_call_required = False
 
                     print("Previous route save file is being used...\n")
@@ -85,7 +89,8 @@ class GIS:
                             self.path = self.path[current_coord_index:]
                             self.path_elevations = self.path_elevations[current_coord_index:]
                             self.path_time_zones = self.path_time_zones[current_coord_index:]
-
+        print(f"API Call: {api_call_required}")
+        print(f"Force Update: {force_updates}")
         if api_call_required or force_update:
             logging.warning("New route requested and/or route save file does not exist. "
                             "Calling Google API and creating new route save file...\n")
