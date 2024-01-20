@@ -90,7 +90,7 @@ class GIS:
                             self.path_elevations = self.path_elevations[current_coord_index:]
                             self.path_time_zones = self.path_time_zones[current_coord_index:]
         print(f"API Call: {api_call_required}")
-        print(f"Force Update: {force_updates}")
+        print(f"Force Update: {force_update}")
         if api_call_required or force_update:
             logging.warning("New route requested and/or route save file does not exist. "
                             "Calling Google API and creating new route save file...\n")
