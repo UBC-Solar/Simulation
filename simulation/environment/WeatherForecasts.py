@@ -385,6 +385,7 @@ class WeatherForecasts:
 
         return result
 
+
     @staticmethod
     def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
         """

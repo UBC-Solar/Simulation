@@ -4,6 +4,8 @@ import numpy as np
 from simulation.motor.base_motor import BaseMotor
 from simulation.common import DayBreak, constants, DayBreakEquations
 
+import matplotlib.pyplot as plt
+
 
 class BasicMotor(BaseMotor):
 
@@ -25,6 +27,8 @@ class BasicMotor(BaseMotor):
 
         self.air_density = constants.AIR_DENSITY
         self.vehicle_frontal_area = DayBreak.vehicle_frontal_area
+        print("drag COEF")
+        print(DayBreak.drag_coefficient)
         self.drag_coefficient = DayBreak.drag_coefficient
 
         self.friction_force = (self.vehicle_mass * self.acceleration_g * self.road_friction)
@@ -84,8 +88,10 @@ class BasicMotor(BaseMotor):
         required_speed_ms = required_speed_kmh / 3.6
         required_angular_speed_rads = required_speed_ms / self.tire_radius
 
-        drag_force = 0.5 * self.air_density * (
-                (required_speed_ms + wind_speed) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+
+
+        # drag_force = 0.5 * self.air_density * (
+        #         (required_speed_ms + wind_speed) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
 
         g_force = self.vehicle_mass * self.acceleration_g * gradient
 
@@ -173,7 +179,7 @@ class BasicMotor(BaseMotor):
 
         return e_mc
 
-    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, wind_directions, tick):
+    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, wind_attack_angles, tick):
         """
 
         Create a function which takes in array of elevation, array of wind speed, required
@@ -182,8 +188,8 @@ class BasicMotor(BaseMotor):
         :param np.ndarray required_speed_kmh: (float[N]) required speed array in km/h
         :param np.ndarray gradients: (float[N]) gradient at parts of the road
         :param np.ndarray wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
+        :param np.ndarray wind_attack_angles: (float[N])
         :param int tick: length of 1 update cycle in seconds
-        :param np.ndarray wind_directions: (float[N])
         :returns: (float[N]) energy expended by the motor at every tick
         :rtype: np.ndarray
 
@@ -194,8 +200,13 @@ class BasicMotor(BaseMotor):
         required_angular_speed_rads = required_speed_ms / self.tire_radius
         required_angular_speed_rads_array = np.ones(len(gradients)) * required_angular_speed_rads
 
-        drag_forces = 0.5 * self.air_density * (
+        drag_forces2 = 0.5 * self.air_density * (
                 (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+        drag_forces = BasicMotor.calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms)
+
+        plt.plot(drag_forces2)
+        plt.plot(drag_forces)
+        plt.show()
 
         angles = np.arctan(gradients)
         g_forces = self.vehicle_mass * self.acceleration_g * np.sin(angles)
@@ -215,11 +226,21 @@ class BasicMotor(BaseMotor):
         return motor_controller_input_energies
 
     @staticmethod
-    def calculate_drag_coefficients(wind_speeds, wind_angles):
-        drag_coefficients = np.zeros_like(wind_angles, dtype=float)
-        #Lookup table mapping wind angle to drag coefficient for a wind speed of 60 km/hr
-        #Source: https://docs.google.com/spreadsheets/d/17Kdt6rm0MFuab7QkUzZPXoEv4qlpFJS2aJyk_ABtHRI/edit#gid=0
-        angle_to_drag_coefficient = {
+    def calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms):
+        """
+
+                Calculate the force of drag acting in the direction opposite the movement of the car at every tick.
+
+                :param np.ndarray wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
+                :param np.ndarray wind_attack_angles: (float[N]) The attack angle of the wind for a given moment
+                :param np.ndarray required_speed_ms: (float[N]) required speed array in m/s
+                :returns: (float[N]) the drag force in Newtons at every tick of the race
+                :rtype: np.ndarray
+
+        """
+
+        #Lookup table mapping wind angle to drag values for a wind speed of 60 km/hr. Comes from CFD simulation in the google drive.
+        angle_to_unscaled_drag = {
             0: 23.41,
             18: 39.73,
             36: 101.51,
@@ -233,17 +254,17 @@ class BasicMotor(BaseMotor):
             180: 23.58
         }
 
-        for index, wind_angle in enumerate(wind_angles):
-            # potentially check for wind angles larger then 180 degrees, not sure if this is a possibility
-            rounded_wind_angle = round(wind_angle / 18) * 18
-            unscaled_drag = angle_to_drag_coefficient[rounded_wind_angle]
+        drag_forces = np.zeros_like(wind_speeds, dtype=float)
+        rounded_attack_angles = np.round(wind_attack_angles / 18) * 18
+        unscaled_wind_drag = np.array(list(map(lambda x: angle_to_unscaled_drag[x], rounded_attack_angles)))
 
-            # data from lookup table corresponds to wind speed of 60 km/hr
-            # this calculation assumes that the drag increases linearly with wind speed
-            scaled_drag = wind_speeds[index] * unscaled_drag / 60
-            drag_coefficients[index] = scaled_drag
+        # data from lookup table corresponds to wind speed of 16.667 m/s
+        direction = np.sign(wind_speeds)
+        wind_drag = direction * unscaled_wind_drag * (wind_speeds ** 2) / (16.667 ** 2)
+        car_drag = angle_to_unscaled_drag[0] * (required_speed_ms ** 2) / (16.667 ** 2)
+        drag_forces = wind_drag + car_drag
 
-        return drag_coefficients
+        return drag_forces
 
 
 
