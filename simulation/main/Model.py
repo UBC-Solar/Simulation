@@ -43,7 +43,6 @@ class Model:
         self.time_zones = None
         self.distances = None
         self.cumulative_distances = None
-        self.temp = None
         self.closest_gis_indices = None
         self.closest_weather_indices = None
         self.path_distances = None
@@ -94,8 +93,6 @@ class Model:
         self.distances = self.tick_array * self.speed_kmh / 3.6
         self.cumulative_distances = np.cumsum(self.distances)
 
-        self.temp = self.cumulative_distances
-
         # ----- Weather and location calculations -----
 
         """ closest_gis_indices is a 1:1 mapping between each point which has within it a timestamp and cumulative
@@ -143,13 +140,13 @@ class Model:
         roll_by_tick = int(3600 / self.simulation.tick) * (24 + self.simulation.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
         weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
 
-        absolute_wind_speeds = weather_forecasts[:, 5]
+        self.absolute_wind_speeds = weather_forecasts[:, 5]
         self.wind_directions = weather_forecasts[:, 6]
         self.cloud_covers = weather_forecasts[:, 7]
 
         # Get the wind speeds at every location
         self.wind_speeds = helpers.get_array_directional_wind_speed(self.gis_vehicle_bearings,
-                                                                    absolute_wind_speeds,
+                                                                    self.absolute_wind_speeds,
                                                                     self.wind_directions)
         # Get angles of attack of the wind for drag calculations
         self.wind_attack_angles = helpers.get_wind_angles_of_attack(self.gis_vehicle_bearings, self.wind_directions)
@@ -165,10 +162,7 @@ class Model:
 
         # ----- Energy Calculations -----
 
-        self.simulation.basic_lvs.update(self.simulation.tick)
-
-        self.lvs_consumed_energy = self.simulation.basic_lvs.get_consumed_energy()
-
+        self.lvs_consumed_energy = self.simulation.basic_lvs.get_consumed_energy(self.simulation.tick)
 
 
         self.motor_consumed_energy = self.simulation.basic_motor.calculate_energy_in(self.speed_kmh,
@@ -192,7 +186,10 @@ class Model:
         self.array_produced_energy = np.logical_and(self.array_produced_energy,
                                                     self.not_charge) * self.array_produced_energy
 
-        self.consumed_energy = self.motor_consumed_energy + self.lvs_consumed_energy
+        # Apply not charge mask to only consume energy when we are racing else 0
+        self.consumed_energy = np.where(self.not_charge,
+                                        self.motor_consumed_energy + self.lvs_consumed_energy, 0)
+
         self.produced_energy = self.array_produced_energy + self.regen_produced_energy
 
         # net energy added to the battery
@@ -280,7 +277,6 @@ class Model:
             "timestamps": self.timestamps,
             "time_zones": self.time_zones,
             "cumulative_distances": self.cumulative_distances,
-            "temp": self.temp,
             "closest_gis_indices": self.closest_gis_indices,
             "closest_weather_indices": self.closest_weather_indices,
             "path_distances": self.path_distances,

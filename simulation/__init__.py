@@ -1,7 +1,8 @@
 from simulation.common import Consumer
 from simulation.common import Producer
 from simulation.common import Storage
-from simulation.common import BatteryEmptyError, PrematureDataRecoveryError
+from simulation.common import BatteryEmptyError
+from simulation.common import PrematureDataRecoveryError
 
 from simulation.arrays import BaseArray
 from simulation.battery import BaseBattery
@@ -24,8 +25,3 @@ from simulation.utils.Plotting import Plotting
 
 from simulation.main import Simulation
 from simulation.main import Model
-
-__version__ = "0.5.10"
-
-print(f"Package 'simulation' imported. Version: {__version__}\n")
-

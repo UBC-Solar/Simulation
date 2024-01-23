@@ -32,7 +32,8 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, golang=False, library=None, weather_data_frequency="daily", force_update=False, origin_coord=None):
+    def __init__(self, api_key, coords, duration, race_type, golang=False, library=None, weather_data_frequency="daily",
+                 force_update=False, origin_coord=None, hash_key=None):
         """
 
         Initializes the instance of a WeatherForecast class
@@ -45,6 +46,7 @@ class WeatherForecasts:
         :param duration: amount of time simulated (in hours)
         :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
         :param golang: boolean determining whether to use faster GoLang implementations when available
+        :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
         self.race_type = race_type
@@ -73,9 +75,7 @@ class WeatherForecasts:
         # if the file exists, load path from file
         if os.path.isfile(weather_file) and force_update is False:
             with np.load(weather_file) as weather_data:
-                if np.array_equal(weather_data['origin_coord'], self.origin_coord) and \
-                        np.array_equal(weather_data['dest_coord'], self.dest_coord):
-
+                if weather_data['hash'] == hash_key:
                     api_call_required = False
 
                     print("Previous weather save file is being used...\n")
@@ -95,7 +95,6 @@ class WeatherForecasts:
                     print("--- Array information ---")
                     for key in weather_data:
                         print(f"> {key}: {weather_data[key].shape}")
-                    print()
 
         if api_call_required or force_update:
             print("Different weather data requested and/or weather file does not exist. "
@@ -104,7 +103,7 @@ class WeatherForecasts:
 
             with open(weather_file, 'wb') as f:
                 np.savez(f, weather_forecast=self.weather_forecast, origin_coord=self.origin_coord,
-                         dest_coord=self.dest_coord)
+                         dest_coord=self.dest_coord, hash=hash_key)
 
         self.last_updated_time = self.weather_forecast[0, 0, 2]
 
@@ -268,6 +267,7 @@ class WeatherForecasts:
         Furthermore, once we have chosen a week's worth of weather forecasts for a specific coordinate, we must isolate
         a single weather forecast depending on what time the car is at the coordinate (10, 20). That is the job of the
         `get_weather_forecast_in_time()` method.
+        
         """
 
         # if racing FSGP, there is no need for distance calculations. We will return only the origin coordinate
@@ -368,22 +368,25 @@ class WeatherForecasts:
 
         """
 
-        # each element is the weather forecast for all available times at that coordinate
+        if self.golang:
+            return self.golang_get_weather_in_time(unix_timestamps, indices)
+        else:
+            return self.python_get_weather_in_time(unix_timestamps, indices)
+
+    def golang_get_weather_in_time(self, unix_timestamps, indices):
+        tensor_sizes = self.weather_forecast.shape
+        linearized_length = tensor_sizes[0] * tensor_sizes[1] * tensor_sizes[2]
+        linearized_weather_forecasts = self.weather_forecast.reshape([linearized_length])
+        return self.lib.golang_weather_in_time(linearized_weather_forecasts, unix_timestamps, indices, tensor_sizes)
+
+    def python_get_weather_in_time(self, unix_timestamps, indices):
         full_weather_forecast_at_coords = self.weather_forecast[indices]
         dt_local_array = full_weather_forecast_at_coords[0, :, 4]
 
-        if self.golang:
-            closest_timestamp_indices = self.lib.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
-        else:
-            closest_timestamp_indices = self.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
-
         temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
+        closest_timestamp_indices = self.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
 
-        # if you're wondering why or how this works, don't ask because I don't know, it just does
-        # this is what duct-taping looks like in software engineering
-        result = full_weather_forecast_at_coords[tuple((temp_0, closest_timestamp_indices))]
-
-        return result
+        return full_weather_forecast_at_coords[temp_0, closest_timestamp_indices]
 
 
     @staticmethod

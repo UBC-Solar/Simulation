@@ -113,6 +113,7 @@ class BasicMotor(BaseMotor):
 
         self.consumed_energy = self.input_power * tick
 
+
     @staticmethod
     def calculate_motor_efficiency(motor_angular_speed, motor_output_energy, tick):
         """
@@ -200,6 +201,7 @@ class BasicMotor(BaseMotor):
         required_angular_speed_rads = required_speed_ms / self.tire_radius
         required_angular_speed_rads_array = np.ones(len(gradients)) * required_angular_speed_rads
 
+        # Old Drag Force Calculations
         drag_forces2 = 0.5 * self.air_density * (
                 (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
         drag_forces = BasicMotor.calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms)
@@ -222,6 +224,10 @@ class BasicMotor(BaseMotor):
                                                           motor_output_energies, tick)
 
         motor_controller_input_energies = motor_output_energies / (e_m * e_mc)
+
+        # Filter out and replace negative energy consumption as 0
+        motor_controller_input_energies = np.where(motor_controller_input_energies > 0,
+                                                   motor_controller_input_energies, 0)
 
         return motor_controller_input_energies
 
