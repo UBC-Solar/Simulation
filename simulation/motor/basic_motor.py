@@ -228,7 +228,6 @@ class BasicMotor(BaseMotor):
     @staticmethod
     def calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms):
         """
-
                 Calculate the force of drag acting in the direction opposite the movement of the car at every tick.
 
                 :param np.ndarray wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
@@ -238,7 +237,6 @@ class BasicMotor(BaseMotor):
                 :rtype: np.ndarray
 
         """
-
         #Lookup table mapping wind angle to drag values for a wind speed of 60 km/hr. Comes from CFD simulation in the google drive.
         angle_to_unscaled_drag = {
             0: 23.41,
@@ -265,7 +263,6 @@ class BasicMotor(BaseMotor):
         drag_forces = wind_drag + car_drag
 
         return drag_forces
-
 
 
     def __str__(self):
