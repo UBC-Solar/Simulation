@@ -203,9 +203,73 @@ func speeds_with_waypoints_loop(speeds_inPtr *float64,
 	}
 }
 
+//export weather_in_time
+func weather_in_time(weather_forecast_Ptr *float64,
+	linearized_results_Ptr *float64,
+	unix_timestamps_Ptr *float64,
+	indices_Ptr *int32,
+	weather_coords int64,
+	weather_times int64,
+	weather_endpoints int64,
+	simulation_duration int64,
+) {
+
+	weather_forecasts_linear := unsafe.Slice(weather_forecast_Ptr, weather_coords*weather_times*weather_endpoints)
+	indices := unsafe.Slice(indices_Ptr, simulation_duration)
+	unix_timestamps := unsafe.Slice(unix_timestamps_Ptr, simulation_duration)
+	linearized_results := unsafe.Slice(linearized_results_Ptr, simulation_duration*weather_endpoints)
+
+	// Construct weather_forecast tensor from the linear array
+	weather_forecast := make([][][]float64, weather_coords)
+	for i := range weather_forecast {
+		weather_forecast[i] = make([][]float64, weather_times)
+		for j := range weather_forecast[0] {
+			weather_forecast[i][j] = make([]float64, weather_endpoints)
+			for k := range weather_forecast[0][0] {
+				index := i*int(weather_times*weather_endpoints) + j*int(weather_endpoints) + k
+				weather_forecast[i][j][k] = weather_forecasts_linear[index]
+			}
+		}
+	}
+
+	//full_weather_forecast_at_coords = self.weather_forecast[indices]
+	full_weather_forecast_at_coords := make([][][]float64, simulation_duration)
+	for i := range full_weather_forecast_at_coords {
+		full_weather_forecast_at_coords[i] = weather_forecast[indices[i]]
+	}
+
+	//dt_local_array = full_weather_forecast_at_coords[0, :, 4]
+	dt_local_array := make([]float64, weather_times)
+	for i := range dt_local_array {
+		dt_local_array[i] = full_weather_forecast_at_coords[0][i][4]
+	}
+
+	//closest_timestamp_indices = self.lib.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
+	closest_timestamp_indices := make([]int64, simulation_duration)
+	weather_in_time_loop(&unix_timestamps[0], &closest_timestamp_indices[0], &dt_local_array[0], weather_times, simulation_duration)
+
+	//temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
+	temp_0 := make([]int64, simulation_duration)
+	for i := range temp_0 {
+		temp_0[i] = int64(i)
+	}
+
+	//result = full_weather_forecast_at_coords[temp_0, closest_timestamp_indices]
+	result := make([][]float64, simulation_duration)
+	for i := range result {
+		result[i] = full_weather_forecast_at_coords[temp_0[i]][closest_timestamp_indices[i]]
+	}
+
+	for i := 0; i < int(simulation_duration); i++ {
+		for j := 0; j < int(weather_endpoints); j++ {
+			linearized_results[i*int(weather_endpoints)+j] = result[i][j]
+		}
+	}
+}
+
 //export weather_in_time_loop
 func weather_in_time_loop(unix_timestamps_inPtr *float64,
-	closest_time_stamp_indices_outPtr *float64,
+	closest_time_stamp_indices_outPtr *int64,
 	dt_local_array_inPtr *float64,
 	dt_local_array_inPtr_size int64,
 	io_ptr_size int64) {
@@ -226,7 +290,7 @@ func weather_in_time_loop(unix_timestamps_inPtr *float64,
 		//differences = np.abs(unix_timestamp_array - dt_local_array)
 		differences := make([]float64, dt_local_array_inPtr_size)
 		for j := range unix_timestamp_array {
-			differences[j] = math.Abs(float64(unix_timestamp_array[j] - dt_local_array[j]))
+			differences[j] = math.Abs(unix_timestamp_array[j] - dt_local_array[j])
 		}
 
 		//minimum__index = np.argmin(differences)
@@ -240,7 +304,7 @@ func weather_in_time_loop(unix_timestamps_inPtr *float64,
 			}
 		}
 		//closest_time_stamp_indices.append(minimum_index)
-		closest_time_stamp_indices_out[index] = float64(min_index)
+		closest_time_stamp_indices_out[index] = int64(min_index)
 	}
 }
 

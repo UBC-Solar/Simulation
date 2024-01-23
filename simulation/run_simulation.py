@@ -1,9 +1,9 @@
-import datetime
-import subprocess
-
 import numpy as np
+import subprocess
+import datetime
 import json
 import sys
+import csv
 
 from simulation.main import Simulation, SimulationReturnType
 from simulation.optimization.bayesian import BayesianOptimization
@@ -11,6 +11,9 @@ from simulation.optimization.random_opt import RandomOptimization
 from simulation.utils.InputBounds import InputBounds
 from simulation.config import config_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
+from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
+from simulation.data.results import results_directory
+from tqdm import tqdm
 
 """
 Description: Execute simulation optimization sequence. 
@@ -24,7 +27,7 @@ class SimulationSettings:
 
     """
 
-    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.distance_travelled,
+    def __init__(self, race_type="ASC", golang=True, return_type=SimulationReturnType.distance_and_time,
                  optimization_iterations=20, route_visualization=False, verbose=False, granularity=1):
         self.race_type = race_type
         self.optimization_iterations = optimization_iterations
@@ -103,15 +106,23 @@ def run_simulation(settings):
     bounds = InputBounds()
     bounds.add_bounds(driving_hours, minimum_speed, maximum_speed)
 
+    # Perform optimization with Genetic Optimization
+    optimization_settings: OptimizationSettings = OptimizationSettings()
+    with tqdm(total=optimization_settings.generation_limit, file=sys.stdout, desc="Optimizing driving speeds",
+              position=0, leave=True, unit="Generation", smoothing=1.0) as pbar:
+        geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=optimization_settings, pbar=pbar)
+        results_genetic = geneticOptimization.maximize()
+    optimized_genetic = simulation_model.run_model(geneticOptimization.bestinput, plot_results=True)
+
     # Initialize optimization methods
     optimization = BayesianOptimization(bounds, simulation_model.run_model)
     random_optimization = RandomOptimization(bounds, simulation_model.run_model)
 
     # Perform optimization with Bayesian Optimization
-    results = optimization.maximize(init_points=5, n_iter=settings.optimization_iterations, kappa=10)
-    optimized = simulation_model.run_model(speed=np.fromiter(results, dtype=float), plot_results=True,
-                                           verbose=settings.verbose,
-                                           route_visualization=settings.route_visualization)
+    results_bayesian = optimization.maximize(init_points=5, n_iter=settings.optimization_iterations, kappa=10)
+    optimized_bayesian = simulation_model.run_model(speed=np.fromiter(results_bayesian, dtype=float), plot_results=True,
+                                                    verbose=settings.verbose,
+                                                    route_visualization=settings.route_visualization)
 
     # Perform optimization with random optimization
     results_random = random_optimization.maximize(iterations=settings.optimization_iterations)
@@ -121,7 +132,7 @@ def run_simulation(settings):
 
     #  ----- Output results ----- #
 
-    display_output(settings.return_type, unoptimized_time, optimized, optimized_random, results,
+    display_output(settings.return_type, unoptimized_time, optimized_bayesian, optimized_random, results_bayesian,
                    results_random)
 
     return unoptimized_time
@@ -292,7 +303,34 @@ def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", g
     return results_array
 
 
+def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds):
+    evals_per_setting: int = 3
+    settings_file = results_directory / "settings.csv"
+    stop_index = 0
+
+    with open(settings_file, 'r') as f:
+        csv_reader = csv.reader(f, delimiter=',')
+        settings_list = GeneticOptimization.parse_csv_into_settings(csv_reader)
+
+    total_num = GeneticOptimization.get_total_generations(settings_list) * evals_per_setting
+    with tqdm(total=total_num, file=sys.stdout, desc="Running hyperparameter search", position=0, leave=True) as pbar:
+        try:
+            for settings in settings_list:
+                stop_index += 1
+                for x in range(evals_per_setting):
+                    geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=settings, pbar=pbar,
+                                                              plot_fitness=True)
+                    geneticOptimization.maximize()
+                    geneticOptimization.write_results()
+        except KeyboardInterrupt:
+            print(f"Finished {stop_index - 1} setting(s), stopped while evaluating setting {stop_index}.")
+            exit()
+    print("Hyperparameter search has concluded.")
+
+
 def get_default_settings(race_type: str = "ASC") -> tuple[dict, dict]:
+    assert race_type in ["ASC", "FSGP"]
+
     #  ----- Load initial conditions -----
     with open(config_directory / f"initial_conditions_{race_type}.json") as f:
         initial_conditions = json.load(f)

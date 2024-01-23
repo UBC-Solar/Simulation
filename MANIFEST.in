@@ -1,6 +1,7 @@
 include simulation/config/*.json
 include simulation/cache/route/*.npz
 include simulation/cache/weather/*.npz
+include simulation/cache/optimization_population/*.npz
 include simulation/library/binaries/*
 include simulation/library/go_files/*.go
 include simulation/library/go_files/go.mod

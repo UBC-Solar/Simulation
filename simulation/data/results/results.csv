@@ -1,0 +1,16 @@
+Chromosomes, Parent_Selection, Generations, Parents, Crossover, Elitism, Mutation Type, Mutation Percent, Max Mutation
+2,24,tournament,30,12,5,single_point,8,random,25.0,0.05,reach_2450,2466.836848641134
+3,24,tournament,30,12,5,single_point,8,random,25.0,0.05,reach_2450,2466.836848641134
+4,24,tournament,30,12,5,single_point,8,random,25.0,0.05,reach_2450,2457.158924143711
+5,24,tournament,30,12,5,single_point,8,random,25.0,0.05,reach_2450,2466.836848641134
+6,24,tournament,30,12,5,single_point,8,random,25.0,0.05,reach_2450,2466.836848641134
+7,24,tournament,30,12,5,single_point,8,random,25.0,0.05,reach_2450,2451.6328180566584
+8,24,tournament,30,12,5,single_point,8,random,25.0,0.1,reach_2450,2466.836848641134
+9,24,tournament,30,12,5,single_point,8,random,25.0,0.1,reach_2450,2461.7866030840682
+10,24,tournament,30,12,5,single_point,8,random,25.0,0.1,reach_2450,2466.836848641134
+11,24,tournament,30,12,5,single_point,8,random,25.0,0.1,reach_2450,2452.352796098845
+12,24,tournament,30,12,5,single_point,8,random,25.0,0.1,reach_2450,2454.900382683449
+13,24,tournament,30,12,5,single_point,8,random,25.0,0.1,reach_2450,2466.836848641134
+14,24,tournament,30,12,5,single_point,8,random,25.0,0.05,reach_2450,1675.903501624473,True
+15,24,tournament,30,12,5,single_point,8,random,25.0,0.05,reach_2450,1683.6880567083292,False
+16,24,tournament,30,12,5,single_point,8,random,25.0,0.05,reach_2450,1679.270599212061,True

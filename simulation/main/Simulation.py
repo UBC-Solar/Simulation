@@ -146,6 +146,11 @@ class Simulation:
                                 "about compiling GoLang for your operating system.\n")
         else:
             self.library = None
+
+        # -------- Hash Key ---------
+
+        self.hash_key = self.__hash__()
+
         # ----- Component initialisation -----
 
         self.basic_array = simulation.BasicArray()
@@ -160,7 +165,7 @@ class Simulation:
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, library=self.library, force_update=gis_force_update,
-                                  current_coord=self.current_coord, golang=self.golang)
+                                  current_coord=self.current_coord, golang=self.golang, hash_key=self.hash_key)
 
         self.route_coords = self.gis.get_path()
 
@@ -175,7 +180,8 @@ class Simulation:
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update,
                                                    origin_coord=self.gis.launch_point,
-                                                   golang=self.golang)
+                                                   golang=self.golang,
+                                                   hash_key=self.hash_key)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
@@ -184,10 +190,6 @@ class Simulation:
                                                                race_type=self.race_type)
 
         self.plotting = simulation.Plotting()
-
-        # -------- Hash Key ---------
-
-        self.hash_key = self.__hash__()
 
         # All attributes ABOVE will NOT be modified when the model is simulated. All attributes BELOW this WILL be
         # mutated over the course of simulation. Ensure that when you modify the behaviour of Simulation that this
@@ -198,15 +200,14 @@ class Simulation:
         self._model = None
 
     def __hash__(self):
-        hash_string = str(self.origin_coord) + str(self.dest_coord) + str(self.current_coord) + str(
-            self.start_hour) + str(self.initial_battery_charge) + str(self.tick) + str(self.simulation_duration)
+        hash_string = str(self.origin_coord) + str(self.dest_coord)
         for value in self.waypoints:
             hash_string += str(value)
         filtered_hash_string = "".join(filter(str.isnumeric, hash_string))
         return helpers.PJWHash(filtered_hash_string)
 
     def run_model(self, speed=None, plot_results=False, verbose=False,
-                  route_visualization=False, plot_portion=(0.0, 1.0), **kwargs):
+                  route_visualization=False, plot_portion=(0.0, 1.0), is_optimizer: bool = False, **kwargs):
         """
 
         Given an array of driving speeds, simulate the model by running calculations sequentially for the entire
@@ -223,31 +224,31 @@ class Simulation:
         Note 2: currently, the simulation can only be run for times during which weather data is available
 
         :param np.ndarray speed: array that specifies the solar car's driving speed at each time step
-        :param bool plot_results: set to True to plot the results of the simulation (is True by default)
+        :param bool plot_results: set to True to plot the results of the simulation
         :param bool verbose: Boolean to control logging and debugging behaviour
         :param bool route_visualization: Flag to control route_visualization plot visibility
         :param tuple[float] plot_portion: A tuple containing the beginning and end of the portion of the array we'd
-        like to plot as percentages (0 <= plot_portion <= 1).
+        like to plot, as percentages (0 <= plot_portion <= 1).
         :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
         :param plot_portion: A tuple containing the beginning and end of the portion of the array we'd
         like to plot as percentages.
-
+        :param bool is_optimizer: flag to set whether this method is being run by an optimizer. Reduces verbosity
+            when true.
         """
 
         if speed is None:
             speed = np.array([30] * self.get_driving_time_divisions())
 
         # Used by the optimization function as it passes values as keyword arguments instead of a numpy array
-        if kwargs:
-            speed = np.fromiter(kwargs.values(), dtype=float)
+        if kwargs or is_optimizer:
+            if kwargs:
+                speed = np.fromiter(kwargs.values(), dtype=float)
 
             # Don't plot results since this code is run by the optimizer
             plot_results = False
             verbose = False
 
-        if not kwargs:
-            print(f"Input speeds: {speed}\n")
         assert len(speed) == self.get_driving_time_divisions(), ("Input driving speeds array must have length equal to "
                                                                  "get_driving_time_divisions()! Current length is "
                                                                  f"{len(speed)} and length of "
@@ -265,7 +266,7 @@ class Simulation:
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
-        if not kwargs:
+        if not kwargs and not is_optimizer:
             print(f"Simulation successful!\n"
                   f"Time taken: {results[0]}\n"
                   f"Route length: {results[1]:.2f}km\n"
