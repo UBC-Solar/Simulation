@@ -60,8 +60,6 @@ class GIS:
         # if the file exists, load path from file
         if os.path.isfile(route_file) and force_update is False:
             with np.load(route_file) as route_data:
-                print(f"This hash key is: {hash_key}")
-                print(f"Looking for: {route_data['hash']}")
                 if route_data['hash'] == hash_key:
                     api_call_required = False
 
