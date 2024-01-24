@@ -90,7 +90,7 @@ class BasicMotor(BaseMotor):
 
         g_force = self.vehicle_mass * self.acceleration_g * gradient
 
-        drag_force = BasicMotor.calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms)
+        drag_force = BasicMotor.calculate_drag_force(wind_speed, wind_attack_angles, required_speed_ms)
 
         motor_output_power = required_angular_speed_rads * (self.friction_force + drag_force + g_force)
 
