@@ -88,9 +88,13 @@ class BasicMotor(BaseMotor):
         required_speed_ms = required_speed_kmh / 3.6
         required_angular_speed_rads = required_speed_ms / self.tire_radius
 
-        g_force = self.vehicle_mass * self.acceleration_g * gradient
 
-        drag_force = BasicMotor.calculate_drag_force(wind_speed, wind_attack_angles, required_speed_ms)
+        # As far as I can tell, this function isn't actually being used anywhere, please let me know if I'm wrong - Felix
+        # drag_force = 0.5 * self.air_density * (
+        #         (required_speed_ms + wind_speed) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+        drag_force = -1000
+
+        g_force = self.vehicle_mass * self.acceleration_g * gradient
 
         motor_output_power = required_angular_speed_rads * (self.friction_force + drag_force + g_force)
 
