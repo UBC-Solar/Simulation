@@ -88,12 +88,9 @@ class BasicMotor(BaseMotor):
         required_speed_ms = required_speed_kmh / 3.6
         required_angular_speed_rads = required_speed_ms / self.tire_radius
 
-
-
-        # drag_force = 0.5 * self.air_density * (
-        #         (required_speed_ms + wind_speed) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
-
         g_force = self.vehicle_mass * self.acceleration_g * gradient
+
+        drag_force = BasicMotor.calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms)
 
         motor_output_power = required_angular_speed_rads * (self.friction_force + drag_force + g_force)
 
@@ -201,14 +198,14 @@ class BasicMotor(BaseMotor):
         required_angular_speed_rads = required_speed_ms / self.tire_radius
         required_angular_speed_rads_array = np.ones(len(gradients)) * required_angular_speed_rads
 
-        # Old Drag Force Calculations
-        drag_forces2 = 0.5 * self.air_density * (
-                (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
-        drag_forces = BasicMotor.calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms)
 
-        plt.plot(drag_forces2)
-        plt.plot(drag_forces)
-        plt.show()
+        drag_forces = BasicMotor.calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms)
+        # Old Drag Force Calculations
+        # drag_forces2 = 0.5 * self.air_density * (
+        #         (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+        # plt.plot(drag_forces2)
+        # plt.plot(drag_forces)
+        # plt.show()
 
         angles = np.arctan(gradients)
         g_forces = self.vehicle_mass * self.acceleration_g * np.sin(angles)
