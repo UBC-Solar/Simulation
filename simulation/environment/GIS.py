@@ -112,6 +112,25 @@ class GIS:
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
                                                                self.path_distances)
 
+        cache_file = route_directory / "speed_limits.npz"
+        try:
+            with np.load(cache_file, "rb") as cache_data:
+                self.speed_limits = cache_data["speed_limits"]
+        except Exception:
+            cumulative_path_distances = np.cumsum(self.path_distances)
+            self.speed_limits = np.empty([int(cumulative_path_distances[-1]) + 1], dtype=int)
+
+            for i in range(int(cumulative_path_distances[-1]) + 1):
+                gis_index = GIS.closest_index(i, cumulative_path_distances)
+                speed_limit = 20 if gis_index % 300 <= 60 else 200
+                self.speed_limits[i] = speed_limit
+
+            np.savez(cache_file, speed_limits=self.speed_limits)
+
+    @staticmethod
+    def closest_index(target_distance, distances):
+        return np.argmin(np.abs(distances - target_distance))
+
     def calculate_closest_gis_indices(self, cumulative_distances):
         """
 
