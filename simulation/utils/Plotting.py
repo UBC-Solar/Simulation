@@ -1,5 +1,3 @@
-import numpy as np
-
 from simulation.common.helpers import plot_graph
 
 
@@ -37,6 +35,8 @@ class Plotting:
         input (0.5, 1.0).
 
         """
+
+        assert 0.0 <= plot_portion[0] < plot_portion[1] <= 1.0, "plotting_portion is out of bounds!"
 
         # Graph all graphs that have been queued
         for graph in self.graph_queue:

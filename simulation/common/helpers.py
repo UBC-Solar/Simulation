@@ -12,6 +12,7 @@ from bokeh.models import HoverTool
 from bokeh.plotting import figure, show, output_file
 from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
+from numba import jit
 from simulation.common import constants, ASC, FSGP, DayBreak
 
 """
@@ -55,6 +56,7 @@ def date_from_unix_timestamp(unix_timestamp):
     return datetime.datetime.utcfromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
+@jit(nopython=True)
 def check_for_non_consecutive_zeros(array, verbose=False):
     """
 
@@ -290,6 +292,7 @@ def calculate_path_distances(coords):
     return path_distances
 
 
+@jit(nopython=True)
 def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
     """
 
@@ -338,6 +341,7 @@ def get_day_of_year(day, month, year):
     return (datetime.date(year, month, day) - datetime.date(year, 1, 1)).days + 1
 
 
+@jit(nopython=True)
 def calculate_declination_angle(day_of_year):
     """
 
@@ -357,7 +361,7 @@ def calculate_declination_angle(day_of_year):
 
 
 # ----- Calculation of Apparent Solar Time -----
-
+@jit(nopython=True)
 def calculate_eot_correction(day_of_year):
     """
 
@@ -377,6 +381,7 @@ def calculate_eot_correction(day_of_year):
     return eot
 
 
+@jit(nopython=True)
 def calculate_LSTM(time_zone_utc):
     """
 
@@ -421,6 +426,7 @@ def local_time_to_apparent_solar_time(time_zone_utc, day_of_year, local_time,
     return lst
 
 
+@jit(nopython=True)
 def calculate_path_gradients(elevations, distances):
     """
 
@@ -456,27 +462,7 @@ def calculate_path_gradients(elevations, distances):
     return gradients
 
 
-def cull_dataset(coords, cull_factor=625):  # DEPRECATED
-    """
-
-    As we currently have a limited number of API calls(60) every minute with the
-        current Weather API, we must shrink the dataset significantly. As the
-        OpenWeatherAPI models have a resolution of between 2.5 - 70 km, we will
-        go for a resolution of 25km. Assuming we travel at 100km/h for 12 hours,
-        1200 kilometres/25 = 48 API calls
-
-    As the Google Maps API has a resolution of around 40m between points,
-        we must cull at 625:1 (because 25,000m / 40m = 625)
-
-    :param int cull_factor: factor in which the input array should be culled, default is 625.
-    :param np.ndarray coords: array to be culled
-    :returns: culled array
-    :rtype: np.ndarray
-
-    """
-    return coords[::cull_factor]
-
-
+@jit(nopython=True)
 def compute_elevation_angle_math(declination_angle, hour_angle, latitude):
     """
 
@@ -552,6 +538,7 @@ def find_multi_index_runs(x):
     return multi_index_run_values, multi_index_run_starts, multi_index_run_lengths
 
 
+@jit(nopython=True)
 def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, race_type, timestamps, verbose):
     """
 
@@ -582,7 +569,7 @@ def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, ra
     return constrained_speed_kmh, not_charging_array
 
 
-def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type, granularity, as_seconds=True):
+def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type, granularity=1, as_seconds=True):
     """
 
     Applies regulation timing constraints to a speed array.
@@ -743,7 +730,6 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
     return
 
 
-
 def route_visualization(coords, visible=True):
     """
 
@@ -798,6 +784,7 @@ def simple_plot_graph(data, title, visible=True):
         plt.show()
 
 
+@jit(nopython=True)
 def calculate_completion_index(path_length, cumulative_distances):
     """
 
@@ -849,6 +836,7 @@ def plot_latitudes(coordinates):
     simple_plot_graph(coordinates[:, 1], "Latitudes")
 
 
+@jit(nopython=True)
 def map_array_to_targets(input_array, target_array):
     """
 
@@ -884,6 +872,7 @@ def map_array_to_targets(input_array, target_array):
     return output_array
 
 
+@jit(nopython=True)
 def get_map_data_indices(closest_gis_indices):
     """
     gets list of indices of the data to be displayed on corresponding
@@ -954,7 +943,29 @@ def parse_coordinates_from_kml(coords_str: str) -> np.ndarray:
     return list(map(parse_coord, coords_str.split()))
 
 
+@jit(nopython=True)
 def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:
     max_value_in_array = np.max(input_array) if max_value is None else max_value
     min_value_in_array = np.min(input_array) if min_value is None else min_value
     return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
+
+
+@jit(nopython=True)
+def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0) -> np.ndarray:
+    return input_array * (max_value - min_value) + min_value
+
+
+@jit(nopython=True)
+def rescale(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
+    normalized_array = normalize(input_array)
+    return denormalize(normalized_array, upper_bound, lower_bound)
+
+
+
+if __name__ == '__main__':
+    # speed_array input
+    speed_array = np.array([45, 87, 65, 89, 43, 54, 45, 23, 34, 20])
+
+    expanded_speed_array = reshape_and_repeat(speed_array, 9 * 3600)
+    expanded_speed_array = np.insert(expanded_speed_array, 0, 0)
+    expanded_speed_array = apply_deceleration(expanded_speed_array, 20)

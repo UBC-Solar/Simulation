@@ -146,3 +146,8 @@ Or:
 ```bash
 pip3 install -U pytest
 ```
+
+
+### Troubleshooting
+
+If you are having errors related to a specific package, it is likely that your system has installed an incompatible (usually too recent) version. It is known that the newest versions of Bokeh and Bayesian Optimization **WILL** cause errors to be raised.

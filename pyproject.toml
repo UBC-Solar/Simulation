@@ -63,7 +63,10 @@ dependencies = [
     "tqdm==4.64.0",
     "strenum==0.4.15",
     "perlin-noise==1.12",
-    "cffi==1.15.1"
+    "cffi==1.15.1",
+    "numba==0.57.1",
+    "pygad==3.0.1",
+    "perlin-noise==1.12"
 ]
 dynamic = ["version"]
 

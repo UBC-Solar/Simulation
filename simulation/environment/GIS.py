@@ -20,7 +20,7 @@ from xml.dom import minidom
 
 class GIS:
     def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, golang, library=None,
-                 force_update=False, current_coord=None, temp_flag=False):
+                 force_update=False, current_coord=None, temp_flag=False, hash_key=None):
         """
 
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
@@ -33,6 +33,7 @@ class GIS:
         :param race_type: String ("FSGP" or "ASC") stating which race is being simulated
         :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
         :param golang: boolean determining whether to use faster GoLang implementations when available
+        :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
 
@@ -60,10 +61,7 @@ class GIS:
         # if the file exists, load path from file
         if os.path.isfile(route_file) and force_update is False:
             with np.load(route_file) as route_data:
-                if np.array_equal(route_data['origin_coord'], self.origin_coord) \
-                        and np.array_equal(route_data['dest_coord'], self.dest_coord) \
-                        and np.array_equal(route_data['waypoints'], self.waypoints):
-
+                if route_data['hash'] == hash_key:
                     api_call_required = False
 
                     print("Previous route save file is being used...\n")
@@ -71,7 +69,6 @@ class GIS:
                     print("----- Route save file information -----")
                     for key in route_data:
                         print(f"> {key}: {route_data[key].shape}")
-                    print()
 
                     self.path = route_data['path']
                     self.launch_point = route_data['path'][0]
@@ -89,7 +86,6 @@ class GIS:
                             self.path = self.path[current_coord_index:]
                             self.path_elevations = self.path_elevations[current_coord_index:]
                             self.path_time_zones = self.path_time_zones[current_coord_index:]
-
         if api_call_required or force_update:
             logging.warning("New route requested and/or route save file does not exist. "
                             "Calling Google API and creating new route save file...\n")
@@ -106,8 +102,8 @@ class GIS:
 
             with open(route_file, 'wb') as f:
                 np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
-                         origin_coord=self.origin_coord,
-                         dest_coord=self.dest_coord, waypoints=self.waypoints)
+                         origin_coord=self.origin_coord, dest_coord=self.dest_coord,
+                         waypoints=self.waypoints, hash=hash_key)
 
         if race_type == "FSGP":
             self.single_lap_path = self.path

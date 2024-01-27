@@ -40,7 +40,7 @@ class Libraries:
 
             self.main_library.weather_in_time_loop.argtypes = [
                 ctypes.POINTER(ctypes.c_double),
-                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_longlong),
                 ctypes.POINTER(ctypes.c_double),
                 ctypes.c_longlong,
                 ctypes.c_longlong
@@ -72,19 +72,30 @@ class Libraries:
                 ctypes.POINTER(ctypes.c_longlong),
                 ctypes.c_longlong
             ]
-            
+
+            self.main_library.weather_in_time.argtypes = [
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_double),
+                ctypes.POINTER(ctypes.c_int32),
+                ctypes.c_longlong,
+                ctypes.c_longlong,
+                ctypes.c_longlong,
+                ctypes.c_longlong,
+            ]
+
             self.perlin_noise_library = ctypes.cdll.LoadLibrary(f"{self.go_directory}/perlin_noise.so")
 
             self.perlin_noise_library.generatePerlinNoise.argtypes = [
                 ctypes.POINTER(ctypes.c_float),
-                ctypes.c_uint,
-                ctypes.c_uint,
+                ctypes.c_uint32,
+                ctypes.c_uint32,
                 ctypes.c_float,
-                ctypes.c_uint,
+                ctypes.c_uint32,
                 ctypes.c_float,
                 ctypes.c_float,
                 ctypes.c_float,
-                ctypes.c_uint
+                ctypes.c_uint32
             ]
 
     @staticmethod
@@ -153,7 +164,7 @@ class Libraries:
             len(results),
         )
 
-        return np.array(results, 'i')
+        return results
 
     def golang_calculate_closest_timestamp_indices(self, unix_timestamps, dt_local_array):
         """
@@ -176,7 +187,7 @@ class Libraries:
             len(dt_local_array),
             len(unix_timestamps))
 
-        return np.array(closest_time_stamp_indices, 'i')
+        return closest_time_stamp_indices
 
     def golang_calculate_closest_weather_indices(self, cumulative_distances, average_distances):
         """
@@ -200,7 +211,7 @@ class Libraries:
             len(closest_weather_indices)
         )
 
-        return np.array(closest_weather_indices, 'i')
+        return closest_weather_indices
 
     def golang_calculate_array_GHI_times(self, local_times):
         """
@@ -223,7 +234,7 @@ class Libraries:
             len(local_time)
         )
 
-        return np.array(day_of_year, 'd'), np.array(local_time, 'd')
+        return day_of_year, local_time
 
     def golang_speeds_with_waypoints_loop(self, speeds, distances, waypoints):
         """
@@ -251,7 +262,61 @@ class Libraries:
             len(waypoints)
         )
 
-        return np.array(new_speeds, 'd')
+        return new_speeds
+
+    def golang_weather_in_time(self, weather_forecast, unix_timestamps, indices, tensor_sizes):
+        """
+
+        GoLang implementation of get_weather_forecast_in_time. See parent function for details.
+
+        """
+
+        # Using custom pointer generation instead of generate_output_pointer as results is a matrix, not an array
+        results = np.zeros([len(indices), tensor_sizes[2]], dtype=ctypes.c_double)
+        results_ptr = results.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+
+        weather_forecast_ptr = Libraries.generate_input_pointer(weather_forecast, ctypes.c_double)
+        indices_ptr = Libraries.generate_input_pointer(indices, ctypes.c_int32)
+        unix_timestamps_ptr = Libraries.generate_input_pointer(unix_timestamps, ctypes.c_double)
+
+        self.main_library.weather_in_time(
+            weather_forecast_ptr,
+            results_ptr,
+            unix_timestamps_ptr,
+            indices_ptr,
+            tensor_sizes[0],
+            tensor_sizes[1],
+            tensor_sizes[2],
+            len(indices),
+        )
+
+        return results
+
+    def golang_generate_perlin_noise(self, width=256, height=256, persistence=0.45, numLayers=8, roughness=7.5,
+                                     baseRoughness=1.5, strength=1, randomSeed=0):
+        """
+
+        GoLang implementation of generate_perlin_noise. See parent function for details.
+
+        """
+
+        output_array = np.array([0] * (width * height))
+        output_array_copy = output_array.astype(ctypes.c_float)
+        ptr = output_array_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+
+        self.perlin_noise_library.generatePerlinNoise(
+            ptr,
+            width,
+            height,
+            persistence,
+            numLayers,
+            roughness,
+            baseRoughness,
+            strength,
+            randomSeed
+        )
+
+        return np.array(output_array_copy, 'f').reshape(width, height)
 
     def golang_generate_perlin_noise(self, width=256, height=256, persistence=0.45, numLayers=8, roughness=7.5,
                                      baseRoughness=1.5, strength=1, randomSeed=0):
@@ -296,7 +361,7 @@ class Libraries:
         return ptr
 
     @staticmethod
-    def generate_output_pointer(output_array_length, c_type):
+    def generate_output_pointer(output_array_length: int, c_type):
         """
 
         Generate an array and a pointer to that array for a Go library to write to.
