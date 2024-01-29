@@ -16,6 +16,7 @@ from tqdm import tqdm
 from sklearn.neighbors import BallTree
 from math import radians
 from xml.dom import minidom
+import matplotlib.pyplot as plt
 
 
 class GIS:
@@ -86,24 +87,53 @@ class GIS:
                             self.path = self.path[current_coord_index:]
                             self.path_elevations = self.path_elevations[current_coord_index:]
                             self.path_time_zones = self.path_time_zones[current_coord_index:]
-        if api_call_required or force_update:
-            logging.warning("New route requested and/or route save file does not exist. "
-                            "Calling Google API and creating new route save file...\n")
-            logging.warning(
-                "The GIS class is collecting data from a Google API. Set force_update to false to prevent this and "
-                "read data from disk instead. This should improve performance. \n")
-            if race_type == "ASC":
-                self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
-            else:
-                self.path = GIS.load_path()
-            self.path_elevations = self.calculate_path_elevations(self.path)
-            self.path_time_zones = self.calculate_time_zones(self.path)
-            self.launch_point = self.path[0]
 
-            with open(route_file, 'wb') as f:
-                np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
-                         origin_coord=self.origin_coord, dest_coord=self.dest_coord,
-                         waypoints=self.waypoints, hash=hash_key)
+        if api_call_required or force_update:
+            if race_type == "ASC":
+                logging.warning("New route requested and/or route save file does not exist. "
+                                "Calling Google API and creating new route save file...\n")
+                logging.warning(
+                    "The GIS class is collecting data from a Google API. Set force_update to false to prevent this and "
+                    "read data from disk instead. This should improve performance. \n")
+                if race_type == "ASC":
+                    self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
+                else:
+                    self.path = GIS.load_FSGP_path()
+                self.path_elevations = self.calculate_path_elevations(self.path)
+                self.path_time_zones = self.calculate_time_zones(self.path)
+                self.launch_point = self.path[0]
+
+                with open(route_file, 'wb') as f:
+                    np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
+                             origin_coord=self.origin_coord, dest_coord=self.dest_coord,
+                             waypoints=self.waypoints, hash=hash_key)
+
+            if race_type == "FSGP":
+                path: np.ndarray = GIS.load_FSGP_path()
+                displacement: np.ndarray = np.diff(path, axis=0)
+                cos_theta: np.ndarray = np.empty(displacement.shape[0] + 1)
+
+                a = displacement[0]
+                b = displacement[-1]
+                cos_theta[0] = np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+                for i in range(1, displacement.shape[0]):
+                    a = displacement[i]
+                    b = displacement[i - 1]
+                    val = np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+                    distance = (np.linalg.norm(a) + np.linalg.norm(b)) * 10000
+                    cos_theta[i] = val / distance
+
+                angles: np.ndarray = np.abs(np.arccos(cos_theta))
+
+                normalized: np.ndarray = (angles - angles.min()) / (angles - angles.min()).max()
+                threshold: float = 0.2
+                step = np.where(normalized < threshold, 0.0, 1.0)
+
+                plt.plot(path[:, 0], path[:, 1])
+                plt.scatter(path[:, 0], path[:, 1], c=step)
+
+                print("Hi!")
 
         if race_type == "FSGP":
             self.single_lap_path = self.path
@@ -117,12 +147,12 @@ class GIS:
                                                                self.path_distances)
 
     @staticmethod
-    def load_path():
+    def load_FSGP_path():
         route_file = route_directory / "FSGP.kml"
         with open(route_file) as f:
             data = minidom.parse(f)
             kml_coordinates = data.getElementsByTagName("coordinates")[0].childNodes[0].data
-            coordinates = helpers.parse_coordinates_from_kml(kml_coordinates)
+            coordinates: np.ndarray = np.array(helpers.parse_coordinates_from_kml(kml_coordinates))
             return coordinates
 
     def calculate_closest_gis_indices(self, cumulative_distances):
