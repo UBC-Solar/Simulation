@@ -80,10 +80,17 @@ class Model:
 
         """
 
+        distance = 0
+        for i, speed in enumerate(self.speed_kmh):
+            speed_limit = self.simulation.gis.speed_limits[int(distance)]
+            speed = min(speed_limit, speed)
+            self.speed_kmh[i] = speed
+            distance += (speed / 3.6) * self.simulation.tick
+
         # ----- Tick array -----
 
         self.timestamps = np.arange(0, self.simulation.simulation_duration + self.simulation.tick, self.simulation.tick)
-        self.tick_array = np.diff(self.timestamps)
+        self.tick_array = np.diff(self.timestamps) # can this not just be np.full(self.timestamps.shape, self.simulation.tick)?
         self.tick_array = np.insert(self.tick_array, 0, 0)
 
         # ----- Expected distance estimate -----
