@@ -922,6 +922,27 @@ def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
     return Hash & 0x7FFFFFFF
 
 
+def parse_coordinates_from_kml(coords_str: str) -> np.ndarray:
+    """
+
+    Parse a coordinates string from a XML (KML) file into a list of coordinates (2D vectors).
+    Requires coordinates in the format "39., 41., 0  39., 40., 0" which will return [ [39., 41.], [39., 40.] ].
+
+    :param coords_str: coordinates string from a XML (KML) file
+    :return: list of 2D vectors representing coordinates
+    :rtype: np.ndarray
+
+    """
+
+    def parse_coord(pair):
+        coord = pair.split(',')
+        coord.pop()
+        coord = [float(value) for value in coord]
+        return coord
+
+    return list(map(parse_coord, coords_str.split()))
+
+
 @jit(nopython=True)
 def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:
     max_value_in_array = np.max(input_array) if max_value is None else max_value
