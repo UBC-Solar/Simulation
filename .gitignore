@@ -101,6 +101,7 @@ celerybeat.pid
 
 # Environments
 simulation/main/.env
+simulation/environment/.env
 .venv
 env/
 venv/
