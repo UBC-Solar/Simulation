@@ -115,23 +115,20 @@ class GIS:
 
                 a = displacement[0]
                 b = displacement[-1]
-                cos_theta[0] = np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+                calculate_cos_theta = lambda u, v: np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
+                cos_theta[0] = calculate_cos_theta(a, b)
 
                 for i in range(1, displacement.shape[0]):
                     a = displacement[i]
                     b = displacement[i - 1]
-                    val = np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-                    distance = (np.linalg.norm(a) + np.linalg.norm(b)) * 10000
-                    cos_theta[i] = val / distance
+                    cos_theta[i] = calculate_cos_theta(a, b)
 
                 angles: np.ndarray = np.abs(np.arccos(cos_theta))
 
                 normalized: np.ndarray = (angles - angles.min()) / (angles - angles.min()).max()
-                threshold: float = 0.2
-                step = np.where(normalized < threshold, 0.0, 1.0)
 
                 plt.plot(path[:, 0], path[:, 1])
-                plt.scatter(path[:, 0], path[:, 1], c=step)
+                plt.scatter(path[:, 0], path[:, 1], c=normalized)
 
                 print("Hi!")
 
@@ -148,7 +145,7 @@ class GIS:
 
     @staticmethod
     def load_FSGP_path():
-        route_file = route_directory / "FSGP.kml"
+        route_file = route_directory / "fsgp_track.kml"
         with open(route_file) as f:
             data = minidom.parse(f)
             kml_coordinates = data.getElementsByTagName("coordinates")[0].childNodes[0].data
