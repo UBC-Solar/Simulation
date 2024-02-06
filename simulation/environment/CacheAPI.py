@@ -10,8 +10,9 @@ import numpy as np
 from tqdm import tqdm
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
+from simulation.common import ASC, FSGP, constants
 from simulation.cache.route import route_directory
-from simulation.common import ASC, FSGP
+from simulation.cache.weather import weather_directory
 
 # load API keys from environment variables
 load_dotenv()
@@ -230,10 +231,177 @@ def calculate_time_zones(coords, race):
 
 
 # ------------------- Weather API -------------------
-def cache_weather():
+def cache_weather(race):
+    print("Different weather data requested and/or weather file does not exist. "
+          "Calling OpenWeather API and creating weather save file...\n")
+
+    # Get coords for a race
+    # TODO: Update logic to get coords from cache instead of doing work again
+    if race == "FSGP":
+        # Get path/coords from KMZ file for FSGP
+        # Coords will be the same as waypoints for FSGP
+        coords, waypoints = get_fsgp_coords()
+        coords = np.array([coords[0], coords[-1]])
+        weather_file = weather_directory / "weather_data_FSGP.npz"
+    else:
+        # Get directions/path from directions API
+        # Coords may not contain all waypoints for ASC
+        coords, waypoints = get_asc_coords()
+        coords = coords[::constants.REDUCTION_FACTOR]
+        weather_file = weather_directory / "weather_data.npz"
+
+    # TODO: Figure these out
+    weather_data_frequency = None
+    duration = None
+
+    weather_forecast = update_path_weather_forecast(coords, weather_data_frequency, duration)
+
+    # TODO: update hash logic
+    with open(weather_file, 'wb') as f:
+        np.savez(f, weather_forecast=weather_forecast, origin_coord=coords[0],
+                 dest_coord=coords[-1], hash=123)
+
     return
 
+def update_path_weather_forecast(coords, weather_data_frequency, duration):
+    """
 
+    Passes in a list of coordinates, returns the hourly weather forecast
+    for each of the coordinates
+
+    :param np.ndarray coords: A NumPy array of [coord_index][2]
+    - [2] => [latitude, longitude]
+    :param str weather_data_frequency: Influences what resolution weather data is requested, must be one of
+        "current", "hourly", or "daily"
+    :param int duration: duration of weather requested, in hours
+
+    :returns
+    - A NumPy array [coord_index][N][9]
+    - [coord_index]: the index of the coordinates passed into the function
+    - [N]: is 1 for "current", 24 for "hourly", 8 for "daily"
+    - [9]: (latitude, longitude, dt (UNIX time), timezone_offset (in seconds), dt + timezone_offset (local time),
+           wind_speed, wind_direction, cloud_cover, description_id)
+
+    """
+
+    if int(duration) > 48 and weather_data_frequency == "hourly":
+        time_length = {"current": 1, "hourly": 54, "daily": 8}
+    else:
+        time_length = {"current": 1, "hourly": 48, "daily": 8}
+
+    num_coords = len(coords)
+
+    weather_forecast = np.zeros((num_coords, time_length[weather_data_frequency], 9))
+
+    with tqdm(total=len(coords), file=sys.stdout, desc="Calling OpenWeatherAPI") as pbar:
+        for i, coord in enumerate(coords):
+            weather_forecast[i] = get_coord_weather_forecast(coord, weather_data_frequency, int(duration))
+            pbar.update(1)
+    print()
+
+    return weather_forecast
+
+def get_coord_weather_forecast(coord, weather_data_frequency, duration):
+    """
+
+    Passes in a single coordinate, returns a weather forecast
+    for the coordinate depending on the entered "weather_data_frequency"
+    argument. This function is unlikely to ever be called directly.
+
+    :param np.ndarray coord: A single coordinate stored inside a NumPy array [latitude, longitude]
+    :param str weather_data_frequency: Influences what resolution weather data is requested, must be one of
+        "current", "hourly", or "daily"
+    :param int  duration: amount of time simulated (in hours)
+
+    :returns weather_array: [N][9]
+    - [N]: is 1 for "current", 24 for "hourly", 8 for "daily"
+    - [9]: (latitude, longitude, dt (UNIX time), timezone_offset (in seconds), dt + timezone_offset (local time),
+           wind_speed, wind_direction, cloud_cover, description_id)
+    :rtype: np.ndarray
+    For reference to the API used:
+    - https://openweathermap.org/api/one-call-api
+
+    """
+
+    # TODO: Who knows, maybe we want to run the simulation like a week into the future, when the weather forecast
+    #   api only allows 24 hours of hourly forecast. I think it is good to pad the end of the weather_array with
+    #   daily forecasts, after the hourly. Then in get_weather_forecast_in_time() the appropriate weather can be
+    #   obtained by using the same shortest place method that you did with the cumulative distances.
+
+    # ----- Building API URL -----
+
+    # If current weather is chosen, only return the instantaneous weather
+    # If hourly weather is chosen, then the first 24 hours of the data will use hourly data.
+    # If the duration of the simulation is greater than 24 hours, then append on the daily weather forecast
+    # up until the 7th day.
+
+    data_frequencies = ["current", "hourly", "daily"]
+
+    if weather_data_frequency in data_frequencies:
+        data_frequencies.remove(weather_data_frequency)
+    else:
+        raise RuntimeError(
+            f"\"weather_data_frequency\" argument is invalid. Must be one of {str(data_frequencies)}")
+
+    exclude_string = ",".join(data_frequencies)
+
+    url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
+          f"&exclude=minutely,{exclude_string}&appid={os.environ['OPENWEATHER_API_KEY']}"
+
+    # ----- Calling OpenWeatherAPI ------
+
+    r = requests.get(url)
+    response = json.loads(r.text)
+
+    # ----- Processing API response -----
+
+    # Ensures that response[weather_data_frequency] is always a list of dictionaries
+    if isinstance(response[weather_data_frequency], dict):
+        weather_data_list = [response[weather_data_frequency]]
+    else:
+        weather_data_list = response[weather_data_frequency]
+
+    # If the weather data is too long, then append the daily requests as well.
+    if weather_data_frequency == "hourly" and duration > 24:
+
+        url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
+              f"&exclude=minutely,hourly,current&appid={os.environ['OPENWEATHER_API_KEY']}"
+
+        r = requests.get(url)
+        response = json.loads(r.text)
+
+        if isinstance(response["daily"], dict):
+            weather_data_list = weather_data_list + [response["daily"]][2:]
+        else:
+            weather_data_list = weather_data_list + response["daily"][2:]
+
+    """ weather_data_list is a list of weather forecast dictionaries.
+        Weather dictionaries contain weather data points (wind speed, direction, cloud cover)
+        for a given timestamp."""
+
+    # ----- Packing weather data into a NumPy array -----
+
+    weather_array = np.zeros((len(weather_data_list), 9))
+
+    for i, weather_data_dict in enumerate(weather_data_list):
+        weather_array[i][0] = coord[0]
+        weather_array[i][1] = coord[1]
+        weather_array[i][2] = weather_data_dict["dt"]
+        weather_array[i][3] = response["timezone_offset"]
+        weather_array[i][4] = weather_data_dict["dt"] + response["timezone_offset"]
+        weather_array[i][5] = weather_data_dict["wind_speed"]
+
+        # wind degrees follows the meteorlogical convention. So, 0 degrees means that the wind is blowing
+        #   from the north to the south. Using the Azimuthal system, this would mean 180 degrees.
+        #   90 degrees becomes 270 degrees, 180 degrees becomes 0 degrees, etc
+        weather_array[i][6] = weather_data_dict["wind_deg"]
+        weather_array[i][7] = weather_data_dict["clouds"]
+        weather_array[i][8] = weather_data_dict["weather"][0]["id"]
+
+    return weather_array
+
+
+# ------------------- Script -------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("race", help="Race Acronym ['FSGP', 'ASC']")
