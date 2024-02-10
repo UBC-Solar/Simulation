@@ -16,7 +16,7 @@ from tqdm import tqdm
 from sklearn.neighbors import BallTree
 from math import radians
 from xml.dom import minidom
-import matplotlib.pyplot as plt
+from scipy import signal
 
 
 class GIS:
@@ -75,6 +75,8 @@ class GIS:
                     self.launch_point = route_data['path'][0]
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
+                    self.path_distances = route_data['path_distances']
+                    self.path_gradients = route_data['path_gradients']
 
                     if current_coord is not None:
                         if not np.array_equal(current_coord, origin_coord):
@@ -89,68 +91,78 @@ class GIS:
                             self.path_time_zones = self.path_time_zones[current_coord_index:]
 
         if api_call_required or force_update:
+            logging.warning("New route requested and/or route save file does not exist. "
+                            "Calling Google API and creating new route save file...\n")
+
             if race_type == "ASC":
-                logging.warning("New route requested and/or route save file does not exist. "
-                                "Calling Google API and creating new route save file...\n")
-                logging.warning(
-                    "The GIS class is collecting data from a Google API. Set force_update to false to prevent this and "
-                    "read data from disk instead. This should improve performance. \n")
-                if race_type == "ASC":
-                    self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
-                else:
-                    self.path = GIS.load_FSGP_path()
+                self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
                 self.path_elevations = self.calculate_path_elevations(self.path)
                 self.path_time_zones = self.calculate_time_zones(self.path)
                 self.launch_point = self.path[0]
 
-                with open(route_file, 'wb') as f:
-                    np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
-                             origin_coord=self.origin_coord, dest_coord=self.dest_coord,
-                             waypoints=self.waypoints, hash=hash_key)
-
             if race_type == "FSGP":
                 path: np.ndarray = GIS.load_FSGP_path()
-                displacement: np.ndarray = np.diff(path, axis=0)
-                cos_theta: np.ndarray = np.empty(displacement.shape[0] + 1)
+                curvature = GIS.calculate_curvature(path)
 
-                a = displacement[0]
-                b = displacement[-1]
-                calculate_cos_theta = lambda u, v: np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
-                cos_theta[0] = calculate_cos_theta(a, b)
+                # The last point is the same as the first, which is now superfluous
+                path = path[:-1]
 
-                for i in range(1, displacement.shape[0]):
-                    a = displacement[i]
-                    b = displacement[i - 1]
-                    cos_theta[i] = calculate_cos_theta(a, b)
+                path_elevations = self.calculate_path_elevations(path)
+                self.path_elevations = np.tile(path_elevations, FSGP.tiling)
 
-                angles: np.ndarray = np.abs(np.arccos(cos_theta))
+                path_time_zones = self.calculate_time_zones(path)
+                self.path_time_zones = np.tile(path_time_zones, FSGP.tiling)
 
-                normalized: np.ndarray = (angles - angles.min()) / (angles - angles.min()).max()
+                self.path = np.tile(path, (FSGP.tiling, 1))
+                self.launch_point = path[0]
 
-                plt.plot(path[:, 0], path[:, 1])
-                plt.scatter(path[:, 0], path[:, 1], c=normalized)
-
-                print("Hi!")
-
-        if race_type == "FSGP":
-            self.single_lap_path = self.path
-            self.path = np.tile(self.path, (FSGP.tiling, 1))
-            self.single_lap_path_elevations = self.path_elevations
-            self.path_elevations = np.tile(self.path_elevations, FSGP.tiling)
-            self.path_time_zones = self.calculate_time_zones(self.path)
+            with open(route_file, 'wb') as f:
+                np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
+                         origin_coord=self.origin_coord, dest_coord=self.dest_coord, path_distances=self.path_distances,
+                         path_gradients=self.path_gradients, waypoints=self.waypoints, hash=hash_key)
 
         self.path_distances = helpers.calculate_path_distances(self.path)
-        self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
-                                                               self.path_distances)
+        self.path_gradients = helpers.calculate_path_gradients(self.path_elevations, self.path_distances)
 
     @staticmethod
-    def load_FSGP_path():
+    def load_FSGP_path() -> np.ndarray:
+        """
+
+        Load the FSGP Track from a KML file exported from a Google Earth project.
+
+        Ensure to follow guidelines enumerated in this directory's `README.md` when creating and
+        loading new route files.
+
+        :return: Array of N coordinates (latitude, longitude) in the shape [N][2].
+        """
+
         route_file = route_directory / "fsgp_track.kml"
         with open(route_file) as f:
             data = minidom.parse(f)
             kml_coordinates = data.getElementsByTagName("coordinates")[0].childNodes[0].data
             coordinates: np.ndarray = np.array(helpers.parse_coordinates_from_kml(kml_coordinates))
-            return coordinates
+
+            # Google Earth exports coordinates in order longitude, latitude, when we want the opposite
+            return np.roll(coordinates, 1, axis=1)
+
+    @staticmethod
+    def calculate_curvature(path):
+        displacement: np.ndarray = np.diff(path, axis=0)
+        cos_theta: np.ndarray = np.empty(displacement.shape[0])
+
+        def calculate_cos_theta(u, v) -> float:
+            return np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
+
+        offset_displacement = np.roll(displacement, (1, 1))
+
+        for i in range(0, len(cos_theta)):
+            cos_theta[i] = calculate_cos_theta(displacement[i], offset_displacement[i])
+
+        angles: np.ndarray = np.abs(np.arccos(cos_theta))
+        normalized: np.ndarray = (angles - angles.min()) / (angles - angles.min()).max()
+
+        return signal.savgol_filter(normalized, 5, 2)
+
 
     def calculate_closest_gis_indices(self, cumulative_distances):
         """

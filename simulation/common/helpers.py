@@ -14,6 +14,8 @@ from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from numba import jit
 from simulation.common import constants, ASC, FSGP, DayBreak
+from haversine import haversine, Unit
+
 
 """
 Description: contains the simulation's helper functions.
