@@ -256,10 +256,9 @@ def adjust_timestamps_to_local_times(timestamps, starting_drive_time, time_zones
 def calculate_path_distances(coords):
     """
 
-    The coordinates are spaced quite tightly together, and they capture the
-    features of the road. So, the lines between every pair of adjacent
-    coordinates can be treated like a straight line, and the distances can
-    thus be obtained.
+    Obtain the distance between each coordinate by approximating the spline between them
+    as a straight line, and use the Haversine formula (https://en.wikipedia.org/wiki/Haversine_formula)
+    to calculate distance between coordinates on a sphere.
 
     :param np.ndarray coords: A NumPy array [n][latitude, longitude]
     :returns path_distances: a NumPy array [n-1][distances],
@@ -267,27 +266,10 @@ def calculate_path_distances(coords):
 
     """
 
-    offset = np.roll(coords, (1, 1))
-
-    # get the latitude and longitude differences, in radians
-    diff = (coords - offset)[1:] * np.pi / 180
-    diff_lat, diff_lng = np.split(diff, 2, axis=1)
-    diff_lat = np.squeeze(diff_lat)
-    diff_lng = np.squeeze(diff_lng)
-
-    # get the mean latitude for every latitude, in radians
-    mean_lat = ((coords + offset)[1:, 0] * np.pi / 180) / 2
-    cosine_mean_lat = np.cos(mean_lat)
-
-    # multiply the latitude difference with the cosine_mean_latitude
-    diff_lng_adjusted = cosine_mean_lat * diff_lng
-
-    # square, sum and square-root
-    square_lat = np.square(diff_lat)
-    square_lng = np.square(diff_lng_adjusted)
-    square_sum = square_lat + square_lng
-
-    path_distances = constants.EARTH_RADIUS * np.sqrt(square_sum)
+    coords_offset = np.roll(coords, (1, 1))
+    path_distances = []
+    for u, v in zip(coords, coords_offset):
+        path_distances.append(haversine(u, v, unit=Unit.METERS))
 
     return path_distances
 
