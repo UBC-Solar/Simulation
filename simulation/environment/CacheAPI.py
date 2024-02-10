@@ -8,6 +8,7 @@ import datetime
 import polyline
 import numpy as np
 from tqdm import tqdm
+from xml.dom import minidom
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 from simulation.common.helpers import PJWHash
@@ -62,7 +63,7 @@ def cache_gis(race):
 def get_fsgp_coords():
     """
 
-    Makes calls to GIS API for coords of a given rache and caches the results to a .npz file
+    Returns the coords and waypoints of FSGP
 
     :returns (coords, waypoints):
         coords = A NumPy array [n][latitude, longitude], marking out the path
@@ -70,8 +71,15 @@ def get_fsgp_coords():
     :rtype: tuple(np.ndarray, np.ndarray)
 
     """
-    coords = []
-    waypoints = []
+
+    route_file = route_directory / "fsgp_track.kml"
+
+    with open(route_file) as f:
+        data = minidom.parse(f)
+        kml_coordinates = data.getElementsByTagName("coordinates")[0].childNodes[0].data
+        coords: np.ndarray = np.array(parse_coordinates_from_kml(kml_coordinates))
+
+    waypoints = coords
 
     return coords, waypoints
 
@@ -269,16 +277,8 @@ def cache_weather(race):
     # Get coords for race
     if race == "FSGP":
         # Get path/coords from cached file
-        route_file = route_directory / "route_data_FSGP.npz"
-
-        if os.path.isfile(route_file):  # check there is a cached gis file
-            with np.load(route_file) as gis_data:
-                coords = gis_data['path']
-                coords = np.array([coords[0], coords[-1]])
-
-        else:  # no cache file found -> get coords
-            coords, waypoints = get_fsgp_coords()
-            coords = np.array([coords[0], coords[-1]])
+        coords, waypoints = get_fsgp_coords()
+        coords = np.array([coords[0], coords[-1]])
 
         weather_file = weather_directory / "weather_data_FSGP.npz"
     else:
@@ -290,13 +290,15 @@ def cache_weather(race):
                 coords = gis_data['path']
                 coords = coords[::constants.REDUCTION_FACTOR]
 
+            waypoints = []  # TODO: get waypoint data from a config file?
+
         else:  # no cache file found -> get coords
             coords, waypoints = get_asc_coords()
             coords = coords[::constants.REDUCTION_FACTOR]
 
         weather_file = weather_directory / "weather_data.npz"
 
-    weather_forecast = update_path_weather_forecast(coords, WEATHER_FREQ, WEATHER_DURATION)
+    weather_forecast = update_path_weather_forecast(coords, WEATHER_FREQ, int(WEATHER_DURATION))
 
     with open(weather_file, 'wb') as f:
         np.savez(f, weather_forecast=weather_forecast, origin_coord=coords[0],
@@ -462,6 +464,27 @@ def get_hash(waypoints):
     return PJWHash(filtered_hash_string)
 
 
+def parse_coordinates_from_kml(coords_str: str) -> np.ndarray:
+    """
+
+    Parse a coordinates string from a XML (KML) file into a list of coordinates (2D vectors).
+    Requires coordinates in the format "39., 41., 0  39., 40., 0" which will return [ [39., 41.], [39., 40.] ].
+
+    :param coords_str: coordinates string from a XML (KML) file
+    :return: list of 2D vectors representing coordinates
+    :rtype: np.ndarray
+
+    """
+
+    def parse_coord(pair):
+        coord = pair.split(',')
+        coord.pop()
+        coord = [float(value) for value in coord]
+        return coord
+
+    return np.array(map(parse_coord, coords_str.split()))
+
+
 # ------------------- Script -------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -499,4 +522,4 @@ if __name__ == "__main__":
         cache_gis(args.race)
 
     if fetch_weather:
-        cache_weather()
+        cache_weather(args.race)
