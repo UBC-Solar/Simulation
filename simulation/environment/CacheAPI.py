@@ -10,9 +10,16 @@ import numpy as np
 from tqdm import tqdm
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
+from simulation.common.helpers import PJWHash
 from simulation.common import ASC, FSGP, constants
 from simulation.cache.route import route_directory
 from simulation.cache.weather import weather_directory
+
+# Const vars
+SIM_DUR = 432000                    # duration of the simulation in seconds (432000s = 5 days)
+WEATHER_DURATION = SIM_DUR/3600     # duration of weather to be fetched
+WEATHER_FREQ = "daily"              # can be "current", "hourly", or "daily"
+
 
 # load API keys from environment variables
 load_dotenv()
@@ -21,6 +28,13 @@ print("loaded environment vars")
 
 # ------------------- GIS API -------------------
 def cache_gis(race):
+    """
+
+    Makes calls to GIS API for coords of a given race and caches the results to a .npz file
+
+    :param str race: either "FSGP" or "ASC"
+
+    """
     print("Calling Google API and creating new route save file...\n")
 
     # Get path for race
@@ -39,18 +53,28 @@ def cache_gis(race):
     path_elevations = calculate_path_elevations(coords)
     path_time_zones = calculate_time_zones(coords, race)
 
-    # TODO: Figure out what to do with hash_key
     with open(route_file, 'wb') as f:
         np.savez(f, path=coords, elevations=path_elevations, time_zones=path_time_zones,
                  origin_coord=coords[0], dest_coord=coords[-1],
-                 waypoints=waypoints, hash=1234)
+                 waypoints=waypoints, hash=get_hash(waypoints))
 
 
 def get_fsgp_coords():
+    """
+
+    Makes calls to GIS API for coords of a given rache and caches the results to a .npz file
+
+    :returns (coords, waypoints):
+        coords = A NumPy array [n][latitude, longitude], marking out the path
+        waypoints = A NumPy array [n][latitude, longitude] marking waypoints
+    :rtype: tuple(np.ndarray, np.ndarray)
+
+    """
     coords = []
     waypoints = []
 
     return coords, waypoints
+
 
 def get_asc_coords():
     """
@@ -59,11 +83,10 @@ def get_asc_coords():
     passing through a group of optional waypoints.
     https://developers.google.com/maps/documentation/directions/start
 
-    :param np.ndarray origin_coord: A NumPy array [latitude, longitude] of the starting coordinate
-    :param np.ndarray dest_coord: A NumPy array [latitude, longitude] of the destination coordinate
-    :param list waypoints: A NumPy array [n][latitude, longitude], where n<=10
-    :returns: A NumPy array [n][latitude, longitude], marking out the path.
-    :rtype: np.ndarray
+    :returns (coords, waypoints):
+        coords = A NumPy array [n][latitude, longitude], marking out the path
+        waypoints = A NumPy array [n][latitude, longitude] marking waypoints
+    :rtype: tuple(np.ndarray, np.ndarray)
 
     """
 
@@ -204,6 +227,7 @@ def calculate_time_zones(coords, race):
     Takes in an array of coordinates, return the time zone relative to UTC, of each location in seconds
 
     :param np.ndarray coords: (float[N][lat lng]) array of coordinates
+    :param str race: either "FSGP" or "ASC" as a string
     :returns np.ndarray time_diff: (float[N]) array of time differences in seconds
 
     """
@@ -232,36 +256,54 @@ def calculate_time_zones(coords, race):
 
 # ------------------- Weather API -------------------
 def cache_weather(race):
+    """
+
+    Makes calls to Weather API for a given race and caches the results to a .npz file
+
+    :param str race: either "FSGP" or "ASC"
+
+    """
     print("Different weather data requested and/or weather file does not exist. "
           "Calling OpenWeather API and creating weather save file...\n")
 
-    # Get coords for a race
-    # TODO: Update logic to get coords from cache instead of doing work again
+    # Get coords for race
     if race == "FSGP":
-        # Get path/coords from KMZ file for FSGP
-        # Coords will be the same as waypoints for FSGP
-        coords, waypoints = get_fsgp_coords()
-        coords = np.array([coords[0], coords[-1]])
+        # Get path/coords from cached file
+        route_file = route_directory / "route_data_FSGP.npz"
+
+        if os.path.isfile(route_file):  # check there is a cached gis file
+            with np.load(route_file) as gis_data:
+                coords = gis_data['path']
+                coords = np.array([coords[0], coords[-1]])
+
+        else:  # no cache file found -> get coords
+            coords, waypoints = get_fsgp_coords()
+            coords = np.array([coords[0], coords[-1]])
+
         weather_file = weather_directory / "weather_data_FSGP.npz"
     else:
-        # Get directions/path from directions API
-        # Coords may not contain all waypoints for ASC
-        coords, waypoints = get_asc_coords()
-        coords = coords[::constants.REDUCTION_FACTOR]
+        # Get path/coords from cached file
+        route_file = route_directory / "route_data.npz"
+
+        if os.path.isfile(route_file):  # check there is a cached gis file
+            with np.load(route_file) as gis_data:
+                coords = gis_data['path']
+                coords = coords[::constants.REDUCTION_FACTOR]
+
+        else:  # no cache file found -> get coords
+            coords, waypoints = get_asc_coords()
+            coords = coords[::constants.REDUCTION_FACTOR]
+
         weather_file = weather_directory / "weather_data.npz"
 
-    # TODO: Figure these out
-    weather_data_frequency = None
-    duration = None
+    weather_forecast = update_path_weather_forecast(coords, WEATHER_FREQ, WEATHER_DURATION)
 
-    weather_forecast = update_path_weather_forecast(coords, weather_data_frequency, duration)
-
-    # TODO: update hash logic
     with open(weather_file, 'wb') as f:
         np.savez(f, weather_forecast=weather_forecast, origin_coord=coords[0],
-                 dest_coord=coords[-1], hash=123)
+                 dest_coord=coords[-1], hash=get_hash(waypoints))
 
     return
+
 
 def update_path_weather_forecast(coords, weather_data_frequency, duration):
     """
@@ -297,9 +339,9 @@ def update_path_weather_forecast(coords, weather_data_frequency, duration):
         for i, coord in enumerate(coords):
             weather_forecast[i] = get_coord_weather_forecast(coord, weather_data_frequency, int(duration))
             pbar.update(1)
-    print()
 
     return weather_forecast
+
 
 def get_coord_weather_forecast(coord, weather_data_frequency, duration):
     """
@@ -401,6 +443,25 @@ def get_coord_weather_forecast(coord, weather_data_frequency, duration):
     return weather_array
 
 
+# ------------------- Helpers ------------------
+def get_hash(waypoints):
+    """
+
+    Makes a hashed key from the inputted waypoints
+
+    :param np.ndarray waypoints: A NumPy array of the waypoints [latitude, longitude] of a race
+    :return: Returns the generated hash
+    :rtype: int
+
+    """
+
+    hash_string = str(waypoints[0]) + str(waypoints[-1])
+    for value in waypoints:
+        hash_string += str(value)
+    filtered_hash_string = "".join(filter(str.isnumeric, hash_string))
+    return PJWHash(filtered_hash_string)
+
+
 # ------------------- Script -------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -408,12 +469,13 @@ if __name__ == "__main__":
     parser.add_argument("api", help="API(s) to cache ['GIS', 'WEATHER', 'ALL']")
     args = parser.parse_args()
 
+    # TODO: debug prints remove later
     print(f"Race Acronym: {args.race}")
     print(f"API: {type(args.race)}")
 
     print(os.environ['GOOGLE_MAPS_API_KEY'])
 
-    # Parse Args fields
+    # Parse Args fields, handle invalid inputs
     fetch_gis = False
     fetch_weather = False
 
@@ -432,14 +494,9 @@ if __name__ == "__main__":
         print("Race field input is invalid")
         exit()
 
+    # Fetch APIs
     if fetch_gis:
         cache_gis(args.race)
 
     if fetch_weather:
         cache_weather()
-
-
-
-
-
-
