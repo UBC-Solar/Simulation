@@ -410,7 +410,6 @@ def local_time_to_apparent_solar_time(time_zone_utc, day_of_year, local_time,
     return lst
 
 
-@jit(nopython=True)
 def calculate_path_gradients(elevations, distances):
     """
 
@@ -435,7 +434,7 @@ def calculate_path_gradients(elevations, distances):
     #   [1 1 1 1]
 
     offset = np.roll(elevations, 1)
-    delta_elevations = (elevations - offset)[1:]
+    delta_elevations = elevations - offset
 
     # Divide the difference in elevation to get the gradient
     # gradient > 0: uphill

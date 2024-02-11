@@ -4,6 +4,6 @@
     "start_hour": 7,
     "initial_battery_charge": 0.65,
 
-    "gis_force_update":  true,
+    "gis_force_update":  false,
     "weather_force_update": false
 }

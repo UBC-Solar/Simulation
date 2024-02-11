@@ -75,8 +75,6 @@ class GIS:
                     self.launch_point = route_data['path'][0]
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
-                    self.path_distances = route_data['path_distances']
-                    self.path_gradients = route_data['path_gradients']
 
                     if current_coord is not None:
                         if not np.array_equal(current_coord, origin_coord):
@@ -104,9 +102,6 @@ class GIS:
                 path: np.ndarray = GIS.load_FSGP_path()
                 curvature = GIS.calculate_curvature(path)
 
-                # The last point is the same as the first, which is now superfluous
-                path = path[:-1]
-
                 path_elevations = self.calculate_path_elevations(path)
                 self.path_elevations = np.tile(path_elevations, FSGP.tiling)
 
@@ -118,8 +113,8 @@ class GIS:
 
             with open(route_file, 'wb') as f:
                 np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
-                         origin_coord=self.origin_coord, dest_coord=self.dest_coord, path_distances=self.path_distances,
-                         path_gradients=self.path_gradients, waypoints=self.waypoints, hash=hash_key)
+                         origin_coord=self.origin_coord, dest_coord=self.dest_coord,
+                         waypoints=self.waypoints, hash=hash_key)
 
         self.path_distances = helpers.calculate_path_distances(self.path)
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations, self.path_distances)
