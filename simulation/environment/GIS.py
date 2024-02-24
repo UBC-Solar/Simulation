@@ -76,6 +76,7 @@ class GIS:
                     self.launch_point = route_data['path'][0]
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
+                    self.speed_limits = route_data['speed_limits']
 
                     if current_coord is not None:
                         if not np.array_equal(current_coord, origin_coord):
