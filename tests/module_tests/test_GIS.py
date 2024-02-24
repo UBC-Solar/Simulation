@@ -29,7 +29,7 @@ def gis():
 
     return location_system
 
-
+@pytest.mark.skip(reason="Test is for ASC")
 def test_calculate_closest_gis_indices(gis):
     test_cumulative_distances = np.array([0, 9, 18, 19, 27, 35, 38, 47, 48, 56, 63])
     test_path_distances = np.repeat(20, 13)
@@ -41,7 +41,7 @@ def test_calculate_closest_gis_indices(gis):
 
     assert np.all(result == np.array([0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3]))
 
-
+@pytest.mark.skip(reason="Test is for ASC")
 def test_get_time_zones(gis):
     test_coord = np.tile([39.0918, -94.4172], 625 * 2)
 
