@@ -3,7 +3,6 @@ Contain calculations and results of Simulation.
 """
 
 import numpy as np
-
 from typing import Union
 from simulation.common import helpers
 
@@ -79,13 +78,6 @@ class Model:
         which allows us to determine the battery's state of charge for the entire simulation duration.
 
         """
-
-        distance = 0
-        for i, speed in enumerate(self.speed_kmh):
-            speed_limit = self.simulation.gis.speed_limits[int(distance)]
-            speed = min(speed_limit, speed)
-            self.speed_kmh[i] = speed
-            distance += (speed / 3.6) * self.simulation.tick
 
         # ----- Tick array -----
 
