@@ -29,3 +29,5 @@ class Car:
         self.drag_coefficient = car_constants["drag_coefficient"]
         self.max_acceleration_kmh_per_s = car_constants["max_acceleration_kmh_per_s"]
         self.max_deceleration_kmh_per_s = car_constants["max_deceleration_kmh_per_s"]
+        self.max_speed_during_turn = car_constants["max_speed_during_turn"]
+        self.max_cruising_speed = car_constants["max_cruising_speed"]

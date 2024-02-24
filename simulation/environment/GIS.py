@@ -8,8 +8,9 @@ import polyline
 import pytz
 import requests
 import sys
+
 from simulation.cache.route import route_directory
-from simulation.common import helpers, ASC, FSGP
+from simulation.common import helpers, ASC, FSGP, BrightSide
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 from tqdm import tqdm
@@ -100,8 +101,12 @@ class GIS:
 
             if race_type == "FSGP":
                 path: np.ndarray = GIS.load_FSGP_path()
-                curvature = GIS.calculate_curvature(path)
+                self.curvature = GIS.calculate_curvature(path)
+                path = path[:len(path) - 1]  # Get rid of superfluous path coordinate at end
 
+                self.speed_limits = GIS.calculate_speed_limits(path, self.curvature)
+
+                self.speed_limits = np.tile(self.speed_limits, FSGP.tiling)
                 path_elevations = self.calculate_path_elevations(path)
                 self.path_elevations = np.tile(path_elevations, FSGP.tiling)
 
@@ -109,15 +114,33 @@ class GIS:
                 self.path_time_zones = np.tile(path_time_zones, FSGP.tiling)
 
                 self.path = np.tile(path, (FSGP.tiling, 1))
+
                 self.launch_point = path[0]
 
             with open(route_file, 'wb') as f:
                 np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
                          origin_coord=self.origin_coord, dest_coord=self.dest_coord,
-                         waypoints=self.waypoints, hash=hash_key)
+                         waypoints=self.waypoints, speed_limits=self.speed_limits, hash=hash_key)
 
         self.path_distances = helpers.calculate_path_distances(self.path)
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations, self.path_distances)
+
+    @staticmethod
+    def linearly_interpolate(x, y, t):
+        return (y - x) * t + x
+
+    @staticmethod
+    def calculate_speed_limits(path, curvature) -> np.ndarray:
+        cumulative_path_distances = np.cumsum(helpers.calculate_path_distances(path))
+        speed_limits = np.empty([int(cumulative_path_distances[-1]) + 1], dtype=int)
+
+        for i in range(int(cumulative_path_distances[-1]) + 1):
+            gis_index = GIS.closest_index(i, cumulative_path_distances)
+            speed_limit = GIS.linearly_interpolate(BrightSide.max_cruising_speed, BrightSide.max_speed_during_turn,
+                                                   curvature[gis_index])
+            speed_limits[i] = speed_limit
+
+        return speed_limits
 
     @staticmethod
     def load_FSGP_path() -> np.ndarray:
@@ -154,25 +177,10 @@ class GIS:
             cos_theta[i] = calculate_cos_theta(displacement[i], offset_displacement[i])
 
         angles: np.ndarray = np.abs(np.arccos(cos_theta))
-        normalized: np.ndarray = (angles - angles.min()) / (angles - angles.min()).max()
+        filtered: np.ndarray = signal.savgol_filter(angles, 5, 2)
+        normalized: np.ndarray = (filtered - filtered.min()) / (filtered - filtered.min()).max()
 
-        return signal.savgol_filter(normalized, 5, 2)
-
-
-        cache_file = route_directory / "speed_limits.npz"
-        try:
-            with np.load(cache_file, "rb") as cache_data:
-                self.speed_limits = cache_data["speed_limits"]
-        except Exception:
-            cumulative_path_distances = np.cumsum(self.path_distances)
-            self.speed_limits = np.empty([int(cumulative_path_distances[-1]) + 1], dtype=int)
-
-            for i in range(int(cumulative_path_distances[-1]) + 1):
-                gis_index = GIS.closest_index(i, cumulative_path_distances)
-                speed_limit = 20 if gis_index % 300 <= 60 else 200
-                self.speed_limits[i] = speed_limit
-
-            np.savez(cache_file, speed_limits=self.speed_limits)
+        return normalized
 
     @staticmethod
     def closest_index(target_distance, distances):
