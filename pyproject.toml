@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm", "setuptools-git-versioning"]
+requires = ["setuptools", "setuptools-scm", "setuptools-git-versioning", "setuptools-rust"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -41,6 +41,7 @@ keywords = ["car", "simulation", "solar"]
 license = { file = "LICENSE"}
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
     "Natural Language :: English",
     "Topic :: Scientific/Engineering :: Physics"
 ]
@@ -86,3 +87,14 @@ packages = ["simulation"]
 run_simulation = "simulation.run_simulation:main"
 simulation_health_check = "simulation.run_simulation:_health_check"
 build_simulation = "simulation.run_simulation:_execute_build_script"
+
+[[tool.setuptools-rust.ext-modules]]
+# Private Rust extension module to be nested into the Python package
+target = "core"
+
+path = "Cargo.toml"      # Default value, can be omitted
+binding = "PyO3"         # Default value, can be omitted
+py-limited-api = "auto"  # Default value, can be omitted
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
