@@ -439,10 +439,10 @@ def calculate_path_gradients(elevations, distances):
     # Divide the difference in elevation to get the gradient
     # gradient > 0: uphill
     # gradient < 0: downhill
+    with np.errstate(invalid='ignore'):
+        gradients = delta_elevations / distances
 
-    gradients = delta_elevations / distances
-
-    return gradients
+    return np.nan_to_num(gradients, nan=0.)
 
 
 @jit(nopython=True)
