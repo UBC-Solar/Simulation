@@ -92,7 +92,7 @@ def run_simulation(settings):
 
     # Initialize a "guess" speed array
     driving_hours = simulation_model.get_driving_time_divisions()
-    input_speed = np.array([30] * driving_hours)
+    input_speed = np.array([60] * driving_hours)
 
     # Run simulation model with the "guess" speed array
     unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=True,
