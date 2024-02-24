@@ -78,7 +78,8 @@ extern __declspec(dllexport) void calculate_array_GHI_times(GoInt64* local_times
 extern __declspec(dllexport) void closest_gis_indices_loop(GoFloat64* averageDistancesPtr, GoInt64 averageDistancesSize, GoFloat64* cumulativeDistancesPtr, GoInt64 cumulativeDistancesSize, GoInt64* resultsPtr, GoInt64 resultsSize);
 extern __declspec(dllexport) void closest_weather_indices_loop(GoFloat64* cumulativeDistancesPtr, GoInt64 cumulativeDistancesSize, GoFloat64* averageDistancesPtr, GoInt64 averageDistancesSize, GoInt64* resultsPtr, GoInt64 resultsSize);
 extern __declspec(dllexport) void speeds_with_waypoints_loop(GoFloat64* speeds_inPtr, GoInt64 speeds_ptrSize, GoFloat64* distances_inPtr, GoInt64 distances_ptrSize, GoInt64* waypoints_inPtr, GoInt64 waypoints_ptrSize);
-extern __declspec(dllexport) void weather_in_time_loop(GoFloat64* unix_timestamps_inPtr, GoFloat64* closest_time_stamp_indices_outPtr, GoFloat64* dt_local_array_inPtr, GoInt64 dt_local_array_inPtr_size, GoInt64 io_ptr_size);
+extern __declspec(dllexport) void weather_in_time(GoFloat64* weather_forecast_Ptr, GoFloat64* linearized_results_Ptr, GoFloat64* unix_timestamps_Ptr, GoInt32* indices_Ptr, GoInt64 weather_coords, GoInt64 weather_times, GoInt64 weather_endpoints, GoInt64 simulation_duration);
+extern __declspec(dllexport) void weather_in_time_loop(GoFloat64* unix_timestamps_inPtr, GoInt64* closest_time_stamp_indices_outPtr, GoFloat64* dt_local_array_inPtr, GoInt64 dt_local_array_inPtr_size, GoInt64 io_ptr_size);
 
 #ifdef __cplusplus
 }

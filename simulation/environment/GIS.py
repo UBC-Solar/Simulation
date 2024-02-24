@@ -15,6 +15,8 @@ from timezonefinder import TimezoneFinder
 from tqdm import tqdm
 from sklearn.neighbors import BallTree
 from math import radians
+from xml.dom import minidom
+from scipy import signal
 
 
 class GIS:
@@ -85,32 +87,77 @@ class GIS:
                             self.path = self.path[current_coord_index:]
                             self.path_elevations = self.path_elevations[current_coord_index:]
                             self.path_time_zones = self.path_time_zones[current_coord_index:]
+
         if api_call_required or force_update:
             logging.warning("New route requested and/or route save file does not exist. "
                             "Calling Google API and creating new route save file...\n")
-            logging.warning(
-                "The GIS class is collecting data from a Google API. Set force_update to false to prevent this and "
-                "read data from disk instead. This should improve performance. \n")
-            self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
-            self.path_elevations = self.calculate_path_elevations(self.path)
-            self.path_time_zones = self.calculate_time_zones(self.path)
-            self.launch_point = self.path[0]
+
+            if race_type == "ASC":
+                self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
+                self.path_elevations = self.calculate_path_elevations(self.path)
+                self.path_time_zones = self.calculate_time_zones(self.path)
+                self.launch_point = self.path[0]
+
+            if race_type == "FSGP":
+                path: np.ndarray = GIS.load_FSGP_path()
+                curvature = GIS.calculate_curvature(path)
+
+                path_elevations = self.calculate_path_elevations(path)
+                self.path_elevations = np.tile(path_elevations, FSGP.tiling)
+
+                path_time_zones = self.calculate_time_zones(path)
+                self.path_time_zones = np.tile(path_time_zones, FSGP.tiling)
+
+                self.path = np.tile(path, (FSGP.tiling, 1))
+                self.launch_point = path[0]
 
             with open(route_file, 'wb') as f:
                 np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
                          origin_coord=self.origin_coord, dest_coord=self.dest_coord,
                          waypoints=self.waypoints, hash=hash_key)
 
-        if race_type == "FSGP":
-            self.single_lap_path = self.path
-            self.path = np.tile(self.path, (FSGP.tiling, 1))
-            self.single_lap_path_elevations = self.path_elevations
-            self.path_elevations = np.tile(self.path_elevations, FSGP.tiling)
-            self.path_time_zones = self.calculate_time_zones(self.path)
-
         self.path_distances = helpers.calculate_path_distances(self.path)
-        self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
-                                                               self.path_distances)
+        self.path_gradients = helpers.calculate_path_gradients(self.path_elevations, self.path_distances)
+
+    @staticmethod
+    def load_FSGP_path() -> np.ndarray:
+        """
+
+        Load the FSGP Track from a KML file exported from a Google Earth project.
+
+        Ensure to follow guidelines enumerated in this directory's `README.md` when creating and
+        loading new route files.
+
+        :return: Array of N coordinates (latitude, longitude) in the shape [N][2].
+        """
+
+        route_file = route_directory / "fsgp_track.kml"
+        with open(route_file) as f:
+            data = minidom.parse(f)
+            kml_coordinates = data.getElementsByTagName("coordinates")[0].childNodes[0].data
+            coordinates: np.ndarray = np.array(helpers.parse_coordinates_from_kml(kml_coordinates))
+
+            # Google Earth exports coordinates in order longitude, latitude, when we want the opposite
+            return np.roll(coordinates, 1, axis=1)
+
+    @staticmethod
+    def calculate_curvature(path):
+        displacement: np.ndarray = np.diff(path, axis=0)
+        cos_theta: np.ndarray = np.empty(displacement.shape[0])
+
+        def calculate_cos_theta(u, v) -> float:
+            return np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
+
+        offset_displacement = np.roll(displacement, (1, 1))
+
+        for i in range(0, len(cos_theta)):
+            cos_theta[i] = calculate_cos_theta(displacement[i], offset_displacement[i])
+
+        angles: np.ndarray = np.abs(np.arccos(cos_theta))
+        normalized: np.ndarray = (angles - angles.min()) / (angles - angles.min()).max()
+
+        return signal.savgol_filter(normalized, 5, 2)
+
 
         cache_file = route_directory / "speed_limits.npz"
         try:

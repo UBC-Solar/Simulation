@@ -14,6 +14,8 @@ from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from numba import jit
 from simulation.common import constants, ASC, FSGP, DayBreak
+from haversine import haversine, Unit
+
 
 """
 Description: contains the simulation's helper functions.
@@ -256,10 +258,9 @@ def adjust_timestamps_to_local_times(timestamps, starting_drive_time, time_zones
 def calculate_path_distances(coords):
     """
 
-    The coordinates are spaced quite tightly together, and they capture the
-    features of the road. So, the lines between every pair of adjacent
-    coordinates can be treated like a straight line, and the distances can
-    thus be obtained.
+    Obtain the distance between each coordinate by approximating the spline between them
+    as a straight line, and use the Haversine formula (https://en.wikipedia.org/wiki/Haversine_formula)
+    to calculate distance between coordinates on a sphere.
 
     :param np.ndarray coords: A NumPy array [n][latitude, longitude]
     :returns path_distances: a NumPy array [n-1][distances],
@@ -267,27 +268,10 @@ def calculate_path_distances(coords):
 
     """
 
-    offset = np.roll(coords, (1, 1))
-
-    # get the latitude and longitude differences, in radians
-    diff = (coords - offset)[1:] * np.pi / 180
-    diff_lat, diff_lng = np.split(diff, 2, axis=1)
-    diff_lat = np.squeeze(diff_lat)
-    diff_lng = np.squeeze(diff_lng)
-
-    # get the mean latitude for every latitude, in radians
-    mean_lat = ((coords + offset)[1:, 0] * np.pi / 180) / 2
-    cosine_mean_lat = np.cos(mean_lat)
-
-    # multiply the latitude difference with the cosine_mean_latitude
-    diff_lng_adjusted = cosine_mean_lat * diff_lng
-
-    # square, sum and square-root
-    square_lat = np.square(diff_lat)
-    square_lng = np.square(diff_lng_adjusted)
-    square_sum = square_lat + square_lng
-
-    path_distances = constants.EARTH_RADIUS * np.sqrt(square_sum)
+    coords_offset = np.roll(coords, (1, 1))
+    path_distances = []
+    for u, v in zip(coords, coords_offset):
+        path_distances.append(haversine(u, v, unit=Unit.METERS))
 
     return path_distances
 
@@ -426,7 +410,6 @@ def local_time_to_apparent_solar_time(time_zone_utc, day_of_year, local_time,
     return lst
 
 
-@jit(nopython=True)
 def calculate_path_gradients(elevations, distances):
     """
 
@@ -451,7 +434,7 @@ def calculate_path_gradients(elevations, distances):
     #   [1 1 1 1]
 
     offset = np.roll(elevations, 1)
-    delta_elevations = (elevations - offset)[1:]
+    delta_elevations = elevations - offset
 
     # Divide the difference in elevation to get the gradient
     # gradient > 0: uphill
@@ -920,6 +903,27 @@ def PJWHash(key: Union[np.ndarray, list, set, str, tuple]) -> int:
         if Test != 0:
             Hash = ((Hash ^ (Test >> ThreeQuarters)) & (~HighBits))
     return Hash & 0x7FFFFFFF
+
+
+def parse_coordinates_from_kml(coords_str: str) -> np.ndarray:
+    """
+
+    Parse a coordinates string from a XML (KML) file into a list of coordinates (2D vectors).
+    Requires coordinates in the format "39., 41., 0  39., 40., 0" which will return [ [39., 41.], [39., 40.] ].
+
+    :param coords_str: coordinates string from a XML (KML) file
+    :return: list of 2D vectors representing coordinates
+    :rtype: np.ndarray
+
+    """
+
+    def parse_coord(pair):
+        coord = pair.split(',')
+        coord.pop()
+        coord = [float(value) for value in coord]
+        return coord
+
+    return list(map(parse_coord, coords_str.split()))
 
 
 @jit(nopython=True)
