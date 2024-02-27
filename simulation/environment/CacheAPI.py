@@ -16,6 +16,8 @@ from simulation.common import ASC, FSGP, constants
 from simulation.cache.route import route_directory
 from simulation.cache.weather import weather_directory
 
+import matplotlib.pyplot as plt
+
 # Const vars
 SIM_DUR = 432000                    # duration of the simulation in seconds (432000s = 5 days)
 WEATHER_DURATION = SIM_DUR/3600     # duration of weather to be fetched
@@ -50,9 +52,21 @@ def cache_gis(race):
         coords, waypoints = get_asc_coords()
         route_file = route_directory / "route_data.npz"
 
+    # latitudes, longitudes = zip(*coords)
+    # plt.figure(figsize=(8, 6))
+    # plt.scatter(longitudes, latitudes, color='blue', s=10)
+    # plt.xlabel('Longitude')
+    # plt.ylabel('Latitude')
+    # plt.title('Plot of Coordinates')
+    # plt.grid(True)
+    # plt.show()
+
     # Call Google Maps API
     path_elevations = calculate_path_elevations(coords)
     path_time_zones = calculate_time_zones(coords, race)
+
+    print(path_elevations)
+    print(path_time_zones)
 
     with open(route_file, 'wb') as f:
         np.savez(f, path=coords, elevations=path_elevations, time_zones=path_time_zones,
@@ -77,7 +91,7 @@ def get_fsgp_coords():
     with open(route_file) as f:
         data = minidom.parse(f)
         kml_coordinates = data.getElementsByTagName("coordinates")[0].childNodes[0].data
-        coords: np.ndarray = np.array(parse_coordinates_from_kml(kml_coordinates))
+        coords: np.ndarray = parse_coordinates_from_kml(kml_coordinates)
 
     waypoints = coords
 
@@ -292,7 +306,7 @@ def cache_weather(race):
 
             waypoints = []  # TODO: get waypoint data from a config file?
 
-        else:  # no cache file found -> get coords
+        else:  # no cached file found -> get coords
             coords, waypoints = get_asc_coords()
             coords = coords[::constants.REDUCTION_FACTOR]
 
@@ -482,7 +496,8 @@ def parse_coordinates_from_kml(coords_str: str) -> np.ndarray:
         coord = [float(value) for value in coord]
         return coord
 
-    return np.array(map(parse_coord, coords_str.split()))
+    coords = list(map(parse_coord, coords_str.split()))
+    return np.array(coords)
 
 
 # ------------------- Script -------------------
@@ -513,7 +528,7 @@ if __name__ == "__main__":
         print("API field input is invalid")
         exit()
 
-    if args.race != "FSGP" or args.race != "ASC":
+    if args.race != "FSGP" and args.race != "ASC":
         print("Race field input is invalid")
         exit()
 
