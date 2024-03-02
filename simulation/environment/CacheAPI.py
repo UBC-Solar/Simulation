@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 from simulation.common.helpers import PJWHash
 from simulation.common import ASC, FSGP, constants
+from simulation.config import config_directory
 from simulation.cache.route import route_directory
 from simulation.cache.weather import weather_directory
 
@@ -44,22 +45,13 @@ def cache_gis(race):
     if race == "FSGP":
         # Get path/coords from KMZ file for FSGP
         # Coords will be the same as waypoints for FSGP
-        coords, waypoints = get_fsgp_coords()
+        origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
         route_file = route_directory / "route_data_FSGP.npz"
     else:
         # Get directions/path from directions API
         # Coords may not contain all waypoints for ASC
-        coords, waypoints = get_asc_coords()
+        origin_coord, dest_coord, coords, waypoints = get_asc_coords()
         route_file = route_directory / "route_data.npz"
-
-    # latitudes, longitudes = zip(*coords)
-    # plt.figure(figsize=(8, 6))
-    # plt.scatter(longitudes, latitudes, color='blue', s=10)
-    # plt.xlabel('Longitude')
-    # plt.ylabel('Latitude')
-    # plt.title('Plot of Coordinates')
-    # plt.grid(True)
-    # plt.show()
 
     # Call Google Maps API
     path_elevations = calculate_path_elevations(coords)
@@ -70,14 +62,14 @@ def cache_gis(race):
 
     with open(route_file, 'wb') as f:
         np.savez(f, path=coords, elevations=path_elevations, time_zones=path_time_zones,
-                 origin_coord=coords[0], dest_coord=coords[-1],
-                 waypoints=waypoints, hash=get_hash(waypoints))
+                 origin_coord=origin_coord, dest_coord=dest_coord,
+                 waypoints=waypoints, hash=get_hash(origin_coord, dest_coord, waypoints))
 
 
 def get_fsgp_coords():
     """
 
-    Returns the coords and waypoints of FSGP
+    Returns the coords and waypoints of FSGP which are the same for FSGP
 
     :returns (coords, waypoints):
         coords = A NumPy array [n][latitude, longitude], marking out the path
@@ -86,16 +78,15 @@ def get_fsgp_coords():
 
     """
 
-    route_file = route_directory / "fsgp_track.kml"
+    config_path = config_directory / f"settings_FSGP.json"
+    with open(config_path) as f:
+        model_parameters = json.load(f)
 
-    with open(route_file) as f:
-        data = minidom.parse(f)
-        kml_coordinates = data.getElementsByTagName("coordinates")[0].childNodes[0].data
-        coords: np.ndarray = parse_coordinates_from_kml(kml_coordinates)
+    origin_coord = model_parameters["origin_coord"]
+    dest_coord = model_parameters["dest_coord"]
+    coords, waypoints = model_parameters["waypoints"]
 
-    waypoints = coords
-
-    return coords, waypoints
+    return origin_coord, dest_coord, coords, waypoints
 
 
 def get_asc_coords():
@@ -112,10 +103,14 @@ def get_asc_coords():
 
     """
 
-    # TODO: Setup these initial params
-    origin_coord = []
-    dest_coord = []
-    waypoints = []
+    config_path = config_directory / f"settings_ASC.json"
+
+    with open(config_path) as f:
+        model_parameters = json.load(f)
+
+    origin_coord = model_parameters["origin_coord"]
+    dest_coord = model_parameters["dest_coord"]
+    waypoints = model_parameters["waypoints"]
 
     # set up URL
     url_head = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin_coord[0]},{origin_coord[1]}" \
@@ -144,6 +139,8 @@ def get_asc_coords():
     response = json.loads(r.text)
 
     path_points = []
+
+    print(response)
 
     # If a route is found...
     if response['status'] == "OK":
@@ -174,7 +171,7 @@ def get_asc_coords():
             (np.diff(route[:, 1]) == 0))
         route = np.delete(route, duplicate_coordinate_indices, axis=0)
 
-    return route, waypoints
+    return origin_coord, dest_coord, route, waypoints
 
 
 def calculate_path_elevations(coords):
@@ -291,7 +288,7 @@ def cache_weather(race):
     # Get coords for race
     if race == "FSGP":
         # Get path/coords from cached file
-        coords, waypoints = get_fsgp_coords()
+        origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
         coords = np.array([coords[0], coords[-1]])
 
         weather_file = weather_directory / "weather_data_FSGP.npz"
@@ -302,12 +299,12 @@ def cache_weather(race):
         if os.path.isfile(route_file):  # check there is a cached gis file
             with np.load(route_file) as gis_data:
                 coords = gis_data['path']
+                origin_coord = gis_data['origin_coord']
+                dest_coord = gis_data['dest_coord']
                 coords = coords[::constants.REDUCTION_FACTOR]
 
-            waypoints = []  # TODO: get waypoint data from a config file?
-
         else:  # no cached file found -> get coords
-            coords, waypoints = get_asc_coords()
+            origin_coord, dest_coord, coords, waypoints = get_asc_coords()
             coords = coords[::constants.REDUCTION_FACTOR]
 
         weather_file = weather_directory / "weather_data.npz"
@@ -315,10 +312,8 @@ def cache_weather(race):
     weather_forecast = update_path_weather_forecast(coords, WEATHER_FREQ, int(WEATHER_DURATION))
 
     with open(weather_file, 'wb') as f:
-        np.savez(f, weather_forecast=weather_forecast, origin_coord=coords[0],
-                 dest_coord=coords[-1], hash=get_hash(waypoints))
-
-    return
+        np.savez(f, weather_forecast=weather_forecast, origin_coord=origin_coord,
+                 dest_coord=dest_coord, hash=get_hash(origin_coord, dest_coord, waypoints))
 
 
 def update_path_weather_forecast(coords, weather_data_frequency, duration):
@@ -460,7 +455,7 @@ def get_coord_weather_forecast(coord, weather_data_frequency, duration):
 
 
 # ------------------- Helpers ------------------
-def get_hash(waypoints):
+def get_hash(origin_coord, dest_coord, waypoints):
     """
 
     Makes a hashed key from the inputted waypoints
@@ -471,7 +466,7 @@ def get_hash(waypoints):
 
     """
 
-    hash_string = str(waypoints[0]) + str(waypoints[-1])
+    hash_string = str(origin_coord) + str(dest_coord)
     for value in waypoints:
         hash_string += str(value)
     filtered_hash_string = "".join(filter(str.isnumeric, hash_string))
@@ -509,7 +504,7 @@ if __name__ == "__main__":
 
     # TODO: debug prints remove later
     print(f"Race Acronym: {args.race}")
-    print(f"API: {type(args.race)}")
+    print(f"API: {args.api}")
 
     print(os.environ['GOOGLE_MAPS_API_KEY'])
 
@@ -517,7 +512,7 @@ if __name__ == "__main__":
     fetch_gis = False
     fetch_weather = False
 
-    if args.api == "BOTH":
+    if args.api == "ALL":
         fetch_gis = True
         fetch_weather = True
     elif args.api == "GIS":
