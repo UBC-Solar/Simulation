@@ -466,8 +466,8 @@ class GeneticOptimization(BaseOptimization):
         # print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
 
         # Plot fitness compared to the generation index to how
-        if self.output_hyperparameters:
-            self.plot_fitness()
+        # if self.output_hyperparameters:
+        #     self.plot_fitness()
 
         # Set the fitness value of the hyperparameter configuration
         self.settings.set_fitness(solution_fitness)
@@ -550,52 +550,6 @@ class GeneticOptimization(BaseOptimization):
 
         return settings_list
 
-    @staticmethod
-    def get_sequence_index(increment_index=True) -> int:
-        """
-
-        Get the current index saved in the counter at `data/results/register.json`.
-
-        :param increment_index: set to False in order to make this a read-only operation, otherwise the counter
-        will be incremented.
-        :return: the value stored in the counter
-        :rtype: int
-
-        """
-
-        register_filepath = results_directory / "register.json"
-
-        if not os.path.isfile(register_filepath):
-            raise FileNotFoundError("Cannot find register file!")
-
-        with open(register_filepath, "r") as file:
-            register_data = json.load(file)
-
-        x = register_data['x']
-        x += 1
-
-        if increment_index:
-            GeneticOptimization.save_index(register_filepath, x)
-
-        return x
-
-    @staticmethod
-    def save_index(register_filepath, index) -> None:
-        """
-
-        Save a new value in the counter.
-
-        :param register_filepath: path to the register file
-        :param index: value to save
-
-        """
-
-        with open(register_filepath, "w") as file:
-            register_data = {
-                "x": index
-            }
-
-            json.dump(register_data, file)
 
     @staticmethod
     def get_total_generations(settings_list: list[OptimizationSettings] = None) -> int:
