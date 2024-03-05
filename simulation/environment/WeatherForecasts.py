@@ -6,11 +6,10 @@ import json
 import numpy as np
 import os
 import requests
-import sys
+import logging
 
 from simulation.cache.weather import weather_directory
 from simulation.common import helpers, constants
-from tqdm import tqdm
 
 
 class WeatherForecasts:
@@ -97,13 +96,9 @@ class WeatherForecasts:
                         print(f"> {key}: {weather_data[key].shape}")
 
         if api_call_required or force_update:
-            print("Different weather data requested and/or weather file does not exist. "
-                  "Calling OpenWeather API and creating weather save file...\n")
-            self.weather_forecast = self.update_path_weather_forecast(self.coords, weather_data_frequency, duration)
+            logging.error("Update API cache by calling CacheAPI.py , Exiting simulation...\n")
 
-            with open(weather_file, 'wb') as f:
-                np.savez(f, weather_forecast=self.weather_forecast, origin_coord=self.origin_coord,
-                         dest_coord=self.dest_coord, hash=hash_key)
+            exit()
 
         self.last_updated_time = self.weather_forecast[0, 0, 2]
 
@@ -205,44 +200,6 @@ class WeatherForecasts:
             weather_array[i][8] = weather_data_dict["weather"][0]["id"]
 
         return weather_array
-
-    def update_path_weather_forecast(self, coords, weather_data_frequency, duration):
-        """
-
-        Passes in a list of coordinates, returns the hourly weather forecast
-        for each of the coordinates
-
-        :param np.ndarray coords: A NumPy array of [coord_index][2]
-        - [2] => [latitude, longitude]
-        :param str weather_data_frequency: Influences what resolution weather data is requested, must be one of
-            "current", "hourly", or "daily"
-        :param int duration: duration of weather requested, in hours
-
-        :returns
-        - A NumPy array [coord_index][N][9]
-        - [coord_index]: the index of the coordinates passed into the function
-        - [N]: is 1 for "current", 24 for "hourly", 8 for "daily"
-        - [9]: (latitude, longitude, dt (UNIX time), timezone_offset (in seconds), dt + timezone_offset (local time),
-               wind_speed, wind_direction, cloud_cover, description_id)
-
-        """
-
-        if int(duration) > 48 and weather_data_frequency == "hourly":
-            time_length = {"current": 1, "hourly": 54, "daily": 8}
-        else:
-            time_length = {"current": 1, "hourly": 48, "daily": 8}
-
-        num_coords = len(coords)
-
-        weather_forecast = np.zeros((num_coords, time_length[weather_data_frequency], 9))
-
-        with tqdm(total=len(coords), file=sys.stdout, desc="Calling OpenWeatherAPI") as pbar:
-            for i, coord in enumerate(coords):
-                weather_forecast[i] = self.get_coord_weather_forecast(coord, weather_data_frequency, int(duration))
-                pbar.update(1)
-        print()
-
-        return weather_forecast
 
     def calculate_closest_weather_indices(self, cumulative_distances):
         """

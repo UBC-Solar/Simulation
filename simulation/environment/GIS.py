@@ -4,14 +4,10 @@ import json
 import logging
 import math
 import numpy as np
-import polyline
-import pytz
-import requests
 import sys
 from simulation.cache.route import route_directory
 from simulation.common import helpers, ASC, FSGP
 from dotenv import load_dotenv
-from timezonefinder import TimezoneFinder
 from tqdm import tqdm
 from sklearn.neighbors import BallTree
 from math import radians
@@ -88,18 +84,9 @@ class GIS:
         if api_call_required or force_update:
             logging.warning("New route requested and/or route save file does not exist. "
                             "Calling Google API and creating new route save file...\n")
-            logging.warning(
-                "The GIS class is collecting data from a Google API. Set force_update to false to prevent this and "
-                "read data from disk instead. This should improve performance. \n")
-            self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
-            self.path_elevations = self.calculate_path_elevations(self.path)
-            self.path_time_zones = self.calculate_time_zones(self.path)
-            self.launch_point = self.path[0]
+            logging.error("Update API cache by calling CacheAPI.py , Exiting simulation...\n")
 
-            with open(route_file, 'wb') as f:
-                np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
-                         origin_coord=self.origin_coord, dest_coord=self.dest_coord,
-                         waypoints=self.waypoints, hash=hash_key)
+            exit()
 
         if race_type == "FSGP":
             self.single_lap_path = self.path
@@ -161,37 +148,7 @@ class GIS:
 
         return np.array(result)
 
-    def calculate_time_zones(self, coords):
-        """
-
-        Takes in an array of coordinates, return the time zone relative to UTC, of each location in seconds
-
-        :param np.ndarray coords: (float[N][lat lng]) array of coordinates
-        :returns np.ndarray time_diff: (float[N]) array of time differences in seconds
-
-        """
-
-        timezones_return = np.zeros(len(coords))
-
-        tf = TimezoneFinder()
-
-        if self.race_type == "FSGP":
-            # this is when FSGP 2021 starts
-            dt = datetime.datetime(*FSGP.date)
-        else:
-            # this is when ASC 2021 starts
-            dt = datetime.datetime(*ASC.date)
-
-        with tqdm(total=len(coords), file=sys.stdout, desc="Calculating Time Zones") as pbar:
-            for index, coord in enumerate(coords):
-                pbar.update(1)
-                tz_string = tf.timezone_at(lat=coord[0], lng=coord[1])
-                timezone = pytz.timezone(tz_string)
-
-                timezones_return[index] = timezone.utcoffset(dt).total_seconds()
-
-        return timezones_return
-
+    # ----- Getters -----
     def get_time_zones(self, gis_indices):
         """
 
@@ -204,8 +161,6 @@ class GIS:
         """
 
         return self.path_time_zones[gis_indices]
-
-    # ----- Getters -----
 
     def get_gradients(self, gis_indices):
         """
@@ -268,151 +223,11 @@ class GIS:
         return self.path_gradients
 
     # ----- Path calculation functions -----
-
-    def update_path(self, origin_coord, dest_coord, waypoints):
-        """
-
-        Returns a path between the origin coordinate and the destination coordinate,
-        passing through a group of optional waypoints.
-        https://developers.google.com/maps/documentation/directions/start
-
-        :param np.ndarray origin_coord: A NumPy array [latitude, longitude] of the starting coordinate
-        :param np.ndarray dest_coord: A NumPy array [latitude, longitude] of the destination coordinate
-        :param list waypoints: A NumPy array [n][latitude, longitude], where n<=10
-        :returns: A NumPy array [n][latitude, longitude], marking out the path.
-        :rtype: np.ndarray
-
-        """
-
-        # set up URL
-        url_head = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin_coord[0]},{origin_coord[1]}" \
-                   f"&destination={dest_coord[0]},{dest_coord[1]}"
-
-        url_waypoints = ""
-        if len(waypoints) != 0:
-
-            url_waypoints = "&waypoints="
-
-            if len(waypoints) > 10:
-                print("Too many waypoints; Truncating to 10 waypoints total")
-                waypoints = waypoints[0:10]
-
-            for waypoint in waypoints:
-                url_waypoints = url_waypoints + f"via:{waypoint[0]},{waypoint[1]}|"
-
-            url_waypoints = url_waypoints[:-1]
-
-        url_end = f"&key={self.api_key}"
-
-        url = url_head + url_waypoints + url_end
-
-        # HTTP GET
-        r = requests.get(url)
-        response = json.loads(r.text)
-
-        path_points = []
-
-        # If a route is found...
-        if response['status'] == "OK":
-            print("A route was found.\n")
-
-            # Pick the first route in the list of available routes
-            # A route consists of a series of legs
-            for leg in response['routes'][0]['legs']:
-
-                # Every leg contains an array of steps.
-                for step in leg['steps']:
-                    # every step contains an encoded polyline
-                    polyline_raw = step['polyline']['points']
-                    polyline_coords = polyline.decode(polyline_raw)
-                    path_points = path_points + polyline_coords
-
-            print("Route has been successfully retrieved!\n")
-
-        else:
-            print(f"No route was found: {response['status']}")
-            print(f"Error Message: {response['error_message']}")
-
-        route = np.array(path_points)
-
-        # Removes duplicate coordinates to prevent gradient calculation errors
-        if route.size != 0:
-            duplicate_coordinate_indices = np.where((np.diff(route[:, 0]) == 0)) and np.where(
-                (np.diff(route[:, 1]) == 0))
-            route = np.delete(route, duplicate_coordinate_indices, axis=0)
-
-        return route
-
     def calculate_path_min_max(self):  # DEPRECATED
         logging.warning(f"Using deprecated function 'calculate_path_min_max()'!")
         min_lat, min_long = self.path.min(axis=0)
         max_lat, max_long = self.path.max(axis=0)
         return [min_long, min_lat, max_long, max_lat]
-
-    def calculate_path_elevations(self, coords):
-        """
-
-        Returns the elevations of every coordinate in the array of coordinates passed in as a coordinate
-        See Error Message Interpretations: https://developers.google.com/maps/documentation/elevation/overview
-
-        :param np.ndarray coords: A NumPy array [n][latitude, longitude]
-        :returns: A NumPy array [n][elevation] in metres
-        :rtype: np.ndarray
-
-        """
-
-        # construct URL
-        url_head = 'https://maps.googleapis.com/maps/api/elevation/json?locations='
-
-        location_strings = []
-        locations = ""
-
-        for coord in coords:
-
-            locations = locations + f"{coord[0]},{coord[1]}|"
-
-            if len(locations) > 8000:
-                location_strings.append(locations[:-1])
-                locations = ""
-
-        if len(locations) != 0:
-            location_strings.append(locations[:-1])
-
-        url_tail = "&key={}".format(self.api_key)
-
-        # Get elevations
-        elevations = np.zeros(len(coords))
-
-        i = 0
-        with tqdm(total=len(location_strings), file=sys.stdout, desc="Acquiring Elevation Data") as pbar:
-            for location_string in location_strings:
-                url = url_head + location_string + url_tail
-
-                r = requests.get(url)
-                response = json.loads(r.text)
-                pbar.update(1)
-
-                if response['status'] == "OK":
-                    for result in response['results']:
-                        elevations[i] = result['elevation']
-                        i = i + 1
-
-                elif response['status'] == "INVALID_REQUEST":
-                    sys.stderr.write("Error: Request was invalid\n")
-
-                elif response['status'] == "OVER_DAILY_LIMIT":
-                    sys.stderr.write(
-                        "Error: Possible causes - API key is missing or invalid, billing has not been enabled,"
-                        " a self-imposed usage cap has been exceeded, or the provided payment method is no longer "
-                        " valid. \n")
-
-                elif response['status'] == "OVER_QUERY_LIMIT":
-                    sys.stderr.write("Error: Requester has exceeded quota\n")
-
-                elif response['status'] == "REQUEST_DENIED":
-                    sys.stderr.write("Error: API could not complete the request\n")
-
-        return elevations
 
     def calculate_current_heading_array(self):
         """

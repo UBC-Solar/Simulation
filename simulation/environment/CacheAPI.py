@@ -8,7 +8,6 @@ import datetime
 import polyline
 import numpy as np
 from tqdm import tqdm
-from xml.dom import minidom
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 from simulation.common.helpers import PJWHash
@@ -16,8 +15,6 @@ from simulation.common import ASC, FSGP, constants
 from simulation.config import config_directory
 from simulation.cache.route import route_directory
 from simulation.cache.weather import weather_directory
-
-import matplotlib.pyplot as plt
 
 # Const vars
 SIM_DUR = 432000                    # duration of the simulation in seconds (432000s = 5 days)
@@ -57,9 +54,6 @@ def cache_gis(race):
     path_elevations = calculate_path_elevations(coords)
     path_time_zones = calculate_time_zones(coords, race)
 
-    print(path_elevations)
-    print(path_time_zones)
-
     with open(route_file, 'wb') as f:
         np.savez(f, path=coords, elevations=path_elevations, time_zones=path_time_zones,
                  origin_coord=origin_coord, dest_coord=dest_coord,
@@ -84,7 +78,8 @@ def get_fsgp_coords():
 
     origin_coord = model_parameters["origin_coord"]
     dest_coord = model_parameters["dest_coord"]
-    coords, waypoints = model_parameters["waypoints"]
+    waypoints = model_parameters["waypoints"]
+    coords = waypoints  # Same for FSGP
 
     return origin_coord, dest_coord, coords, waypoints
 
@@ -139,8 +134,6 @@ def get_asc_coords():
     response = json.loads(r.text)
 
     path_points = []
-
-    print(response)
 
     # If a route is found...
     if response['status'] == "OK":
@@ -301,6 +294,7 @@ def cache_weather(race):
                 coords = gis_data['path']
                 origin_coord = gis_data['origin_coord']
                 dest_coord = gis_data['dest_coord']
+                waypoints = gis_data['waypoints']
                 coords = coords[::constants.REDUCTION_FACTOR]
 
         else:  # no cached file found -> get coords
@@ -460,6 +454,8 @@ def get_hash(origin_coord, dest_coord, waypoints):
 
     Makes a hashed key from the inputted waypoints
 
+    :param np.ndarray origin_coord: A NumPy array of the waypoints [latitude, longitude] of a race
+    :param np.ndarray dest_coord: A NumPy array of the waypoints [latitude, longitude] of a race
     :param np.ndarray waypoints: A NumPy array of the waypoints [latitude, longitude] of a race
     :return: Returns the generated hash
     :rtype: int
@@ -473,40 +469,12 @@ def get_hash(origin_coord, dest_coord, waypoints):
     return PJWHash(filtered_hash_string)
 
 
-def parse_coordinates_from_kml(coords_str: str) -> np.ndarray:
-    """
-
-    Parse a coordinates string from a XML (KML) file into a list of coordinates (2D vectors).
-    Requires coordinates in the format "39., 41., 0  39., 40., 0" which will return [ [39., 41.], [39., 40.] ].
-
-    :param coords_str: coordinates string from a XML (KML) file
-    :return: list of 2D vectors representing coordinates
-    :rtype: np.ndarray
-
-    """
-
-    def parse_coord(pair):
-        coord = pair.split(',')
-        coord.pop()
-        coord = [float(value) for value in coord]
-        return coord
-
-    coords = list(map(parse_coord, coords_str.split()))
-    return np.array(coords)
-
-
 # ------------------- Script -------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("race", help="Race Acronym ['FSGP', 'ASC']")
     parser.add_argument("api", help="API(s) to cache ['GIS', 'WEATHER', 'ALL']")
     args = parser.parse_args()
-
-    # TODO: debug prints remove later
-    print(f"Race Acronym: {args.race}")
-    print(f"API: {args.api}")
-
-    print(os.environ['GOOGLE_MAPS_API_KEY'])
 
     # Parse Args fields, handle invalid inputs
     fetch_gis = False
