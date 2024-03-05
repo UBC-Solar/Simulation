@@ -378,6 +378,18 @@ class WeatherForecasts:
         linearized_length = tensor_sizes[0] * tensor_sizes[1] * tensor_sizes[2]
         linearized_weather_forecasts = self.weather_forecast.reshape([linearized_length])
         return self.lib.golang_weather_in_time(linearized_weather_forecasts, unix_timestamps, indices, tensor_sizes)
+    
+    def rust_get_weather_in_time(self, unix_timestamps, indices):
+
+        import rust_simulation
+
+        full_weather_forecast_at_coords = self.weather_forecast[indices]
+        dt_local_array = full_weather_forecast_at_coords[0, :, 4]
+
+        temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
+        closest_timestamp_indices = rust_simulation.closest_timestamp_indices(unix_timestamps, dt_local_array)
+
+        return full_weather_forecast_at_coords[temp_0, closest_timestamp_indices]
 
     def python_get_weather_in_time(self, unix_timestamps, indices):
         full_weather_forecast_at_coords = self.weather_forecast[indices]
