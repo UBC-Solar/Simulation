@@ -171,7 +171,6 @@ class Simulation:
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
-                                                   self.simulation_duration / 3600,
                                                    self.race_type,
                                                    library=self.library,
                                                    origin_coord=self.gis.launch_point,
