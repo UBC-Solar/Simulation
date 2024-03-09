@@ -31,8 +31,7 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, golang=False, library=None, weather_data_frequency="daily",
-                 force_update=False, origin_coord=None, hash_key=None):
+    def __init__(self, api_key, coords, race_type, golang=False, library=None, origin_coord=None, hash_key=None):
         """
 
         Initializes the instance of a WeatherForecast class
@@ -40,10 +39,6 @@ class WeatherForecasts:
         :param api_key: A personal OpenWeatherAPI key to access weather forecasts
         :param origin_coord: A NumPy array of a single [latitude, longitude]
         :param coords: A NumPy array of [latitude, longitude]
-        :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
-            "current", "hourly", or "daily"
-        :param duration: amount of time simulated (in hours)
-        :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
         :param golang: boolean determining whether to use faster GoLang implementations when available
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
@@ -69,13 +64,10 @@ class WeatherForecasts:
             self.coords = np.array([coords[0], coords[-1]])
             weather_file = weather_directory / "weather_data_FSGP.npz"
 
-        api_call_required = True
-
         # if the file exists, load path from file
-        if os.path.isfile(weather_file) and force_update is False:
+        if os.path.isfile(weather_file):
             with np.load(weather_file) as weather_data:
                 if weather_data['hash'] == hash_key:
-                    api_call_required = False
 
                     print("Previous weather save file is being used...\n")
 
@@ -94,112 +86,12 @@ class WeatherForecasts:
                     print("--- Array information ---")
                     for key in weather_data:
                         print(f"> {key}: {weather_data[key].shape}")
-
-        if api_call_required or force_update:
+        else:
             logging.error("Update API cache by calling CacheAPI.py , Exiting simulation...\n")
 
             exit()
 
         self.last_updated_time = self.weather_forecast[0, 0, 2]
-
-    def get_coord_weather_forecast(self, coord, weather_data_frequency, duration):
-        """
-
-        Passes in a single coordinate, returns a weather forecast
-        for the coordinate depending on the entered "weather_data_frequency"
-        argument. This function is unlikely to ever be called directly.
-
-        :param np.ndarray coord: A single coordinate stored inside a NumPy array [latitude, longitude]
-        :param str weather_data_frequency: Influences what resolution weather data is requested, must be one of
-            "current", "hourly", or "daily"
-        :param int  duration: amount of time simulated (in hours)
-
-        :returns weather_array: [N][9]
-        - [N]: is 1 for "current", 24 for "hourly", 8 for "daily"
-        - [9]: (latitude, longitude, dt (UNIX time), timezone_offset (in seconds), dt + timezone_offset (local time),
-               wind_speed, wind_direction, cloud_cover, description_id)
-        :rtype: np.ndarray
-        For reference to the API used:
-        - https://openweathermap.org/api/one-call-api
-
-        """
-
-        # TODO: Who knows, maybe we want to run the simulation like a week into the future, when the weather forecast
-        #   api only allows 24 hours of hourly forecast. I think it is good to pad the end of the weather_array with
-        #   daily forecasts, after the hourly. Then in get_weather_forecast_in_time() the appropriate weather can be
-        #   obtained by using the same shortest place method that you did with the cumulative distances.
-
-        # ----- Building API URL -----
-
-        # If current weather is chosen, only return the instantaneous weather
-        # If hourly weather is chosen, then the first 24 hours of the data will use hourly data.
-        # If the duration of the simulation is greater than 24 hours, then append on the daily weather forecast
-        # up until the 7th day.
-
-        data_frequencies = ["current", "hourly", "daily"]
-
-        if weather_data_frequency in data_frequencies:
-            data_frequencies.remove(weather_data_frequency)
-        else:
-            raise RuntimeError(
-                f"\"weather_data_frequency\" argument is invalid. Must be one of {str(data_frequencies)}")
-
-        exclude_string = ",".join(data_frequencies)
-
-        url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
-              f"&exclude=minutely,{exclude_string}&appid={self.api_key}"
-
-        # ----- Calling OpenWeatherAPI ------
-
-        r = requests.get(url)
-        response = json.loads(r.text)
-
-        # ----- Processing API response -----
-
-        # Ensures that response[weather_data_frequency] is always a list of dictionaries
-        if isinstance(response[weather_data_frequency], dict):
-            weather_data_list = [response[weather_data_frequency]]
-        else:
-            weather_data_list = response[weather_data_frequency]
-
-        # If the weather data is too long, then append the daily requests as well.
-        if weather_data_frequency == "hourly" and duration > 24:
-
-            url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
-                  f"&exclude=minutely,hourly,current&appid={self.api_key}"
-
-            r = requests.get(url)
-            response = json.loads(r.text)
-
-            if isinstance(response["daily"], dict):
-                weather_data_list = weather_data_list + [response["daily"]][2:]
-            else:
-                weather_data_list = weather_data_list + response["daily"][2:]
-
-        """ weather_data_list is a list of weather forecast dictionaries.
-            Weather dictionaries contain weather data points (wind speed, direction, cloud cover)
-            for a given timestamp."""
-
-        # ----- Packing weather data into a NumPy array -----
-
-        weather_array = np.zeros((len(weather_data_list), 9))
-
-        for i, weather_data_dict in enumerate(weather_data_list):
-            weather_array[i][0] = coord[0]
-            weather_array[i][1] = coord[1]
-            weather_array[i][2] = weather_data_dict["dt"]
-            weather_array[i][3] = response["timezone_offset"]
-            weather_array[i][4] = weather_data_dict["dt"] + response["timezone_offset"]
-            weather_array[i][5] = weather_data_dict["wind_speed"]
-
-            # wind degrees follows the meteorlogical convention. So, 0 degrees means that the wind is blowing
-            #   from the north to the south. Using the Azimuthal system, this would mean 180 degrees.
-            #   90 degrees becomes 270 degrees, 180 degrees becomes 0 degrees, etc
-            weather_array[i][6] = weather_data_dict["wind_deg"]
-            weather_array[i][7] = weather_data_dict["clouds"]
-            weather_array[i][8] = weather_data_dict["weather"][0]["id"]
-
-        return weather_array
 
     def calculate_closest_weather_indices(self, cumulative_distances):
         """

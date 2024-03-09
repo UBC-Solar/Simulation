@@ -16,15 +16,8 @@ from simulation.config import config_directory
 from simulation.cache.route import route_directory
 from simulation.cache.weather import weather_directory
 
-# Const vars
-SIM_DUR = 432000                    # duration of the simulation in seconds (432000s = 5 days)
-WEATHER_DURATION = SIM_DUR/3600     # duration of weather to be fetched
-WEATHER_FREQ = "daily"              # can be "current", "hourly", or "daily"
-
-
 # load API keys from environment variables
 load_dotenv()
-print("loaded environment vars")
 
 
 # ------------------- GIS API -------------------
@@ -303,7 +296,12 @@ def cache_weather(race):
 
         weather_file = weather_directory / "weather_data.npz"
 
-    weather_forecast = update_path_weather_forecast(coords, WEATHER_FREQ, int(WEATHER_DURATION))
+    with open(os.path.join(config_directory, f"settings_{race}.json")) as f:
+        race_configs = json.load(f)
+
+    weather_forecast = update_path_weather_forecast(coords,
+                                                    race_configs["weather_freq"],
+                                                    int(race_configs["simulation_duration"] / 3600))
 
     with open(weather_file, 'wb') as f:
         np.savez(f, weather_forecast=weather_forecast, origin_coord=origin_coord,
@@ -472,8 +470,8 @@ def get_hash(origin_coord, dest_coord, waypoints):
 # ------------------- Script -------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("race", help="Race Acronym ['FSGP', 'ASC']")
-    parser.add_argument("api", help="API(s) to cache ['GIS', 'WEATHER', 'ALL']")
+    parser.add_argument("--race", help="Race Acronym ['FSGP', 'ASC']")
+    parser.add_argument("--api", help="API(s) to cache ['GIS', 'WEATHER', 'ALL']")
     args = parser.parse_args()
 
     # Parse Args fields, handle invalid inputs

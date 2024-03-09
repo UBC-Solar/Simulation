@@ -15,7 +15,7 @@ from math import radians
 
 class GIS:
     def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, golang, library=None,
-                 force_update=False, current_coord=None, temp_flag=False, hash_key=None):
+                 current_coord=None, temp_flag=False, hash_key=None):
         """
 
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
@@ -26,7 +26,6 @@ class GIS:
         :param dest_coord: NumPy array containing the end coordinate (lat, long) of the planned travel route
         :param waypoints: NumPy array containing the route waypoints to travel through during simulation
         :param race_type: String ("FSGP" or "ASC") stating which race is being simulated
-        :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
         :param golang: boolean determining whether to use faster GoLang implementations when available
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
@@ -51,13 +50,10 @@ class GIS:
         else:
             route_file = route_directory / "route_data.npz"
 
-        api_call_required = True
-
         # if the file exists, load path from file
-        if os.path.isfile(route_file) and force_update is False:
+        if os.path.isfile(route_file):
             with np.load(route_file) as route_data:
                 if route_data['hash'] == hash_key:
-                    api_call_required = False
 
                     print("Previous route save file is being used...\n")
 
@@ -81,9 +77,8 @@ class GIS:
                             self.path = self.path[current_coord_index:]
                             self.path_elevations = self.path_elevations[current_coord_index:]
                             self.path_time_zones = self.path_time_zones[current_coord_index:]
-        if api_call_required or force_update:
-            logging.warning("New route requested and/or route save file does not exist. "
-                            "Calling Google API and creating new route save file...\n")
+        else:
+            logging.warning("Route save file does not exist.\n")
             logging.error("Update API cache by calling CacheAPI.py , Exiting simulation...\n")
 
             exit()
@@ -447,7 +442,7 @@ if __name__ == "__main__":
     ])
 
     locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints,
-                         race_type="FSGP", force_update=False)
+                         race_type="FSGP")
 
     locationSystem.tile_route(simulation_duration=simulation_duration)
 

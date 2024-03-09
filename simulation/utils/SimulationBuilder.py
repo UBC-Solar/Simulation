@@ -20,9 +20,6 @@ class SimulationBuilder:
 
         self.initial_battery_charge = None
 
-        self.gis_force_update = None
-        self.weather_force_update = None
-
         # Model Parameters
         self.race_type = None
         self.lvs_power_loss = None
@@ -40,9 +37,6 @@ class SimulationBuilder:
         self.start_hour = args["start_hour"]
 
         self.initial_battery_charge = args["initial_battery_charge"]
-
-        self.gis_force_update = args["gis_force_update"]
-        self.weather_force_update = args["weather_force_update"]
 
         return self
 
