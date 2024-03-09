@@ -31,7 +31,7 @@ def get_current_evolution(results_directory: str) -> int:
         return int(file.readline())
 
 
-def increment_evolution_counter(results_directory: str, new_value: int) -> None:
+def set_evolution_counter(results_directory: str, new_value: int) -> None:
     with open(os.path.join(results_directory, 'last_evolution.txt'), 'w') as file:
         print(f"Writing {new_value}")
         file.write(str(new_value))
@@ -111,6 +111,26 @@ def write_fitness_over_generation(evolution_directory: str, evolution: Evolution
             writer.writerow([i, fitness])
 
 
+def collect_local_results(results_directory: str):
+    dirs = [os.path.join(results_directory, directory) for directory in os.listdir(results_directory)]
+    evolution_folders = [directory for directory in dirs if (os.path.isdir(directory) and '__pycache__' not in directory)]
+
+    evolution_logs: list[dict] = []
+    for evolution_folder in evolution_folders:
+        with open(os.path.join(evolution_folder, 'evolution_log.txt'), 'rt') as evolution_log:
+            lines: list[str] = evolution_log.read().split('\n')
+            data = {item.split(':')[0]: item.split(':')[1].strip() for item in lines if len(item.split(':')) > 1}
+
+            if 'CHROMOSOME' in data.keys():
+                del data['CHROMOSOME']
+
+            evolution_logs.append(data)
+
+    df = pd.DataFrame(evolution_logs)
+    df.index.names = ['Evolution']
+    return df
+
+
 def write(results_directory: str, evolution: Evolution):
     evolution_number: int = get_current_evolution(results_directory)
     evolution_directory = os.path.join(results_directory, str(evolution_number))
@@ -122,7 +142,7 @@ def write(results_directory: str, evolution: Evolution):
     write_chromosome_simulation(evolution_directory, evolution)
     write_fitness_over_generation(evolution_directory, evolution)
 
-    increment_evolution_counter(results_directory, evolution_number + 1)
+    set_evolution_counter(results_directory, evolution_number + 1)
 
 
 def pull():
@@ -133,5 +153,5 @@ def push():
     print("Hi!")
 
 
-
-
+if __name__ == "__main__":
+    collect_local_results('/Users/joshuariefman/Simulation/simulation/data/results')

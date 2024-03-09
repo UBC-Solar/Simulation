@@ -70,7 +70,10 @@ dependencies = [
     "perlin-noise==1.12",
     "haversine==2.8.1",
     "gitpython==3.1.42",
-    "dill==0.3.8"
+    "dill==0.3.8",
+    "google-api-python-client==2.120.0",
+    "google-auth-httplib2==0.2.0",
+    "google-auth-oauthlib==1.2.0"
 ]
 dynamic = ["version"]
 

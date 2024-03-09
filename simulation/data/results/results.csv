@@ -1,10 +1,4 @@
 Chromosomes,Parent_Selection,Generations,Parents,Crossover,Elitism,Mutation Type,Mutation Percent,Max Mutation,Fitness
-0,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9847039069603261
-1,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9503893484470851
-2,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,1.0004089817153785
-3,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9195470286215761
-4,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9828111360650853
-5,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9195470286215761
-0,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9262462355176583
-1,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9195470286215761
-2,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.921274618833511
+0,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9943145493084727
+1,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.958182673549807
+2,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9318640608517876
