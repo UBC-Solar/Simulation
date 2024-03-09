@@ -11,6 +11,7 @@ import sys
 
 from simulation.cache.route import route_directory
 from simulation.common import helpers, ASC, FSGP, BrightSide
+from simulation.config import config_directory
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 from tqdm import tqdm
@@ -147,6 +148,20 @@ class GIS:
     def load_FSGP_path() -> np.ndarray:
         """
 
+        Load the FSGP Track from settings.
+
+        :return: Array of N coordinates (latitude, longitude) in the shape [N][2].
+        """
+
+        route_file = config_directory / "settings_FSGP.json"
+        with open(route_file) as f:
+            data = json.load(f)
+            return data["waypoints"]
+
+    @staticmethod
+    def process_KML_file(route_file):
+        """
+
         Load the FSGP Track from a KML file exported from a Google Earth project.
 
         Ensure to follow guidelines enumerated in this directory's `README.md` when creating and
@@ -154,8 +169,6 @@ class GIS:
 
         :return: Array of N coordinates (latitude, longitude) in the shape [N][2].
         """
-
-        route_file = route_directory / "fsgp_track.kml"
         with open(route_file) as f:
             data = minidom.parse(f)
             kml_coordinates = data.getElementsByTagName("coordinates")[0].childNodes[0].data
