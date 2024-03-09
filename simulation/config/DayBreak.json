@@ -17,5 +17,8 @@
   "drag_coefficient": 0.223,
 
   "max_acceleration_kmh_per_s": 6,
-  "max_deceleration_kmh_per_s": 6
+  "max_deceleration_kmh_per_s": 6,
+
+  "max_speed_during_turn": 20,
+  "max_cruising_speed": 80
 }
