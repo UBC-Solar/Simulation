@@ -83,13 +83,6 @@ class GIS:
 
             exit()
 
-        if race_type == "FSGP":
-            self.single_lap_path = self.path
-            self.path = np.tile(self.path, (FSGP.tiling, 1))
-            self.single_lap_path_elevations = self.path_elevations
-            self.path_elevations = np.tile(self.path_elevations, FSGP.tiling)
-            self.path_time_zones = self.calculate_time_zones(self.path)
-
         self.path_distances = helpers.calculate_path_distances(self.path)
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations,
                                                                self.path_distances)
