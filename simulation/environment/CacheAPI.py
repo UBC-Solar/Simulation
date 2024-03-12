@@ -8,14 +8,14 @@ import datetime
 import polyline
 import numpy as np
 from tqdm import tqdm
+from scipy import signal
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
-from simulation.environment import GIS
 from simulation.common.helpers import PJWHash
-from simulation.common import ASC, FSGP, constants
 from simulation.config import config_directory
 from simulation.cache.route import route_directory
 from simulation.cache.weather import weather_directory
+from simulation.common import ASC, FSGP, constants, BrightSide, helpers
 
 # load API keys from environment variables
 load_dotenv()
@@ -38,8 +38,7 @@ def cache_gis(race):
         
         # Coords will be the same as waypoints for FSGP
         origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
-        
-        coords = coords[:len(coords) - 1]  # Get rid of superfluous path coordinate at end
+
         tiling = FSGP.tiling # set tiling from config file
     else:
         route_file = route_directory / "route_data.npz"
@@ -51,8 +50,9 @@ def cache_gis(race):
         tiling = ASC.tiling # set tiling from config file
 
     # Calculate speed limits and curvature
-    curvature = GIS.calculate_curvature(coords)
-    speed_limits = GIS.calculate_speed_limits(coords, curvature)
+    curvature = calculate_curvature(coords)
+    coords = coords[:len(coords) - 1]  # Get rid of superfluous path coordinate at end
+    speed_limits = calculate_speed_limits(coords, curvature)
     
     # Call Google Maps API
     path_elevations = calculate_path_elevations(coords)
@@ -466,6 +466,47 @@ def get_coord_weather_forecast(coord, weather_data_frequency, duration):
 
 
 # ------------------- Helpers ------------------
+def linearly_interpolate(x, y, t):
+    return (y - x) * t + x
+
+
+def calculate_speed_limits(path, curvature) -> np.ndarray:
+    cumulative_path_distances = np.cumsum(helpers.calculate_path_distances(path))
+    speed_limits = np.empty([int(cumulative_path_distances[-1]) + 1], dtype=int)
+    print(len(cumulative_path_distances), len(curvature))
+    for i in range(int(cumulative_path_distances[-1]) + 1):
+        gis_index = closest_index(i, cumulative_path_distances)
+        speed_limit = linearly_interpolate(BrightSide.max_cruising_speed,
+                                           BrightSide.max_speed_during_turn,
+                                           curvature[gis_index])
+        speed_limits[i] = speed_limit
+
+    return speed_limits
+
+
+def calculate_curvature(path):
+    displacement: np.ndarray = np.diff(path, axis=0)
+    cos_theta: np.ndarray = np.empty(displacement.shape[0])
+
+    def calculate_cos_theta(u, v) -> float:
+        return np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
+
+    offset_displacement = np.roll(displacement, (1, 1))
+
+    for i in range(0, len(cos_theta)):
+        cos_theta[i] = calculate_cos_theta(displacement[i], offset_displacement[i])
+
+    angles: np.ndarray = np.abs(np.arccos(cos_theta))
+    filtered: np.ndarray = signal.savgol_filter(angles, 5, 2)
+    normalized: np.ndarray = (filtered - filtered.min()) / (filtered - filtered.min()).max()
+
+    return normalized
+
+
+def closest_index(target_distance, distances):
+    return np.argmin(np.abs(distances - target_distance))
+
+
 def get_hash(origin_coord, dest_coord, waypoints):
     """
 

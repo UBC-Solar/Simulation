@@ -14,7 +14,6 @@ from tqdm import tqdm
 from sklearn.neighbors import BallTree
 from math import radians
 from xml.dom import minidom
-from scipy import signal
 
 
 class GIS:
@@ -92,37 +91,6 @@ class GIS:
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations, self.path_distances)
 
     @staticmethod
-    def linearly_interpolate(x, y, t):
-        return (y - x) * t + x
-
-    @staticmethod
-    def calculate_speed_limits(path, curvature) -> np.ndarray:
-        cumulative_path_distances = np.cumsum(helpers.calculate_path_distances(path))
-        speed_limits = np.empty([int(cumulative_path_distances[-1]) + 1], dtype=int)
-
-        for i in range(int(cumulative_path_distances[-1]) + 1):
-            gis_index = GIS.closest_index(i, cumulative_path_distances)
-            speed_limit = GIS.linearly_interpolate(BrightSide.max_cruising_speed, BrightSide.max_speed_during_turn,
-                                                   curvature[gis_index])
-            speed_limits[i] = speed_limit
-
-        return speed_limits
-
-    @staticmethod
-    def load_FSGP_path() -> np.ndarray:
-        """
-
-        Load the FSGP Track from settings.
-
-        :return: Array of N coordinates (latitude, longitude) in the shape [N][2].
-        """
-
-        route_file = config_directory / "settings_FSGP.json"
-        with open(route_file) as f:
-            data = json.load(f)
-            return data["waypoints"]
-
-    @staticmethod
     def process_KML_file(route_file):
         """
 
@@ -140,29 +108,6 @@ class GIS:
 
             # Google Earth exports coordinates in order longitude, latitude, when we want the opposite
             return np.roll(coordinates, 1, axis=1)
-
-    @staticmethod
-    def calculate_curvature(path):
-        displacement: np.ndarray = np.diff(path, axis=0)
-        cos_theta: np.ndarray = np.empty(displacement.shape[0])
-
-        def calculate_cos_theta(u, v) -> float:
-            return np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
-
-        offset_displacement = np.roll(displacement, (1, 1))
-
-        for i in range(0, len(cos_theta)):
-            cos_theta[i] = calculate_cos_theta(displacement[i], offset_displacement[i])
-
-        angles: np.ndarray = np.abs(np.arccos(cos_theta))
-        filtered: np.ndarray = signal.savgol_filter(angles, 5, 2)
-        normalized: np.ndarray = (filtered - filtered.min()) / (filtered - filtered.min()).max()
-
-        return normalized
-
-    @staticmethod
-    def closest_index(target_distance, distances):
-        return np.argmin(np.abs(distances - target_distance))
 
     def calculate_closest_gis_indices(self, cumulative_distances):
         """
