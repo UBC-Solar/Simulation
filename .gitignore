@@ -152,6 +152,9 @@ simulation/config/settings_FSGP.json
 # Data Images
 data/images/*.png
 
+# Results
+/results
+
 # idea
 .idea
 /simulation/examples/.env

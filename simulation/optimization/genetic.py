@@ -424,7 +424,7 @@ class GeneticOptimization(BaseOptimization):
             else self.model.get_distance_before_exhaustion()
 
         self.did_finish_race = True if distance_travelled_real == distance_travelled else False
-
+        fitness = (691200 / time_taken) * (distance_travelled_real / 2466)
         # distance_travelled is scaled such that optimization REALLY prioritizes finishing the race
         distance_scaled = distance_travelled_real * self.fitness_sigmoid(distance_travelled_real)
         # optimization really likes even small reductions in time taken
@@ -433,7 +433,7 @@ class GeneticOptimization(BaseOptimization):
         # combined_fitness = distance travelled (km) / time_taken (days) = distance travelled per day
         combined_fitness = distance_scaled / (time_taken_scaled / 86400)
 
-        return combined_fitness
+        return fitness
 
     def maximize(self) -> np.ndarray:
         """

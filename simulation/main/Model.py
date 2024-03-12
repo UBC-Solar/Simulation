@@ -3,7 +3,6 @@ Contain calculations and results of Simulation.
 """
 
 import numpy as np
-
 from typing import Union
 from simulation.common import helpers
 

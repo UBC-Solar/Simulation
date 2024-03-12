@@ -1,6 +1,7 @@
 import simulation
 import functools
 import logging
+import core
 import os
 import numpy as np
 
@@ -11,7 +12,6 @@ from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.exceptions import LibrariesNotFound
 from simulation.utils.Plotting import GraphPage
-
 
 def simulation_property(func):
     """
@@ -254,6 +254,7 @@ class Simulation:
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
+        speed_kmh = core.constrain_speeds(self.gis.speed_limits.astype(float), speed_kmh, self.tick)
 
         # ------ Run calculations and get result and modified speed array -------
         self._model = simulation.Model(self, speed_kmh)
