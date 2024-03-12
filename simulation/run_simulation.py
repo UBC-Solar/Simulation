@@ -13,7 +13,7 @@ from simulation.config import config_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
 from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
 from simulation.data.results import results_directory
-from simulation.data.collect import assemble, write
+from simulation.data.assemble import marshal_evolution, assemble_evolution
 from tqdm import tqdm
 
 """
@@ -303,8 +303,8 @@ def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds)
                     geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=settings, pbar=pbar,
                                                               plot_fitness=True)
                     geneticOptimization.maximize()
-                    evolution = assemble(geneticOptimization, simulation_model)
-                    write(results_directory, evolution)
+                    evolution = marshal_evolution(geneticOptimization, simulation_model)
+                    assemble_evolution(results_directory, evolution)
 
         except KeyboardInterrupt:
             print(f"Finished {stop_index - 1} setting(s), stopped while evaluating setting {stop_index}.")

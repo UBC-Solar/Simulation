@@ -2,6 +2,7 @@ import csv
 import os.path
 
 from simulation.data.Evolution import Evolution
+from simulation.data.download import Downloader
 from simulation.main import Simulation
 from simulation.optimization.genetic import GeneticOptimization
 import numpy as np
@@ -9,7 +10,7 @@ import pandas as pd
 import dill
 
 
-def assemble(optimizer: GeneticOptimization, simulation_model: Simulation) -> Evolution:
+def marshal_evolution(optimizer: GeneticOptimization, simulation_model: Simulation) -> Evolution:
     speeds: np.ndarray = optimizer.bestinput
     fitness = simulation_model.run_model(speeds, plot_results=False)
 
@@ -131,7 +132,7 @@ def collect_local_results(results_directory: str):
     return df
 
 
-def write(results_directory: str, evolution: Evolution):
+def assemble_evolution(results_directory: str, evolution: Evolution):
     evolution_number: int = get_current_evolution(results_directory)
     evolution_directory = os.path.join(results_directory, str(evolution_number))
 
@@ -146,7 +147,9 @@ def write(results_directory: str, evolution: Evolution):
 
 
 def pull():
-    print("Hi!")
+    downloader = Downloader()
+    downloader.download_evolution_browser()
+    downloader.download_evolution_browser()
 
 
 def push():
