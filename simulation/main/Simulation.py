@@ -118,9 +118,6 @@ class Simulation:
         self.current_coord = builder.current_coord
         self.waypoints = builder.waypoints
 
-        gis_force_update = builder.gis_force_update
-        weather_force_update = builder.weather_force_update
-
         # ----- API keys -----
 
         load_dotenv()
@@ -164,8 +161,8 @@ class Simulation:
         self.basic_regen = simulation.BasicRegen()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, library=self.library, force_update=gis_force_update,
-                                  current_coord=self.current_coord, golang=self.golang, hash_key=self.hash_key)
+                                  self.race_type, library=self.library, current_coord=self.current_coord,
+                                  golang=self.golang, hash_key=self.hash_key)
 
         self.route_coords = self.gis.get_path()
 
@@ -174,11 +171,8 @@ class Simulation:
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
-                                                   self.simulation_duration / 3600,
                                                    self.race_type,
                                                    library=self.library,
-                                                   weather_data_frequency="daily",
-                                                   force_update=weather_force_update,
                                                    origin_coord=self.gis.launch_point,
                                                    golang=self.golang,
                                                    hash_key=self.hash_key)

@@ -4,26 +4,21 @@ import json
 import logging
 import math
 import numpy as np
-import polyline
-import pytz
-import requests
 import sys
 
 from simulation.cache.route import route_directory
 from simulation.common import helpers, ASC, FSGP, BrightSide
 from simulation.config import config_directory
 from dotenv import load_dotenv
-from timezonefinder import TimezoneFinder
 from tqdm import tqdm
 from sklearn.neighbors import BallTree
 from math import radians
 from xml.dom import minidom
-from scipy import signal
 
 
 class GIS:
     def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, golang, library=None,
-                 force_update=False, current_coord=None, temp_flag=False, hash_key=None):
+                 current_coord=None, temp_flag=False, hash_key=None):
         """
 
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
@@ -34,7 +29,6 @@ class GIS:
         :param dest_coord: NumPy array containing the end coordinate (lat, long) of the planned travel route
         :param waypoints: NumPy array containing the route waypoints to travel through during simulation
         :param race_type: String ("FSGP" or "ASC") stating which race is being simulated
-        :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
         :param golang: boolean determining whether to use faster GoLang implementations when available
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
@@ -59,13 +53,10 @@ class GIS:
         else:
             route_file = route_directory / "route_data.npz"
 
-        api_call_required = True
-
         # if the file exists, load path from file
-        if os.path.isfile(route_file) and force_update is False:
+        if os.path.isfile(route_file):
             with np.load(route_file) as route_data:
                 if route_data['hash'] == hash_key:
-                    api_call_required = False
 
                     print("Previous route save file is being used...\n")
 
@@ -90,73 +81,14 @@ class GIS:
                             self.path = self.path[current_coord_index:]
                             self.path_elevations = self.path_elevations[current_coord_index:]
                             self.path_time_zones = self.path_time_zones[current_coord_index:]
+        else:
+            logging.warning("Route save file does not exist.\n")
+            logging.error("Update API cache by calling CacheAPI.py , Exiting simulation...\n")
 
-        if api_call_required or force_update:
-            logging.warning("New route requested and/or route save file does not exist. "
-                            "Calling Google API and creating new route save file...\n")
-
-            if race_type == "ASC":
-                self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
-                self.path_elevations = self.calculate_path_elevations(self.path)
-                self.path_time_zones = self.calculate_time_zones(self.path)
-                self.launch_point = self.path[0]
-
-            if race_type == "FSGP":
-                path: np.ndarray = GIS.load_FSGP_path()
-                self.curvature = GIS.calculate_curvature(path)
-                path = path[:len(path) - 1]  # Get rid of superfluous path coordinate at end
-
-                self.speed_limits = GIS.calculate_speed_limits(path, self.curvature)
-
-                self.speed_limits = np.tile(self.speed_limits, FSGP.tiling)
-                path_elevations = self.calculate_path_elevations(path)
-                self.path_elevations = np.tile(path_elevations, FSGP.tiling)
-
-                path_time_zones = self.calculate_time_zones(path)
-                self.path_time_zones = np.tile(path_time_zones, FSGP.tiling)
-
-                self.path = np.tile(path, (FSGP.tiling, 1))
-
-                self.launch_point = path[0]
-
-            with open(route_file, 'wb') as f:
-                np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
-                         origin_coord=self.origin_coord, dest_coord=self.dest_coord,
-                         waypoints=self.waypoints, speed_limits=self.speed_limits, hash=hash_key)
+            exit()
 
         self.path_distances = helpers.calculate_path_distances(self.path)
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations, self.path_distances)
-
-    @staticmethod
-    def linearly_interpolate(x, y, t):
-        return (y - x) * t + x
-
-    @staticmethod
-    def calculate_speed_limits(path, curvature) -> np.ndarray:
-        cumulative_path_distances = np.cumsum(helpers.calculate_path_distances(path))
-        speed_limits = np.empty([int(cumulative_path_distances[-1]) + 1], dtype=int)
-
-        for i in range(int(cumulative_path_distances[-1]) + 1):
-            gis_index = GIS.closest_index(i, cumulative_path_distances)
-            speed_limit = GIS.linearly_interpolate(BrightSide.max_cruising_speed, BrightSide.max_speed_during_turn,
-                                                   curvature[gis_index])
-            speed_limits[i] = speed_limit
-
-        return speed_limits
-
-    @staticmethod
-    def load_FSGP_path() -> np.ndarray:
-        """
-
-        Load the FSGP Track from settings.
-
-        :return: Array of N coordinates (latitude, longitude) in the shape [N][2].
-        """
-
-        route_file = config_directory / "settings_FSGP.json"
-        with open(route_file) as f:
-            data = json.load(f)
-            return data["waypoints"]
 
     @staticmethod
     def process_KML_file(route_file):
@@ -176,29 +108,6 @@ class GIS:
 
             # Google Earth exports coordinates in order longitude, latitude, when we want the opposite
             return np.roll(coordinates, 1, axis=1)
-
-    @staticmethod
-    def calculate_curvature(path):
-        displacement: np.ndarray = np.diff(path, axis=0)
-        cos_theta: np.ndarray = np.empty(displacement.shape[0])
-
-        def calculate_cos_theta(u, v) -> float:
-            return np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
-
-        offset_displacement = np.roll(displacement, (1, 1))
-
-        for i in range(0, len(cos_theta)):
-            cos_theta[i] = calculate_cos_theta(displacement[i], offset_displacement[i])
-
-        angles: np.ndarray = np.abs(np.arccos(cos_theta))
-        filtered: np.ndarray = signal.savgol_filter(angles, 5, 2)
-        normalized: np.ndarray = (filtered - filtered.min()) / (filtered - filtered.min()).max()
-
-        return normalized
-
-    @staticmethod
-    def closest_index(target_distance, distances):
-        return np.argmin(np.abs(distances - target_distance))
 
     def calculate_closest_gis_indices(self, cumulative_distances):
         """
@@ -249,37 +158,7 @@ class GIS:
 
         return np.array(result)
 
-    def calculate_time_zones(self, coords):
-        """
-
-        Takes in an array of coordinates, return the time zone relative to UTC, of each location in seconds
-
-        :param np.ndarray coords: (float[N][lat lng]) array of coordinates
-        :returns np.ndarray time_diff: (float[N]) array of time differences in seconds
-
-        """
-
-        timezones_return = np.zeros(len(coords))
-
-        tf = TimezoneFinder()
-
-        if self.race_type == "FSGP":
-            # this is when FSGP 2021 starts
-            dt = datetime.datetime(*FSGP.date)
-        else:
-            # this is when ASC 2021 starts
-            dt = datetime.datetime(*ASC.date)
-
-        with tqdm(total=len(coords), file=sys.stdout, desc="Calculating Time Zones") as pbar:
-            for index, coord in enumerate(coords):
-                pbar.update(1)
-                tz_string = tf.timezone_at(lat=coord[0], lng=coord[1])
-                timezone = pytz.timezone(tz_string)
-
-                timezones_return[index] = timezone.utcoffset(dt).total_seconds()
-
-        return timezones_return
-
+    # ----- Getters -----
     def get_time_zones(self, gis_indices):
         """
 
@@ -292,8 +171,6 @@ class GIS:
         """
 
         return self.path_time_zones[gis_indices]
-
-    # ----- Getters -----
 
     def get_gradients(self, gis_indices):
         """
@@ -356,151 +233,11 @@ class GIS:
         return self.path_gradients
 
     # ----- Path calculation functions -----
-
-    def update_path(self, origin_coord, dest_coord, waypoints):
-        """
-
-        Returns a path between the origin coordinate and the destination coordinate,
-        passing through a group of optional waypoints.
-        https://developers.google.com/maps/documentation/directions/start
-
-        :param np.ndarray origin_coord: A NumPy array [latitude, longitude] of the starting coordinate
-        :param np.ndarray dest_coord: A NumPy array [latitude, longitude] of the destination coordinate
-        :param list waypoints: A NumPy array [n][latitude, longitude], where n<=10
-        :returns: A NumPy array [n][latitude, longitude], marking out the path.
-        :rtype: np.ndarray
-
-        """
-
-        # set up URL
-        url_head = f"https://maps.googleapis.com/maps/api/directions/json?origin={origin_coord[0]},{origin_coord[1]}" \
-                   f"&destination={dest_coord[0]},{dest_coord[1]}"
-
-        url_waypoints = ""
-        if len(waypoints) != 0:
-
-            url_waypoints = "&waypoints="
-
-            if len(waypoints) > 10:
-                print("Too many waypoints; Truncating to 10 waypoints total")
-                waypoints = waypoints[0:10]
-
-            for waypoint in waypoints:
-                url_waypoints = url_waypoints + f"via:{waypoint[0]},{waypoint[1]}|"
-
-            url_waypoints = url_waypoints[:-1]
-
-        url_end = f"&key={self.api_key}"
-
-        url = url_head + url_waypoints + url_end
-
-        # HTTP GET
-        r = requests.get(url)
-        response = json.loads(r.text)
-
-        path_points = []
-
-        # If a route is found...
-        if response['status'] == "OK":
-            print("A route was found.\n")
-
-            # Pick the first route in the list of available routes
-            # A route consists of a series of legs
-            for leg in response['routes'][0]['legs']:
-
-                # Every leg contains an array of steps.
-                for step in leg['steps']:
-                    # every step contains an encoded polyline
-                    polyline_raw = step['polyline']['points']
-                    polyline_coords = polyline.decode(polyline_raw)
-                    path_points = path_points + polyline_coords
-
-            print("Route has been successfully retrieved!\n")
-
-        else:
-            print(f"No route was found: {response['status']}")
-            print(f"Error Message: {response['error_message']}")
-
-        route = np.array(path_points)
-
-        # Removes duplicate coordinates to prevent gradient calculation errors
-        if route.size != 0:
-            duplicate_coordinate_indices = np.where((np.diff(route[:, 0]) == 0)) and np.where(
-                (np.diff(route[:, 1]) == 0))
-            route = np.delete(route, duplicate_coordinate_indices, axis=0)
-
-        return route
-
     def calculate_path_min_max(self):  # DEPRECATED
         logging.warning(f"Using deprecated function 'calculate_path_min_max()'!")
         min_lat, min_long = self.path.min(axis=0)
         max_lat, max_long = self.path.max(axis=0)
         return [min_long, min_lat, max_long, max_lat]
-
-    def calculate_path_elevations(self, coords):
-        """
-
-        Returns the elevations of every coordinate in the array of coordinates passed in as a coordinate
-        See Error Message Interpretations: https://developers.google.com/maps/documentation/elevation/overview
-
-        :param np.ndarray coords: A NumPy array [n][latitude, longitude]
-        :returns: A NumPy array [n][elevation] in metres
-        :rtype: np.ndarray
-
-        """
-
-        # construct URL
-        url_head = 'https://maps.googleapis.com/maps/api/elevation/json?locations='
-
-        location_strings = []
-        locations = ""
-
-        for coord in coords:
-
-            locations = locations + f"{coord[0]},{coord[1]}|"
-
-            if len(locations) > 8000:
-                location_strings.append(locations[:-1])
-                locations = ""
-
-        if len(locations) != 0:
-            location_strings.append(locations[:-1])
-
-        url_tail = "&key={}".format(self.api_key)
-
-        # Get elevations
-        elevations = np.zeros(len(coords))
-
-        i = 0
-        with tqdm(total=len(location_strings), file=sys.stdout, desc="Acquiring Elevation Data") as pbar:
-            for location_string in location_strings:
-                url = url_head + location_string + url_tail
-
-                r = requests.get(url)
-                response = json.loads(r.text)
-                pbar.update(1)
-
-                if response['status'] == "OK":
-                    for result in response['results']:
-                        elevations[i] = result['elevation']
-                        i = i + 1
-
-                elif response['status'] == "INVALID_REQUEST":
-                    sys.stderr.write("Error: Request was invalid\n")
-
-                elif response['status'] == "OVER_DAILY_LIMIT":
-                    sys.stderr.write(
-                        "Error: Possible causes - API key is missing or invalid, billing has not been enabled,"
-                        " a self-imposed usage cap has been exceeded, or the provided payment method is no longer "
-                        " valid. \n")
-
-                elif response['status'] == "OVER_QUERY_LIMIT":
-                    sys.stderr.write("Error: Requester has exceeded quota\n")
-
-                elif response['status'] == "REQUEST_DENIED":
-                    sys.stderr.write("Error: API could not complete the request\n")
-
-        return elevations
 
     def calculate_current_heading_array(self):
         """
@@ -720,7 +457,7 @@ if __name__ == "__main__":
     ])
 
     locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints,
-                         race_type="FSGP", force_update=False)
+                         race_type="FSGP")
 
     locationSystem.tile_route(simulation_duration=simulation_duration)
 
