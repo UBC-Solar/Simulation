@@ -10,6 +10,7 @@ import numpy as np
 from tqdm import tqdm
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
+from simulation.environment import GIS
 from simulation.common.helpers import PJWHash
 from simulation.common import ASC, FSGP, constants
 from simulation.config import config_directory
@@ -31,25 +32,42 @@ def cache_gis(race):
     """
     print("Calling Google API and creating new route save file...\n")
 
-    # Get path for race
+    # Get path for race from setting JSONs 
     if race == "FSGP":
-        # Get path/coords from KMZ file for FSGP
+        route_file = route_directory / "route_data_FSGP.npz"
+        
         # Coords will be the same as waypoints for FSGP
         origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
-        route_file = route_directory / "route_data_FSGP.npz"
+        
+        coords = coords[:len(coords) - 1]  # Get rid of superfluous path coordinate at end
+        tiling = FSGP.tiling # set tiling from config file
     else:
+        route_file = route_directory / "route_data.npz"
+        
         # Get directions/path from directions API
         # Coords may not contain all waypoints for ASC
         origin_coord, dest_coord, coords, waypoints = get_asc_coords()
-        route_file = route_directory / "route_data.npz"
+        
+        tiling = ASC.tiling # set tiling from config file
 
+    # Calculate speed limits and curvature
+    curvature = GIS.calculate_curvature(coords)
+    speed_limits = GIS.calculate_speed_limits(coords, curvature)
+    
     # Call Google Maps API
     path_elevations = calculate_path_elevations(coords)
     path_time_zones = calculate_time_zones(coords, race)
 
+    # Tile results
+    speed_limits = np.tile(speed_limits, tiling)
+    path_elevations = np.tile(path_elevations, tiling)
+    path_time_zones = np.tile(path_time_zones, tiling)
+    coords = np.tile(coords, (tiling, 1))
+
+    # Cache results
     with open(route_file, 'wb') as f:
         np.savez(f, path=coords, elevations=path_elevations, time_zones=path_time_zones,
-                 origin_coord=origin_coord, dest_coord=dest_coord,
+                 origin_coord=origin_coord, dest_coord=dest_coord, speed_limits=speed_limits,
                  waypoints=waypoints, hash=get_hash(origin_coord, dest_coord, waypoints))
 
 
@@ -303,6 +321,7 @@ def cache_weather(race):
                                                     race_configs["weather_freq"],
                                                     int(race_configs["simulation_duration"] / 3600))
 
+    # Cache results
     with open(weather_file, 'wb') as f:
         np.savez(f, weather_forecast=weather_forecast, origin_coord=origin_coord,
                  dest_coord=dest_coord, hash=get_hash(origin_coord, dest_coord, waypoints))

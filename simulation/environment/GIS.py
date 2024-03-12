@@ -82,39 +82,11 @@ class GIS:
                             self.path = self.path[current_coord_index:]
                             self.path_elevations = self.path_elevations[current_coord_index:]
                             self.path_time_zones = self.path_time_zones[current_coord_index:]
+        else:
+            logging.warning("Route save file does not exist.\n")
+            logging.error("Update API cache by calling CacheAPI.py , Exiting simulation...\n")
 
-        if api_call_required or force_update:
-            logging.warning("New route requested and/or route save file does not exist. "
-                            "Calling Google API and creating new route save file...\n")
-
-            if race_type == "ASC":
-                self.path = self.update_path(self.origin_coord, self.dest_coord, self.waypoints)
-                self.path_elevations = self.calculate_path_elevations(self.path)
-                self.path_time_zones = self.calculate_time_zones(self.path)
-                self.launch_point = self.path[0]
-
-            if race_type == "FSGP":
-                path: np.ndarray = GIS.load_FSGP_path()
-                self.curvature = GIS.calculate_curvature(path)
-                path = path[:len(path) - 1]  # Get rid of superfluous path coordinate at end
-
-                self.speed_limits = GIS.calculate_speed_limits(path, self.curvature)
-
-                self.speed_limits = np.tile(self.speed_limits, FSGP.tiling)
-                path_elevations = self.calculate_path_elevations(path)
-                self.path_elevations = np.tile(path_elevations, FSGP.tiling)
-
-                path_time_zones = self.calculate_time_zones(path)
-                self.path_time_zones = np.tile(path_time_zones, FSGP.tiling)
-
-                self.path = np.tile(path, (FSGP.tiling, 1))
-
-                self.launch_point = path[0]
-
-            with open(route_file, 'wb') as f:
-                np.savez(f, path=self.path, elevations=self.path_elevations, time_zones=self.path_time_zones,
-                         origin_coord=self.origin_coord, dest_coord=self.dest_coord,
-                         waypoints=self.waypoints, speed_limits=self.speed_limits, hash=hash_key)
+            exit()
 
         self.path_distances = helpers.calculate_path_distances(self.path)
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations, self.path_distances)
