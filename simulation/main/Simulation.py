@@ -60,8 +60,6 @@ class Simulation:
         race_type: string defining which race, ASC or FSGP, is being simulated
         granularity: controls how granular (detailed) the driving speeds array is
         initial_battery_charge: starting charge of the battery
-        golang: define whether Go implementations should be used when applicable
-        library: manages and locates Go shared libraries (if possible)
         google_api_key: API key to access GoogleMaps API. Stored in a .env file. Please ask Simulation Lead for this!
         weather_api_key: API key to access OpenWeather API. Stored in a .env file. Please ask Simulation Lead for this!
         origin_coord: array containing latitude and longitude of route start point
@@ -128,24 +126,6 @@ class Simulation:
         self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
-        # ----- Go library initialisation -----
-
-        # Simulation uses compiled Go libraries to speed up methods that cannot be accelerated with NumPy to achieve
-        # a significant performance increase (~75% runtime reduction) when applicable.
-
-        self.golang = builder.golang
-        if self.golang:
-            try:
-                self.library = simulation.Libraries()
-            except LibrariesNotFound:
-                # If compatible Go binaries weren't found, disable GoLang usage.
-                self.golang = False
-                self.library = None
-                logging.warning("Go binaries not found ==> Go usage has been disabled. \n"
-                                "To use Go implementations, see simulation/libraries/COMPILING_HOWTO.md \n"
-                                "about compiling GoLang for your operating system.\n")
-        else:
-            self.library = None
 
         # -------- Hash Key ---------
 
@@ -164,8 +144,8 @@ class Simulation:
         self.basic_regen = simulation.BasicRegen()
 
         self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, library=self.library, force_update=gis_force_update,
-                                  current_coord=self.current_coord, golang=self.golang, hash_key=self.hash_key)
+                                  self.race_type, force_update=gis_force_update,
+                                  current_coord=self.current_coord, hash_key=self.hash_key)
 
         self.route_coords = self.gis.get_path()
 
@@ -176,18 +156,15 @@ class Simulation:
         self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
                                                    self.simulation_duration / 3600,
                                                    self.race_type,
-                                                   library=self.library,
                                                    weather_data_frequency="daily",
                                                    force_update=weather_force_update,
                                                    origin_coord=self.gis.launch_point,
-                                                   golang=self.golang,
                                                    hash_key=self.hash_key)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations(golang=self.golang, library=self.library,
-                                                               race_type=self.race_type)
+        self.solar_calculations = simulation.SolarCalculations(race_type=self.race_type)
 
         self.plotting = simulation.Plotting()
 

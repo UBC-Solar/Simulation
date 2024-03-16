@@ -12,6 +12,8 @@ from simulation.cache.weather import weather_directory
 from simulation.common import helpers, constants
 from tqdm import tqdm
 
+import rust_simulation
+
 
 class WeatherForecasts:
     """
@@ -32,7 +34,7 @@ class WeatherForecasts:
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, duration, race_type, golang=False, library=None, weather_data_frequency="daily",
+    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily",
                  force_update=False, origin_coord=None, hash_key=None):
         """
 
@@ -45,15 +47,12 @@ class WeatherForecasts:
             "current", "hourly", or "daily"
         :param duration: amount of time simulated (in hours)
         :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
-        :param golang: boolean determining whether to use faster GoLang implementations when available
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
         self.race_type = race_type
         self.api_key = api_key
         self.last_updated_time = -1
-        self.golang = golang
-        self.lib = library
 
         if origin_coord is not None:
             self.origin_coord = np.array(origin_coord)
@@ -292,10 +291,7 @@ class WeatherForecasts:
         # contains the average distance between two consecutive elements in the cumulative_weather_path_distances array
         average_distances = np.abs(np.diff(cumulative_weather_path_distances) / 2)
 
-        if not self.golang:
-            return self.python_calculate_closest_weather_indices(cumulative_distances, average_distances)
-        else:
-            return self.lib.golang_calculate_closest_weather_indices(cumulative_distances, average_distances)
+        return rust_simulation.closest_weather_indices_loop(cumulative_distances, average_distances)
 
     def python_calculate_closest_weather_indices(self, cumulative_distances, average_distances):
         """
@@ -368,28 +364,7 @@ class WeatherForecasts:
 
         """
 
-        if self.golang:
-            return self.golang_get_weather_in_time(unix_timestamps, indices)
-        else:
-            return self.python_get_weather_in_time(unix_timestamps, indices)
-
-    def golang_get_weather_in_time(self, unix_timestamps, indices):
-        tensor_sizes = self.weather_forecast.shape
-        linearized_length = tensor_sizes[0] * tensor_sizes[1] * tensor_sizes[2]
-        linearized_weather_forecasts = self.weather_forecast.reshape([linearized_length])
-        return self.lib.golang_weather_in_time(linearized_weather_forecasts, unix_timestamps, indices, tensor_sizes)
-    
-    def rust_get_weather_in_time(self, unix_timestamps, indices):
-
-        import rust_simulation
-
-        full_weather_forecast_at_coords = self.weather_forecast[indices]
-        dt_local_array = full_weather_forecast_at_coords[0, :, 4]
-
-        temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
-        closest_timestamp_indices = rust_simulation.closest_timestamp_indices(unix_timestamps, dt_local_array)
-
-        return full_weather_forecast_at_coords[temp_0, closest_timestamp_indices]
+        return rust_simulation.weather_in_time(unix_timestamps.astype(np.int64), indices, self.weather_forecast)
 
     def python_get_weather_in_time(self, unix_timestamps, indices):
         full_weather_forecast_at_coords = self.weather_forecast[indices]

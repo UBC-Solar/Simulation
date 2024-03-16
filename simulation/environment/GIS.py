@@ -15,10 +15,11 @@ from timezonefinder import TimezoneFinder
 from tqdm import tqdm
 from sklearn.neighbors import BallTree
 from math import radians
+import rust_simulation
 
 
 class GIS:
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, golang, library=None,
+    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type,
                  force_update=False, current_coord=None, temp_flag=False, hash_key=None):
         """
 
@@ -31,7 +32,6 @@ class GIS:
         :param waypoints: NumPy array containing the route waypoints to travel through during simulation
         :param race_type: String ("FSGP" or "ASC") stating which race is being simulated
         :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
-        :param golang: boolean determining whether to use faster GoLang implementations when available
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
@@ -46,8 +46,6 @@ class GIS:
         self.current_coord = current_coord
         self.waypoints = waypoints
         self.race_type = race_type
-        self.golang = golang
-        self.lib = library
 
         # path to file storing the route and elevation NumPy arrays
         if self.race_type == "FSGP":
@@ -130,15 +128,13 @@ class GIS:
         cumulative_path_distances[::2] *= -1
         average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
 
-        if not self.golang:
-            return self.python_calculate_closest_gis_indices(cumulative_distances, average_distances)
-        else:
-            return self.lib.golang_calculate_closest_gis_indices(cumulative_distances, average_distances)
+
+        return rust_simulation.closest_gis_indices_loop(cumulative_distances, average_distances)
 
     def python_calculate_closest_gis_indices(self, cumulative_distances, average_distances):
         """
 
-        Python implementation of golang_calculate_closest_gis_indices. See parent function for documentation details.
+        Python implementation of golang_calculate_closest_gis_indices (now removed). See parent function for documentation details.
 
         """
 
@@ -507,113 +503,6 @@ class GIS:
             distances_from_current_coord[i] = GIS.calculate_vector_square_magnitude(to_current_coord_from_path[i])
 
         return distances_from_current_coord.argmin()
-
-    def speeds_with_waypoints(self, path, distances, speeds, waypoints, verbose=False):
-        """
-
-        Calculate speeds with waypoints.
-
-        :param np.ndarray path: array of path coordinates[N][2]
-        :param np.ndarray distances: array of distances[N]
-        :param np.ndarray speeds: array of speeds[N]
-        :param list waypoints: array of waypoints[2]
-        :param bool verbose: flag of whether to be verbose or not
-        :return: modified speeds array based on waypoints
-        :rtype: np.ndarray
-
-        """
-
-        # First we need to find the closest path coordinates for each waypoint/checkpoint
-        path_rad = np.array([[radians(p[0]), radians(p[1])] for p in path])
-        tree = BallTree(path_rad, metric='haversine')
-        _, wp = tree.query([[radians(w[0]), radians(w[1])] for w in waypoints])
-        if verbose:
-            print(f"Waypoint indices in path array:\n{wp}\n")
-
-        # iterate through the speeds array for each second
-        if not self.golang:
-            speeds = self.speeds_with_waypoints_loop(path, distances, speeds, wp, verbose)
-        else:
-            speeds = self.lib.golang_speeds_with_waypoints_loop(speeds, distances, wp)
-
-        return np.multiply(speeds, 3.6)
-
-    def speeds_with_waypoints_loop(self, path, distances, speeds, waypoints, verbose=False):
-        delta = 0.05  # margin of error with double arithmetic
-        path_index = 0  # current path coordinate
-        # stores the interim distance travelled between two path coordinates
-        temp_distance_travelled = 0
-
-        i = 0
-        while i < len(speeds):
-            distance = speeds[i]
-
-            """
-            For each second, we will:
-                1) keep travelling past path coordinates until:
-                    i) we don't have enough speed to reach the next path coordinate
-                    ii) we reach a waypoint
-                        - replace the next 45 minutes of speeds with 0
-                2) come to a "fractional coordinate" that exists between 2 path coordinates
-                    - add the temporary distance travelled between two path coordinates to a temp variable
-            """
-
-            total_distance_travelled = 0  # total distance travelled this second
-            waypoint_flag = 0  # flag used to indicate if we reached a waypoint
-
-            # if we can reach the next path coordinate
-            while distance + temp_distance_travelled > distances[path_index] - delta:
-                # update distance to be remainder of distance we can travel this second
-                distance = distance + temp_distance_travelled - distances[path_index]
-                # add the distance travelled to our total distance travelled this second
-                total_distance_travelled += distances[path_index] - temp_distance_travelled
-                # reset the temp_distance_travelled since we just reached a new path coordinate
-                temp_distance_travelled = 0
-                # increment values of path_index
-                path_index += 1
-
-                # If we reached the end of the coordinate list, exit
-                if path_index >= len(distances):
-                    if verbose:
-                        print(f"Travelled {total_distance_travelled} m at second {i}\n"
-                              f"New coordinates: {path[path_index]}\n"
-                              "Race complete!\n")
-                    return np.multiply(speeds, 3.6)
-
-                # If we have reached a waypoint/checkpoint, replace speeds with 0
-                if waypoints.size > 0 and path_index == waypoints[0]:
-                    if verbose:
-                        print(
-                            f"Travelled {total_distance_travelled} m at second {i}\n" f"New coordinates: {path[path_index]}\n" "Reached a waypoint!\n")
-                    # delete the waypoint we just reached from the wp array
-                    waypoints = np.delete(waypoints, 0)
-                    # update the current speed to be only what we travelled this second
-                    speeds[i] = total_distance_travelled
-                    # replace the speeds with 0's
-                    speeds[i + 1: i + 1 + 45 * 60] = [0] * 45 * 60
-                    i += 45 * 60 - 1
-                    distance = 0  # shouldn't travel anymore in this second
-                    waypoint_flag = 1
-                    break
-
-                if waypoint_flag:
-                    continue
-
-            # If I still have distance to travel but can't reach the next coordinate
-            if distance + temp_distance_travelled < distances[path_index] - delta:
-                # Update total distance travelled
-                total_distance_travelled += distance
-
-                # Add onto the temporary distance between two coordinates
-                temp_distance_travelled += distance
-
-                if verbose:
-                    print(
-                        f"Travelled {total_distance_travelled} m at second {i}\n" f"Reached fractional coordinate.\n")
-
-            i += 1
-
-        return speeds
 
 
 if __name__ == "__main__":
