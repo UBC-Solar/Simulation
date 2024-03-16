@@ -1,9 +1,8 @@
-use numpy::ndarray::{s, Array, Array2, ArrayViewD, ArrayViewMut2, ArrayViewMut3, Axis};
 use chrono::{Datelike, NaiveDateTime, Timelike};
+use numpy::ndarray::{s, Array, Array2, ArrayViewD, ArrayViewMut2, ArrayViewMut3, Axis};
+use numpy::{PyArray, PyArrayDyn, PyReadwriteArrayDyn};
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
-use numpy::{PyArray, PyArrayDyn, PyReadwriteArrayDyn};
-use std::time::Instant;
 
 /// A Python module implemented in Rust. The name of this function is the Rust module name!
 #[pymodule]
@@ -43,8 +42,9 @@ fn rust_simulation(_py: Python, m: &PyModule) -> PyResult<()> {
                     current_coord_index = average_distances.len() - 1;
                 } else {
                     current_coord_index += 1;
-                    
-                    current_coord_index = std::cmp::min(current_coord_index, average_distances.len() - 1);
+
+                    current_coord_index =
+                        std::cmp::min(current_coord_index, average_distances.len() - 1);
                 }
             }
             result.push(current_coord_index as i64);
@@ -61,15 +61,15 @@ fn rust_simulation(_py: Python, m: &PyModule) -> PyResult<()> {
         let mut result: Vec<i64> = Vec::with_capacity(cumulative_distances.len());
 
         for &distance in cumulative_distances {
-            
             current_coord_index = std::cmp::min(current_coord_index, average_distances.len() - 1);
-            
+
             if distance > average_distances[current_coord_index] {
                 current_coord_index += 1;
-                
-                current_coord_index = std::cmp::min(current_coord_index, average_distances.len() - 1);
+
+                current_coord_index =
+                    std::cmp::min(current_coord_index, average_distances.len() - 1);
             }
-            
+
             result.push(current_coord_index as i64);
         }
 
@@ -80,73 +80,65 @@ fn rust_simulation(_py: Python, m: &PyModule) -> PyResult<()> {
         unix_timestamps: ArrayViewD<'_, i64>,
         indices: ArrayViewD<'_, i64>,
         weather_forecast: ArrayViewD<f64>,
-    ) ->Array2<f64> {
-
-
-        let start = Instant::now();
+    ) -> Array2<f64> {
         // Obtain dimensions for arrays and slices
         let weather_forecast_raw_dim = weather_forecast.raw_dim();
-        let full_forecast_shape = (weather_forecast_raw_dim[0], weather_forecast_raw_dim[1], weather_forecast_raw_dim[2]);
+        let full_forecast_shape = (
+            weather_forecast_raw_dim[0],
+            weather_forecast_raw_dim[1],
+            weather_forecast_raw_dim[2],
+        );
         let weather_at_coord_shape = (full_forecast_shape.1, full_forecast_shape.2);
         let weather_in_time_shape = (indices.len(), full_forecast_shape.2);
-        let shape_calculations = start.elapsed();
 
-
-        let start = Instant::now();
         // Create an empty full_weather_forecast_at_coords array (all zeros)
         let indexed_weather_shape = (indices.len(), full_forecast_shape.1, full_forecast_shape.2);
-        let mut placeholder1: Vec<f64> = vec![0.0; indexed_weather_shape.0 * indexed_weather_shape.1 * indexed_weather_shape.2];
-        let mut indexed_forecast = ArrayViewMut3::from_shape(indexed_weather_shape, &mut placeholder1).unwrap();
-        let indexed_forecast_initialization = start.elapsed();
+        let mut placeholder1: Vec<f64> =
+            vec![0.0; indexed_weather_shape.0 * indexed_weather_shape.1 * indexed_weather_shape.2];
+        let mut indexed_forecast =
+            ArrayViewMut3::from_shape(indexed_weather_shape, &mut placeholder1).unwrap();
 
-        
-        let start = Instant::now();
         // Fill full_weather_forecast_at_coords with the 2d slices at [indices]
         for (out_index, &coord_index) in indices.iter().enumerate() {
-            let slice_2d = weather_forecast.slice(s![coord_index as usize, .., ..]).into_shape(weather_at_coord_shape).unwrap();
-            indexed_forecast.slice_mut(s![out_index, .., ..]).assign(&slice_2d);
+            let slice_2d = weather_forecast
+                .slice(s![coord_index as usize, .., ..])
+                .into_shape(weather_at_coord_shape)
+                .unwrap();
+            indexed_forecast
+                .slice_mut(s![out_index, .., ..])
+                .assign(&slice_2d);
         }
-        let indexed_forecast_filling = start.elapsed();
 
-
-        let start = Instant::now();
         let mut dt_local_array = Vec::with_capacity(full_forecast_shape.1);
         // Populate dt_local_array with the list of forecast's timestamps at the first coordinate
         // I don't really understand how this works
-        let dt_local_arrayview = weather_forecast.index_axis_move(Axis(0), 0).index_axis_move(Axis(1), 4);
+        let dt_local_arrayview = weather_forecast
+            .index_axis_move(Axis(0), 0)
+            .index_axis_move(Axis(1), 4);
         for &timestamp in dt_local_arrayview {
             dt_local_array.push(timestamp as i64);
         }
-        let dt_local_array_time = start.elapsed();
 
+        let closest_timestamp_indices =
+            rust_closest_timestamp_indices(unix_timestamps, dt_local_array);
 
-        let start = Instant::now();
-        let closest_timestamp_indices = rust_closest_timestamp_indices(unix_timestamps, dt_local_array);
-        let closest_timestamp_indices_time = start.elapsed();
-        
-
-        let start = Instant::now();
         // Create a mutable array of the desired shape with dummy initial values
-        let mut placeholder2: Vec<f64> = vec![0.0; weather_in_time_shape.0 * weather_in_time_shape.1];        
-        let mut weather_in_time_arrayview = ArrayViewMut2::from_shape(weather_in_time_shape, &mut placeholder2).unwrap();
+        let mut placeholder2: Vec<f64> =
+            vec![0.0; weather_in_time_shape.0 * weather_in_time_shape.1];
+        let mut weather_in_time_arrayview =
+            ArrayViewMut2::from_shape(weather_in_time_shape, &mut placeholder2).unwrap();
         for (index_1, &index_2) in closest_timestamp_indices.iter().enumerate() {
-            let slice_1d = indexed_forecast.slice(s![index_1, index_2, ..]).into_shape(full_forecast_shape.2).unwrap();
-            weather_in_time_arrayview.slice_mut(s![index_1, ..]).assign(&slice_1d);
+            let slice_1d = indexed_forecast
+                .slice(s![index_1, index_2, ..])
+                .into_shape(full_forecast_shape.2)
+                .unwrap();
+            weather_in_time_arrayview
+                .slice_mut(s![index_1, ..])
+                .assign(&slice_1d);
         }
-        let weather_in_time_arrayview_time = start.elapsed();
 
-
-        println!("Time taken for shape_calculations: {:?}", shape_calculations);
-        println!("Time taken for indexed_forecast_initialization: {:?}", indexed_forecast_initialization);
-        println!("Time taken for indexed_forecast_filling: {:?}", indexed_forecast_filling);
-        println!("Time taken for dt_local_array: {:?}", dt_local_array_time);
-        println!("Time taken for closest_timestamp_indices: {:?}", closest_timestamp_indices_time);
-        println!("Time taken for weather_in_time_arrayview: {:?}", weather_in_time_arrayview_time);
-
-        
         weather_in_time_arrayview.into_owned()
-        
-    }  
+    }
 
     fn rust_closest_timestamp_indices(
         unix_timestamps: ArrayViewD<'_, i64>,
@@ -154,22 +146,24 @@ fn rust_simulation(_py: Python, m: &PyModule) -> PyResult<()> {
     ) -> Vec<usize> {
         let mut closest_time_stamp_indices: Vec<usize> = Vec::new();
 
-        for unix_timestamp in unix_timestamps{
-
-            let unix_timestamp_array = Array::from_elem(dt_local_array.len(), unix_timestamp as &i64);
+        for unix_timestamp in unix_timestamps {
+            let unix_timestamp_array =
+                Array::from_elem(dt_local_array.len(), unix_timestamp as &i64);
             let mut differences: Vec<i64> = Vec::new();
 
             for i in 0..unix_timestamp_array.len() {
-                differences.push((unix_timestamp-dt_local_array[i]).abs());
+                differences.push((unix_timestamp - dt_local_array[i]).abs());
             }
-            
-            let (min_index, _) = differences.iter().enumerate().min_by_key(|(_, &v)| v).unwrap();
-            closest_time_stamp_indices.push(min_index)
 
+            let (min_index, _) = differences
+                .iter()
+                .enumerate()
+                .min_by_key(|(_, &v)| v)
+                .unwrap();
+            closest_time_stamp_indices.push(min_index)
         }
         closest_time_stamp_indices
     }
-
 
     #[pyfn(m)]
     #[pyo3(name = "calculate_array_ghi_times")]
@@ -222,7 +216,7 @@ fn rust_simulation(_py: Python, m: &PyModule) -> PyResult<()> {
     ) -> &'py PyArrayDyn<f64> {
         let unix_timestamps = python_unix_timestamps.as_array();
         let indices = python_indices.as_array();
-        let weather_forecast= python_weather_forecast.as_array();
+        let weather_forecast = python_weather_forecast.as_array();
         let mut result = rust_weather_in_time(unix_timestamps, indices, weather_forecast);
         let py_result = PyArray::from_array(py, &mut result).to_dyn();
         py_result
