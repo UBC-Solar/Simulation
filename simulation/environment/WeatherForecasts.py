@@ -11,6 +11,8 @@ import logging
 from simulation.cache.weather import weather_directory
 from simulation.common import helpers, constants
 
+import core
+
 
 class WeatherForecasts:
     """
@@ -30,8 +32,8 @@ class WeatherForecasts:
             weather forecast fields available. These are: (latitude, longitude, dt (UNIX time), timezone_offset
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
-
-    def __init__(self, api_key, coords, race_type, golang=False, library=None, origin_coord=None, hash_key=None):
+    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily",
+                 force_update=False, origin_coord=None, hash_key=None):
         """
 
         Initializes the instance of a WeatherForecast class
@@ -39,15 +41,16 @@ class WeatherForecasts:
         :param api_key: A personal OpenWeatherAPI key to access weather forecasts
         :param origin_coord: A NumPy array of a single [latitude, longitude]
         :param coords: A NumPy array of [latitude, longitude]
-        :param golang: boolean determining whether to use faster GoLang implementations when available
+        :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
+            "current", "hourly", or "daily"
+        :param duration: amount of time simulated (in hours)
+        :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
         self.race_type = race_type
         self.api_key = api_key
         self.last_updated_time = -1
-        self.golang = golang
-        self.lib = library
 
         if origin_coord is not None:
             self.origin_coord = np.array(origin_coord)
@@ -141,10 +144,7 @@ class WeatherForecasts:
         # contains the average distance between two consecutive elements in the cumulative_weather_path_distances array
         average_distances = np.abs(np.diff(cumulative_weather_path_distances) / 2)
 
-        if not self.golang:
-            return self.python_calculate_closest_weather_indices(cumulative_distances, average_distances)
-        else:
-            return self.lib.golang_calculate_closest_weather_indices(cumulative_distances, average_distances)
+        return core.closest_weather_indices_loop(cumulative_distances, average_distances)
 
     def python_calculate_closest_weather_indices(self, cumulative_distances, average_distances):
         """
@@ -217,16 +217,7 @@ class WeatherForecasts:
 
         """
 
-        if self.golang:
-            return self.golang_get_weather_in_time(unix_timestamps, indices)
-        else:
-            return self.python_get_weather_in_time(unix_timestamps, indices)
-
-    def golang_get_weather_in_time(self, unix_timestamps, indices):
-        tensor_sizes = self.weather_forecast.shape
-        linearized_length = tensor_sizes[0] * tensor_sizes[1] * tensor_sizes[2]
-        linearized_weather_forecasts = self.weather_forecast.reshape([linearized_length])
-        return self.lib.golang_weather_in_time(linearized_weather_forecasts, unix_timestamps, indices, tensor_sizes)
+        return core.weather_in_time(unix_timestamps.astype(np.int64), indices, self.weather_forecast)
 
     def python_get_weather_in_time(self, unix_timestamps, indices):
         full_weather_forecast_at_coords = self.weather_forecast[indices]
