@@ -2,3 +2,12 @@ Chromosomes,Parent_Selection,Generations,Parents,Crossover,Elitism,Mutation Type
 0,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9943145493084727
 1,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.958182673549807
 2,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9318640608517876
+0,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9704648483652388
+0,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9684709035797301
+1,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,1.005202053812404
+2,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9946688098904365
+0,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9516571554552671
+1,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9375165383623854
+2,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9504228119687134
+0,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.9929524290492062
+1,6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15,0.973458193148043

@@ -10,7 +10,7 @@ from simulation.main import Simulation
 
 
 class Evolution:
-    def __init__(self, optimizer: GeneticOptimization, simulation_model: Simulation, fitness: float, results: pd.DataFrame):
+    def __init__(self, optimizer: GeneticOptimization, simulation_model: Simulation, fitness: tuple, results: pd.DataFrame):
         repo = git.Repo.init(pathlib.Path(os.getcwd()).parent)
         self.optimizer = optimizer
 

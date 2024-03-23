@@ -6,21 +6,16 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseUpload
 from simulation.data.connect import Connect
 
 
-EVOLUTION_ROOT_ID = "1L7mqA3UHsQD4FWVdkqDEcS6TPej6h9Pq"
-EVOLUTION_NUMBER_ID = "1YHkewF40Na8xu137C-i4bVcuRoIARdQn"
-EVOLUTION_BROWSER_ID = "1P7_pt6pgP7BkTOeUAZF915giN_2c8TGy"
-
-
 class Uploader(Connect):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, service):
+        super().__init__(service)
 
     def create_folder(self, number: int) -> str:
         # Specify the folder metadata
         folder_metadata = {
             'name': str(number),
             'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [EVOLUTION_ROOT_ID]
+            'parents': [self.evolution_root_id]
         }
 
         # Create the folder
@@ -52,16 +47,16 @@ class Uploader(Connect):
         self.service.files().update(fileId=file_id, media_body=media).execute()
         print(f"File with ID '{file_id}' updated successfully.")
 
-    def upload_evolution(self, evolution_folder: Path, number: int):
-        folder_id = self.create_folder(number)
+    def upload_evolution(self, evolution_folder: Path):
+        evolution_number: int = int(str(evolution_folder).split(os.sep)[-1])
+        folder_id = self.create_folder(evolution_number)
 
-        files = [(str(file), Path(str(file))) for file in os.listdir(evolution_folder) if os.path.isfile(file)]
+        files = [(str(file), Path(str(os.path.join(evolution_folder, file)))) for file in os.listdir(evolution_folder) if os.path.isfile(os.path.join(evolution_folder, file))]
         for name, path in files:
             self.upload_file(name, path.resolve(), folder_id)
 
+    def upload_evolution_number(self):
+        self.update_file(self.evolution_number_id, self.last_evolution_path)
 
-if __name__ == "__main__":
-    # Bootstrap
-    uploader = Uploader()
-    uploader.upload_file("last_evolution.txt", Path("last_evolution.txt").resolve(), EVOLUTION_ROOT_ID)
-    uploader.upload_file("evolution_browser.csv", Path("evolution_browser.csv").resolve(), EVOLUTION_ROOT_ID)
+    def upload_evolution_browser(self):
+        self.update_file(self.evolution_browser_id, self.evolution_browser_path)

@@ -1,39 +1,17 @@
-import os.path
-from pathlib import Path
-
-import googleapiclient.discovery
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
-from googleapiclient.errors import HttpError
-import io
-
-
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
-EVOLUTION_ROOT_ID = "1L7mqA3UHsQD4FWVdkqDEcS6TPej6h9Pq"
-AUTH_FILE = "token.env"
-Client = googleapiclient.discovery.Resource
+import tomllib
+import pathlib
 
 
 class Connect:
-    def __init__(self):
-        self.credentials = authenticate()
-        self.service = get_service(self.credentials)
+    def __init__(self, service):
+        self.service = service
 
+        with open(pathlib.Path(__file__).parent / 'network.toml', 'rb') as config_file:
+            config = tomllib.load(config_file)
 
-def authenticate() -> Credentials:
-    if os.path.exists(AUTH_FILE):
-        return Credentials.from_authorized_user_file(AUTH_FILE, SCOPES)
-    else:
-        raise FileNotFoundError("Cannot find Google Drive API token!")
+            self.evolution_root_id = config['locations']['EVOLUTION_ROOT_ID']
+            self.evolution_number_id = config['locations']['EVOLUTION_NUMBER_ID']
+            self.evolution_browser_id = config['locations']['EVOLUTION_BROWSER_ID']
 
-
-def get_service(credentials: Credentials) -> Client:
-    return build("drive", "v3", credentials=credentials)
-
-
-if __name__ == "__main__":
-    creds: Credentials = authenticate()
-    service: Client = get_service(creds)
+            self.last_evolution_path = (pathlib.Path(__file__).parent / "last_evolution.txt").resolve()
+            self.evolution_browser_path = (pathlib.Path(__file__).parent / "evolution_browser.csv").resolve()
