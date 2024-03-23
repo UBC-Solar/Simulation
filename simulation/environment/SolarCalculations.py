@@ -9,7 +9,7 @@ import datetime
 import numpy as np
 
 from simulation.common import helpers, constants, ASC, FSGP
-import rust_simulation
+import core
 
 
 class SolarCalculations:
@@ -330,7 +330,7 @@ class SolarCalculations:
         """
 
 
-        (day_of_year, local_time) = rust_simulation.calculate_array_ghi_times(local_times)
+        (day_of_year, local_time) = core.calculate_array_ghi_times(local_times)
 
         ghi = self.calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
                                  day_of_year, local_time, elevations, cloud_covers)

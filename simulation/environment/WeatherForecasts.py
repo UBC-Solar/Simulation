@@ -32,8 +32,9 @@ class WeatherForecasts:
             weather forecast fields available. These are: (latitude, longitude, dt (UNIX time), timezone_offset
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
-    def __init__(self, api_key, coords, duration, race_type, weather_data_frequency="daily",
-                 force_update=False, origin_coord=None, hash_key=None):
+
+    def __init__(self, api_key, coords, race_type, origin_coord=None, hash_key=None):
+
         """
 
         Initializes the instance of a WeatherForecast class
@@ -41,10 +42,6 @@ class WeatherForecasts:
         :param api_key: A personal OpenWeatherAPI key to access weather forecasts
         :param origin_coord: A NumPy array of a single [latitude, longitude]
         :param coords: A NumPy array of [latitude, longitude]
-        :param weather_data_frequency: Influences what resolution weather data is requested, must be one of
-            "current", "hourly", or "daily"
-        :param duration: amount of time simulated (in hours)
-        :param force_update: if true, weather cache data is updated by calling the OpenWeatherAPI
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
@@ -217,7 +214,7 @@ class WeatherForecasts:
 
         """
 
-        return core.weather_in_time(unix_timestamps.astype(np.int64), indices, self.weather_forecast)
+        return core.weather_in_time(unix_timestamps.astype(np.int64), indices.astype(np.int64), self.weather_forecast)
 
     def python_get_weather_in_time(self, unix_timestamps, indices):
         full_weather_forecast_at_coords = self.weather_forecast[indices]
