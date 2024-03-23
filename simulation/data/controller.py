@@ -18,8 +18,6 @@ from collections import OrderedDict
 from pathlib import Path
 
 
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
-AUTH_FILE = pathlib.Path(__file__).parent / "token.env"
 Client = googleapiclient.discovery.Resource
 
 
