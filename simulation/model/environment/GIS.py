@@ -1,18 +1,13 @@
-import datetime
 import os
-import json
 import logging
 import math
 import numpy as np
 import sys
 
 from simulation.cache.route import route_directory
-from simulation.common import helpers, ASC, FSGP, BrightSide
-from simulation.config import config_directory
+from simulation.common import helpers
 from dotenv import load_dotenv
 from tqdm import tqdm
-from sklearn.neighbors import BallTree
-from math import radians
 from xml.dom import minidom
 import core
 

@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-from simulation.motor.base_motor import BaseMotor
+from simulation.model.car.motor.base_motor import BaseMotor
 from simulation.common import DayBreak, constants, DayBreakEquations
 
 

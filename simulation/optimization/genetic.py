@@ -16,7 +16,7 @@ from simulation.common.helpers import denormalize, normalize, rescale
 from simulation.data.results import results_directory
 from simulation.common.noise import Noise
 from simulation.utils import InputBounds
-from simulation.main import Simulation, SimulationReturnType
+from simulation.model.Simulation import Simulation, SimulationReturnType
 
 """
 

@@ -1,5 +1,4 @@
-import numpy as np
-from simulation.arrays.base_array import BaseArray
+from simulation.model.car.arrays.base_array import BaseArray
 from simulation.common import DayBreak
 
 
