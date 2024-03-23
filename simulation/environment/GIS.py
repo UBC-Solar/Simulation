@@ -18,8 +18,7 @@ import core
 
 
 class GIS:
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type,
-                 force_update=False, current_coord=None, temp_flag=False, hash_key=None):
+    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, current_coord=None, hash_key=None):
         """
 
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
@@ -30,7 +29,6 @@ class GIS:
         :param dest_coord: NumPy array containing the end coordinate (lat, long) of the planned travel route
         :param waypoints: NumPy array containing the route waypoints to travel through during simulation
         :param race_type: String ("FSGP" or "ASC") stating which race is being simulated
-        :param force_update: this argument allows you to update the cached route data by calling the Google Maps API.
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
@@ -132,7 +130,7 @@ class GIS:
     def python_calculate_closest_gis_indices(self, cumulative_distances, average_distances):
         """
 
-        Python implementation of golang_calculate_closest_gis_indices (now removed). See parent function for documentation details.
+        Python implementation of rust core.closest_gis_indices_loop. See parent function for documentation details.
 
         """
 
