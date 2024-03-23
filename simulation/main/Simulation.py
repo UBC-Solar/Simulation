@@ -60,6 +60,8 @@ class Simulation:
         race_type: string defining which race, ASC or FSGP, is being simulated
         granularity: controls how granular (detailed) the driving speeds array is
         initial_battery_charge: starting charge of the battery
+        golang: define whether Go implementations should be used when applicable
+        library: manages and locates Go shared libraries (if possible)
         google_api_key: API key to access GoogleMaps API. Stored in a .env file. Please ask Simulation Lead for this!
         weather_api_key: API key to access OpenWeather API. Stored in a .env file. Please ask Simulation Lead for this!
         origin_coord: array containing latitude and longitude of route start point
@@ -126,6 +128,24 @@ class Simulation:
         self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
         self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
+        # ----- Go library initialisation -----
+
+        # Simulation uses compiled Go libraries to speed up methods that cannot be accelerated with NumPy to achieve
+        # a significant performance increase (~75% runtime reduction) when applicable.
+
+        self.golang = builder.golang
+        if self.golang:
+            try:
+                self.library = simulation.Libraries()
+            except LibrariesNotFound:
+                # If compatible Go binaries weren't found, disable GoLang usage.
+                self.golang = False
+                self.library = None
+                logging.warning("Go binaries not found ==> Go usage has been disabled. \n"
+                                "To use Go implementations, see simulation/libraries/COMPILING_HOWTO.md \n"
+                                "about compiling GoLang for your operating system.\n")
+        else:
+            self.library = None
 
         # -------- Hash Key ---------
 
