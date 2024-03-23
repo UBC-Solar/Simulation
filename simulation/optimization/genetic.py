@@ -259,9 +259,35 @@ class GeneticOptimization(BaseOptimization):
         # Add a time delay between generations (used for debug purposes)
         delay_after_generation = 0.0
 
+        # Store diversity of generation per optimization iteration
+        self.diversity = []
+
         # Define a function to be run when a generation begins
-        # Here we define it to update the progress bar, if it exists
-        on_generation = (lambda x: pbar.update(1)) if pbar is not None else (lambda x: print("New generation!"))
+        def on_generation_callback(x):
+            """
+            Callback function that is called after each generation/optimization iteration.
+            Passes in a GA instance named x in this func
+            """
+
+            population = np.copy(x.population)
+            sum_stages = 0  # stages -> individual gene
+
+            for i in range(x.pop_size[1]):  # iterate through each gene/stage
+                stage_mean = np.mean(population[:, i])
+                population[:, i] = np.square(population[:, i] - stage_mean)  # squared difference with the mean
+                sum_stages += np.sqrt(np.sum(population[:, i]))  # sum of squared differences for this gene
+
+            # Diversity of this population / generation
+            diversity = (1/x.pop_size[1]) * sum_stages
+            self.diversity.append(diversity)
+
+            x.logger.info(self.diversity)
+
+            # Update progress bar if it exists
+            if pbar is not None:
+                pbar.update(1)
+            else:
+                print("New generation!")
 
         # We must obtain or create an initial population for GA to work with.
         initial_population = self.get_initial_population(self.sol_per_pop, force_new_population_flag)
@@ -282,7 +308,7 @@ class GeneticOptimization(BaseOptimization):
                                     mutation_type=str(mutation_type),
                                     mutation_percent_genes=mutation_percent_genes,
                                     gene_space=gene_space,
-                                    on_generation=on_generation,
+                                    on_generation=on_generation_callback,
                                     delay_after_gen=delay_after_generation,
                                     random_mutation_max_val=mutation_max_value,
                                     stop_criteria=str(stop_criteria))
