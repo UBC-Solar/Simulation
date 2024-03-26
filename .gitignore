@@ -161,3 +161,6 @@ data/images/*.png
 
 # OS Stuff
 .DS_Store
+
+# Env
+*.env

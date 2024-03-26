@@ -1,0 +1,8 @@
+[locations]
+EVOLUTION_NUMBER_ID = "1XMR_XYNHFh7XtObaKtEG3I21IQ8s49SI"
+EVOLUTION_BROWSER_ID = "1biRjhW87Rq17AH5dBnbvHRktmdf80b3b"
+EVOLUTION_ROOT_ID = "1L7mqA3UHsQD4FWVdkqDEcS6TPej6h9Pq"
+
+[settings]
+AUTH_FILE = "token.env"
+SCOPES = ["https://www.googleapis.com/auth/drive.file"]
