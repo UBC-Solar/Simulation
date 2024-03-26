@@ -3,6 +3,9 @@ import pathlib
 
 
 class Connect:
+    """
+    Represents a consumer of a Google Drive API service
+    """
     def __init__(self, service):
         self.service = service
 

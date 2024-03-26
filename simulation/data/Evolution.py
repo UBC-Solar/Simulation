@@ -10,6 +10,11 @@ from simulation.main import Simulation
 
 
 class Evolution:
+    """
+
+    Responsible for storing all the data related to the context, results, and optimization settings of an evolution.
+
+    """
     def __init__(self, optimizer: GeneticOptimization, simulation_model: Simulation, fitness: tuple, results: pd.DataFrame):
         repo = git.Repo.init(pathlib.Path(os.getcwd()).parent)
         self.optimizer = optimizer
@@ -52,6 +57,8 @@ class Evolution:
         self.best_fitness = fitness
         self.best_chromosome = optimizer.bestinput
         self.results = results
+
+        # TODO:
         # self.diversity = optimizer.diversity
         # self.fitness_over_generations = optimizer.fitness_over_generations
         # self.stopping_point = optimizer.stopping_point

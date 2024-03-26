@@ -305,7 +305,7 @@ def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds)
                                                               plot_fitness=True)
                     geneticOptimization.maximize()
                     evolution = assembler.marshal_evolution(geneticOptimization, simulation_model)
-                    assembler.assemble_evolution(evolution)
+                    assembler.write_evolution(evolution)
 
         except KeyboardInterrupt:
             print(f"Finished {stop_index - 1} setting(s), stopped while evaluating setting {stop_index}.")

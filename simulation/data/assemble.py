@@ -51,6 +51,7 @@ class Assembler:
         speeds: np.ndarray = optimizer.bestinput
         fitness = simulation_model.run_model(speeds, plot_results=False)
 
+        # Get results
         results_arrays = simulation_model.get_results(["speed_kmh", "distances", "state_of_charge", "delta_energy",
                                                        "solar_irradiances", "wind_speeds",
                                                        "gis_route_elevations_at_each_tick",
@@ -59,6 +60,7 @@ class Assembler:
                           "Solar irradiance (W/m^2)", "Wind Speeds (km/h)", "Elevation (m)",
                           "Cloud cover (%)", "Raw SOC (%)"]
 
+        # Pack results into a DataFrame
         results_df = pd.DataFrame({label: array for label, array in zip(results_labels, results_arrays)})
 
         return Evolution(optimizer, simulation_model, fitness, results_df)
@@ -145,6 +147,7 @@ class Assembler:
 
         """
 
+        # Legacy method to write results to a CSV
         results_file = os.path.join(self.results_directory, "results.csv")
         with open(results_file, 'a') as f:
             writer = csv.writer(f)
@@ -153,12 +156,29 @@ class Assembler:
             writer.writerow(output)
 
     @staticmethod
-    def write_chromosome_simulation(evolution_directory: str, evolution: Evolution):
+    def write_chromosome_simulation(evolution_directory: str, evolution: Evolution) -> None:
+        """
+
+        From an ``evolution``, pickle the object and save it onto the disk in ``evolution_directory``
+        as ``results.pkl``.
+
+        :raises FileExistsError: if there's already a ``results.pkl`` in ``evolution_directory``
+        :param evolution_directory: the location to save the result
+        :param evolution: the object that will be pickled
+        """
         with open(os.path.join(evolution_directory, 'results.pkl'), 'xb') as file:
             dill.dump(evolution.results, file)
 
     @staticmethod
-    def write_fitness_over_generation(evolution_directory: str, evolution: Evolution):
+    def write_fitness_over_generation(evolution_directory: str, evolution: Evolution) -> None:
+        """
+        From an ``evolution`` object, write the data for the "Fitness vs Generation" graph into a CSV
+        in ``evolution_directory`` as ``fitness_vs_generation.csv``.
+
+        :raises FileExistsError: if there's already a ``fitness_vs_generation.csv`` in ``evolution_directory``
+        :param evolution_directory:
+        :param evolution:
+        """
         fitness_over_time = evolution.optimizer.ga_instance.best_solutions_fitness
         with open(os.path.join(evolution_directory, 'fitness_vs_generation.csv'), 'x') as file:
             writer = csv.writer(file)
@@ -166,29 +186,55 @@ class Assembler:
             for i, fitness in enumerate(fitness_over_time):
                 writer.writerow([i, fitness])
 
-    def collect_local_results(self):
-        dirs = [os.path.join(self.results_directory, directory) for directory in os.listdir(self.results_directory)]
-        evolution_folders = [directory for directory in dirs if (os.path.isdir(directory) and '__pycache__' not in directory)]
+    def collect_local_results(self) -> pd.DataFrame:
+        """
+        Collect the data contained in the evolution logs of all local evolutions
+        into a DataFrame.
+
+        :return: DataFrame containing local evolution logs, indexed by evolution number
+        """
+
+        # Get all evolution directories, filtering out anything else
+        dirs: list[str] = [os.path.join(self.results_directory, directory) for directory in os.listdir(self.results_directory)]
+        evolution_folders: list[str] = [directory for directory in dirs if (os.path.isdir(directory) and '__pycache__' not in directory)]
+
         evolution_numbers = []
         evolution_logs: list[dict] = []
+
+        # Walk through each evolution folder, collecting all the evolution logs
         for evolution_folder in evolution_folders:
             with open(os.path.join(evolution_folder, 'evolution_log.txt'), 'rt') as evolution_log:
+                # Keep track of the evolution number by grabbing it from the folder name
                 evolution_numbers.append(int(evolution_folder.split(os.sep)[-1]))
 
+                # Parse the file into lines
                 lines: list[str] = evolution_log.read().split('\n')
-                data = {item.split(':')[0]: item.split(':')[1].strip() for item in lines if len(item.split(':')) > 1}
+                # Go through the lines and filter out ones that aren't in the form "$FIELD: $DATA"
+                valid_log_elements = [item for item in lines if len(item.split(':')) == 2]
+                # Convert each element into a keypair and put it in a dictionary
+                log_elements_dictionary = {item.split(':')[0]: item.split(':')[1].strip() for item in valid_log_elements}
 
-                if 'CHROMOSOME' in data.keys():
-                    del data['CHROMOSOME']
-                evolution_logs.append(data)
+                # Chromosome is too large (and not very relevant) to be in this CSV
+                if 'CHROMOSOME' in log_elements_dictionary.keys():
+                    del log_elements_dictionary['CHROMOSOME']
+
+                evolution_logs.append(log_elements_dictionary)
 
         df = pd.DataFrame(evolution_logs)
+
+        # Reindex to be indexed by evolution numbers
         df.index = evolution_numbers
         df.index.names = ['Evolution']
 
         return df
 
-    def assemble_evolution(self, evolution: Evolution):
+    def write_evolution(self, evolution: Evolution) -> None:
+        """
+
+        Write the data contained by an ``evolution`` to the disk as an evolution folder.
+
+        :param evolution: Evolution that will be written
+        """
         evolution_number: int = Assembler.get_current_evolution()
         evolution_directory = os.path.join(self.results_directory, str(evolution_number))
 
