@@ -463,10 +463,6 @@ class GeneticOptimization(BaseOptimization):
         # print("Parameters of the best solution : {solution}".format(solution=self.bestinput))
         # print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
 
-        # Plot fitness compared to the generation index to how
-        # if self.output_hyperparameters:
-        #     self.plot_fitness()
-
         # Set the fitness value of the hyperparameter configuration
         self.settings.set_fitness(solution_fitness)
 
