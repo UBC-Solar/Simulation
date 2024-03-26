@@ -68,7 +68,8 @@ dependencies = [
     "numba==0.57.1",
     "pygad==3.0.1",
     "perlin-noise==1.12",
-    "haversine==2.8.1"
+    "haversine==2.8.1",
+    "gitpython==3.1.42"
 ]
 dynamic = ["version"]
 
