@@ -29,13 +29,10 @@ def weather():
     route_coords = location_system.get_path()
 
     # 5 day simulation duration
-    simulation_duration = 432000
     library = libraries.Libraries()
     weather_calculations = simulation.environment.WeatherForecasts(api_key=weather_api_key,
                                                                    coords=route_coords,
-                                                                   duration=simulation_duration / 3600,
                                                                    race_type="ASC",
-                                                                   force_update=False,
                                                                    golang=True,
                                                                    library=library)
 

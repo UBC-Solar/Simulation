@@ -15,8 +15,7 @@
     "initial_battery_charge": 0.65,
     "lvs_power_loss": 0,
 
-    "gis_force_update":  false,
-    "weather_force_update": false,
+    "weather_freq": "daily",
 
     "charging_begin" : 7,
     "charging_end": 20,

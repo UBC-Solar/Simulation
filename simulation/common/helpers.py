@@ -909,7 +909,7 @@ def parse_coordinates_from_kml(coords_str: str) -> np.ndarray:
     """
 
     Parse a coordinates string from a XML (KML) file into a list of coordinates (2D vectors).
-    Requires coordinates in the format "39., 41., 0  39., 40., 0" which will return [ [39., 41.], [39., 40.] ].
+    Requires coordinates in the format "39.,41.,0  39.,40.,0" which will return [ [39., 41.], [39., 40.] ].
 
     :param coords_str: coordinates string from a XML (KML) file
     :return: list of 2D vectors representing coordinates

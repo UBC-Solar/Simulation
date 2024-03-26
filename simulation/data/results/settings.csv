@@ -1,5 +1,3 @@
-6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15
-6,tournament,3,3,3,single_point,3,random,25.0,0.1,saturate_15
-6,tournament,3,3,3,single_point,3,random,50.0,0.1,saturate_15
-6,tournament,3,3,3,single_point,3,random,50.0,0.1,saturate_15
-6,tournament,3,3,3,single_point,3,random,50.0,0.1,saturate_15
+24,tournament,15,12,5,single_point,8,random,25.0,0.1,saturate_15
+24,tournament,15,12,5,single_point,8,random,25.0,0.1,saturate_15
+24,tournament,15,12,5,single_point,8,random,25.0,0.1,saturate_15

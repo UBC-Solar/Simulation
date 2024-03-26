@@ -9,25 +9,20 @@ import datetime
 import numpy as np
 
 from simulation.common import helpers, constants, ASC, FSGP
+import core
 
 
 class SolarCalculations:
 
-    def __init__(self, golang=True, library=None, race_type="ASC"):
+    def __init__(self, race_type="ASC"):
         """
 
         Initializes the instance of a SolarCalculations class
-
-        :param golang: Boolean that determines whether GoLang implementations will be used when applicable.
-        :param library: GoLang binaries library
 
         """
 
         # Solar Constant in W/m2
         self.S_0 = constants.SOLAR_IRRADIANCE
-
-        self.golang = golang
-        self.lib = library
         self.race_type = race_type
 
     # ----- Calculation of solar position in the sky -----
@@ -334,10 +329,8 @@ class SolarCalculations:
 
         """
 
-        if not self.golang:
-            day_of_year, local_time = self.python_calculate_array_GHI_times(local_times)
-        else:
-            day_of_year, local_time = self.lib.golang_calculate_array_GHI_times(local_times)
+
+        day_of_year, local_time = core.calculate_array_ghi_times(local_times)
 
         ghi = self.calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
                                  day_of_year, local_time, elevations, cloud_covers)

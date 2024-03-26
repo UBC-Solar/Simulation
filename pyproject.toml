@@ -68,12 +68,7 @@ dependencies = [
     "numba==0.57.1",
     "pygad==3.0.1",
     "perlin-noise==1.12",
-    "haversine==2.8.1",
-    "gitpython==3.1.42",
-    "dill==0.3.8",
-    "google-api-python-client==2.120.0",
-    "google-auth-httplib2==0.2.0",
-    "google-auth-oauthlib==1.2.0"
+    "haversine==2.8.1"
 ]
 dynamic = ["version"]
 

@@ -6,8 +6,6 @@ import sys
 import csv
 
 from simulation.main import Simulation, SimulationReturnType
-from simulation.optimization.bayesian import BayesianOptimization
-from simulation.optimization.random_opt import RandomOptimization
 from simulation.utils.InputBounds import InputBounds
 from simulation.config import config_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
@@ -108,7 +106,7 @@ def run_simulation(settings):
     bounds.add_bounds(driving_hours, minimum_speed, maximum_speed)
 
     run_hyperparameter_search(simulation_model, bounds)
-    exit()
+
     # Perform optimization with Genetic Optimization
     optimization_settings: OptimizationSettings = OptimizationSettings()
     with tqdm(total=optimization_settings.generation_limit, file=sys.stdout, desc="Optimizing driving speeds",
