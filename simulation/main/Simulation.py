@@ -13,6 +13,7 @@ from simulation.common import helpers
 from simulation.common.exceptions import LibrariesNotFound
 from simulation.utils.Plotting import GraphPage
 
+
 def simulation_property(func):
     """
 

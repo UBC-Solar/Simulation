@@ -55,6 +55,6 @@ def test_compare_golang_python_get_weather_in_time(weather):
 
     go_gwit_result = weather.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
 
-    python_gwit_result = weather.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
+    python_gwit_result = weather._python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
 
     assert np.all(go_gwit_result == python_gwit_result)

@@ -143,7 +143,8 @@ class WeatherForecasts:
 
         return core.closest_weather_indices_loop(cumulative_distances, average_distances)
 
-    def python_calculate_closest_weather_indices(self, cumulative_distances, average_distances):
+    @staticmethod
+    def _python_calculate_closest_weather_indices(cumulative_distances, average_distances):
         """
 
         Python implementation of calculate_closest_weather_indices. See parent function for documentation details.
@@ -169,7 +170,7 @@ class WeatherForecasts:
         return np.array(result)
 
     @staticmethod
-    def python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array):
+    def _python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array):
         """
 
         Python implementation to find the indices of the closest timestamps in dt_local_array and package them into a NumPy Array
@@ -216,35 +217,14 @@ class WeatherForecasts:
 
         return core.weather_in_time(unix_timestamps.astype(np.int64), indices.astype(np.int64), self.weather_forecast)
 
-    def python_get_weather_in_time(self, unix_timestamps, indices):
+    def _python_get_weather_in_time(self, unix_timestamps, indices):
         full_weather_forecast_at_coords = self.weather_forecast[indices]
         dt_local_array = full_weather_forecast_at_coords[0, :, 4]
 
         temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
-        closest_timestamp_indices = self.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
+        closest_timestamp_indices = self._python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
 
         return full_weather_forecast_at_coords[temp_0, closest_timestamp_indices]
-
-    @staticmethod
-    def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
-        """
-
-        Returns the array of wind speed in m/s, in the direction opposite to the 
-            bearing of the vehicle
-
-
-        :param np.ndarray vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
-        :param np.ndarray wind_speeds: (float[N]) The absolute speeds in m/s
-        :param np.ndarray wind_directions: (float[N]) The wind direction in the meteorlogical convention. To convert from meteorlogical convention to azimuth angle, use (x + 180) % 360
-        :returns: The wind speeds in the direction opposite to the bearing of the vehicle
-        :rtype: np.ndarray
-        
-        """
-
-        # wind direction is 90 degrees meteorological, so it is 270 degrees azimuthal. car is 90 degrees
-        #   cos(90 - 90) = cos(0) = 1. Wind speed is moving opposite to the car,
-        # car is 270 degrees, cos(90-270) = -1. Wind speed is in direction of the car.
-        return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
 
     @staticmethod
     def get_weather_advisory(weather_id):

@@ -16,9 +16,9 @@ from simulation.lvs import BasicLVS
 from simulation.motor import BasicMotor
 from simulation.regen import BasicRegen
 
-from simulation.environment.GIS import GIS
-from simulation.environment.SolarCalculations import SolarCalculations
-from simulation.environment.WeatherForecasts import WeatherForecasts
+from simulation.environment.gis.GIS import GIS
+from simulation.environment.solar_calculations.SolarCalculations import SolarCalculations
+from simulation.environment.weather_forecasts.WeatherForecasts import WeatherForecasts
 
 from simulation.library import Libraries
 from simulation.utils.Plotting import Plotting

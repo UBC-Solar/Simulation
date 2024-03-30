@@ -101,10 +101,9 @@ class Model:
 
         self.closest_gis_indices = self.simulation.gis.calculate_closest_gis_indices(self.cumulative_distances)
 
-        self.closest_weather_indices = self.simulation.weather.calculate_closest_weather_indices(
-            self.cumulative_distances)
+        self.closest_weather_indices = self.simulation.weather.calculate_closest_weather_indices(self.cumulative_distances)
 
-        self.path_distances = self.simulation.gis.path_distances
+        self.path_distances = self.simulation.gis.get_path_distances()
         self.cumulative_distances = np.cumsum(self.path_distances)  # [cumulative_distances] = meters
 
         self.max_route_distance = self.cumulative_distances[-1]
@@ -148,7 +147,7 @@ class Model:
                                                                     self.wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time
-        self.solar_irradiances = self.simulation.solar_calculations.calculate_array_GHI(
+        self.solar_irradiances = self.simulation.solar_calculations.get_solar_irradiance(
             self.simulation.route_coords[self.closest_gis_indices],
             self.time_zones, local_times,
             self.gis_route_elevations_at_each_tick,
