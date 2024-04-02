@@ -6,13 +6,12 @@ import sys
 import csv
 
 from simulation.main import Simulation, SimulationReturnType
-from simulation.optimization.bayesian import BayesianOptimization
-from simulation.optimization.random_opt import RandomOptimization
 from simulation.utils.InputBounds import InputBounds
 from simulation.config import config_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
 from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
 from simulation.data.results import results_directory
+from simulation.data.assemble import Assembler
 from tqdm import tqdm
 
 """
@@ -294,6 +293,7 @@ def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds)
         settings_list = GeneticOptimization.parse_csv_into_settings(csv_reader)
 
     total_num = GeneticOptimization.get_total_generations(settings_list) * evals_per_setting
+    assembler = Assembler(results_directory)
     with tqdm(total=total_num, file=sys.stdout, desc="Running hyperparameter search", position=0, leave=True) as pbar:
         try:
             for settings in settings_list:
@@ -302,7 +302,9 @@ def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds)
                     geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=settings, pbar=pbar,
                                                               plot_fitness=True)
                     geneticOptimization.maximize()
-                    geneticOptimization.write_results()
+                    evolution = assembler.marshal_evolution(geneticOptimization, simulation_model)
+                    assembler.write_evolution(evolution)
+
         except KeyboardInterrupt:
             print(f"Finished {stop_index - 1} setting(s), stopped while evaluating setting {stop_index}.")
             exit()
