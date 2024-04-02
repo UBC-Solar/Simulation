@@ -139,7 +139,7 @@ def reset(controller) -> None:
     controller.uploader.upload_evolution_browser()
 
 
-def bootstrap(controller):
+def bootstrap(controller: Controller):
     """
     Boostrap Google Drive to have the evolution browser and number file.
     REQUIRES SAVING THE NEWLY CREATED IDS INTO ``network.toml``!!
@@ -150,8 +150,3 @@ def bootstrap(controller):
     controller.uploader.upload_file("last_evolution.txt", Path("last_evolution.txt").resolve(), controller.uploader.evolution_number_id)
     controller.uploader.upload_file("evolution_browser.csv", Path("evolution_browser.csv").resolve(), controller.uploader.evolution_browser_id)
     print("WARNING! SAVE THE ABOVE ID'S INTO NETWORK.TOML!")
-
-
-if __name__ == "__main__":
-    controller: Controller = Controller('/Users/joshuariefman/Simulation/simulation/data/results')
-    controller.sync()
