@@ -11,9 +11,10 @@ import random
 import googleapiclient.discovery
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from upload import Uploader
-from download import Downloader
-from assemble import Assembler
+from simulation.data.upload import Uploader
+from simulation.data.download import Downloader
+from simulation.data.assemble import Assembler
+from simulation.data import data_directory
 from collections import OrderedDict
 from pathlib import Path
 
@@ -24,7 +25,7 @@ Client = googleapiclient.discovery.Resource
 class Controller:
     def __init__(self, results_directory: str):
         # Get the data directory and config
-        self.data_directory = pathlib.Path(__file__).parent.resolve()
+        self.data_directory = data_directory
         with open(self.data_directory / "network.toml", 'rb') as config_file:
             config = tomllib.load(config_file)
             self.scopes = config['settings']['SCOPES']
