@@ -128,7 +128,7 @@ class OptimizationSettings:
                  stopping_criteria: Stopping_Criteria = Stopping_Criteria(Stopping_Criteria.saturate, 15)):
         self.chromosome_size: int = chromosome_size
         self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = parent_selection_type
-        self.generation_limit: int = generation_limit
+        self.generation_limit: int = 10
         self.num_parents: int = num_parents
         self.k_tournament: int = k_tournament
         self.crossover_type: OptimizationSettings.Crossover_Type = crossover_type
@@ -384,7 +384,7 @@ class GeneticOptimization(BaseOptimization):
         min_speed_kmh: float = 30
 
         # We will use Perlin noise to generate our guess arrays
-        noise_generator = Noise(self.model.golang, self.model.library)
+        noise_generator = Noise()
 
         # Determine the length that our driving speed arrays must be
         length = self.model.get_driving_time_divisions()
@@ -392,20 +392,22 @@ class GeneticOptimization(BaseOptimization):
 
         with tqdm(total=num_arrays_to_generate, file=sys.stdout, desc="Generating new initial population ", position=0,
                   leave=True) as pbar:
-            # Generate a matrix of (nearly) normalized Perlin noise of size [length, num_arrays_to_generate]
-            noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
+            # Generate a matrix of normalized Gaussian noise of size [length, num_arrays_to_generate]
+            noise = noise_generator.get_gauss_noise_matrix(length, num_arrays_to_generate)
+
             x = 0
 
             while len(speed_arrays) < num_arrays_to_generate:
-                # Read rows from the Perlin noise matrix as a normalized driving speed array
+                # Read rows from the Gaussian noise matrix as a normalized driving speed array
                 guess_speed = normalize(noise[x])
 
                 # We generate just enough noise to be able to test num_arrays_to_generate speed arrays.
                 # Thus, the following logic keeps careful track of the index because if we have even one
                 # unsuccessful array, we'll need to generate more noise.
                 if x >= len(noise) - 1:
-                    noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
+                    noise = noise_generator.get_gauss_noise_matrix(length, num_arrays_to_generate)
                     x = 0
+
                 else:
                     x += 1
 
