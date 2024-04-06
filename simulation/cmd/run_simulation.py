@@ -5,7 +5,7 @@ import json
 import sys
 import csv
 
-from simulation.main import Simulation, SimulationReturnType
+from simulation.model.Simulation import Simulation, SimulationReturnType
 from simulation.utils.InputBounds import InputBounds
 from simulation.config import config_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder

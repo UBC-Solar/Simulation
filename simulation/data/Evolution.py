@@ -6,7 +6,7 @@ import git
 import pandas as pd
 
 from simulation.optimization.genetic import GeneticOptimization
-from simulation.main import Simulation
+from simulation.model.Simulation import Simulation
 
 
 class Evolution:

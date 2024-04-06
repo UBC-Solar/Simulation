@@ -1,10 +1,9 @@
 import dotenv
 import os
 import pytest
-import simulation
 from simulation.common.helpers import *
-from simulation.environment import WeatherForecasts
-from simulation.library import libraries
+from simulation.model.environment.WeatherForecasts import WeatherForecasts
+from simulation.model.environment.GIS import GIS
 
 
 @pytest.fixture
@@ -22,19 +21,15 @@ def weather():
 
     dest_coord = np.array([43.6142, -116.2080])
 
-    location_system = simulation.environment.GIS(api_key=google_api_key, origin_coord=origin_coord,
-                                                 waypoints=waypoints, dest_coord=dest_coord, race_type="ASC",
-                                                 golang=False)
+    location_system = GIS(api_key=google_api_key, origin_coord=origin_coord,
+                                                 waypoints=waypoints, dest_coord=dest_coord, race_type="ASC")
 
     route_coords = location_system.get_path()
 
     # 5 day simulation duration
-    library = libraries.Libraries()
-    weather_calculations = simulation.environment.WeatherForecasts(api_key=weather_api_key,
-                                                                   coords=route_coords,
-                                                                   race_type="ASC",
-                                                                   golang=True,
-                                                                   library=library)
+    weather_calculations = WeatherForecasts(api_key=weather_api_key,
+                                            coords=route_coords,
+                                            race_type="ASC")
 
     return weather_calculations
 

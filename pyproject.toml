@@ -92,9 +92,9 @@ enabled = true
 packages = ["simulation"]
 
 [project.scripts]
-run_simulation = "simulation.run_simulation:main"
-simulation_health_check = "simulation.run_simulation:_health_check"
-build_simulation = "simulation.run_simulation:_execute_build_script"
+run_simulation = "simulation.cmd.run_simulation:main"
+simulation_health_check = "simulation.cmd.run_simulation:_health_check"
+build_simulation = "simulation.cmd.run_simulation:_execute_build_script"
 
 [[tool.setuptools-rust.ext-modules]]
 # Private Rust extension module to be nested into the Python package

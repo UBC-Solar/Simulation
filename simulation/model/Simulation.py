@@ -1,8 +1,8 @@
 import simulation
 import functools
 import logging
-import core
 import os
+import core
 import numpy as np
 
 from typing import Union
@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.exceptions import LibrariesNotFound
 from simulation.utils.Plotting import GraphPage
+
 
 def simulation_property(func):
     """

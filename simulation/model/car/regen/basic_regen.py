@@ -1,4 +1,4 @@
-from simulation.regen import BaseRegen
+from simulation.model.car.regen import BaseRegen
 import numpy as np
 
 

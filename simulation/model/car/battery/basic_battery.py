@@ -1,6 +1,6 @@
 import numpy as np
 
-from simulation.battery.base_battery import BaseBattery
+from simulation.model.car.battery.base_battery import BaseBattery
 from simulation.common import DayBreak, DayBreakEquations as equations
 
 

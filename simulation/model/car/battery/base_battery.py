@@ -1,4 +1,3 @@
-from simulation.common import BatteryEmptyError
 from simulation.common import Storage
 
 

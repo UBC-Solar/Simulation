@@ -1,5 +1,4 @@
-from simulation.main.Simulation import Simulation, SimulationReturnType
-from abc import ABC
+from simulation.model.Simulation import Simulation, SimulationReturnType
 
 
 class SimulationBuilder:
@@ -72,38 +71,3 @@ class SimulationBuilder:
 
     def get(self):
         return Simulation(self)
-
-
-class StandardVehicle(ABC):
-    """
-
-    This class will hold constants that apply to any vehicle in the future.
-
-    """
-    def __init__(self):
-        self.dynamic_friction = None
-
-
-class Daybreak(StandardVehicle):
-    """
-
-    This class will hold vehicle constants in the future.
-
-    """
-    def __init__(self):
-        super().__init__()
-        self.vehicle_mass = None
-
-
-class Brightside(StandardVehicle):
-    """
-
-    This class will hold vehicle constants in the future.
-
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.vehicle_mass = None
-
-
