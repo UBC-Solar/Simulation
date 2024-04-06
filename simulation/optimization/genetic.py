@@ -1,7 +1,6 @@
 import numpy as np
 import zipfile
 import pygad
-import json
 import math
 import sys
 import csv
@@ -13,7 +12,6 @@ from tqdm import tqdm
 from simulation.cache.optimization_population import population_directory
 from simulation.optimization.base_optimization import BaseOptimization
 from simulation.common.helpers import denormalize, normalize, rescale
-from simulation.data.results import results_directory
 from simulation.common.noise import Noise
 from simulation.utils import InputBounds
 from simulation.model.Simulation import Simulation, SimulationReturnType
@@ -465,57 +463,10 @@ class GeneticOptimization(BaseOptimization):
         # print("Parameters of the best solution : {solution}".format(solution=self.bestinput))
         # print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
 
-        # Plot fitness compared to the generation index to how
-        if self.output_hyperparameters:
-            self.plot_fitness()
-
         # Set the fitness value of the hyperparameter configuration
         self.settings.set_fitness(solution_fitness)
 
         return self.bestinput
-
-    def plot_fitness(self, save_graph: bool = True) -> None:
-        """
-
-        Plot the highest fitness value of each generation's population as a Fitness vs Generation graph.
-
-        :param bool save_graph: set whether the graph should be saved to data/results directory.
-
-        """
-
-        # We keep track of the hyperparameter configuration index so that the filename matches the index
-        # of the configuration on the `Hyperparameter Search` spreadsheet.
-        sequence_index = GeneticOptimization.get_sequence_index(increment_index=False)
-
-        graph_title = "sequence" + str(sequence_index)
-        save_dir = None
-
-        if save_graph:
-            save_dir = results_directory / graph_title
-
-        self.ga_instance.plot_fitness(title=graph_title, save_dir=save_dir)
-
-    def write_results(self):
-        """
-
-        Write the hyperparameters of the current configuration, along with the resultant fitness
-        value that the configuration achieved, to a CSV as one row.
-
-        For the purposes of documenting the effectiveness of different hyperparameter configurations,
-        we log each configuration and the resultant fitness and save the corresponding Fitness vs Generation
-        graph. Both of the aforementioned items are saved the same hyperparameter index, which is stored
-        in `register.json` and incremented for each subsequent hyperparameter configuration we attempt.
-
-        """
-
-        results_file = results_directory / "results.csv"
-        with open(results_file, 'a') as f:
-            writer = csv.writer(f)
-            sequence_index: int = GeneticOptimization.get_sequence_index()
-            output = self.settings.as_list()
-            output.insert(0, str(sequence_index))
-            output.append(str(self.did_finish_race))
-            writer.writerow(output)
 
     @staticmethod
     def parse_csv_into_settings(csv_reader: csv.reader) -> list[OptimizationSettings]:
@@ -551,61 +502,8 @@ class GeneticOptimization(BaseOptimization):
         return settings_list
 
     @staticmethod
-    def get_sequence_index(increment_index=True) -> int:
-        """
-
-        Get the current index saved in the counter at `data/results/register.json`.
-
-        :param increment_index: set to False in order to make this a read-only operation, otherwise the counter
-        will be incremented.
-        :return: the value stored in the counter
-        :rtype: int
-
-        """
-
-        register_filepath = results_directory / "register.json"
-
-        if not os.path.isfile(register_filepath):
-            raise FileNotFoundError("Cannot find register file!")
-
-        with open(register_filepath, "r") as file:
-            register_data = json.load(file)
-
-        x = register_data['x']
-        x += 1
-
-        if increment_index:
-            GeneticOptimization.save_index(register_filepath, x)
-
-        return x
-
-    @staticmethod
-    def save_index(register_filepath, index) -> None:
-        """
-
-        Save a new value in the counter.
-
-        :param register_filepath: path to the register file
-        :param index: value to save
-
-        """
-
-        with open(register_filepath, "w") as file:
-            register_data = {
-                "x": index
-            }
-
-            json.dump(register_data, file)
-
-    @staticmethod
     def get_total_generations(settings_list: list[OptimizationSettings] = None) -> int:
         total: int = 0
         for settings in settings_list:
             total += settings.generation_limit
         return total
-
-
-if __name__ == "__main__":
-    register_file = results_directory / "register.json"
-    GeneticOptimization.save_index(register_file, 26)
-    print(GeneticOptimization.get_sequence_index(increment_index=False))

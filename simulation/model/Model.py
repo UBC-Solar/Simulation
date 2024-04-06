@@ -82,7 +82,7 @@ class Model:
         # ----- Tick array -----
 
         self.timestamps = np.arange(0, self.simulation.simulation_duration + self.simulation.tick, self.simulation.tick)
-        self.tick_array = np.diff(self.timestamps)
+        self.tick_array = np.diff(self.timestamps) # can this not just be np.full(self.timestamps.shape, self.simulation.tick)?
         self.tick_array = np.insert(self.tick_array, 0, 0)
 
         # ----- Expected distance estimate -----
