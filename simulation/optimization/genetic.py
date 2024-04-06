@@ -128,7 +128,7 @@ class OptimizationSettings:
                  stopping_criteria: Stopping_Criteria = Stopping_Criteria(Stopping_Criteria.saturate, 15)):
         self.chromosome_size: int = chromosome_size
         self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = parent_selection_type
-        self.generation_limit: int = 10
+        self.generation_limit: int = generation_limit
         self.num_parents: int = num_parents
         self.k_tournament: int = k_tournament
         self.crossover_type: OptimizationSettings.Crossover_Type = crossover_type
@@ -269,16 +269,17 @@ class GeneticOptimization(BaseOptimization):
             Passes in a GA instance named x in this func
             """
 
-            population = np.copy(x.population)
-            sum_stages = 0  # stages -> individual gene
+            # sum accumulator for standard deviation of a stage
+            sum_stage_sd = 0  # stages -> individual gene
 
             for i in range(x.pop_size[1]):  # iterate through each gene/stage
-                stage_mean = np.mean(population[:, i])
-                population[:, i] = np.square(population[:, i] - stage_mean)  # squared difference with the mean
-                sum_stages += np.sqrt(np.sum(population[:, i]))  # sum of squared differences for this gene
+                stage_mean = np.mean(x.population[:, i])
+                squared_diffs = np.square(x.population[:, i] - stage_mean)
+                mean_squared_diffs = np.mean(squared_diffs)  # mean of squared differences
+                sum_stage_sd += np.sqrt(mean_squared_diffs)  # add standard deviation of this gene
 
-            # Diversity of this population / generation
-            diversity = (1/x.pop_size[1]) * sum_stages
+            # Diversity of this population / generation -> average standard deviation of genes
+            diversity = sum_stage_sd / x.pop_size[1]
             self.diversity.append(diversity)
 
             x.logger.info(self.diversity)
