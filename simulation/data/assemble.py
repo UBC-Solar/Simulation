@@ -7,7 +7,7 @@ import dill
 import pathlib
 import numpy as np
 import pandas as pd
-from simulation.main import Simulation
+from simulation.model.Simulation import Simulation
 from simulation.data.Evolution import Evolution
 from simulation.optimization.genetic import GeneticOptimization
 
