@@ -147,7 +147,7 @@ class Model:
                                                                     self.wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time
-        self.solar_irradiances = self.simulation.solar_calculations.get_solar_irradiance(
+        self.solar_irradiances = self.simulation.solar_calculations.calculate_array_GHI(
             self.simulation.route_coords[self.closest_gis_indices],
             self.time_zones, local_times,
             self.gis_route_elevations_at_each_tick,
