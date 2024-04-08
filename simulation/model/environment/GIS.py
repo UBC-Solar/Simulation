@@ -6,7 +6,6 @@ import sys
 
 from simulation.cache.route import route_directory
 from simulation.common import helpers
-from dotenv import load_dotenv
 from tqdm import tqdm
 from xml.dom import minidom
 import core
@@ -67,7 +66,7 @@ class GIS:
                             logging.warning("Current position is not origin position. Modifying path data.\n")
 
                             # We need to find the closest coordinate along the path to the vehicle position
-                            current_coord_index = GIS.find_closest_coordinate_index(current_coord, self.path)
+                            current_coord_index = GIS._find_closest_coordinate_index(current_coord, self.path)
 
                             # All coords before the current coordinate should be discarded
                             self.path = self.path[current_coord_index:]
@@ -122,7 +121,8 @@ class GIS:
 
         return core.closest_gis_indices_loop(cumulative_distances, average_distances)
 
-    def python_calculate_closest_gis_indices(self, cumulative_distances, average_distances):
+    @staticmethod
+    def _python_calculate_closest_gis_indices(cumulative_distances, average_distances):
         """
 
         Python implementation of rust core.closest_gis_indices_loop. See parent function for documentation details.
@@ -223,7 +223,7 @@ class GIS:
         return self.path_gradients
 
     # ----- Path calculation functions -----
-    def calculate_path_min_max(self):  # DEPRECATED
+    def calculate_path_min_max(self):
         logging.warning(f"Using deprecated function 'calculate_path_min_max()'!")
         min_lat, min_long = self.path.min(axis=0)
         max_lat, max_long = self.path.max(axis=0)
@@ -262,34 +262,8 @@ class GIS:
 
         return bearing_array
 
-    def update_vehicle_position(self, incremental_distance):
-        """
-
-        Returns the closest coordinate to the current coordinate
-
-        :param float incremental_distance: distance in m covered in the latest tick
-        :returns: The new index of the vehicle
-        :rtype: int
-        """
-
-        additional_distance = self.distance_remainder + incremental_distance
-
-        # while the index of position can still be advanced
-        while additional_distance > 0:
-            # subtract contributions from every new index
-            additional_distance = additional_distance - self.path_distances[self.current_index]
-
-            # advance the index
-            self.current_index = self.current_index + 1
-
-        # backtrack a bit
-        self.distance_remainder = additional_distance + self.path_distances[self.current_index - 1]
-        self.current_index = self.current_index - 1
-
-        return self.current_index
-
     @staticmethod
-    def calculate_vector_square_magnitude(vector):
+    def _calculate_vector_square_magnitude(vector):
         """
 
         Calculate the square magnitude of an input vector. Must be one-dimensional.
@@ -303,7 +277,7 @@ class GIS:
         return sum(i ** 2 for i in vector)
 
     @staticmethod
-    def find_closest_coordinate_index(current_coord, path):
+    def _find_closest_coordinate_index(current_coord, path):
         """
 
         Returns the closest coordinate to current_coord in path
@@ -319,30 +293,7 @@ class GIS:
         distances_from_current_coord = np.zeros(len(to_current_coord_from_path))
         for i in range(len(to_current_coord_from_path)):
             # As we just need the minimum, using square magnitude will save performance
-            distances_from_current_coord[i] = GIS.calculate_vector_square_magnitude(to_current_coord_from_path[i])
+            distances_from_current_coord[i] = GIS._calculate_vector_square_magnitude(to_current_coord_from_path[i])
 
         return distances_from_current_coord.argmin()
 
-
-if __name__ == "__main__":
-    load_dotenv()
-    google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
-
-    simulation_duration = 1 * 60 * 60
-
-    origin_coord = np.array([38.9281815, -95.6770217])
-    dest_coord = np.array([38.9282115, -95.6770268])
-    waypoints = np.array([
-        [38.9221906, -95.6762981],
-        [38.9217086, -95.6767896], [38.9189926, -95.6753145], [38.9196768, -95.6724799],
-        [38.9196768, -95.6724799], [38.9247448, -95.6714528], [38.9309102, -95.6749362],
-        [38.928188, -95.6770129]
-    ])
-
-    locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints,
-                         race_type="FSGP")
-
-    locationSystem.tile_route(simulation_duration=simulation_duration)
-
-    # path = locationSystem.get_path()
-    # print(path)

@@ -51,8 +51,8 @@ class SolarCalculations:
 
         return hour_angle
 
-    def calculate_elevation_angle(self, latitude, longitude, time_zone_utc, day_of_year,
-                                  local_time):
+    def _calculate_elevation_angle(self, latitude, longitude, time_zone_utc, day_of_year,
+                                   local_time):
         """
 
         Calculates the Elevation Angle of the Sun relative to a location on the Earth
@@ -87,8 +87,8 @@ class SolarCalculations:
         # mathy part is delegated to a helper function to optimize for numba compilation
         return helpers.compute_elevation_angle_math(declination_angle, hour_angle, latitude)
 
-    def calculate_zenith_angle(self, latitude, longitude, time_zone_utc, day_of_year,
-                               local_time):
+    def _calculate_zenith_angle(self, latitude, longitude, time_zone_utc, day_of_year,
+                                local_time):
         """
 
         Calculates the Zenith Angle of the Sun relative to a location on the Earth
@@ -106,12 +106,12 @@ class SolarCalculations:
 
         """
 
-        elevation_angle = self.calculate_elevation_angle(latitude, longitude,
-                                                         time_zone_utc, day_of_year, local_time)
+        elevation_angle = self._calculate_elevation_angle(latitude, longitude,
+                                                          time_zone_utc, day_of_year, local_time)
 
         return 90 - elevation_angle
 
-    def calculate_azimuth_angle(self, latitude, longitude, time_zone_utc, day_of_year,
+    def _calculate_azimuth_angle(self, latitude, longitude, time_zone_utc, day_of_year,
                                 local_time):
         """
 
@@ -141,8 +141,8 @@ class SolarCalculations:
             np.sin(np.radians(latitude)) * \
             np.cos(np.radians(hour_angle))
 
-        elevation_angle = self.calculate_elevation_angle(latitude, longitude,
-                                                         time_zone_utc, day_of_year, local_time)
+        elevation_angle = self._calculate_elevation_angle(latitude, longitude,
+                                                          time_zone_utc, day_of_year, local_time)
 
         term_3 = np.float_(term_1 - term_2) / \
             np.cos(np.radians(elevation_angle))
@@ -160,8 +160,8 @@ class SolarCalculations:
 
     # ----- Calculation of modes of solar irradiance -----
 
-    def calculate_DNI(self, latitude, longitude, time_zone_utc, day_of_year,
-                      local_time, elevation):
+    def _calculate_DNI(self, latitude, longitude, time_zone_utc, day_of_year,
+                       local_time, elevation):
         """
 
         Calculates the Direct Normal Irradiance from the Sun, relative to a location
@@ -181,8 +181,8 @@ class SolarCalculations:
 
         """
 
-        zenith_angle = self.calculate_zenith_angle(latitude, longitude,
-                                                   time_zone_utc, day_of_year, local_time)
+        zenith_angle = self._calculate_zenith_angle(latitude, longitude,
+                                                    time_zone_utc, day_of_year, local_time)
         a = 0.14
 
         # https://www.pveducation.org/pvcdrom/properties-of-sunlight/air-mass
@@ -199,8 +199,8 @@ class SolarCalculations:
 
         return np.where(zenith_angle > 90, 0, DNI)
 
-    def calculate_DHI(self, latitude, longitude, time_zone_utc, day_of_year,
-                      local_time, elevation):
+    def _calculate_DHI(self, latitude, longitude, time_zone_utc, day_of_year,
+                       local_time, elevation):
         """
 
         Calculates the Diffuse Horizontal Irradiance from the Sun, relative to a location
@@ -220,15 +220,15 @@ class SolarCalculations:
 
         """
 
-        DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
-                                 local_time, elevation)
+        DNI = self._calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
+                                  local_time, elevation)
 
         DHI = 0.1 * DNI
 
         return DHI
 
-    def calculate_GHI(self, latitude, longitude, time_zone_utc, day_of_year,
-                      local_time, elevation, cloud_cover):
+    def _calculate_GHI(self, latitude, longitude, time_zone_utc, day_of_year,
+                       local_time, elevation, cloud_cover):
         """
 
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
@@ -249,21 +249,21 @@ class SolarCalculations:
 
         """
 
-        DHI = self.calculate_DHI(latitude, longitude, time_zone_utc, day_of_year,
-                                 local_time, elevation)
+        DHI = self._calculate_DHI(latitude, longitude, time_zone_utc, day_of_year,
+                                  local_time, elevation)
 
-        DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
-                                 local_time, elevation)
+        DNI = self._calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
+                                  local_time, elevation)
 
-        zenith_angle = self.calculate_zenith_angle(latitude, longitude,
-                                                   time_zone_utc, day_of_year, local_time)
+        zenith_angle = self._calculate_zenith_angle(latitude, longitude,
+                                                    time_zone_utc, day_of_year, local_time)
 
         GHI = DNI * np.cos(np.radians(zenith_angle)) + DHI
 
-        return self.apply_cloud_cover(GHI=GHI, cloud_cover=cloud_cover)
+        return self._apply_cloud_cover(GHI=GHI, cloud_cover=cloud_cover)
 
     @staticmethod
-    def apply_cloud_cover(GHI, cloud_cover):
+    def _apply_cloud_cover(GHI, cloud_cover):
         """
 
         Applies a cloud cover model to the GHI data.
@@ -289,14 +289,15 @@ class SolarCalculations:
         return GHI * (1 - (0.75 * np.power(scaled_cloud_cover, 3.4)))
 
     # ----- Calculation of modes of solar irradiance, but returning numpy arrays -----
-    def python_calculate_array_GHI_times(self, local_times):
+    @staticmethod
+    def _python_calculate_array_GHI_times(local_times):
         date = list(map(datetime.datetime.utcfromtimestamp, local_times))
         day_of_year = np.array(list(map(helpers.get_day_of_year_map, date)), dtype=np.float64)
-        local_time = np.array(list(map(SolarCalculations.dateConvert, date)))
+        local_time = np.array(list(map(SolarCalculations._date_convert, date)))
         return day_of_year, local_time
 
     @staticmethod
-    def dateConvert(date):
+    def _date_convert(date):
         """
 
         Convert a date into local time.
@@ -332,11 +333,11 @@ class SolarCalculations:
 
         day_of_year, local_time = core.calculate_array_ghi_times(local_times)
 
-        ghi = self.calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
-                                 day_of_year, local_time, elevations, cloud_covers)
+        ghi = self._calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
+                                  day_of_year, local_time, elevations, cloud_covers)
 
-        stationary_irradiance = self.calculate_angled_irradiance(coords[:, 0], coords[:, 1], time_zones, day_of_year,
-                                                                 local_time, elevations, cloud_covers)
+        stationary_irradiance = self._calculate_angled_irradiance(coords[:, 0], coords[:, 1], time_zones, day_of_year,
+                                                                  local_time, elevations, cloud_covers)
 
         if self.race_type == "ASC":
             driving_begin = ASC.driving_begin
@@ -358,8 +359,8 @@ class SolarCalculations:
 
         return effective_irradiance
 
-    def calculate_angled_irradiance(self, latitude, longitude, time_zone_utc, day_of_year,
-                                    local_time, elevation, cloud_cover, array_angles=np.array([0, 15, 30, 45])):
+    def _calculate_angled_irradiance(self, latitude, longitude, time_zone_utc, day_of_year,
+                                     local_time, elevation, cloud_cover, array_angles=np.array([0, 15, 30, 45])):
         """
 
         Determine the direct and diffuse irradiance on an array which can be mounted at different angles.
@@ -382,14 +383,14 @@ class SolarCalculations:
 
         """
 
-        DHI = self.calculate_DHI(latitude, longitude, time_zone_utc, day_of_year,
-                                 local_time, elevation)
+        DHI = self._calculate_DHI(latitude, longitude, time_zone_utc, day_of_year,
+                                  local_time, elevation)
 
-        DNI = self.calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
-                                 local_time, elevation)
+        DNI = self._calculate_DNI(latitude, longitude, time_zone_utc, day_of_year,
+                                  local_time, elevation)
 
-        zenith_angle = self.calculate_zenith_angle(latitude, longitude,
-                                                   time_zone_utc, day_of_year, local_time)
+        zenith_angle = self._calculate_zenith_angle(latitude, longitude,
+                                                    time_zone_utc, day_of_year, local_time)
 
         # Calculate the absolute differences
         differences = np.abs(zenith_angle[:, np.newaxis] - array_angles)
@@ -401,4 +402,4 @@ class SolarCalculations:
 
         GHI = DNI * np.cos(np.radians(effective_zenith)) + DHI
 
-        return self.apply_cloud_cover(GHI=GHI, cloud_cover=cloud_cover)
+        return self._apply_cloud_cover(GHI=GHI, cloud_cover=cloud_cover)
