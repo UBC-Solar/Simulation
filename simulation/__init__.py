@@ -4,24 +4,24 @@ from simulation.common import Storage
 from simulation.common import BatteryEmptyError
 from simulation.common import PrematureDataRecoveryError
 
-from simulation.arrays import BaseArray
-from simulation.battery import BaseBattery
-from simulation.lvs import BaseLVS
-from simulation.motor import BaseMotor
-from simulation.regen import BaseRegen
+from simulation.model.car.arrays import BaseArray
+from simulation.model.car.battery import BaseBattery
+from simulation.model.car.lvs import BaseLVS
+from simulation.model.car.motor import BaseMotor
+from simulation.model.car.regen import BaseRegen
 
-from simulation.arrays import BasicArray
-from simulation.battery import BasicBattery
-from simulation.lvs import BasicLVS
-from simulation.motor import BasicMotor
-from simulation.regen import BasicRegen
+from simulation.model.car.arrays import BasicArray
+from simulation.model.car.battery import BasicBattery
+from simulation.model.car.lvs import BasicLVS
+from simulation.model.car.motor import BasicMotor
+from simulation.model.car.regen import BasicRegen
 
-from simulation.environment.gis.GIS import GIS
-from simulation.environment.solar_calculations.SolarCalculations import SolarCalculations
-from simulation.environment.weather_forecasts.WeatherForecasts import WeatherForecasts
+from simulation.model.environment.GIS import GIS
+from simulation.model.environment.SolarCalculations import SolarCalculations
+from simulation.model.environment.WeatherForecasts import WeatherForecasts
 
 from simulation.library import Libraries
 from simulation.utils.Plotting import Plotting
 
-from simulation.main import Simulation
-from simulation.main import Model
+from simulation.model.Simulation import Simulation
+from simulation.model.Model import Model

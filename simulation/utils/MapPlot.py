@@ -8,7 +8,8 @@ import uuid
 from PIL import Image
 from dotenv import load_dotenv
 from io import BytesIO
-from simulation.environment import GIS
+from simulation.model.environment.GIS import GIS
+
 
 BACKGROUND_IMAGE_PATH = './data/images/'
 BACKGROUND_COORDINATE_DATA_NAME = 'coordinates.json'
@@ -94,6 +95,6 @@ if __name__ == "__main__":
     ])
 
     locationSystem = GIS(api_key=google_api_key, origin_coord=origin_coord, dest_coord=dest_coord, waypoints=waypoints,
-                         race_type="FSGP", force_update=True)
+                         race_type="FSGP")
     map = MapPlot(locationSystem.path, locationSystem.calculate_path_min_max())
     map.plotPath(locationSystem.waypoints)

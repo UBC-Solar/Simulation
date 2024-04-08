@@ -1,11 +1,11 @@
 import numpy as np
 import pytest
 import simulation as simulation
-
+from simulation.model.environment.SolarCalculations import SolarCalculations
 
 @pytest.fixture
 def solar():
-    solar_calculations = simulation.environment.SolarCalculations()
+    solar_calculations = SolarCalculations()
     return solar_calculations
 
 

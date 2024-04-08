@@ -130,10 +130,6 @@ dmypy.json
 # VS Code settings
 .vscode
 
-# Numpy data files
-data/route/*.npz
-data/weather/*.npz
-
 # HTML Output files
 examples/*.html
 *.html
@@ -145,10 +141,6 @@ simulation/examples/cProfile
 # Docs
 docs/UBC Solar - Simulation.pdf
 
-# Config files
-simulation/config/settings_ASC.json
-simulation/config/settings_FSGP.json
-
 # Data Images
 data/images/*.png
 
@@ -159,5 +151,11 @@ data/images/*.png
 .idea
 /simulation/examples/.env
 
+# Env Files
+*.env
+
 # OS Stuff
 .DS_Store
+
+# Env
+*.env

@@ -1,4 +1,4 @@
-from simulation.run_simulation import build_basic_model
+from simulation.cmd.run_simulation import build_basic_model
 
 
 def test_integration():
