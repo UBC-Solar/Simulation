@@ -9,10 +9,11 @@ import datetime
 import numpy as np
 
 from simulation.common import helpers, constants, ASC, FSGP
+from simulation.model.environment.solar_calculations import BaseSolarCalculations
 import core
 
 
-class SolarCalculations:
+class SolarCalculations(BaseSolarCalculations):
 
     def __init__(self, race_type="ASC"):
         """
@@ -28,7 +29,7 @@ class SolarCalculations:
     # ----- Calculation of solar position in the sky -----
 
     @staticmethod
-    def calculate_hour_angle(time_zone_utc, day_of_year, local_time, longitude):
+    def _calculate_hour_angle(time_zone_utc, day_of_year, local_time, longitude):
         """
 
         Calculates and returns the Hour Angle of the Sun in the sky.
@@ -78,8 +79,8 @@ class SolarCalculations:
         # Negative hour angles: Morning
         # 0 hour angle : Solar noon
         # Positive hour angle: Afternoon
-        hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year,
-                                               local_time, longitude)
+        hour_angle = self._calculate_hour_angle(time_zone_utc, day_of_year,
+                                                local_time, longitude)
         # From: https://en.wikipedia.org/wiki/Hour_angle#:~:text=At%20solar%20noon%20the%20hour,times%201.5%20hours%20before%20noon).
         # "For example, at 10:30 AM local apparent time
         # the hour angle is −22.5° (15° per hour times 1.5 hours before noon)."
@@ -131,8 +132,8 @@ class SolarCalculations:
         """
 
         declination_angle = helpers.calculate_declination_angle(day_of_year)
-        hour_angle = self.calculate_hour_angle(time_zone_utc, day_of_year,
-                                               local_time, longitude)
+        hour_angle = self._calculate_hour_angle(time_zone_utc, day_of_year,
+                                                local_time, longitude)
 
         term_1 = np.sin(np.radians(declination_angle)) * \
             np.sin(np.radians(latitude))

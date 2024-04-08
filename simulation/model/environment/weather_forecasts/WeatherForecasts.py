@@ -7,12 +7,13 @@ import os
 import logging
 
 from simulation.cache.weather import weather_directory
+from simulation.model.environment.weather_forecasts.base_weather_forecasts import BaseWeatherForecasts
 from simulation.common import helpers, constants
 
 import core
 
 
-class WeatherForecasts:
+class WeatherForecasts(BaseWeatherForecasts):
     """
     Class that gathers weather data and performs calculations on it to allow the implementation of weather phenomenon
     such as changes in wind speeds and cloud cover in the simulation.

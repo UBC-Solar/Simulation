@@ -5,13 +5,14 @@ import numpy as np
 import sys
 
 from simulation.cache.route import route_directory
+from simulation.model.environment.gis.base_gis import BaseGIS
 from simulation.common import helpers
 from tqdm import tqdm
 from xml.dom import minidom
 import core
 
 
-class GIS:
+class GIS(BaseGIS):
     def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, current_coord=None, hash_key=None):
         """
 

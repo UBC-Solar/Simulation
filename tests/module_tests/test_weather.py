@@ -2,8 +2,8 @@ import dotenv
 import os
 import pytest
 from simulation.common.helpers import *
-from simulation.model.environment.WeatherForecasts import WeatherForecasts
-from simulation.model.environment.GIS import GIS
+from simulation.model.environment.weather_forecasts import WeatherForecasts
+from simulation.model.environment.gis import GIS
 
 
 @pytest.fixture
