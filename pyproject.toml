@@ -77,7 +77,8 @@ dependencies = [
     "google-auth-oauthlib==1.2.0",
     "googleapis-common-protos==1.62.0",
     "dill==0.3.8",
-    "solcast==1.2.3"
+    "solcast==1.2.3",
+    "cryptography==41.0.5"
 ]
 dynamic = ["version"]
 
