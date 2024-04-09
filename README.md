@@ -98,12 +98,12 @@ Or, you can run the script directly. Before running the following commands make 
 #### Unix
 
 ```bash
-python3 simulation/run_simulation.py
+python3 simulation/cmd/run_simulation.py
 ```
 #### Windows
 
 ```bash
-python .\simulation\run_simulation.py
+python .\simulation\cmd\run_simulation.py
 ```
 
 ### Arguments
@@ -113,12 +113,12 @@ You can view a list of valid arguments and settings that Simulation can accept w
 #### Unix
 
 ```bash
-python3 simulation/run_simulation.py -help
+python3 simulation/cmd/run_simulation.py -help
 ```
 #### Windows
 
 ```bash
-python .\simulation\run_simulation.py -help
+python .\simulation\cmd\run_simulation.py -help
 ```
 
 ### Testing

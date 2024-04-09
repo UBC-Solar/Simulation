@@ -124,7 +124,6 @@ def _compile() -> bool:
     print("Beginning to compile libraries!\n")
 
     # Get build commands
-    cmd_build_lib = _build_compile_lib_cmd()
     cmd_build_perlin_lib = _build_compile_perlin_noise_cmd()
     pbar.update(1)
 
@@ -134,42 +133,32 @@ def _compile() -> bool:
     try:
         # Try to compile
         # check=True is intentionally missing because we don't want to throw an error right away
-        result_lib = subprocess.run(cmd_build_lib, shell=True)
-        pbar.update(1)
 
         result_perlin = subprocess.run(cmd_build_perlin_lib, shell=True)
         pbar.update(1)
 
-        if result_lib.returncode == 0 and result_perlin.returncode == 0:
+        if result_perlin.returncode == 0:
             return True
 
         else:
             # Try adding os_type and arch_type specifiers
-            cmd_build_lib = f"GOOS={os_type} GOARCH={arch_type}" + cmd_build_lib
             cmd_build_perlin_lib = f"GOOS={os_type} GOARCH={arch_type}" + cmd_build_perlin_lib
-
-            result_lib = subprocess.run(cmd_build_lib, shell=True)
-            pbar.update(1)
 
             result_perlin = subprocess.run(cmd_build_perlin_lib, shell=True)
             pbar.update(1)
 
-            if result_lib.returncode == 0 and result_perlin == 0:
+            if result_perlin == 0:
                 return True
 
             else:
                 # Try adding CGO_ENABLED=1
                 # check=True is enabled here because we do want to throw an error – we've got nothing else to try
-                cmd_build_lib = "CGO_ENABLED=1" + cmd_build_lib
                 cmd_build_perlin_lib = "CGO_ENABLED=1" + cmd_build_perlin_lib
-
-                result_lib = subprocess.run(cmd_build_lib, shell=True, check=True)
-                pbar.update(1)
 
                 result_perlin = subprocess.run(cmd_build_perlin_lib, shell=True, check=True)
                 pbar.update(1)
 
-                return result_lib.returncode == 0 and result_perlin == 0
+                return result_perlin == 0
 
     except subprocess.CalledProcessError as e:
         print(f"Compilation has failed: {e}\n")
@@ -246,8 +235,6 @@ def _search_for_libraries() -> bool:
         path_to_libraries: str = libraries_directory
 
         # Check if they exist and are compatible, throwing an OSError if either is not true
-        ctypes.cdll.LoadLibrary(f"{path_to_libraries}/main.so")
-        pbar.update(1)
 
         ctypes.cdll.LoadLibrary(f"{path_to_libraries}/perlin_noise.so")
         pbar.update(1)
@@ -309,12 +296,6 @@ def _move_to_directory() -> bool:
 
     if not _make_destination_directory():
         return False
-
-    _move("main.h")
-    pbar.update(1)
-
-    _move("main.so")
-    pbar.update(1)
 
     _move("perlin_noise.h")
     pbar.update(1)

@@ -68,7 +68,15 @@ dependencies = [
     "numba==0.57.1",
     "pygad==3.0.1",
     "perlin-noise==1.12",
-    "haversine==2.8.1"
+    "haversine==2.8.1",
+    "gitpython==3.1.42",
+    "google-api-core==2.17.1",
+    "google-api-python-client==2.120.0",
+    "google-auth==2.28.1",
+    "google-auth-httplib2==0.2.0",
+    "google-auth-oauthlib==1.2.0",
+    "googleapis-common-protos==1.62.0",
+    "dill==0.3.8"
 ]
 dynamic = ["version"]
 
@@ -84,9 +92,9 @@ enabled = true
 packages = ["simulation"]
 
 [project.scripts]
-run_simulation = "simulation.run_simulation:main"
-simulation_health_check = "simulation.run_simulation:_health_check"
-build_simulation = "simulation.run_simulation:_execute_build_script"
+run_simulation = "simulation.cmd.run_simulation:main"
+simulation_health_check = "simulation.cmd.run_simulation:_health_check"
+build_simulation = "simulation.cmd.run_simulation:_execute_build_script"
 
 [[tool.setuptools-rust.ext-modules]]
 # Private Rust extension module to be nested into the Python package
