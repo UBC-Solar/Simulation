@@ -306,7 +306,10 @@
   "start_hour": 7,
   "initial_battery_charge": 1.0,
   "lvs_power_loss": 0,
+
   "period": "30min",
+  "weather_freq": "daily",
+  "weather_provider": "OPENWEATHER",
 
   "charging_begin" : 8,
   "charging_end": 20,

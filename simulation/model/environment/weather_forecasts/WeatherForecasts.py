@@ -19,7 +19,6 @@ class WeatherForecasts(BaseWeatherForecasts):
     such as changes in wind speeds and cloud cover in the simulation.
 
     Attributes:
-        api_key (string): key that allows us to gather data from OpenWeatherAPI
         coords (NumPy array [N][lat, long]): a list of N coordinates for which to gather weather forecasts for
         origin_coord (NumPy array [lat, long]): the starting coordinate
         dest_coord (NumPy array [lat, long]): the ending coordinate
@@ -32,20 +31,19 @@ class WeatherForecasts(BaseWeatherForecasts):
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, api_key, coords, race_type, origin_coord=None, hash_key=None):
+    def __init__(self, coords, race_type, provider: str, origin_coord=None, hash_key=None):
 
         """
 
         Initializes the instance of a WeatherForecast class
 
-        :param api_key: A personal OpenWeatherAPI key to access weather forecasts
         :param origin_coord: A NumPy array of a single [latitude, longitude]
+        :param str provider: string indicating weather provider
         :param coords: A NumPy array of [latitude, longitude]
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
         self.race_type = race_type
-        self.api_key = api_key
         self.last_updated_time = -1
 
         if origin_coord is not None:
@@ -58,13 +56,15 @@ class WeatherForecasts(BaseWeatherForecasts):
 
         if self.race_type == "ASC":
             self.coords = coords[::constants.REDUCTION_FACTOR]
-            weather_file = weather_directory / "weather_data.npz"
+            weather_file = weather_directory / f"weather_data_{provider}.npz"
         else:
             self.coords = np.array([coords[0], coords[-1]])
-            weather_file = weather_directory / "weather_data_FSGP.npz"
+            weather_file = weather_directory / f"weather_data_FSGP_{provider}.npz"
 
         # if the file exists, load path from file
+        print(f"Expecting: {weather_file}")
         if os.path.isfile(weather_file):
+            print("Here?")
             with np.load(weather_file) as weather_data:
                 if weather_data['hash'] == hash_key:
 
@@ -86,8 +86,7 @@ class WeatherForecasts(BaseWeatherForecasts):
                     for key in weather_data:
                         print(f"> {key}: {weather_data[key].shape}")
         else:
-            logging.error("Update API cache by calling CacheAPI.py , Exiting simulation...\n")
-
+            logging.error("Update API cache by calling CacheAPI.py\nExiting simulation...")
             exit()
 
         self.last_updated_time = self.weather_forecast[0, 0, 2]

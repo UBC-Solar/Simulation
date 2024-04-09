@@ -13,13 +13,12 @@ import core
 
 
 class GIS(BaseGIS):
-    def __init__(self, api_key, origin_coord, dest_coord, waypoints, race_type, current_coord=None, hash_key=None):
+    def __init__(self, origin_coord, dest_coord, waypoints, race_type, current_coord=None, hash_key=None):
         """
 
         Initialises a GIS (geographic location system) object. This object is responsible for getting the
         simulation's planned route from the Google Maps API and performing operations on the received data.
 
-        :param api_key: API key that allows access to the Google Maps API
         :param origin_coord: NumPy array containing the start coordinate (lat, long) of the planned travel route
         :param dest_coord: NumPy array containing the end coordinate (lat, long) of the planned travel route
         :param waypoints: NumPy array containing the route waypoints to travel through during simulation
@@ -27,9 +26,6 @@ class GIS(BaseGIS):
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
-
-        self.api_key = api_key
-
         self.current_index = 0
         self.distance_remainder = 0
 

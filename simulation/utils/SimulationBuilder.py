@@ -14,9 +14,7 @@ class SimulationBuilder:
         self.dest_coord = None
         self.current_coord = None
         self.waypoints = None
-
         self.start_hour = None
-
         self.initial_battery_charge = None
 
         # Model Parameters
@@ -24,6 +22,7 @@ class SimulationBuilder:
         self.lvs_power_loss = None
         self.tick = None
         self.simulation_duration = None
+        self.weather_provider = None
 
         # Execution Parameters
         self.golang = None
@@ -48,6 +47,7 @@ class SimulationBuilder:
         self.lvs_power_loss = args['lvs_power_loss']
         self.tick = args['tick']
         self.simulation_duration = args['simulation_duration']
+        self.weather_provider = args['weather_provider']
 
         return self
 

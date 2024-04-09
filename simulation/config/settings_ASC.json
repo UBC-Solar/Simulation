@@ -16,6 +16,7 @@
     "lvs_power_loss": 0,
 
     "weather_freq": "daily",
+    "weather_provider": "OPENWEATHER",
 
     "charging_begin" : 7,
     "charging_end": 20,

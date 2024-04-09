@@ -99,6 +99,7 @@ class Simulation:
         assert builder.race_type in ["ASC", "FSGP"]
 
         self.race_type = builder.race_type
+        self.weather_provider = builder.weather_provider
 
         # ---- Granularity -----
         self.granularity = builder.granularity
@@ -122,9 +123,6 @@ class Simulation:
         # ----- API keys -----
 
         load_dotenv()
-
-        self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
-        self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- Go library initialisation -----
 
@@ -161,7 +159,7 @@ class Simulation:
 
         self.basic_regen = simulation.BasicRegen()
 
-        self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
+        self.gis = simulation.GIS(self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, current_coord=self.current_coord, hash_key=self.hash_key)
 
         self.route_coords = self.gis.get_path()
@@ -170,8 +168,9 @@ class Simulation:
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
-        self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
+        self.weather = simulation.WeatherForecasts(self.route_coords,
                                                    self.race_type,
+                                                   self.weather_provider,
                                                    origin_coord=self.gis.launch_point,
                                                    hash_key=self.hash_key)
 
