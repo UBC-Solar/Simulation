@@ -35,3 +35,4 @@ if __name__ == "__main__":
     decryptor = Decryptor(Key.from_str(key_str))
 
     decrypt(decryptor, weather_directory / 'weather_data_FSGP_SOLCAST.bin', weather_directory / 'weather_data_FSGP_SOLCAST.npz' )
+    decrypt(decryptor, weather_directory / 'weather_data_FSGP_OPENWEATHER.bin', weather_directory / 'weather_data_FSGP_OPENWEATHER.npz' )
