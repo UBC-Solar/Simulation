@@ -13,8 +13,6 @@ def gis():
 
     load_dotenv()
 
-    google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
-
     origin_coord = np.array([39.0918, -94.4172])
 
     waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
@@ -23,9 +21,8 @@ def gis():
 
     dest_coord = np.array([43.6142, -116.2080])
 
-    location_system = GIS(google_api_key, origin_coord, dest_coord,
-                          waypoints, "ASC", golang=False, library=None,
-                          hash_key=231165811)
+    location_system = GIS(origin_coord, dest_coord,
+                          waypoints, "ASC", hash_key=231165811)
 
     return location_system
 

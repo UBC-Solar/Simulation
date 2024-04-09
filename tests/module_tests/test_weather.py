@@ -10,9 +10,6 @@ from simulation.model.environment.gis import GIS
 def weather():
     dotenv.load_dotenv()
 
-    weather_api_key = os.environ.get("OPENWEATHER_API_KEY")
-    google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
-
     origin_coord = np.array([39.0918, -94.4172])
 
     waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
@@ -21,15 +18,14 @@ def weather():
 
     dest_coord = np.array([43.6142, -116.2080])
 
-    location_system = GIS(api_key=google_api_key, origin_coord=origin_coord,
-                                                 waypoints=waypoints, dest_coord=dest_coord, race_type="ASC")
+    location_system = GIS(origin_coord=origin_coord, waypoints=waypoints, dest_coord=dest_coord, race_type="ASC")
 
     route_coords = location_system.get_path()
 
     # 5 day simulation duration
-    weather_calculations = WeatherForecasts(api_key=weather_api_key,
-                                            coords=route_coords,
-                                            race_type="ASC")
+    weather_calculations = WeatherForecasts(coords=route_coords,
+                                            race_type="ASC",
+                                            provider="OPENWEATHER")
 
     return weather_calculations
 
