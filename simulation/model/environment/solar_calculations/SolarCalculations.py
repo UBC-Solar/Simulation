@@ -330,8 +330,6 @@ class SolarCalculations(BaseSolarCalculations):
         :rtype: np.ndarray
 
         """
-
-
         day_of_year, local_time = core.calculate_array_ghi_times(local_times)
 
         ghi = self._calculate_GHI(coords[:, 0], coords[:, 1], time_zones,

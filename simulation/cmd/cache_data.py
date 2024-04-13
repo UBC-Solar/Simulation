@@ -2,7 +2,6 @@ import os
 import sys
 import json
 import pytz
-import tempfile
 import requests
 import argparse
 import datetime
@@ -15,7 +14,6 @@ from strenum import StrEnum
 from dotenv import load_dotenv
 from solcast import forecast
 from timezonefinder import TimezoneFinder
-from simulation.utils import Key, Encryptor
 from simulation.common.helpers import PJWHash
 from simulation.config import config_directory
 from simulation.cache.route import route_directory
@@ -352,7 +350,6 @@ def cache_weather(race: RaceType, weather_provider: WeatherProvider):
                                                                     race_configs["weather_freq"],
                                                                     int(race_configs["simulation_duration"] / 3600))
     elif weather_provider == WeatherProvider.SOLCAST:
-        print(race_configs.keys())
         weather_forecast = update_path_weather_forecast_solcast(coords,
                                                                 int(race_configs['simulation_duration'] / 3600),
                                                                 WeatherPeriod.Period(race_configs['period']))
@@ -360,23 +357,9 @@ def cache_weather(race: RaceType, weather_provider: WeatherProvider):
         raise NotImplementedError(f"Unsupported weather provider: {str(weather_provider)}!")
 
     with open(weather_file, 'wb') as f:
-        # We want to encrypt the weather data stored as a .npz file. But, there's no direct method to capture the
-        # bytes (that np.savez would write to a file) into memory that we can encrypt. So, we have np.savez write the
-        # data to a temporary file which will exist in memory instead of a real file in order to capture the bytes.
-        with tempfile.TemporaryFile() as tf:
-            np.savez(tf, weather_forecast=weather_forecast, origin_coord=origin_coord,
-                     dest_coord=dest_coord, hash=get_hash(origin_coord, dest_coord, waypoints),
-                     provider=str(weather_provider))
-
-            tf.seek(0)            # After writing the data, the file cursor will be at the end of the file,
-            raw_data = tf.read()  # so we need to reset the file cursor to read the bytes out of the temp file.
-
-        # Encrypt the data and write it to an actual file
-        encryptor = Encryptor(Key.from_str(os.getenv("ENCRYPTION_KEY")))
-        print(raw_data)
-        encrypted_data = encryptor.encrypt(raw_data)
-
-        f.write(encrypted_data)
+        np.savez(f, weather_forecast=weather_forecast, origin_coord=origin_coord,
+                 dest_coord=dest_coord, hash=get_hash(origin_coord, dest_coord, waypoints),
+                 provider=str(weather_provider))
 
 
 def update_path_weather_forecast_openweather(coords, weather_data_frequency, duration):
