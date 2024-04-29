@@ -132,8 +132,8 @@ class Assembler:
             file.write(f"\n")
             file.write(f" --- RESULTS --- \n")
             file.write(f"FITNESS:            {' '.join(map(str, evolution.best_fitness))}\n")
-            file.write(f"CHROMOSOME:         {' '.join(map(str, evolution.best_chromosome))}")
-            file.write(f"DIVERSITY:          {' '.join(map(str, evolution.diversity))}")
+            file.write(f"CHROMOSOME:         {' '.join(map(str, evolution.best_chromosome))}\n")
+            file.write(f"DIVERSITY:          {' '.join(map(str, evolution.diversity))}\n")
             file.write(f"STOPPING POINT:     {str(evolution.stopping_point)}")
 
     def write_results(self, evolution: Evolution, evolution_number: str):

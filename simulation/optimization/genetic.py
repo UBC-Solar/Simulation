@@ -126,7 +126,7 @@ class OptimizationSettings:
                  stopping_criteria: Stopping_Criteria = Stopping_Criteria(Stopping_Criteria.saturate, 15)):
         self.chromosome_size: int = chromosome_size
         self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = parent_selection_type
-        self.generation_limit: int = 15
+        self.generation_limit: int = generation_limit
         self.num_parents: int = num_parents
         self.k_tournament: int = k_tournament
         self.crossover_type: OptimizationSettings.Crossover_Type = crossover_type
@@ -286,10 +286,8 @@ class GeneticOptimization(BaseOptimization):
             diversity = sum_stage_sd / x.pop_size[1]
             self.diversity.append(diversity)
 
-            x.logger.info(self.diversity)
-
             # Record Stopping point info
-            if self.settings.stopping_criteria == "saturate":
+            if "saturate" in str(self.settings.stopping_criteria):
                 self.stopping_point = x.generations_completed
             else:  # self.settings.stopping_criteria == "reach"
                 self.stopping_point = x.best_solutions_fitness[-1]  # best fitness of the last completed generation
