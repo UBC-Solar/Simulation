@@ -29,7 +29,7 @@ class Controller:
         with open(self.data_directory / "network.toml", 'rb') as config_file:
             config = tomllib.load(config_file)
             self.scopes = config['settings']['SCOPES']
-            self.auth_file = config['settings']['AUTH_FILE']
+            self.auth_file = os.path.join(data_directory, config['settings']['AUTH_FILE'])
 
         # Create clients with Google Drive
         service = Controller.get_service(self.authenticate())
@@ -46,6 +46,7 @@ class Controller:
         if os.path.exists(self.auth_file):
             return Credentials.from_authorized_user_file(str(self.auth_file), self.scopes)
         else:
+            print(self.auth_file)
             raise FileNotFoundError("Cannot find Google Drive API token!")
 
     @staticmethod
@@ -151,3 +152,8 @@ def bootstrap(controller: Controller):
     controller.uploader.upload_file("last_evolution.txt", Path("last_evolution.txt").resolve(), controller.uploader.evolution_number_id)
     controller.uploader.upload_file("evolution_browser.csv", Path("evolution_browser.csv").resolve(), controller.uploader.evolution_browser_id)
     print("WARNING! SAVE THE ABOVE ID'S INTO NETWORK.TOML!")
+
+
+if __name__ == "__main__":
+     controller: Controller = Controller('C:/Users/tamze/OneDrive/Documents/GitHub/Simulation/simulation/data/results')
+     controller.sync()

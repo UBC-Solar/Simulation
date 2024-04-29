@@ -126,7 +126,7 @@ class OptimizationSettings:
                  stopping_criteria: Stopping_Criteria = Stopping_Criteria(Stopping_Criteria.saturate, 15)):
         self.chromosome_size: int = chromosome_size
         self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = parent_selection_type
-        self.generation_limit: int = generation_limit
+        self.generation_limit: int = 15
         self.num_parents: int = num_parents
         self.k_tournament: int = k_tournament
         self.crossover_type: OptimizationSettings.Crossover_Type = crossover_type
@@ -260,13 +260,19 @@ class GeneticOptimization(BaseOptimization):
         # Store diversity of generation per optimization iteration
         self.diversity = []
 
-        # Define a function to be run when a generation begins
+        # Stopping context based on stopping criteria
+        # If stopping criteria = "saturate" -> stopping_point = generations_completed
+        # If stopping criteria = "reach" -> stopping_point = fitness reached
+        self.stopping_point = 0
+
+        # A function to be run when a generation begins
         def on_generation_callback(x):
             """
             Callback function that is called after each generation/optimization iteration.
             Passes in a GA instance named x in this func
             """
 
+            # Calculate Diversity
             # sum accumulator for standard deviation of a stage
             sum_stage_sd = 0  # stages -> individual gene
 
@@ -281,6 +287,12 @@ class GeneticOptimization(BaseOptimization):
             self.diversity.append(diversity)
 
             x.logger.info(self.diversity)
+
+            # Record Stopping point info
+            if self.settings.stopping_criteria == "saturate":
+                self.stopping_point = x.generations_completed
+            else:  # self.settings.stopping_criteria == "reach"
+                self.stopping_point = x.best_solutions_fitness[-1]  # best fitness of the last completed generation
 
             # Update progress bar if it exists
             if pbar is not None:
