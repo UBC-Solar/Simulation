@@ -22,7 +22,7 @@ class Evolution:
         # Context
         self.timestamp: datetime.datetime = datetime.datetime.fromtimestamp(time.time())
         self.username: str = repo.config_reader().get_value("user", "name")
-        self.repo_commit: str = "abc123"
+        self.repo_commit: str = repo.git.rev_parse(repo.head.object.hexsha, short=10)
         self.is_dirty: bool = repo.is_dirty()
 
         # Simulation Attributes
