@@ -1,3 +1,4 @@
+from simulation.common import Race
 from simulation.common import Consumer
 from simulation.common import Producer
 from simulation.common import Storage

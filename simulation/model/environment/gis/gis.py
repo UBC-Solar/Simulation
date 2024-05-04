@@ -6,7 +6,7 @@ import sys
 
 from simulation.cache.route import route_directory
 from simulation.model.environment.gis.base_gis import BaseGIS
-from simulation.common import helpers
+from simulation.common import helpers, Race
 from tqdm import tqdm
 from xml.dom import minidom
 import core
@@ -36,7 +36,7 @@ class GIS(BaseGIS):
         self.race_type = race_type
 
         # path to file storing the route and elevation NumPy arrays
-        if self.race_type == "FSGP":
+        if self.race_type == Race.RaceType.FSGP:
             route_file = route_directory / "route_data_FSGP.npz"
         else:
             route_file = route_directory / "route_data.npz"

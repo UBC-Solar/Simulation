@@ -1,7 +1,6 @@
 import simulation
 import functools
 import logging
-import os
 import core
 import numpy as np
 
@@ -11,6 +10,7 @@ from dotenv import load_dotenv
 
 from simulation.common import helpers
 from simulation.common.exceptions import LibrariesNotFound
+from simulation.common import Race, load_race
 from simulation.utils.Plotting import GraphPage
 
 
@@ -63,8 +63,6 @@ class Simulation:
         initial_battery_charge: starting charge of the battery
         golang: define whether Go implementations should be used when applicable
         library: manages and locates Go shared libraries (if possible)
-        google_api_key: API key to access GoogleMaps API. Stored in a .env file. Please ask Simulation Lead for this!
-        weather_api_key: API key to access OpenWeather API. Stored in a .env file. Please ask Simulation Lead for this!
         origin_coord: array containing latitude and longitude of route start point
         dest_coord: array containing latitude and longitude of route end point
         waypoints: array containing latitude and longitude pairs of route waypoints
@@ -96,9 +94,10 @@ class Simulation:
 
         # ----- Race type -----
 
-        assert builder.race_type in ["ASC", "FSGP"]
+        assert builder.race_type in Race.RaceType, f"{builder.race_type} is not a valid race type!"
 
         self.race_type = builder.race_type
+        self.race = load_race(self.race_type)
         self.weather_provider = builder.weather_provider
 
         # ---- Granularity -----
@@ -169,7 +168,7 @@ class Simulation:
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
         self.weather = simulation.WeatherForecasts(self.route_coords,
-                                                   self.race_type,
+                                                   self.race_type.value,
                                                    self.weather_provider,
                                                    origin_coord=self.gis.launch_point,
                                                    hash_key=self.hash_key)
@@ -177,7 +176,7 @@ class Simulation:
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations(race_type=self.race_type)
+        self.solar_calculations = simulation.SolarCalculations(race=self.race)
 
         self.plotting = simulation.Plotting()
 
@@ -245,8 +244,7 @@ class Simulation:
                                                                  f"{self.get_driving_time_divisions()} is needed!")
 
         # ----- Reshape speed array -----
-        speed_kmh = helpers.reshape_speed_array(self.start_hour, self.simulation_duration, self.race_type,
-                                                speed, self.granularity, self.tick)
+        speed_kmh = helpers.reshape_speed_array(self.race, speed, self.granularity)
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
@@ -365,9 +363,7 @@ class Simulation:
 
         """
 
-        return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
-                                                           self.race_type, self.granularity,
-                                                           as_seconds=False).sum().astype(int)
+        return helpers.get_granularity_reduced_boolean(self.race.driving_boolean, self.granularity).sum().astype(int)
 
     def get_race_length(self):
         try:

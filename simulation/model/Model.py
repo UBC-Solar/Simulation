@@ -81,7 +81,7 @@ class Model:
 
         # ----- Tick array -----
 
-        self.timestamps = np.arange(0, self.simulation.simulation_duration + self.simulation.tick, self.simulation.tick)
+        self.timestamps = np.arange(0, self.simulation.simulation_duration, self.simulation.tick)
         self.tick_array = np.diff(self.timestamps) # can this not just be np.full(self.timestamps.shape, self.simulation.tick)?
         self.tick_array = np.insert(self.tick_array, 0, 0)
 
@@ -169,10 +169,8 @@ class Model:
         self.regen_produced_energy = self.simulation.basic_regen.calculate_produced_energy(self.speed_kmh,
                                                                                            self.gis_route_elevations_at_each_tick)
 
-        self.not_charge = helpers.get_charge_timing_constraints_boolean(start_hour=self.simulation.start_hour,
-                                                                        simulation_duration=self.simulation.
-                                                                        simulation_duration,
-                                                                        race_type=self.simulation.race_type)[:self.simulation.simulation_duration + 1]
+        self.not_charge = self.simulation.race.charging_boolean
+
         if self.simulation.tick != 1:
             self.not_charge = self.not_charge[::self.simulation.tick]
 

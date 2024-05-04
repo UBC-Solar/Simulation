@@ -18,7 +18,7 @@ from simulation.common.helpers import PJWHash
 from simulation.config import config_directory
 from simulation.cache.route import route_directory
 from simulation.cache.weather import weather_directory
-from simulation.common import ASC, FSGP, constants, BrightSide, helpers
+from simulation.common import constants, BrightSide, helpers, Race, load_race
 
 
 # load API keys from environment variables
@@ -29,11 +29,6 @@ class APIType(StrEnum):
     GIS = "GIS"
     WEATHER = "WEATHER"
     ALL = "ALL"
-
-
-class RaceType(StrEnum):
-    FSGP = "FSGP"
-    ASC = "ASC"
 
 
 class WeatherProvider(StrEnum):
@@ -54,20 +49,22 @@ def cache_gis(race):
 
     # Get path for race from setting JSONs 
     if race == "FSGP":
+        race = load_race(Race.FSGP)
         route_file = route_directory / "route_data_FSGP.npz"
 
         # Coords will be the same as waypoints for FSGP
         origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
 
-        tiling = FSGP.tiling  # set tiling from config file
+        tiling = race.tiling  # set tiling from config file
     else:
+        race = load_race(Race.ASC)
         route_file = route_directory / "route_data.npz"
 
         # Get directions/path from directions API
         # Coords may not contain all waypoints for ASC
         origin_coord, dest_coord, coords, waypoints = get_asc_coords()
 
-        tiling = ASC.tiling  # set tiling from config file
+        tiling = race.tiling  # set tiling from config file
 
     # Calculate speed limits and curvature
     curvature = calculate_curvature(coords)
@@ -278,13 +275,14 @@ def calculate_time_zones(coords, race):
     timezones_return = np.zeros(len(coords))
 
     tf = TimezoneFinder()
-
     if race == "FSGP":
+        race = load_race(Race.FSGP)
         # this is when FSGP 2021 starts
-        dt = datetime.datetime(*FSGP.date)
+        dt = datetime.datetime(*race.date)
     else:
+        race = load_race(Race.ASC)
         # this is when ASC 2021 starts
-        dt = datetime.datetime(*ASC.date)
+        dt = datetime.datetime(*race.date)
 
     with tqdm(total=len(coords), file=sys.stdout, desc="Calculating Time Zones") as pbar:
         for index, coord in enumerate(coords):
@@ -298,7 +296,7 @@ def calculate_time_zones(coords, race):
 
 
 # ------------------- Weather API -------------------
-def cache_weather(race: RaceType, weather_provider: WeatherProvider):
+def cache_weather(race: Race.RaceType, weather_provider: WeatherProvider):
     """
 
     Makes calls to Weather API for a given race and caches the results to a .npz file
@@ -311,7 +309,7 @@ def cache_weather(race: RaceType, weather_provider: WeatherProvider):
           f"Calling {str(weather_provider)} API and creating weather save file...\n")
 
     # Get coords for race
-    if race == RaceType.FSGP:
+    if race == Race.FSGP:
         # Get path/coords from cached file
         origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
 
@@ -321,7 +319,7 @@ def cache_weather(race: RaceType, weather_provider: WeatherProvider):
 
         weather_file = weather_directory / f"weather_data_FSGP_{str(weather_provider)}.bin"
 
-    elif race == RaceType.ASC:
+    elif race == Race.ASC:
         # Get path/coords from cached file
         route_file = route_directory / "route_data.npz"
 
@@ -706,13 +704,13 @@ def get_hash(origin_coord, dest_coord, waypoints):
 class Query:
     def __init__(self, api_type, race_type, weather_provider):
         self.api: APIType = APIType(api_type)
-        self.race: RaceType = RaceType(race_type)
+        self.race: Race.RaceType = Race.RaceType(race_type)
         self.provider: WeatherProvider = WeatherProvider(weather_provider)
 
     def make(self):
         # Fetch APIs
         if self.api == APIType.GIS or self.api == APIType.ALL:
-            cache_gis(self.race)
+            cache_gis(str(self.race))
 
         if self.api == APIType.WEATHER or self.api == APIType.ALL:
             cache_weather(self.race, self.provider)

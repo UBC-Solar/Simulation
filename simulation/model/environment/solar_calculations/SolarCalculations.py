@@ -8,14 +8,14 @@ A class to perform calculation and approximations for obtaining quantities
 import datetime
 import numpy as np
 
-from simulation.common import helpers, constants, ASC, FSGP
+from simulation.common import helpers, constants, Race
 from simulation.model.environment.solar_calculations.base_solar_calculations import BaseSolarCalculations
 import core
 
 
 class SolarCalculations(BaseSolarCalculations):
 
-    def __init__(self, race_type="ASC"):
+    def __init__(self, race: Race):
         """
 
         Initializes the instance of a SolarCalculations class
@@ -24,7 +24,7 @@ class SolarCalculations(BaseSolarCalculations):
 
         # Solar Constant in W/m2
         self.S_0 = constants.SOLAR_IRRADIANCE
-        self.race_type = race_type
+        self.race = race
 
     # ----- Calculation of solar position in the sky -----
 
@@ -338,21 +338,9 @@ class SolarCalculations(BaseSolarCalculations):
         stationary_irradiance = self._calculate_angled_irradiance(coords[:, 0], coords[:, 1], time_zones, day_of_year,
                                                                   local_time, elevations, cloud_covers)
 
-        if self.race_type == "ASC":
-            driving_begin = ASC.driving_begin
-            driving_end = ASC.driving_end
-        elif self.race_type == "FSGP":
-            driving_begin = FSGP.driving_begin
-            driving_end = FSGP.driving_end
-        else:
-            driving_begin = 0
-            driving_end = 24
-
         # Use stationary irradiance when the car is not driving
         effective_irradiance = np.where(
-            np.logical_or(
-                (local_time < driving_begin),
-                (driving_end < local_time)),
+            np.logical_not(self.race.driving_boolean),
             stationary_irradiance,
             ghi)
 

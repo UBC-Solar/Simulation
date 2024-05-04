@@ -301,22 +301,30 @@
     [ 36.99932082, -86.37230251]
   ],
   "tick": 1,
-  "simulation_duration": 259200,
   "race_length": 0,
-  "start_hour": 7,
-  "initial_battery_charge": 1.0,
   "lvs_power_loss": 0,
+  "simulation_duration": 259200,
 
   "period": "30min",
   "weather_freq": "daily",
   "weather_provider": "OPENWEATHER",
 
-  "charging_begin" : 8,
-  "charging_end": 20,
-  "driving_begin": 9,
-  "driving_end": 18,
-  "tiling": 300,
-
+  "days": {
+    "0": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    },
+    "1": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    },
+    "2": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    }
+  },
+  "tiling": 600,
+  "start_hour": 7,
   "start_year": 2021,
   "start_month": 7,
   "start_day": 31

@@ -1,6 +1,8 @@
 {
     "current_coord": [38.9281815, -95.677021],
 
+    "start_day": 0,
     "start_hour": 7,
+    "start_time": 420,
     "initial_battery_charge": 0.65
 }

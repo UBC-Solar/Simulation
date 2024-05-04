@@ -13,7 +13,7 @@ from bokeh.plotting import figure, show, output_file
 from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from numba import jit
-from simulation.common import constants, ASC, FSGP, DayBreak
+from simulation.common import DayBreak, Race
 from haversine import haversine, Unit
 
 
@@ -190,7 +190,38 @@ def apply_acceleration(input_speed_array, tick):
     return input_speed_array
 
 
-def reshape_speed_array(start_hour, simulation_duration, race_type, speed, granularity, tick=1):
+def get_granularity_reduced_boolean(boolean: np.ndarray, granularity: int | float) -> np.ndarray:
+    """
+    Reduce a boolean where each element represented one second by agglomerating blocks of
+    elements into a single element where the result will be False if there are any False
+    values in the block; block size is dependent on granularity where a granularity of 1
+    will result in a block size of 3600 (1 hour).
+
+
+    :param boolean:
+    :param granularity:
+    :return:
+    """
+    inverse_granularity = int(3600 / granularity)  # Number of seconds. Granularity of 1 should mean 1 per hour
+    duration = len(boolean)
+    reduced_duration = int(duration / inverse_granularity)
+    reduced_boolean = np.empty(reduced_duration, dtype=bool)
+
+    i = 0
+    n = 0
+
+    while i < len(boolean):
+        j = i + inverse_granularity
+        truth_value = any(~boolean[i:j].astype(bool))
+        reduced_boolean[n] = truth_value
+
+        n += 1
+        i = j
+
+    return ~reduced_boolean
+
+
+def reshape_speed_array(race: Race, speed, granularity, tick=1):
     """
 
     Modify the speed array to reflect:
@@ -211,13 +242,12 @@ def reshape_speed_array(start_hour, simulation_duration, race_type, speed, granu
     :rtype: np.ndarray
 
     """
-    speed_boolean_array = get_race_timing_constraints_boolean(start_hour, simulation_duration,
-                                                              race_type, as_seconds=False,
-                                                              granularity=granularity).astype(int)
-    speed_mapped = map_array_to_targets(speed, speed_boolean_array)
+    speed_boolean_array = race.driving_boolean.astype(int)
 
-    reshaped_tick_count = simulation_duration/tick
-    speed_mapped_per_tick = np.insert(reshape_and_repeat(speed_mapped, reshaped_tick_count), 0, 0)
+    speed_mapped = map_array_to_targets(speed, get_granularity_reduced_boolean(speed_boolean_array, granularity))
+
+    reshaped_tick_count = race.race_duration / tick
+    speed_mapped_per_tick = reshape_and_repeat(speed_mapped, reshaped_tick_count)
     speed_smoothed_kmh = apply_deceleration(apply_acceleration(speed_mapped_per_tick, tick), tick)
 
     return speed_smoothed_kmh
@@ -519,110 +549,6 @@ def find_multi_index_runs(x):
     multi_index_run_lengths = run_lengths[multi_index_run_indices]
 
     return multi_index_run_values, multi_index_run_starts, multi_index_run_lengths
-
-
-@jit(nopython=True)
-def apply_race_timing_constraints(speed_kmh, start_hour, simulation_duration, race_type, timestamps, verbose):
-    """
-
-    Applies regulation timing constraints to a speed array.
-
-    :param np.ndarray speed_kmh: A NumPy array representing the speed at each timestamp in km/h
-    :param int start_hour: An integer representing the race's start hour
-    :param int simulation_duration: An integer representing simulation duration in seconds
-    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
-    :param np.ndarray timestamps: A NumPy array representing the timestamps for the simulated race
-    :param bool verbose: A flag to show speed array modifications for debugging purposes
-    :returns: constrained_speed_kmh, a speed array with race timing constraints applied to it, not_charging_array, a boolean array representing when the car can charge and when it cannot (1 = charge, 0 = not_charging_array)
-    :rtype: np.ndarray
-    :raises: ValueError is race_type is not one of "ASC" or "FSGP"
-
-    """
-
-    not_charging_array = get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type)
-
-    if verbose:
-        plot_graph(timestamps=timestamps,
-                   arrays_to_plot=[not_charging_array, speed_kmh],
-                   array_labels=["not charge", "updated speed (km/h)"],
-                   graph_title="not charge and speed")
-
-    constrained_speed_kmh = np.logical_and(speed_kmh, not_charging_array) * speed_kmh
-
-    return constrained_speed_kmh, not_charging_array
-
-
-def get_race_timing_constraints_boolean(start_hour, simulation_duration, race_type, granularity=1, as_seconds=True):
-    """
-
-    Applies regulation timing constraints to a speed array.
-
-    :param int start_hour: An integer representing the race's start hour
-    :param int simulation_duration: An integer representing simulation duration in seconds
-    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
-    :param bool as_seconds: will return an array of seconds, or hours if set to False
-    :param float granularity: how granular the time divisions for Simulation's speed array should be, where 1 is hourly and 2 is twice per hour.
-    :returns: driving_time_boolean, a boolean array with race timing constraints applied to it
-    :rtype: np.ndarray
-    :raises: ValueError is race_type is not one of "ASC" or "FSGP"
-
-    """
-
-    # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
-    # (Charge from 8am-9am and 6pm-8pm) for FSGP
-
-    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60), (1.0 / granularity))
-
-    if as_seconds is True:
-        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
-                                               start_hour + simulation_duration / (60 * 60)).astype(int)
-        if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= ASC.driving_begin, (simulation_hours_by_second % 24) >= ASC.driving_end]
-        else:  # FSGP
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= FSGP.driving_begin, (simulation_hours_by_second % 24) >= FSGP.driving_end]
-    else:
-        if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours % 24) <= ASC.driving_begin, (simulation_hours % 24) >= ASC.driving_end]
-        else:  # FSGP
-            driving_time_boolean = [(simulation_hours % 24) <= FSGP.driving_begin, (simulation_hours % 24) >= FSGP.driving_end]
-
-    return np.invert(np.logical_or.reduce(driving_time_boolean))
-
-
-def get_charge_timing_constraints_boolean(start_hour, simulation_duration, race_type, as_seconds=True):
-    """
-
-    Applies regulation timing constraints to an array representing when the car will be able to charge.
-
-    :param int start_hour: An integer representing the race's start hour
-    :param int simulation_duration: An integer representing simulation duration in seconds
-    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
-    :param bool as_seconds: will return an array of seconds, or hours if set to False
-    :returns: driving_time_boolean, a boolean array with charge timing constraints applied to it
-    :rtype: np.ndarray
-    :raises: ValueError is race_type is not one of "ASC" or "FSGP"
-
-    """
-
-    # (Charge from 7am-9am and 6pm-8pm) for ASC - 13 Hours of Race Day, 9 Hours of Driving
-    # (Charge from 8am-9am and 6pm-8pm) for FSGP
-
-    simulation_hours = np.arange(start_hour, start_hour + simulation_duration / (60 * 60))
-
-    if as_seconds is True:
-        simulation_hours_by_second = np.append(np.repeat(simulation_hours, 3600),
-                                               start_hour + simulation_duration / (60 * 60)).astype(int)
-        if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= ASC.charging_begin, (simulation_hours_by_second % 24) >= ASC.charging_end]
-        else:  # FSGP
-            driving_time_boolean = [(simulation_hours_by_second % 24) <= FSGP.charging_begin, (simulation_hours_by_second % 24) >= FSGP.charging_end]
-    else:
-        if race_type == "ASC":
-            driving_time_boolean = [(simulation_hours % 24) <= ASC.charging_begin, (simulation_hours % 24) >= ASC.charging_end]
-        else:  # FSGP
-            driving_time_boolean = [(simulation_hours % 24) <= FSGP.charging_begin, (simulation_hours % 24) >= FSGP.charging_end]
-
-    return np.invert(np.logical_or.reduce(driving_time_boolean))
 
 
 def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
@@ -942,7 +868,6 @@ def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0)
 def rescale(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
     normalized_array = normalize(input_array)
     return denormalize(normalized_array, upper_bound, lower_bound)
-
 
 
 if __name__ == '__main__':
