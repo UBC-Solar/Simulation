@@ -46,8 +46,7 @@ class Controller:
         if os.path.exists(self.auth_file):
             return Credentials.from_authorized_user_file(str(self.auth_file), self.scopes)
         else:
-            print(self.auth_file)
-            raise FileNotFoundError("Cannot find Google Drive API token!")
+            raise FileNotFoundError("Cannot find Google Drive API token! Auth file not found: ", self.auth_file)
 
     @staticmethod
     def get_service(credentials: Credentials) -> Client:
@@ -153,7 +152,13 @@ def bootstrap(controller: Controller):
     controller.uploader.upload_file("evolution_browser.csv", Path("evolution_browser.csv").resolve(), controller.uploader.evolution_browser_id)
     print("WARNING! SAVE THE ABOVE ID'S INTO NETWORK.TOML!")
 
-
 if __name__ == "__main__":
-     controller: Controller = Controller('C:/Users/tamze/OneDrive/Documents/GitHub/Simulation/simulation/data/results')
-     controller.sync()
+    path = ""
+    while not os.path.exists(path):  # Prompt user to submit or resubmit path
+        path = input("Enter/Paste path to simulation data results: ")
+
+        if not os.path.exists(path):  # Check path validity
+            print("Path invalid, please check path and resubmit")
+
+    controller: Controller = Controller(path)
+    controller.sync()

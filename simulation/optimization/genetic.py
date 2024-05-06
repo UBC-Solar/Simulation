@@ -260,9 +260,7 @@ class GeneticOptimization(BaseOptimization):
         # Store diversity of generation per optimization iteration
         self.diversity = []
 
-        # Stopping context based on stopping criteria
-        # If stopping criteria = "saturate" -> stopping_point = generations_completed
-        # If stopping criteria = "reach" -> stopping_point = fitness reached
+        # Stopping context based on stopping criteria -> generations completed
         self.stopping_point = 0
 
         # A function to be run when a generation begins
@@ -287,10 +285,7 @@ class GeneticOptimization(BaseOptimization):
             self.diversity.append(diversity)
 
             # Record Stopping point info
-            if "saturate" in str(self.settings.stopping_criteria):
-                self.stopping_point = x.generations_completed
-            else:  # self.settings.stopping_criteria == "reach"
-                self.stopping_point = x.best_solutions_fitness[-1]  # best fitness of the last completed generation
+            self.stopping_point = x.generations_completed
 
             # Update progress bar if it exists
             if pbar is not None:
