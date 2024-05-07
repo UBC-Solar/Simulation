@@ -132,7 +132,9 @@ class Assembler:
             file.write(f"\n")
             file.write(f" --- RESULTS --- \n")
             file.write(f"FITNESS:            {' '.join(map(str, evolution.best_fitness))}\n")
-            file.write(f"CHROMOSOME:         {' '.join(map(str, evolution.best_chromosome))}")
+            file.write(f"CHROMOSOME:         {' '.join(map(str, evolution.best_chromosome))}\n")
+            file.write(f"DIVERSITY:          {' '.join(map(str, evolution.diversity))}\n")
+            file.write(f"STOPPING POINT:     {str(evolution.stopping_point)}")
 
     def write_results(self, evolution: Evolution, evolution_number: str):
         """
@@ -249,4 +251,4 @@ class Assembler:
 
 
 if __name__ == "__main__":
-    Assembler('/Users/joshuariefman/Simulation/simulation/data/results').collect_local_results()
+    Assembler('C:/Users/tamze/OneDrive/Documents/GitHub/Simulation/simulation/data/results').collect_local_results()

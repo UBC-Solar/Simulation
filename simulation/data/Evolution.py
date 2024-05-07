@@ -57,9 +57,9 @@ class Evolution:
         self.best_fitness = fitness
         self.best_chromosome = optimizer.bestinput
         self.results = results
+        self.diversity = optimizer.diversity
+        self.stopping_point = optimizer.stopping_point
 
         # TODO:
-        # self.diversity = optimizer.diversity
         # self.fitness_over_generations = optimizer.fitness_over_generations
-        # self.stopping_point = optimizer.stopping_point
 

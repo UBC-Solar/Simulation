@@ -29,7 +29,7 @@ class Controller:
         with open(self.data_directory / "network.toml", 'rb') as config_file:
             config = tomllib.load(config_file)
             self.scopes = config['settings']['SCOPES']
-            self.auth_file = config['settings']['AUTH_FILE']
+            self.auth_file = os.path.join(data_directory, config['settings']['AUTH_FILE'])
 
         # Create clients with Google Drive
         service = Controller.get_service(self.authenticate())
@@ -46,7 +46,7 @@ class Controller:
         if os.path.exists(self.auth_file):
             return Credentials.from_authorized_user_file(str(self.auth_file), self.scopes)
         else:
-            raise FileNotFoundError("Cannot find Google Drive API token!")
+            raise FileNotFoundError("Cannot find Google Drive API token! Auth file not found: ", self.auth_file)
 
     @staticmethod
     def get_service(credentials: Credentials) -> Client:
@@ -151,3 +151,14 @@ def bootstrap(controller: Controller):
     controller.uploader.upload_file("last_evolution.txt", Path("last_evolution.txt").resolve(), controller.uploader.evolution_number_id)
     controller.uploader.upload_file("evolution_browser.csv", Path("evolution_browser.csv").resolve(), controller.uploader.evolution_browser_id)
     print("WARNING! SAVE THE ABOVE ID'S INTO NETWORK.TOML!")
+
+if __name__ == "__main__":
+    path = ""
+    while not os.path.exists(path):  # Prompt user to submit or resubmit path
+        path = input("Enter/Paste path to simulation data results: ")
+
+        if not os.path.exists(path):  # Check path validity
+            print("Path invalid, please check path and resubmit")
+
+    controller: Controller = Controller(path)
+    controller.sync()
