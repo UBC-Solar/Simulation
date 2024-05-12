@@ -231,10 +231,8 @@ def reshape_speed_array(race: Race, speed, granularity, tick=1):
         - reasonable deceleration
         - tick length (time interval between speed array values in seconds)
 
+    :param Race race: Race object containing the timing configuration
     :param np.ndarray speed: A NumPy array representing the speed at each timestamp in km/h
-    :param int start_hour: An integer representing the race's start hour
-    :param int simulation_duration: An integer representing simulation duration in seconds
-    :param str race_type: A string describing the race type. Must be one of "ASC" or "FSGP"
     :param float granularity: how granular the time divisions for Simulation's speed array should be,
                               where 1 is hourly and 0.5 is twice per hour.
     :param int tick: The time interval in seconds between each speed in the speed array

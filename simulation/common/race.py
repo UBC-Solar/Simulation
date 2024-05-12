@@ -29,6 +29,9 @@ class Race:
         def __contains__(self, item):
             return item == "ASC" or item == "FSGP"
 
+        def __repr__(self):
+            return str(self)
+
     ASC = RaceType.ASC
     FSGP = RaceType.FSGP
 
@@ -81,4 +84,3 @@ if __name__ == "__main__":
 
     race = Race(Race.ASC)
     race.write()
-
