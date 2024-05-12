@@ -167,11 +167,10 @@ class Simulation:
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
-        self.weather = simulation.WeatherForecasts(self.route_coords,
-                                                   self.race_type.value,
-                                                   self.weather_provider,
-                                                   origin_coord=self.gis.launch_point,
-                                                   hash_key=self.hash_key)
+        self.weather = simulation.OpenWeatherForecast(self.route_coords,
+                                                      self.race,
+                                                      origin_coord=self.gis.launch_point,
+                                                      hash_key=self.hash_key)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)

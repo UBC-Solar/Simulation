@@ -1,6 +1,6 @@
 """
 A class to extract local and path weather predictions such as wind_speed, 
-    wind_direction, cloud_cover and weather type
+    wind_direction, cloud_cover and weather type from OpenWeather.
 """
 import numpy as np
 import os
@@ -8,12 +8,12 @@ import logging
 
 from simulation.cache.weather import weather_directory
 from simulation.model.environment.weather_forecasts.base_weather_forecasts import BaseWeatherForecasts
-from simulation.common import helpers, constants
+from simulation.common import helpers, constants, Race
 
 import core
 
 
-class WeatherForecasts(BaseWeatherForecasts):
+class OpenWeatherForecast(BaseWeatherForecasts):
     """
     Class that gathers weather data and performs calculations on it to allow the implementation of weather phenomenon
     such as changes in wind speeds and cloud cover in the simulation.
@@ -31,7 +31,7 @@ class WeatherForecasts(BaseWeatherForecasts):
             (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
     """
 
-    def __init__(self, coords, race_type, provider: str, origin_coord=None, hash_key=None):
+    def __init__(self, coords, race: Race, origin_coord=None, hash_key=None):
 
         """
 
@@ -43,53 +43,20 @@ class WeatherForecasts(BaseWeatherForecasts):
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
-        self.race_type = race_type
-        self.last_updated_time = -1
-
-        if origin_coord is not None:
-            self.origin_coord = np.array(origin_coord)
-        else:
-            self.origin_coord = coords[0]
-        self.dest_coord = coords[-1]
-
-        assert race_type in ["ASC", "FSGP"]
-
-        if self.race_type == "ASC":
-            self.coords = coords[::constants.REDUCTION_FACTOR]
-            weather_file = weather_directory / f"weather_data_{provider}.npz"
-        else:
-            self.coords = np.array([coords[0], coords[-1]])
-            weather_file = weather_directory / f"weather_data_FSGP_{provider}.npz"
-
-        # if the file exists, load path from file
-        print(f"Expecting: {weather_file}")
-        if os.path.isfile(weather_file):
-            print("Here?")
-            with np.load(weather_file) as weather_data:
-                if weather_data['hash'] == hash_key:
-
-                    print("Previous weather save file is being used...\n")
-
-                    self.weather_forecast = weather_data['weather_forecast']
-
-                    start_time_unix = self.weather_forecast[0, 0, 2]
-                    end_time_unix = self.weather_forecast[0, -1, 2]
-                    start_time = helpers.date_from_unix_timestamp(start_time_unix)
-                    end_time = helpers.date_from_unix_timestamp(end_time_unix)
-
-                    print("----- Weather save file information -----\n")
-                    print(f"--- Data time range ---")
-                    print(f"Start time (UTC)f: {start_time} [{start_time_unix:.0f}]\n"
-                          f"End time (UTC): {end_time} [{end_time_unix:.0f}]\n")
-
-                    print("--- Array information ---")
-                    for key in weather_data:
-                        print(f"> {key}: {weather_data[key].shape}")
-        else:
-            logging.error("Update API cache by calling CacheAPI.py\nExiting simulation...")
-            exit()
+        super().__init__(coords, race, "OPENWEATHER", origin_coord, hash_key)
 
         self.last_updated_time = self.weather_forecast[0, 0, 2]
+
+        start_time_unix = self.weather_forecast[0, 0, 2]
+        end_time_unix = self.weather_forecast[0, -1, 2]
+        start_time = helpers.date_from_unix_timestamp(start_time_unix)
+        end_time = helpers.date_from_unix_timestamp(end_time_unix)
+
+        print("----- Weather save file information -----\n")
+        print(f"--- Data time range ---")
+        print(f"Start time (UTC)f: {start_time} [{start_time_unix:.0f}]\n"
+              f"End time (UTC): {end_time} [{end_time_unix:.0f}]\n")
+
 
     def calculate_closest_weather_indices(self, cumulative_distances):
         """
@@ -121,7 +88,7 @@ class WeatherForecasts(BaseWeatherForecasts):
         # This characterizes the weather at every point along the FSGP tracks
         # with the weather at a single coordinate on the track, which is great for reducing the API calls and is a
         # reasonable assumption to make for FSGP only.
-        if self.race_type == "FSGP":
+        if self.race.race_type == Race.FSGP:
             result = np.zeros_like(cumulative_distances, dtype=int)
             return result
 
