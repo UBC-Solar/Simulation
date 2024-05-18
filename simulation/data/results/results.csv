@@ -38,3 +38,7 @@ Chromosomes, Parent_Selection, Generations, Parents, Crossover, Elitism, Mutatio
 38,24,tournament,15,12,5,single_point,8,random,25.0,0.1,saturate_15,0.841406137021291,True
 39,24,tournament,15,12,5,single_point,8,random,25.0,0.1,saturate_15,0.8249952730640481,True
 40,24,tournament,15,12,5,single_point,8,random,25.0,0.1,saturate_15,0.8299108034714554,True
+19,24,tournament,15,12,5,single_point,8,random,25.0,0.1,saturate_15,1.108815042208632
+20,24,tournament,15,12,5,single_point,8,random,25.0,0.1,saturate_15,1.1067993301897405
+21,24,tournament,15,12,5,single_point,8,random,25.0,0.1,saturate_15,1.181081745154019
+22,24,tournament,15,12,5,single_point,8,random,25.0,0.1,saturate_15,1.1621084065079585

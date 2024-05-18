@@ -1,7 +1,6 @@
 import numpy as np
 import zipfile
 import pygad
-import json
 import math
 import sys
 import csv
@@ -13,10 +12,9 @@ from tqdm import tqdm
 from simulation.cache.optimization_population import population_directory
 from simulation.optimization.base_optimization import BaseOptimization
 from simulation.common.helpers import denormalize, normalize, rescale
-from simulation.data.results import results_directory
 from simulation.common.noise import Noise
 from simulation.utils import InputBounds
-from simulation.main import Simulation, SimulationReturnType
+from simulation.model.Simulation import Simulation, SimulationReturnType
 
 """
 
@@ -259,9 +257,41 @@ class GeneticOptimization(BaseOptimization):
         # Add a time delay between generations (used for debug purposes)
         delay_after_generation = 0.0
 
-        # Define a function to be run when a generation begins
-        # Here we define it to update the progress bar, if it exists
-        on_generation = (lambda x: pbar.update(1)) if pbar is not None else (lambda x: print("New generation!"))
+        # Store diversity of generation per optimization iteration
+        self.diversity = []
+
+        # Stopping context based on stopping criteria -> generations completed
+        self.stopping_point = 0
+
+        # A function to be run when a generation begins
+        def on_generation_callback(x):
+            """
+            Callback function that is called after each generation/optimization iteration.
+            Passes in a GA instance named x in this func
+            """
+
+            # Calculate Diversity
+            # sum accumulator for standard deviation of a stage
+            sum_stage_sd = 0  # stages -> individual gene
+
+            for i in range(x.pop_size[1]):  # iterate through each gene/stage
+                stage_mean = np.mean(x.population[:, i])
+                squared_diffs = np.square(x.population[:, i] - stage_mean)
+                mean_squared_diffs = np.mean(squared_diffs)  # mean of squared differences
+                sum_stage_sd += np.sqrt(mean_squared_diffs)  # add standard deviation of this gene
+
+            # Diversity of this population / generation -> average standard deviation of genes
+            diversity = sum_stage_sd / x.pop_size[1]
+            self.diversity.append(diversity)
+
+            # Record Stopping point info
+            self.stopping_point = x.generations_completed
+
+            # Update progress bar if it exists
+            if pbar is not None:
+                pbar.update(1)
+            else:
+                print("New generation!")
 
         # We must obtain or create an initial population for GA to work with.
         initial_population = self.get_initial_population(self.sol_per_pop, force_new_population_flag)
@@ -282,7 +312,7 @@ class GeneticOptimization(BaseOptimization):
                                     mutation_type=str(mutation_type),
                                     mutation_percent_genes=mutation_percent_genes,
                                     gene_space=gene_space,
-                                    on_generation=on_generation,
+                                    on_generation=on_generation_callback,
                                     delay_after_gen=delay_after_generation,
                                     random_mutation_max_val=mutation_max_value,
                                     stop_criteria=str(stop_criteria))
@@ -358,7 +388,7 @@ class GeneticOptimization(BaseOptimization):
         min_speed_kmh: float = 30
 
         # We will use Perlin noise to generate our guess arrays
-        noise_generator = Noise(self.model.golang, self.model.library)
+        noise_generator = Noise()
 
         # Determine the length that our driving speed arrays must be
         length = self.model.get_driving_time_divisions()
@@ -366,20 +396,22 @@ class GeneticOptimization(BaseOptimization):
 
         with tqdm(total=num_arrays_to_generate, file=sys.stdout, desc="Generating new initial population ", position=0,
                   leave=True) as pbar:
-            # Generate a matrix of (nearly) normalized Perlin noise of size [length, num_arrays_to_generate]
-            noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
+            # Generate a matrix of normalized Gaussian noise of size [length, num_arrays_to_generate]
+            noise = noise_generator.get_gauss_noise_matrix(length, num_arrays_to_generate)
+
             x = 0
 
             while len(speed_arrays) < num_arrays_to_generate:
-                # Read rows from the Perlin noise matrix as a normalized driving speed array
+                # Read rows from the Gaussian noise matrix as a normalized driving speed array
                 guess_speed = normalize(noise[x])
 
                 # We generate just enough noise to be able to test num_arrays_to_generate speed arrays.
                 # Thus, the following logic keeps careful track of the index because if we have even one
                 # unsuccessful array, we'll need to generate more noise.
                 if x >= len(noise) - 1:
-                    noise = noise_generator.get_perlin_noise_matrix(length, num_arrays_to_generate)
+                    noise = noise_generator.get_gauss_noise_matrix(length, num_arrays_to_generate)
                     x = 0
+
                 else:
                     x += 1
 
@@ -465,57 +497,10 @@ class GeneticOptimization(BaseOptimization):
         # print("Parameters of the best solution : {solution}".format(solution=self.bestinput))
         # print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
 
-        # Plot fitness compared to the generation index to how
-        if self.output_hyperparameters:
-            self.plot_fitness()
-
         # Set the fitness value of the hyperparameter configuration
         self.settings.set_fitness(solution_fitness)
 
         return self.bestinput
-
-    def plot_fitness(self, save_graph: bool = True) -> None:
-        """
-
-        Plot the highest fitness value of each generation's population as a Fitness vs Generation graph.
-
-        :param bool save_graph: set whether the graph should be saved to data/results directory.
-
-        """
-
-        # We keep track of the hyperparameter configuration index so that the filename matches the index
-        # of the configuration on the `Hyperparameter Search` spreadsheet.
-        sequence_index = GeneticOptimization.get_sequence_index(increment_index=False)
-
-        graph_title = "sequence" + str(sequence_index)
-        save_dir = None
-
-        if save_graph:
-            save_dir = results_directory / graph_title
-
-        self.ga_instance.plot_fitness(title=graph_title, save_dir=save_dir)
-
-    def write_results(self):
-        """
-
-        Write the hyperparameters of the current configuration, along with the resultant fitness
-        value that the configuration achieved, to a CSV as one row.
-
-        For the purposes of documenting the effectiveness of different hyperparameter configurations,
-        we log each configuration and the resultant fitness and save the corresponding Fitness vs Generation
-        graph. Both of the aforementioned items are saved the same hyperparameter index, which is stored
-        in `register.json` and incremented for each subsequent hyperparameter configuration we attempt.
-
-        """
-
-        results_file = results_directory / "results.csv"
-        with open(results_file, 'a') as f:
-            writer = csv.writer(f)
-            sequence_index: int = GeneticOptimization.get_sequence_index()
-            output = self.settings.as_list()
-            output.insert(0, str(sequence_index))
-            output.append(str(self.did_finish_race))
-            writer.writerow(output)
 
     @staticmethod
     def parse_csv_into_settings(csv_reader: csv.reader) -> list[OptimizationSettings]:
@@ -551,61 +536,8 @@ class GeneticOptimization(BaseOptimization):
         return settings_list
 
     @staticmethod
-    def get_sequence_index(increment_index=True) -> int:
-        """
-
-        Get the current index saved in the counter at `data/results/register.json`.
-
-        :param increment_index: set to False in order to make this a read-only operation, otherwise the counter
-        will be incremented.
-        :return: the value stored in the counter
-        :rtype: int
-
-        """
-
-        register_filepath = results_directory / "register.json"
-
-        if not os.path.isfile(register_filepath):
-            raise FileNotFoundError("Cannot find register file!")
-
-        with open(register_filepath, "r") as file:
-            register_data = json.load(file)
-
-        x = register_data['x']
-        x += 1
-
-        if increment_index:
-            GeneticOptimization.save_index(register_filepath, x)
-
-        return x
-
-    @staticmethod
-    def save_index(register_filepath, index) -> None:
-        """
-
-        Save a new value in the counter.
-
-        :param register_filepath: path to the register file
-        :param index: value to save
-
-        """
-
-        with open(register_filepath, "w") as file:
-            register_data = {
-                "x": index
-            }
-
-            json.dump(register_data, file)
-
-    @staticmethod
     def get_total_generations(settings_list: list[OptimizationSettings] = None) -> int:
         total: int = 0
         for settings in settings_list:
             total += settings.generation_limit
         return total
-
-
-if __name__ == "__main__":
-    register_file = results_directory / "register.json"
-    GeneticOptimization.save_index(register_file, 26)
-    print(GeneticOptimization.get_sequence_index(increment_index=False))
