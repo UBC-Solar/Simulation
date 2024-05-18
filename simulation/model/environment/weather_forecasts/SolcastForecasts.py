@@ -1,16 +1,19 @@
 """
 A class to extract local and path weather predictions such as wind_speed, 
-    wind_direction, cloud_cover and weather type from OpenWeather.
+    wind_direction, cloud_cover and weather type using data from Solcast.
 """
 import numpy as np
+import os
+import logging
 
-from simulation.model.environment.weather_forecasts.base_weather_forecasts import BaseWeatherForecasts
-from simulation.common import helpers, Race
+from simulation.cache.weather import weather_directory
+from simulation.model.environment.weather_forecasts.base_weather_forecasts import BaseWeatherForecasts, WeatherData
+from simulation.common import helpers, constants, Race
 
 import core
 
 
-class OpenWeatherForecast(BaseWeatherForecasts):
+class SolcastForecasts(BaseWeatherForecasts):
     """
     Class that gathers weather data and performs calculations on it to allow the implementation of weather phenomenon
     such as changes in wind speeds and cloud cover in the simulation.
@@ -21,11 +24,10 @@ class OpenWeatherForecast(BaseWeatherForecasts):
         dest_coord (NumPy array [lat, long]): the ending coordinate
         last_updated_time (int): value that tells us the starting time after which we have weather data available
 
-        weather_forecast (NumPy array [N][T][9]): array that stores the complete weather forecast data. N represents the
-            number of coordinates, T represents time length which differs depending on the `weather_data_frequency`
-            argument ("current" -> T = 1 ; "hourly" -> T = 24 ; "daily" -> T = 8). The last 9 represents the number of
-            weather forecast fields available. These are: (latitude, longitude, dt (UNIX time), timezone_offset
-            (in seconds), dt + timezone_offset (local time), wind_speed, wind_direction, cloud_cover, description_id)
+        weather_forecast (NumPy array [N][T][6]): array that stores the complete weather forecast data. N represents the
+            number of coordinates, T represents time length with temporal granularity defined in settings_*.json.
+            The last 6 represents the number of weather forecast fields available. These are: time_dt (UTC UNIX time),
+            latitude, longitude, wind_speed (m/s), wind_direction (meteorological convention), ghi (W/m^2)
     """
 
     def __init__(self, coords, race: Race, origin_coord=None, hash_key=None):
@@ -40,20 +42,9 @@ class OpenWeatherForecast(BaseWeatherForecasts):
         :param hash_key: key used to identify cached data as valid for a Simulation model
 
         """
-        super().__init__(coords, race, "OPENWEATHER", origin_coord, hash_key)
-
-        self.last_updated_time = self.weather_forecast[0, 0, 2]
-
-        start_time_unix = self.weather_forecast[0, 0, 2]
-        end_time_unix = self.weather_forecast[0, -1, 2]
-        start_time = helpers.date_from_unix_timestamp(start_time_unix)
-        end_time = helpers.date_from_unix_timestamp(end_time_unix)
-
-        print("----- Weather save file information -----\n")
-        print(f"--- Data time range ---")
-        print(f"Start time (UTC)f: {start_time} [{start_time_unix:.0f}]\n"
-              f"End time (UTC): {end_time} [{end_time_unix:.0f}]\n")
-
+        super().__init__(coords, race, "SOLCAST", origin_coord, hash_key)
+        self.race = race
+        self.last_updated_time = self.weather_forecast[0, 0, 0]
 
     def calculate_closest_weather_indices(self, cumulative_distances):
         """
@@ -90,7 +81,7 @@ class OpenWeatherForecast(BaseWeatherForecasts):
             return result
 
         # a list of all the coordinates that we have weather data for
-        weather_coords = self.weather_forecast[:, 0, 0:2]
+        weather_coords = self.weather_forecast[:, 0, 1:3]
 
         # distances between all the coordinates that we have weather data for
         weather_path_distances = helpers.calculate_path_distances(weather_coords)
@@ -152,7 +143,7 @@ class OpenWeatherForecast(BaseWeatherForecasts):
 
         return np.asarray(closest_time_stamp_indices, dtype=np.int32)
 
-    def get_weather_forecast_in_time(self, indices, unix_timestamps, start_hour, tick):
+    def get_weather_forecast_in_time(self, indices, unix_timestamps, start_hour, tick) -> WeatherData:
         """
 
         Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
@@ -171,22 +162,29 @@ class OpenWeatherForecast(BaseWeatherForecasts):
         :param np.ndarray unix_timestamps: (int[N]) unix timestamps of the vehicle's journey
         :param int start_hour: the starting hour of simulation
         :param int tick: length of a tick in seconds
-        :returns:
-            - A NumPy array of size [N][9]
-            - [9] (latitude, longitude, unix_time, timezone_offset, unix_time_corrected, wind_speed, wind_direction,
-                        cloud_cover, precipitation, description):
-        :rtype: np.ndarray
-
+        :returns: a WeatherData object with time_dt, latitude, longitude, wind_speed, wind_direction, and ghi.
+        :rtype: WeatherData
         """
-        weather_data = core.weather_in_time(unix_timestamps.astype(np.int64), indices.astype(np.int64), self.weather_forecast, 4)
-        roll_by_tick = int(3600 / tick) * (24 + start_hour - helpers.hour_from_unix_timestamp(weather_data[0, 2]))
-        weather_data = np.roll(weather_data, -roll_by_tick, 0)
+        forecasts_array = core.weather_in_time(unix_timestamps.astype(np.int64), indices.astype(np.int64), self.weather_forecast, 0)
+        # forecasts_array = self._python_get_weather_in_time(unix_timestamps, indices)
 
-        return weather_data
+        roll_by_tick = int(3600 / tick) * (24 + start_hour - helpers.hour_from_unix_timestamp(forecasts_array[0, 0]))
+        forecasts_array = np.roll(forecasts_array, -roll_by_tick, 0)
+
+        weather_object = WeatherData()
+
+        weather_object.time_dt = forecasts_array[:, 0]
+        weather_object.latitude = forecasts_array[:, 1]
+        weather_object.longitude = forecasts_array[:, 2]
+        weather_object.wind_speed = forecasts_array[:, 3]
+        weather_object.wind_direction = forecasts_array[:, 4]
+        weather_object.ghi = forecasts_array[:, 5]
+
+        return weather_object
 
     def _python_get_weather_in_time(self, unix_timestamps, indices):
         full_weather_forecast_at_coords = self.weather_forecast[indices]
-        dt_local_array = full_weather_forecast_at_coords[0, :, 4]
+        dt_local_array = full_weather_forecast_at_coords[0, :, 0]
 
         temp_0 = np.arange(0, full_weather_forecast_at_coords.shape[0])
         closest_timestamp_indices = self._python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
@@ -213,33 +211,6 @@ class OpenWeatherForecast(BaseWeatherForecasts):
         #   cos(90 - 90) = cos(0) = 1. Wind speed is moving opposite to the car,
         # car is 270 degrees, cos(90-270) = -1. Wind speed is in direction of the car.
         return wind_speeds * (np.cos(np.radians(wind_directions - vehicle_bearings)))
-
-    @staticmethod
-    def _get_weather_advisory(weather_id):
-        """
-
-        Returns a string indicating the type of weather to expect, from the standardized
-            weather code passed as a parameter
-
-        https://openweathermap.org/weather-conditions#Weather-Condition-Codes-2
-        :param int weather_id: Weather ID
-        :return: type of weather advisory
-        :rtype: str
-
-        """
-
-        if 200 <= weather_id < 300:
-            return "Thunderstorm"
-        elif 300 <= weather_id < 500:
-            return "Drizzle"
-        elif 500 <= weather_id < 600:
-            return "Rain"
-        elif 600 <= weather_id < 700:
-            return "Snow"
-        elif weather_id == 800:
-            return "Clear"
-        else:
-            return "Unknown"
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ from simulation.model.car.regen import BasicRegen
 
 from simulation.model.environment.gis import GIS
 from simulation.model.environment.solar_calculations import SolarCalculations
-from simulation.model.environment.weather_forecasts import OpenWeatherForecast
+from simulation.model.environment.weather_forecasts import OpenWeatherForecast, SolcastForecasts
 
 from simulation.library import Libraries
 from simulation.utils.Plotting import Plotting

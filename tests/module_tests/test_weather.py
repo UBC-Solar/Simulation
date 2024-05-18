@@ -2,7 +2,7 @@ import dotenv
 import os
 import pytest
 from simulation.common.helpers import *
-from simulation.model.environment.weather_forecasts import WeatherForecasts
+from simulation.model.environment.weather_forecasts import OpenWeatherForecast
 from simulation.model.environment.gis import GIS
 
 
@@ -23,9 +23,9 @@ def weather():
     route_coords = location_system.get_path()
 
     # 5 day simulation duration
-    weather_calculations = WeatherForecasts(coords=route_coords,
-                                            race_type="ASC",
-                                            provider="OPENWEATHER")
+    weather_calculations = OpenWeatherForecast(coords=route_coords,
+                                               race_type="ASC",
+                                               provider="OPENWEATHER")
 
     return weather_calculations
 
@@ -34,8 +34,8 @@ def weather():
 def test_compare_golang_python_get_weather_in_time(weather):
     """
 
-    Unit test for WeatherForecasts.golang_calculate_closest_timestamp_indices and
-    WeatherForecasts.python_calculate_closest_timestamp_indices.
+    Unit test for OpenWeatherForecast.golang_calculate_closest_timestamp_indices and
+    OpenWeatherForecast.python_calculate_closest_timestamp_indices.
     Checks to see if the results are the same format and equal element-wise
 
     """

@@ -133,13 +133,12 @@ class Model:
 
         # Get the weather at every location
         weather_forecasts = self.simulation.weather.get_weather_forecast_in_time(self.closest_weather_indices,
-                                                                                 local_times)
-        roll_by_tick = int(3600 / self.simulation.tick) * (24 + self.simulation.start_hour - helpers.hour_from_unix_timestamp(weather_forecasts[0, 2]))
-        weather_forecasts = np.roll(weather_forecasts, -roll_by_tick, 0)
+                                                                                 local_times, self.simulation.start_hour,
+                                                                                 self.simulation.tick)
 
-        self.absolute_wind_speeds = weather_forecasts[:, 5]
-        self.wind_directions = weather_forecasts[:, 6]
-        self.cloud_covers = weather_forecasts[:, 7]
+        self.absolute_wind_speeds = weather_forecasts.wind_speed
+        self.wind_directions = weather_forecasts.wind_direction
+        # self.cloud_covers = weather_forecasts[:, 7]
 
         # Get the wind speeds at every location
         self.wind_speeds = helpers.get_array_directional_wind_speed(self.gis_vehicle_bearings,
@@ -147,11 +146,12 @@ class Model:
                                                                     self.wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time
-        self.solar_irradiances = self.simulation.solar_calculations.calculate_array_GHI(
-            self.simulation.route_coords[self.closest_gis_indices],
-            self.time_zones, local_times,
-            self.gis_route_elevations_at_each_tick,
-            self.cloud_covers)
+        # self.solar_irradiances = self.simulation.solar_calculations.calculate_array_GHI(
+        #     self.simulation.route_coords[self.closest_gis_indices],
+        #     self.time_zones, local_times,
+        #     self.gis_route_elevations_at_each_tick,
+        #     self.cloud_covers)
+        self.solar_irradiances = weather_forecasts.ghi
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 

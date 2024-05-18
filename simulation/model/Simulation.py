@@ -167,10 +167,10 @@ class Simulation:
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
-        self.weather = simulation.OpenWeatherForecast(self.route_coords,
-                                                      self.race,
-                                                      origin_coord=self.gis.launch_point,
-                                                      hash_key=self.hash_key)
+        self.weather = simulation.SolcastForecasts(self.route_coords,
+                                                   self.race,
+                                                   origin_coord=self.gis.launch_point,
+                                                   hash_key=self.hash_key)
 
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
@@ -268,10 +268,10 @@ class Simulation:
             results_arrays = self.get_results(["speed_kmh", "distances", "state_of_charge", "delta_energy",
                                                "solar_irradiances", "wind_speeds",
                                                "gis_route_elevations_at_each_tick",
-                                               "cloud_covers", "raw_soc"]) + [raw_speed]
+                                               "raw_soc"]) + [raw_speed]
             results_labels = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                               "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
-                              "Cloud cover (%)", "Raw SOC (%)", "Raw Speed (km/h)"]
+                              "Raw SOC (%)", "Raw Speed (km/h)"]
 
             self.plotting.add_graph_page_to_queue(GraphPage(results_arrays, results_labels, page_name="Results"))
 

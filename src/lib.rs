@@ -97,6 +97,7 @@ fn rust_simulation(_py: Python, m: &PyModule) -> PyResult<()> {
         unix_timestamps: ArrayViewD<'_, i64>,
         indices: ArrayViewD<'_, i64>,
         weather_forecast: ArrayViewD<f64>,
+        dt_index: u8
     ) -> Array2<f64> {
         // Obtain dimensions for arrays and slices
         let weather_forecast_raw_dim = weather_forecast.raw_dim();
@@ -131,7 +132,7 @@ fn rust_simulation(_py: Python, m: &PyModule) -> PyResult<()> {
         // I don't really understand how this works
         let dt_local_arrayview = weather_forecast
             .index_axis_move(Axis(0), 0)
-            .index_axis_move(Axis(1), 4);
+            .index_axis_move(Axis(1), dt_index as usize);
         for &timestamp in dt_local_arrayview {
             dt_local_array.push(timestamp as i64);
         }
@@ -239,11 +240,12 @@ fn rust_simulation(_py: Python, m: &PyModule) -> PyResult<()> {
         python_unix_timestamps: PyReadwriteArrayDyn<'py, i64>,
         python_indices: PyReadwriteArrayDyn<'py, i64>,
         python_weather_forecast: PyReadwriteArrayDyn<'py, f64>,
+        index: u8
     ) -> &'py PyArrayDyn<f64> {
         let unix_timestamps = python_unix_timestamps.as_array();
         let indices = python_indices.as_array();
         let weather_forecast = python_weather_forecast.as_array();
-        let mut result = rust_weather_in_time(unix_timestamps, indices, weather_forecast);
+        let mut result = rust_weather_in_time(unix_timestamps, indices, weather_forecast, index);
         let py_result = PyArray::from_array(py, &mut result).to_dyn();
         py_result
     }

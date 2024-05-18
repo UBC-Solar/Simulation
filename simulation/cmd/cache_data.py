@@ -1,6 +1,8 @@
 import os
 import sys
 import json
+
+import dill
 import pytz
 import requests
 import argparse
@@ -317,7 +319,7 @@ def cache_weather(race: Race.RaceType, weather_provider: WeatherProvider):
         # throughout the track, so just get weather for the first point
         coords = np.array([coords[0], coords[-1]])[0:1]
 
-        weather_file = weather_directory / f"weather_data_FSGP_{str(weather_provider)}.bin"
+        weather_file = weather_directory / f"weather_data_FSGP_{str(weather_provider)}.npz"
 
     elif race == Race.ASC:
         # Get path/coords from cached file
@@ -347,17 +349,25 @@ def cache_weather(race: Race.RaceType, weather_provider: WeatherProvider):
         weather_forecast = update_path_weather_forecast_openweather(coords,
                                                                     race_configs["weather_freq"],
                                                                     int(race_configs["simulation_duration"] / 3600))
+        with open(weather_file, 'wb') as f:
+            np.savez(f, weather_forecast=weather_forecast, origin_coord=origin_coord,
+                     dest_coord=dest_coord, hash=get_hash(origin_coord, dest_coord, waypoints),
+                     provider=str(weather_provider))
+
     elif weather_provider == WeatherProvider.SOLCAST:
         weather_forecast = update_path_weather_forecast_solcast(coords,
-                                                                int(race_configs['simulation_duration'] / 3600),
+                                                                int(race_configs['simulation_duration'] / 3600) + 24,
                                                                 WeatherPeriod.Period(race_configs['period']))
+        with open(weather_file, 'wb') as f:
+            dill.dump({
+                'weather_forecast': weather_forecast,
+                'origin_coord': origin_coord,
+                'dest_coord': dest_coord,
+                'hash': get_hash(origin_coord, dest_coord, waypoints),
+                'provider': str(weather_provider)
+            }, f)
     else:
         raise NotImplementedError(f"Unsupported weather provider: {str(weather_provider)}!")
-
-    with open(weather_file, 'wb') as f:
-        np.savez(f, weather_forecast=weather_forecast, origin_coord=origin_coord,
-                 dest_coord=dest_coord, hash=get_hash(origin_coord, dest_coord, waypoints),
-                 provider=str(weather_provider))
 
 
 def update_path_weather_forecast_openweather(coords, weather_data_frequency, duration):
