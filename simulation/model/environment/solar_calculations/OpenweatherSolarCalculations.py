@@ -9,11 +9,12 @@ import datetime
 import numpy as np
 
 from simulation.common import helpers, constants, Race
-from simulation.model.environment.solar_calculations.base_solar_calculations import BaseSolarCalculations
+from simulation.model.environment.solar_calculations import BaseSolarCalculations
+from simulation.model.environment import OpenweatherEnvironment
 import core
 
 
-class SolarCalculations(BaseSolarCalculations):
+class OpenweatherSolarCalculations(BaseSolarCalculations):
 
     def __init__(self, race: Race):
         """
@@ -294,7 +295,7 @@ class SolarCalculations(BaseSolarCalculations):
     def _python_calculate_array_GHI_times(local_times):
         date = list(map(datetime.datetime.utcfromtimestamp, local_times))
         day_of_year = np.array(list(map(helpers.get_day_of_year_map, date)), dtype=np.float64)
-        local_time = np.array(list(map(SolarCalculations._date_convert, date)))
+        local_time = np.array(list(map(OpenweatherSolarCalculations._date_convert, date)))
         return day_of_year, local_time
 
     @staticmethod
@@ -312,7 +313,7 @@ class SolarCalculations(BaseSolarCalculations):
         return date.hour + (float(date.minute * 60 + date.second) / 3600)
 
     def calculate_array_GHI(self, coords, time_zones, local_times,
-                            elevations, cloud_covers):
+                            elevations, environment: OpenweatherEnvironment):
         """
 
         Calculates the Global Horizontal Irradiance from the Sun, relative to a location
@@ -325,7 +326,7 @@ class SolarCalculations(BaseSolarCalculations):
         :param np.ndarray time_zones: (int[N]) time zones at different locations in seconds relative to UTC
         :param np.ndarray local_times: (int[N]) unix time that the vehicle will be at each location. (Adjusted for Daylight Savings)
         :param np.ndarray elevations: (float[N]) elevation from sea level in m
-        :param np.ndarray cloud_covers: (float[N]) percentage cloud cover in range of 0 to 1
+        :param OpenweatherEnvironment environment: environment data object
         :returns: (float[N]) Global Horizontal Irradiance in W/m2
         :rtype: np.ndarray
 
@@ -333,10 +334,10 @@ class SolarCalculations(BaseSolarCalculations):
         day_of_year, local_time = core.calculate_array_ghi_times(local_times)
 
         ghi = self._calculate_GHI(coords[:, 0], coords[:, 1], time_zones,
-                                  day_of_year, local_time, elevations, cloud_covers)
+                                  day_of_year, local_time, elevations, environment.cloud_cover)
 
         stationary_irradiance = self._calculate_angled_irradiance(coords[:, 0], coords[:, 1], time_zones, day_of_year,
-                                                                  local_time, elevations, cloud_covers)
+                                                                  local_time, elevations, environment.cloud_cover)
 
         # Use stationary irradiance when the car is not driving
         effective_irradiance = np.where(
