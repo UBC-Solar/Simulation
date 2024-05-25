@@ -6,8 +6,8 @@ import numpy as np
 import os
 import logging
 
-from simulation.cache.weather import weather_directory
-from simulation.model.environment.weather_forecasts.base_weather_forecasts import BaseWeatherForecasts, WeatherData
+from simulation.model.environment.weather_forecasts import BaseWeatherForecasts
+from simulation.model.environment import SolcastEnvironment
 from simulation.common import helpers, constants, Race
 
 import core
@@ -143,7 +143,7 @@ class SolcastForecasts(BaseWeatherForecasts):
 
         return np.asarray(closest_time_stamp_indices, dtype=np.int32)
 
-    def get_weather_forecast_in_time(self, indices, unix_timestamps, start_hour, tick) -> WeatherData:
+    def get_weather_forecast_in_time(self, indices, unix_timestamps, start_hour, tick) -> SolcastEnvironment:
         """
 
         Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
@@ -162,16 +162,15 @@ class SolcastForecasts(BaseWeatherForecasts):
         :param np.ndarray unix_timestamps: (int[N]) unix timestamps of the vehicle's journey
         :param int start_hour: the starting hour of simulation
         :param int tick: length of a tick in seconds
-        :returns: a WeatherData object with time_dt, latitude, longitude, wind_speed, wind_direction, and ghi.
-        :rtype: WeatherData
+        :returns: a SolcastEnvironment object with time_dt, latitude, longitude, wind_speed, wind_direction, and ghi.
+        :rtype: SolcastEnvironment
         """
         forecasts_array = core.weather_in_time(unix_timestamps.astype(np.int64), indices.astype(np.int64), self.weather_forecast, 0)
-        # forecasts_array = self._python_get_weather_in_time(unix_timestamps, indices)
 
-        roll_by_tick = int(3600 / tick) * (24 + start_hour - helpers.hour_from_unix_timestamp(forecasts_array[0, 0]))
+        roll_by_tick = int(3600 / tick) * helpers.hour_from_unix_timestamp(forecasts_array[0, 0])
         forecasts_array = np.roll(forecasts_array, -roll_by_tick, 0)
 
-        weather_object = WeatherData()
+        weather_object = SolcastEnvironment()
 
         weather_object.time_dt = forecasts_array[:, 0]
         weather_object.latitude = forecasts_array[:, 1]

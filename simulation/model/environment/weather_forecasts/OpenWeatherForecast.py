@@ -4,6 +4,7 @@ A class to extract local and path weather predictions such as wind_speed,
 """
 import numpy as np
 
+from simulation.model.environment import OpenweatherEnvironment
 from simulation.model.environment.weather_forecasts.base_weather_forecasts import BaseWeatherForecasts
 from simulation.common import helpers, Race
 
@@ -182,7 +183,15 @@ class OpenWeatherForecast(BaseWeatherForecasts):
         roll_by_tick = int(3600 / tick) * (24 + start_hour - helpers.hour_from_unix_timestamp(weather_data[0, 2]))
         weather_data = np.roll(weather_data, -roll_by_tick, 0)
 
-        return weather_data
+        weather_object = OpenweatherEnvironment()
+        weather_object.latitude = weather_data[:, 0]
+        weather_object.longitude = weather_data[:, 1]
+        weather_object.unix_time = weather_data[:, 2]
+        weather_object.wind_speed = weather_data[:, 5]
+        weather_object.wind_direction = weather_data[:, 6]
+        weather_object.cloud_cover = weather_data[:, 7]
+
+        return weather_object
 
     def _python_get_weather_in_time(self, unix_timestamps, indices):
         full_weather_forecast_at_coords = self.weather_forecast[indices]
