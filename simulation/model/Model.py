@@ -138,7 +138,6 @@ class Model:
 
         self.absolute_wind_speeds = weather_forecasts.wind_speed
         self.wind_directions = weather_forecasts.wind_direction
-        # self.cloud_covers = weather_forecasts[:, 7]
 
         # Get the wind speeds at every location
         self.wind_speeds = helpers.get_array_directional_wind_speed(self.gis_vehicle_bearings,
@@ -146,12 +145,11 @@ class Model:
                                                                     self.wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time
-        # self.solar_irradiances = self.simulation.solar_calculations.calculate_array_GHI(
-        #     self.simulation.route_coords[self.closest_gis_indices],
-        #     self.time_zones, local_times,
-        #     self.gis_route_elevations_at_each_tick,
-        #     self.cloud_covers)
-        self.solar_irradiances = weather_forecasts.ghi
+        self.solar_irradiances = self.simulation.solar_calculations.calculate_array_GHI(
+            self.simulation.route_coords[self.closest_gis_indices],
+            self.time_zones, local_times,
+            self.gis_route_elevations_at_each_tick,
+            weather_forecasts)
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 

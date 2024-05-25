@@ -175,7 +175,7 @@ class Simulation:
         weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
         self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
 
-        self.solar_calculations = simulation.SolarCalculations(race=self.race)
+        self.solar_calculations = simulation.SolcastSolarCalculations(race=self.race)
 
         self.plotting = simulation.Plotting()
 
@@ -254,6 +254,7 @@ class Simulation:
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
+
         if not kwargs and not is_optimizer:
             print(f"Simulation successful!\n"
                   f"Time taken: {results[0]}\n"
