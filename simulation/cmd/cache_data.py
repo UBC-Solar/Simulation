@@ -645,7 +645,7 @@ def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, dura
         longitude: float = coord[1]
         wind_speed: float = weather['wind_speed_10m']
         wind_direction: float = weather['wind_direction_10m']
-        ghi: float = weather['dni'] + weather['dhi']
+        ghi: float = weather['gti']
 
         weather_array[i] = np.array([time_dt, latitude, longitude, wind_speed, wind_direction, ghi])
 
