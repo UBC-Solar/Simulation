@@ -1,5 +1,6 @@
 import datetime
 import functools
+import math
 
 import numpy as np
 import pandas as pd
@@ -204,7 +205,7 @@ def get_granularity_reduced_boolean(boolean: np.ndarray, granularity: int | floa
     """
     inverse_granularity = int(3600 / granularity)  # Number of seconds. Granularity of 1 should mean 1 per hour
     duration = len(boolean)
-    reduced_duration = int(duration / inverse_granularity)
+    reduced_duration = math.ceil(duration / inverse_granularity)
     reduced_boolean = np.empty(reduced_duration, dtype=bool)
 
     i = 0
@@ -221,7 +222,7 @@ def get_granularity_reduced_boolean(boolean: np.ndarray, granularity: int | floa
     return ~reduced_boolean
 
 
-def reshape_speed_array(race: Race, speed, granularity, tick=1):
+def reshape_speed_array(race: Race, speed, granularity, start_time: int, tick=1):
     """
 
     Modify the speed array to reflect:
@@ -235,16 +236,17 @@ def reshape_speed_array(race: Race, speed, granularity, tick=1):
     :param np.ndarray speed: A NumPy array representing the speed at each timestamp in km/h
     :param float granularity: how granular the time divisions for Simulation's speed array should be,
                               where 1 is hourly and 0.5 is twice per hour.
+    :param int start_time: time since start of the race that simulation is beginning
     :param int tick: The time interval in seconds between each speed in the speed array
     :return: A modified speed array which reflects race constraints and the car's acceleration/deceleration
     :rtype: np.ndarray
 
     """
-    speed_boolean_array = race.driving_boolean.astype(int)
+    speed_boolean_array = race.driving_boolean.astype(int)[start_time:]
 
     speed_mapped = map_array_to_targets(speed, get_granularity_reduced_boolean(speed_boolean_array, granularity))
 
-    reshaped_tick_count = race.race_duration / tick
+    reshaped_tick_count = (race.race_duration - start_time) / tick
     speed_mapped_per_tick = reshape_and_repeat(speed_mapped, reshaped_tick_count)
     speed_smoothed_kmh = apply_deceleration(apply_acceleration(speed_mapped_per_tick, tick), tick)
 

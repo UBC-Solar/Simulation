@@ -303,7 +303,6 @@
   "tick": 1,
   "race_length": 0,
   "lvs_power_loss": 0,
-  "simulation_duration": 259200,
 
   "period": "30min",
   "weather_freq": "daily",
@@ -324,7 +323,6 @@
     }
   },
   "tiling": 600,
-  "start_hour": 7,
   "start_year": 2021,
   "start_month": 7,
   "start_day": 31

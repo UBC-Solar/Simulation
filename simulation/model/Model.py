@@ -133,7 +133,7 @@ class Model:
 
         # Get the weather at every location
         weather_forecasts = self.simulation.weather.get_weather_forecast_in_time(self.closest_weather_indices,
-                                                                                 local_times, self.simulation.start_hour,
+                                                                                 local_times, self.simulation.start_time,
                                                                                  self.simulation.tick)
 
         self.absolute_wind_speeds = weather_forecasts.wind_speed
@@ -167,7 +167,7 @@ class Model:
         self.regen_produced_energy = self.simulation.basic_regen.calculate_produced_energy(self.speed_kmh,
                                                                                            self.gis_route_elevations_at_each_tick)
 
-        self.not_charge = self.simulation.race.charging_boolean
+        self.not_charge = self.simulation.race.charging_boolean[self.simulation.start_time:]
 
         if self.simulation.tick != 1:
             self.not_charge = self.not_charge[::self.simulation.tick]

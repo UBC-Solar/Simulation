@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 import json
@@ -16,12 +17,12 @@ from strenum import StrEnum
 from dotenv import load_dotenv
 from solcast import forecast
 from timezonefinder import TimezoneFinder
+
 from simulation.common.helpers import PJWHash
 from simulation.config import config_directory
 from simulation.cache.route import route_directory
 from simulation.cache.weather import weather_directory
 from simulation.common import constants, BrightSide, helpers, Race, load_race
-
 
 # load API keys from environment variables
 load_dotenv()
@@ -263,7 +264,7 @@ def calculate_path_elevations(coords):
     return elevations
 
 
-def calculate_time_zones(coords, race):
+def calculate_time_zones(coords, race: Race):
     """
 
     Takes in an array of coordinates, return the time zone relative to UTC, of each location in seconds
@@ -277,14 +278,7 @@ def calculate_time_zones(coords, race):
     timezones_return = np.zeros(len(coords))
 
     tf = TimezoneFinder()
-    if race == "FSGP":
-        race = load_race(Race.FSGP)
-        # this is when FSGP 2021 starts
-        dt = datetime.datetime(*race.date)
-    else:
-        race = load_race(Race.ASC)
-        # this is when ASC 2021 starts
-        dt = datetime.datetime(*race.date)
+    dt = datetime.datetime(*race.date)
 
     with tqdm(total=len(coords), file=sys.stdout, desc="Calculating Time Zones") as pbar:
         for index, coord in enumerate(coords):
@@ -298,7 +292,7 @@ def calculate_time_zones(coords, race):
 
 
 # ------------------- Weather API -------------------
-def cache_weather(race: Race.RaceType, weather_provider: WeatherProvider):
+def cache_weather(race: Race, weather_provider: WeatherProvider):
     """
 
     Makes calls to Weather API for a given race and caches the results to a .npz file
@@ -311,7 +305,7 @@ def cache_weather(race: Race.RaceType, weather_provider: WeatherProvider):
           f"Calling {str(weather_provider)} API and creating weather save file...\n")
 
     # Get coords for race
-    if race == Race.FSGP:
+    if race.race_type == Race.FSGP:
         # Get path/coords from cached file
         origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
 
@@ -321,7 +315,7 @@ def cache_weather(race: Race.RaceType, weather_provider: WeatherProvider):
 
         weather_file = weather_directory / f"weather_data_FSGP_{str(weather_provider)}.npz"
 
-    elif race == Race.ASC:
+    elif race.race_type == Race.ASC:
         # Get path/coords from cached file
         route_file = route_directory / "route_data.npz"
 
@@ -340,10 +334,13 @@ def cache_weather(race: Race.RaceType, weather_provider: WeatherProvider):
         weather_file = weather_directory / f"weather_data_{str(weather_provider)}.npz"
 
     else:
-        raise NotImplementedError(f"Unsupported race type: {race}!")
+        raise NotImplementedError(f"Unsupported race type: {str(race)}!")
 
-    with open(os.path.join(config_directory, f"settings_{race}.json"), 'rt') as settings_file:
+    with open(os.path.join(config_directory, f"settings_{str(race)}.json"), 'rt') as settings_file:
         race_configs = json.load(settings_file)
+
+    with open(os.path.join(config_directory, f"initial_conditions_{str(race)}.json"), 'rt') as conditions_file:
+        conditions = json.load(conditions_file)
 
     if weather_provider == WeatherProvider.OPENWEATHER:
         weather_forecast = update_path_weather_forecast_openweather(coords,
@@ -355,9 +352,16 @@ def cache_weather(race: Race.RaceType, weather_provider: WeatherProvider):
                      provider=str(weather_provider))
 
     elif weather_provider == WeatherProvider.SOLCAST:
+        racing_hours = len(race.days) * 24
+        start_time = conditions["start_time"]
+        raced_hours = start_time / 3600
+        remaining_hours = math.floor(racing_hours - raced_hours)
         weather_forecast = update_path_weather_forecast_solcast(coords,
-                                                                int(race_configs['simulation_duration'] / 3600) + 24,
-                                                                WeatherPeriod.Period(race_configs['period']))
+                                                                remaining_hours,
+                                                                WeatherPeriod.Period(race_configs['period']),
+                                                                race,
+                                                                start_time)
+
         with open(weather_file, 'wb') as f:
             dill.dump({
                 'weather_forecast': weather_forecast,
@@ -445,7 +449,7 @@ class WeatherPeriod:
     }
 
 
-def update_path_weather_forecast_solcast(coords, duration, period: WeatherPeriod.Period):
+def update_path_weather_forecast_solcast(coords, duration, period: WeatherPeriod.Period, race, start_time):
     """
 
     Pass in a list of coordinates, returns the hourly weather forecast
@@ -469,7 +473,7 @@ def update_path_weather_forecast_solcast(coords, duration, period: WeatherPeriod
 
     with tqdm(total=len(coords), file=sys.stdout, desc="Calling Solcast API") as pbar:
         for i, coord in enumerate(coords):
-            weather_forecast[i] = get_coord_weather_forecast_solcast(coord, period, duration)
+            weather_forecast[i] = get_coord_weather_forecast_solcast(coord, period, duration, race, start_time)
             pbar.update(1)
 
     return weather_forecast
@@ -575,7 +579,7 @@ def get_coord_weather_forecast_openweather(coord, weather_data_frequency, durati
     return weather_array
 
 
-def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, duration: int):
+def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, duration: int, race: Race, start_time):
     """
 
     Returns a weather forecast for the coordinate for ``duration`` with a granularity of ``period``.
@@ -613,7 +617,7 @@ def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, dura
         hours=duration,
         period=WeatherPeriod.possible_periods[period]['formatted'],
         output_parameters=[
-            'ghi'
+            'gti'
         ],
     ).to_pandas()
 
@@ -624,32 +628,74 @@ def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, dura
         tilt=0,
         period=WeatherPeriod.possible_periods[period]['formatted'],
         output_parameters=[
-            'ghi'
+            'gti',
         ],
     ).to_pandas()
 
-    ghi_forecast: pd.DataFrame = apply_stationary_charging_mask(tilted_ghi_forecast, untilted_ghi_forecast)
-    weather_forecast: pd.DataFrame = wind_forecast.join(ghi_forecast)
+    temporal_period = int(60 * 60 / WeatherPeriod.possible_periods[period]['hourly_rate'])
+    irradiance_forecast: pd.DataFrame = apply_stationary_charging_mask(tilted_ghi_forecast, untilted_ghi_forecast, race,
+                                                                        temporal_period, start_time)
+
+    weather_forecast: pd.DataFrame = wind_forecast.join(irradiance_forecast)
 
     weather_array = np.zeros((len(weather_forecast), 6))
-    for i, (time, weather) in enumerate(wind_forecast.join(ghi_forecast).iterrows()):
+    for i, (time, weather) in enumerate(wind_forecast.join(irradiance_forecast).iterrows()):
         time_dt: int = int(time.timestamp())  # ``time`` will be a pandas.time.Timestamp object
         latitude: float = coord[0]
         longitude: float = coord[1]
         wind_speed: float = weather['wind_speed_10m']
         wind_direction: float = weather['wind_direction_10m']
-        ghi: float = weather['ghi']
+        ghi: float = weather['dni'] + weather['dhi']
 
         weather_array[i] = np.array([time_dt, latitude, longitude, wind_speed, wind_direction, ghi])
 
     return weather_array
 
 
-def apply_stationary_charging_mask(tilted_ghi_forecast, untilted_ghi_forecast):
-    return untilted_ghi_forecast
+def apply_stationary_charging_mask(tilted_ghi_forecast, untilted_ghi_forecast, race: Race, period: int,
+                                   start_time: int):
+    driving_mask = race.driving_boolean
+    charging_mask = race.charging_boolean
+    stationary_mask = np.logical_and(charging_mask, np.logical_not(driving_mask))
+    stationary_mask = stationary_mask[start_time:]
+
+    tilted_ghi = tilted_ghi_forecast["gti"]
+    untilted_ghi = untilted_ghi_forecast["gti"]
+
+    mask = stationary_mask[::period]
+    # It is fair to pad with False and assume we won't be charging at the end
+    # because the last element will always correspond to the end of the race
+    mask = match_sizes(mask, untilted_ghi, False)
+
+    untilted_ghi_forecast["gti"] = np.where(mask, tilted_ghi, untilted_ghi)
+
+    return tilted_ghi_forecast
 
 
 # ------------------- Helpers ------------------
+def match_sizes(array_1: np.ndarray, array_2: np.ndarray, pad_element) -> np.ndarray:
+    """
+    Match the length of ``array_1`` to ``array_2`` by removing elements of ``array_1`` from
+    the back first, or pad with elements of kind ``pad_element``.
+
+    Does nothing if the lengths already match.
+
+    :param np.ndarray array_1: Array that will be modified
+    :param np.ndarray array_2: Reference array
+    :param pad_element: Value that will be used for padding
+    :return: Modified array
+    """
+
+    if len(array_1) > len(array_2):
+        while len(array_1) > len(array_2):
+            array_1 = array_1[:-1]
+    elif len(array_1) < len(array_2):
+        while len(array_1) < len(array_2):
+            array_1 = np.append(array_1, pad_element)
+
+    return array_1
+
+
 def linearly_interpolate(x, y, t):
     return (y - x) * t + x
 
@@ -657,7 +703,7 @@ def linearly_interpolate(x, y, t):
 def calculate_speed_limits(path, curvature) -> np.ndarray:
     cumulative_path_distances = np.cumsum(helpers.calculate_path_distances(path))
     speed_limits = np.empty([int(cumulative_path_distances[-1]) + 1], dtype=int)
-    print(len(cumulative_path_distances), len(curvature))
+
     for i in range(int(cumulative_path_distances[-1]) + 1):
         gis_index = closest_index(i, cumulative_path_distances)
         speed_limit = linearly_interpolate(BrightSide.max_cruising_speed,
@@ -714,7 +760,7 @@ def get_hash(origin_coord, dest_coord, waypoints):
 class Query:
     def __init__(self, api_type, race_type, weather_provider):
         self.api: APIType = APIType(api_type)
-        self.race: Race.RaceType = Race.RaceType(race_type)
+        self.race: Race = load_race(race_type)
         self.provider: WeatherProvider = WeatherProvider(weather_provider)
 
     def make(self):

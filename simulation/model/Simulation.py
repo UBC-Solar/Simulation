@@ -109,10 +109,9 @@ class Simulation:
         self.tick = builder.tick
         assert isinstance(self.tick, int), "Discrete tick length must be an integer!"
 
-        self.simulation_duration = builder.simulation_duration
         self.initial_battery_charge = builder.initial_battery_charge
 
-        self.start_hour = builder.start_hour
+        self.start_time = builder.start_time
 
         self.origin_coord = builder.origin_coord
         self.dest_coord = builder.dest_coord
@@ -172,8 +171,9 @@ class Simulation:
                                                    origin_coord=self.gis.launch_point,
                                                    hash_key=self.hash_key)
 
-        weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
-        self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
+        self.time_of_initialization = self.weather.last_updated_time  # Real Time
+
+        self.simulation_duration = builder.race_duration * 3600 * 24 - self.start_time
 
         self.solar_calculations = simulation.SolcastSolarCalculations(race=self.race)
 
@@ -243,7 +243,7 @@ class Simulation:
                                                                  f"{self.get_driving_time_divisions()} is needed!")
 
         # ----- Reshape speed array -----
-        speed_kmh = helpers.reshape_speed_array(self.race, speed, self.granularity)
+        speed_kmh = helpers.reshape_speed_array(self.race, speed, self.granularity, self.start_time, self.tick)
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
@@ -363,7 +363,7 @@ class Simulation:
 
         """
 
-        return helpers.get_granularity_reduced_boolean(self.race.driving_boolean, self.granularity).sum().astype(int)
+        return helpers.get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:], self.granularity).sum().astype(int)
 
     def get_race_length(self):
         try:

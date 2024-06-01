@@ -10,18 +10,18 @@ class SimulationBuilder:
     def __init__(self):
 
         # Initial Conditions
-        self.origin_coord = None
-        self.dest_coord = None
         self.current_coord = None
-        self.waypoints = None
-        self.start_hour = None
+        self.start_time = None
         self.initial_battery_charge = None
 
         # Model Parameters
         self.race_type = None
+        self.origin_coord = None
+        self.dest_coord = None
+        self.waypoints = None
+        self.race_duration = None
         self.lvs_power_loss = None
         self.tick = None
-        self.simulation_duration = None
         self.weather_provider = None
 
         # Execution Parameters
@@ -31,9 +31,7 @@ class SimulationBuilder:
 
     def set_initial_conditions(self, args):
         self.current_coord = args["current_coord"]
-
-        self.start_hour = args["start_hour"]
-
+        self.start_time = args["start_time"]
         self.initial_battery_charge = args["initial_battery_charge"]
 
         return self
@@ -46,8 +44,8 @@ class SimulationBuilder:
         self.race_type = race_type
         self.lvs_power_loss = args['lvs_power_loss']
         self.tick = args['tick']
-        self.simulation_duration = args['simulation_duration']
         self.weather_provider = args['weather_provider']
+        self.race_duration = len(args['days'])
 
         return self
 

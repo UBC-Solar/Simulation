@@ -45,12 +45,14 @@ class Race:
 
         self.days = race_constants["days"]
         self.tiling = race_constants["tiling"]
-        self.start_hour = race_constants["start_hour"]
         self.date = (race_constants["start_year"], race_constants["start_month"], race_constants["start_day"])
 
         self.race_duration = len(self.days) * 24 * 60 * 60  # Duration (s)
         self.driving_boolean = self.make_time_boolean("driving")
         self.charging_boolean = self.make_time_boolean("charging")
+
+    def __str__(self):
+        return str(self.race_type)
 
     def write(self):
         with open(race_directory / f"{str(self.race_type)}.pkl", 'wb') as outfile:
@@ -59,7 +61,6 @@ class Race:
     def make_time_boolean(self, boolean_type: str):
         boolean: np.ndarray = np.empty(self.race_duration, dtype=np.int8)
         DAY_LENGTH: int = 24 * 60 * 60  # Length of a day in seconds
-        start_time: int = self.start_hour * 3600
 
         for tick in range(len(boolean)):
             day: int = tick // DAY_LENGTH    # Integer division to determine how many days have passed
@@ -67,20 +68,19 @@ class Race:
             begin, end = self.days[str(day)][boolean_type]
 
             # If the time of day is between the beginning and end, then the boolean is True, else False
-            local_time = start_time + time_of_day
-            boolean[tick] = begin <= local_time < end
+            boolean[tick] = begin <= time_of_day < end
 
         return boolean
 
 
-def load_race(race_type):
+def load_race(race_type: Race.RaceType) -> Race:
     with open(race_directory / f"{str(race_type)}.pkl", 'rb') as infile:
         return pickle.load(infile)
 
 
-if __name__ == "__main__":
-    race = Race(Race.FSGP)
-    race.write()
+def compile_races():
+    fsgp = Race(Race.FSGP)
+    fsgp.write()
 
-    race = Race(Race.ASC)
-    race.write()
+    asc = Race(Race.ASC)
+    asc.write()

@@ -143,7 +143,7 @@ class SolcastForecasts(BaseWeatherForecasts):
 
         return np.asarray(closest_time_stamp_indices, dtype=np.int32)
 
-    def get_weather_forecast_in_time(self, indices, unix_timestamps, start_hour, tick) -> SolcastEnvironment:
+    def get_weather_forecast_in_time(self, indices, unix_timestamps, start_time, tick) -> SolcastEnvironment:
         """
 
         Takes in an array of indices of the weather_forecast array, and an array of timestamps. Uses those to figure out
@@ -160,7 +160,7 @@ class SolcastForecasts(BaseWeatherForecasts):
 
         :param np.ndarray indices: (int[N]) coordinate indices of self.weather_forecast
         :param np.ndarray unix_timestamps: (int[N]) unix timestamps of the vehicle's journey
-        :param int start_hour: the starting hour of simulation
+        :param int start_time: time since the start of the race that simulation is beginning
         :param int tick: length of a tick in seconds
         :returns: a SolcastEnvironment object with time_dt, latitude, longitude, wind_speed, wind_direction, and ghi.
         :rtype: SolcastEnvironment
