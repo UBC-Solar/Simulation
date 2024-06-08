@@ -83,10 +83,10 @@ assert (diff_same_shape(control_speed_kmh) <= 0).all()
 assert (diff_same_shape(regen_speed_kmh) <= 0).all()
 assert (battery_voltage > 0).all()
 
-# plt.plot(control_speed_kmh, label="control_speed_kmh")
-# plt.plot(regen_speed_kmh, label="regen_speed_kmh")
-# plt.plot(regen_current, label="regen_current")
-# plt.plot(battery_voltage, label="battery_voltage")
+plt.plot(control_speed_kmh, label="control_speed_kmh")
+plt.plot(regen_speed_kmh, label="regen_speed_kmh")
+plt.plot(regen_current, label="regen_current")
+plt.plot(battery_voltage, label="battery_voltage")
 
 # --------------------------------------- derive values -----------------------------------------
 
@@ -115,16 +115,16 @@ regen_kinetic_power = np.multiply(regen_force, control_speed_kmh / 3.6)
 
 '''
 Invert:
-	v_ctrl(t) →t(v_ctrl)
-    v_regen(t) →t(v_regen)
+	v_ctrl(t) →t(v_ctrl) done
+    v_regen(t) →t(v_regen) done
 
 Differentiate velocity:
-a_ctrl(t) = v_ctrl’(t)
-a_regen(t) = v_regen ’(t)
+a_ctrl(t) = v_ctrl’(t) done
+a_regen(t) = v_regen ’(t) done
 
 Composition:
-    a_ctrl(t(v_ctrl)) → a_ctrl(v)
-    a_regen(t(v_ctrl)) → a_regen(v)
+    a_ctrl(t(v_ctrl)) → a_ctrl(v) done
+    a_regen(t(v_ctrl)) → a_regen(v) done
 
 I(t(v)) → I(v)
 V_batt(t(v)) → V_batt(v)
@@ -141,7 +141,6 @@ Use electric power formula P = IV:
 Efficiency(v) = p_electric(v) / p_kinetic_regen_only(v)
 
 '''
-
 
 
 plt.legend(loc='best')
