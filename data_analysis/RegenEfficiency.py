@@ -95,7 +95,7 @@ print("Regen currents:\n", regen_current)
 print("Battery voltages:\n", battery_voltage)
 print("Regen power:\n", regen_power)
 
-# plt.scatter(v_control_kmh[:, 0], v_control_kmh[:, 1], label="v_control_kmh")
+# plt.scatter(v_control_kmh[:, 0], v_control_kmh[:, 1], label="v_control_kmh", label="v_control_kmh")
 # plt.scatter(v_regen_kmh[:, 0], v_regen_kmh[:, 1], label="v_regen_kmh")
 # plt.scatter(regen_current[:, 0], regen_current[:, 1], label="regen_current")
 # plt.scatter(battery_voltage[:, 0], battery_voltage[:, 1], label="battery_voltage")
