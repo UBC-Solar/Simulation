@@ -1,3 +1,4 @@
+from simulation.common import Race
 from simulation.common import Consumer
 from simulation.common import Producer
 from simulation.common import Storage
@@ -16,9 +17,9 @@ from simulation.model.car.lvs import BasicLVS
 from simulation.model.car.motor import BasicMotor
 from simulation.model.car.regen import BasicRegen
 
-from simulation.model.environment.GIS import GIS
-from simulation.model.environment.SolarCalculations import SolarCalculations
-from simulation.model.environment.WeatherForecasts import WeatherForecasts
+from simulation.model.environment.gis import GIS
+from simulation.model.environment.solar_calculations import OpenweatherSolarCalculations, SolcastSolarCalculations
+from simulation.model.environment.weather_forecasts import OpenWeatherForecast, SolcastForecasts
 
 from simulation.library import Libraries
 from simulation.utils.Plotting import Plotting

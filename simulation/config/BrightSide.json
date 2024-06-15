@@ -1,6 +1,6 @@
 {
   "panel_efficiency": 0.2,
-  "panel_size": 6.0,
+  "panel_size": 4.0,
 
   "max_voltage": 117.6,
   "min_voltage": 75.6,

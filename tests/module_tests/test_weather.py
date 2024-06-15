@@ -2,16 +2,13 @@ import dotenv
 import os
 import pytest
 from simulation.common.helpers import *
-from simulation.model.environment.WeatherForecasts import WeatherForecasts
-from simulation.model.environment.GIS import GIS
+from simulation.model.environment.weather_forecasts import OpenWeatherForecast
+from simulation.model.environment.gis import GIS
 
 
 @pytest.fixture
 def weather():
     dotenv.load_dotenv()
-
-    weather_api_key = os.environ.get("OPENWEATHER_API_KEY")
-    google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
 
     origin_coord = np.array([39.0918, -94.4172])
 
@@ -21,15 +18,14 @@ def weather():
 
     dest_coord = np.array([43.6142, -116.2080])
 
-    location_system = GIS(api_key=google_api_key, origin_coord=origin_coord,
-                                                 waypoints=waypoints, dest_coord=dest_coord, race_type="ASC")
+    location_system = GIS(origin_coord=origin_coord, waypoints=waypoints, dest_coord=dest_coord, race_type="ASC")
 
     route_coords = location_system.get_path()
 
     # 5 day simulation duration
-    weather_calculations = WeatherForecasts(api_key=weather_api_key,
-                                            coords=route_coords,
-                                            race_type="ASC")
+    weather_calculations = OpenWeatherForecast(coords=route_coords,
+                                               race_type="ASC",
+                                               provider="OPENWEATHER")
 
     return weather_calculations
 
@@ -38,8 +34,8 @@ def weather():
 def test_compare_golang_python_get_weather_in_time(weather):
     """
 
-    Unit test for WeatherForecasts.golang_calculate_closest_timestamp_indices and
-    WeatherForecasts.python_calculate_closest_timestamp_indices.
+    Unit test for OpenWeatherForecast.golang_calculate_closest_timestamp_indices and
+    OpenWeatherForecast.python_calculate_closest_timestamp_indices.
     Checks to see if the results are the same format and equal element-wise
 
     """
@@ -50,6 +46,6 @@ def test_compare_golang_python_get_weather_in_time(weather):
 
     go_gwit_result = weather.golang_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
 
-    python_gwit_result = weather.python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
+    python_gwit_result = weather._python_calculate_closest_timestamp_indices(unix_timestamps, dt_local_array)
 
     assert np.all(go_gwit_result == python_gwit_result)

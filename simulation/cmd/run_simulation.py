@@ -12,6 +12,7 @@ from simulation.utils.SimulationBuilder import SimulationBuilder
 from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
 from simulation.data.results import results_directory
 from simulation.data.assemble import Assembler
+from simulation.common.race import Race
 from tqdm import tqdm
 
 """
@@ -28,6 +29,7 @@ class SimulationSettings:
 
     def __init__(self, race_type="FSGP", golang=True, return_type=SimulationReturnType.distance_and_time,
                  optimization_iterations=20, route_visualization=False, verbose=False, granularity=1):
+
         self.race_type = race_type
         self.optimization_iterations = optimization_iterations
         self.golang = golang
@@ -79,10 +81,10 @@ def run_simulation(settings):
     """
 
     # Build simulation model
-    initial_conditions, model_parameters = get_default_settings(settings.race_type)
+    initial_conditions, model_parameters = get_default_settings(Race.RaceType(settings.race_type))
     simulation_builder = SimulationBuilder() \
         .set_initial_conditions(initial_conditions) \
-        .set_model_parameters(model_parameters, settings.race_type) \
+        .set_model_parameters(model_parameters, Race.RaceType(settings.race_type)) \
         .set_golang(settings.golang) \
         .set_return_type(settings.return_type) \
         .set_granularity(settings.granularity)
@@ -250,7 +252,7 @@ def parse_commands(cmds) -> SimulationSettings:
     return simulation_settings
 
 
-def run_unoptimized_and_export(input_speed=None, values=None, race_type="ASC", granularity=1, golang=True):
+def run_unoptimized_and_export(input_speed=None, values=None, race_type=Race.FSGP, granularity=1, golang=True):
     """
 
     Export simulation data.
@@ -311,8 +313,8 @@ def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds)
     print("Hyperparameter search has concluded.")
 
 
-def get_default_settings(race_type: str = "ASC") -> tuple[dict, dict]:
-    assert race_type in ["ASC", "FSGP"]
+def get_default_settings(race_type: Race.RaceType = Race.FSGP) -> tuple[dict, dict]:
+    assert race_type in Race.RaceType
 
     #  ----- Load initial conditions -----
     with open(config_directory / f"initial_conditions_{race_type}.json") as f:
@@ -326,11 +328,11 @@ def get_default_settings(race_type: str = "ASC") -> tuple[dict, dict]:
     return initial_conditions, model_parameters
 
 
-def build_basic_model(race_type: str = "FSGP", golang: bool = True, granularity: float = 1) -> Simulation:
+def build_basic_model(race_type: Race.RaceType = Race.FSGP, golang: bool = True, granularity: float = 1) -> Simulation:
     initial_conditions, model_parameters = get_default_settings(race_type)
     simulation_builder = SimulationBuilder() \
         .set_initial_conditions(initial_conditions) \
-        .set_model_parameters(model_parameters, race_type) \
+        .set_model_parameters(model_parameters, Race.RaceType(race_type)) \
         .set_golang(golang) \
         .set_return_type(SimulationReturnType.void) \
         .set_granularity(granularity)

@@ -344,6 +344,9 @@ class GeneticOptimization(BaseOptimization):
                     if population_data['hash_key'] == self.model.hash_key:
                         initial_population = np.array(population_data['population'])
 
+                        if not len(initial_population[0]) == self.model.get_driving_time_divisions():
+                            raise IndexError
+
                         # Check if the number of arrays needed and cached match. If we need more
                         # arrays than are cached, we can still use the cached arrays and just generate more.
                         if len(initial_population) == self.sol_per_pop:
@@ -352,7 +355,9 @@ class GeneticOptimization(BaseOptimization):
                             # In the case that there are more cached arrays then we need, slice off the excess.
                             new_initial_population = population_data['population'][:num_arrays_to_generate]
                             arrays_from_cache = len(new_initial_population)
-            except zipfile.BadZipFile:
+
+            except (IndexError, zipfile.BadZipFile):
+                print("Couldn't find valid arrays... generating")
                 arrays_from_cache = 0
 
         # If we need more arrays, generate the number of new arrays that we need

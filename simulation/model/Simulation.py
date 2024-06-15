@@ -1,7 +1,6 @@
 import simulation
 import functools
 import logging
-import os
 import core
 import numpy as np
 
@@ -11,6 +10,7 @@ from dotenv import load_dotenv
 
 from simulation.common import helpers
 from simulation.common.exceptions import LibrariesNotFound
+from simulation.common import Race, load_race
 from simulation.utils.Plotting import GraphPage
 
 
@@ -63,8 +63,6 @@ class Simulation:
         initial_battery_charge: starting charge of the battery
         golang: define whether Go implementations should be used when applicable
         library: manages and locates Go shared libraries (if possible)
-        google_api_key: API key to access GoogleMaps API. Stored in a .env file. Please ask Simulation Lead for this!
-        weather_api_key: API key to access OpenWeather API. Stored in a .env file. Please ask Simulation Lead for this!
         origin_coord: array containing latitude and longitude of route start point
         dest_coord: array containing latitude and longitude of route end point
         waypoints: array containing latitude and longitude pairs of route waypoints
@@ -96,9 +94,11 @@ class Simulation:
 
         # ----- Race type -----
 
-        assert builder.race_type in ["ASC", "FSGP"]
+        assert builder.race_type in Race.RaceType, f"{builder.race_type} is not a valid race type!"
 
         self.race_type = builder.race_type
+        self.race = load_race(self.race_type)
+        self.weather_provider = builder.weather_provider
 
         # ---- Granularity -----
         self.granularity = builder.granularity
@@ -109,10 +109,9 @@ class Simulation:
         self.tick = builder.tick
         assert isinstance(self.tick, int), "Discrete tick length must be an integer!"
 
-        self.simulation_duration = builder.simulation_duration
         self.initial_battery_charge = builder.initial_battery_charge
 
-        self.start_hour = builder.start_hour
+        self.start_time = builder.start_time
 
         self.origin_coord = builder.origin_coord
         self.dest_coord = builder.dest_coord
@@ -122,9 +121,6 @@ class Simulation:
         # ----- API keys -----
 
         load_dotenv()
-
-        self.weather_api_key = os.getenv('OPENWEATHER_API_KEY')
-        self.google_api_key = os.getenv('GOOGLE_MAPS_API_KEY')
 
         # ----- Go library initialisation -----
 
@@ -161,7 +157,7 @@ class Simulation:
 
         self.basic_regen = simulation.BasicRegen()
 
-        self.gis = simulation.GIS(self.google_api_key, self.origin_coord, self.dest_coord, self.waypoints,
+        self.gis = simulation.GIS(self.origin_coord, self.dest_coord, self.waypoints,
                                   self.race_type, current_coord=self.current_coord, hash_key=self.hash_key)
 
         self.route_coords = self.gis.get_path()
@@ -170,15 +166,16 @@ class Simulation:
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
-        self.weather = simulation.WeatherForecasts(self.weather_api_key, self.route_coords,
-                                                   self.race_type,
+        self.weather = simulation.SolcastForecasts(self.route_coords,
+                                                   self.race,
                                                    origin_coord=self.gis.launch_point,
                                                    hash_key=self.hash_key)
 
-        weather_hour = helpers.hour_from_unix_timestamp(self.weather.last_updated_time)
-        self.time_of_initialization = self.weather.last_updated_time + 3600 * (24 + self.start_hour - weather_hour)
+        self.time_of_initialization = self.weather.last_updated_time  # Real Time
 
-        self.solar_calculations = simulation.SolarCalculations(race_type=self.race_type)
+        self.simulation_duration = builder.race_duration * 3600 * 24 - self.start_time
+
+        self.solar_calculations = simulation.SolcastSolarCalculations(race=self.race)
 
         self.plotting = simulation.Plotting()
 
@@ -246,8 +243,7 @@ class Simulation:
                                                                  f"{self.get_driving_time_divisions()} is needed!")
 
         # ----- Reshape speed array -----
-        speed_kmh = helpers.reshape_speed_array(self.start_hour, self.simulation_duration, self.race_type,
-                                                speed, self.granularity, self.tick)
+        speed_kmh = helpers.reshape_speed_array(self.race, speed, self.granularity, self.start_time, self.tick)
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
@@ -258,6 +254,7 @@ class Simulation:
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
+
         if not kwargs and not is_optimizer:
             print(f"Simulation successful!\n"
                   f"Time taken: {results[0]}\n"
@@ -272,10 +269,10 @@ class Simulation:
             results_arrays = self.get_results(["speed_kmh", "distances", "state_of_charge", "delta_energy",
                                                "solar_irradiances", "wind_speeds",
                                                "gis_route_elevations_at_each_tick",
-                                               "cloud_covers", "raw_soc"]) + [raw_speed]
+                                               "raw_soc"]) + [raw_speed]
             results_labels = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
                               "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
-                              "Cloud cover (%)", "Raw SOC (%)", "Raw Speed (km/h)"]
+                              "Raw SOC (%)", "Raw Speed (km/h)"]
 
             self.plotting.add_graph_page_to_queue(GraphPage(results_arrays, results_labels, page_name="Results"))
 
@@ -366,9 +363,7 @@ class Simulation:
 
         """
 
-        return helpers.get_race_timing_constraints_boolean(self.start_hour, self.simulation_duration,
-                                                           self.race_type, self.granularity,
-                                                           as_seconds=False).sum().astype(int)
+        return helpers.get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:], self.granularity).sum().astype(int)
 
     def get_race_length(self):
         try:

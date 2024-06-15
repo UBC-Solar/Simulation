@@ -154,8 +154,8 @@ data/images/*.png
 # Env Files
 *.env
 
+# Files that should not get to GitHub
+/simulation/cache/weather/*.npz
+
 # OS Stuff
 .DS_Store
-
-# Env
-*.env

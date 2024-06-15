@@ -1,10 +1,10 @@
 import numpy as np
 import os
 import pytest
-import simulation
 from dotenv import load_dotenv
 from simulation.common import helpers
 from simulation.common.constants import EARTH_RADIUS
+from simulation.model.environment.gis import GIS
 
 
 @pytest.fixture
@@ -12,8 +12,6 @@ def gis():
     # Initialises the GIS object as a PyTest fixture so it can be used in all subsequent test functions
 
     load_dotenv()
-
-    google_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
 
     origin_coord = np.array([39.0918, -94.4172])
 
@@ -23,11 +21,11 @@ def gis():
 
     dest_coord = np.array([43.6142, -116.2080])
 
-    location_system = simulation.environment.GIS(google_api_key, origin_coord, dest_coord,
-                                                 waypoints, "ASC", golang=False, library=None,
-                                                 hash_key=231165811)
+    location_system = GIS(origin_coord, dest_coord,
+                          waypoints, "ASC", hash_key=231165811)
 
     return location_system
+
 
 @pytest.mark.skip(reason="Test is for ASC")
 def test_calculate_closest_gis_indices(gis):
@@ -40,6 +38,7 @@ def test_calculate_closest_gis_indices(gis):
     result = gis.calculate_closest_gis_indices(test_cumulative_distances)
 
     assert np.all(result == np.array([0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3]))
+
 
 @pytest.mark.skip(reason="Test is for ASC")
 def test_get_time_zones(gis):

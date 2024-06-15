@@ -16,11 +16,42 @@
     "lvs_power_loss": 0,
 
     "weather_freq": "daily",
+    "weather_provider": "OPENWEATHER",
 
-    "charging_begin" : 7,
-    "charging_end": 20,
-    "driving_begin": 9,
-    "driving_end": 18,
+  "days": {
+    "0": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    },
+    "1": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    },
+    "2": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    },
+    "3": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    },
+    "4": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    },
+    "5": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    },
+    "6": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    },
+    "7": {
+      "charging": [28800, 72000],
+      "driving": [32400, 64800]
+    }
+  },
     "tiling": 0,
 
     "start_year": 2021,

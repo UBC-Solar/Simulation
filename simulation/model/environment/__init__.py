@@ -1,3 +1,3 @@
-from simulation.model.environment.GIS import GIS
-from simulation.model.environment.SolarCalculations import SolarCalculations
-from simulation.model.environment.WeatherForecasts import WeatherForecasts
+from simulation.model.environment.base_environment import BaseEnvironment
+from simulation.model.environment.solcast_environment import SolcastEnvironment
+from simulation.model.environment.openweather_environment import OpenweatherEnvironment
