@@ -28,12 +28,14 @@ from simulation.common import constants, BrightSide, helpers, Race, load_race
 load_dotenv()
 
 
+# Enum to discretize between different data we need to acquire
 class APIType(StrEnum):
     GIS = "GIS"
     WEATHER = "WEATHER"
     ALL = "ALL"
 
 
+# Enum to discretize between different weather providers we have available
 class WeatherProvider(StrEnum):
     SOLCAST = "SOLCAST"
     OPENWEATHER = "OPENWEATHER"
@@ -412,6 +414,7 @@ def update_path_weather_forecast_openweather(coords, weather_data_frequency, dur
     return weather_forecast
 
 
+# Class to represent the temporal granularity of Solcast weather API
 class WeatherPeriod:
     class Period(StrEnum):
         min_5 = '5min'
@@ -633,8 +636,8 @@ def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, dura
     ).to_pandas()
 
     temporal_period = int(60 * 60 / WeatherPeriod.possible_periods[period]['hourly_rate'])
-    irradiance_forecast: pd.DataFrame = apply_stationary_charging_mask(tilted_ghi_forecast, untilted_ghi_forecast, race,
-                                                                        temporal_period, start_time)
+    irradiance_forecast: pd.DataFrame = apply_stationary_charging(tilted_ghi_forecast, untilted_ghi_forecast, race,
+                                                                  temporal_period, start_time)
 
     weather_forecast: pd.DataFrame = wind_forecast.join(irradiance_forecast)
 
@@ -652,8 +655,20 @@ def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, dura
     return weather_array
 
 
-def apply_stationary_charging_mask(tilted_ghi_forecast, untilted_ghi_forecast, race: Race, period: int,
-                                   start_time: int):
+def apply_stationary_charging(tilted_ghi_forecast, untilted_ghi_forecast, race: Race, period: int,
+                              start_time: int):
+    """
+    Apply stationary charging by determining when we will be charging while stationary, and
+    use the tilted irradiance for that period.
+
+    :param np.ndarray tilted_ghi_forecast: irradiance if the arrays are optimally tilted to the sun
+    :param np.ndarray untilted_ghi_forecast: irradiance if the arrays are horizontal
+    :param Race race: race that is being simulated
+    :param period: period for the irradiance
+    :param start_time: real time that the simulation is beginning
+    :return: accurate irradiance factoring in stationary charging
+    """
+
     driving_mask = race.driving_boolean
     charging_mask = race.charging_boolean
     stationary_mask = np.logical_and(charging_mask, np.logical_not(driving_mask))
