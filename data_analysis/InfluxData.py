@@ -7,9 +7,6 @@ Parse data downloaded from InfluxDB as CSV files into numpy arrays
 import os
 import pandas as pd
 import numpy as np
-from dateutil.parser import isoparse
-
-isoparse_vec = np.vectorize(isoparse)
 
 DEFAULT_COLS = [
     "table",
