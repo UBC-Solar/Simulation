@@ -1,15 +1,12 @@
 import numpy as np
 
 from matplotlib import pyplot as plt
-from simulation.library.libraries import Libraries
 from perlin_noise import PerlinNoise
 from simulation.common.helpers import normalize
 
 
 class Noise:
-    def __init__(self, golang=True, lib: Libraries = None):
-        self.golang = golang
-        self.lib = lib
+    def __init__(self, ):
         self.noise = None
         self.randomSeed = 0
 
