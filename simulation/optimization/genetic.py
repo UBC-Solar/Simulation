@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import zipfile
 import pygad
@@ -13,6 +15,7 @@ from simulation.cache.optimization_population import population_directory
 from simulation.optimization.base_optimization import BaseOptimization
 from simulation.common.helpers import denormalize, normalize, rescale
 from simulation.common.noise import Noise
+from simulation.config import config_directory
 from simulation.utils import InputBounds
 from simulation.model.Simulation import Simulation, SimulationReturnType
 
@@ -113,28 +116,32 @@ class OptimizationSettings:
         saturate: Criteria_Type = Criteria_Type.saturate
         reach: Criteria_Type = Criteria_Type.reach
 
-    def __init__(self, chromosome_size: int = 24,
-                 parent_selection_type: Parent_Selection_Type = Parent_Selection_Type.tournament,
-                 generation_limit: int = 30,
-                 num_parents: int = 12,
-                 k_tournament: int = 5,
-                 crossover_type: Crossover_Type = Crossover_Type.single_point,
-                 elitism: int = 8,
-                 mutation_type: Mutation_Type = Mutation_Type.random,
-                 mutation_percent: float = 25.0,
-                 max_mutation: float = 0.05,
-                 stopping_criteria: Stopping_Criteria = Stopping_Criteria(Stopping_Criteria.saturate, 15)):
-        self.chromosome_size: int = chromosome_size
-        self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = parent_selection_type
-        self.generation_limit: int = generation_limit
-        self.num_parents: int = num_parents
-        self.k_tournament: int = k_tournament
-        self.crossover_type: OptimizationSettings.Crossover_Type = crossover_type
-        self.elitism: int = elitism
-        self.mutation_type: OptimizationSettings.Mutation_Type = mutation_type
-        self.mutation_percent: float = mutation_percent
-        self.max_mutation: float = max_mutation
-        self.stopping_criteria: OptimizationSettings.Stopping_Criteria = stopping_criteria
+    def __init__(self, chromosome_size: int = None,
+                 parent_selection_type: Parent_Selection_Type = None,
+                 generation_limit: int = None,
+                 num_parents: int = None,
+                 k_tournament: int = None,
+                 crossover_type: Crossover_Type = None,
+                 elitism: int = None,
+                 mutation_type: Mutation_Type = None,
+                 mutation_percent: float = None,
+                 max_mutation: float = None,
+                 stopping_criteria: Stopping_Criteria = None):
+
+        with open(config_directory / "optimization_settings.json", "r") as settings_file:
+            settings = json.load(settings_file)
+
+        self.chromosome_size: int = int(settings["chromosome_size"]) if chromosome_size is None else chromosome_size
+        self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = OptimizationSettings.Parent_Selection_Type(settings["parent_selection_type"]) if parent_selection_type is None else parent_selection_type
+        self.generation_limit: int = int(settings["generation_limit"]) if generation_limit is None else generation_limit
+        self.num_parents: int = int(settings["num_parents"]) if num_parents is None else num_parents
+        self.k_tournament: int = int(settings["k_tournament"]) if k_tournament is None else k_tournament
+        self.crossover_type: OptimizationSettings.Crossover_Type = OptimizationSettings.Crossover_Type(settings["crossover_type"]) if crossover_type is None else crossover_type
+        self.elitism: int = int(settings["elitism"]) if elitism is None else elitism
+        self.mutation_type: OptimizationSettings.Mutation_Type = OptimizationSettings.Mutation_Type(settings["mutation_type"]) if mutation_type is None else mutation_type
+        self.mutation_percent: float = float(settings["mutation_percent"]) if mutation_percent is None else mutation_percent
+        self.max_mutation: float = float(settings["max_mutation"]) if max_mutation is None else max_mutation
+        self.stopping_criteria: OptimizationSettings.Stopping_Criteria = OptimizationSettings.Stopping_Criteria(string=settings["stopping_criteria"]) if stopping_criteria is None else stopping_criteria
 
         self._fitness: float = 0
 
@@ -546,3 +553,4 @@ class GeneticOptimization(BaseOptimization):
         for settings in settings_list:
             total += settings.generation_limit
         return total
+
