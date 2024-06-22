@@ -25,7 +25,6 @@ class SimulationBuilder:
         self.weather_provider = None
 
         # Execution Parameters
-        self.golang = None
         self.return_type = None
         self.granularity = None
 
@@ -46,11 +45,6 @@ class SimulationBuilder:
         self.tick = args['tick']
         self.weather_provider = args['weather_provider']
         self.race_duration = len(args['days'])
-
-        return self
-
-    def set_golang(self, golang):
-        self.golang = golang
 
         return self
 

@@ -1,6 +1,5 @@
 import simulation
 import functools
-import logging
 import core
 import numpy as np
 
@@ -9,7 +8,6 @@ from strenum import StrEnum
 from dotenv import load_dotenv
 
 from simulation.common import helpers
-from simulation.common.exceptions import LibrariesNotFound
 from simulation.common import Race, load_race
 from simulation.utils.Plotting import GraphPage
 
@@ -126,20 +124,6 @@ class Simulation:
 
         # Simulation uses compiled Go libraries to speed up methods that cannot be accelerated with NumPy to achieve
         # a significant performance increase (~75% runtime reduction) when applicable.
-
-        self.golang = builder.golang
-        if self.golang:
-            try:
-                self.library = simulation.Libraries()
-            except LibrariesNotFound:
-                # If compatible Go binaries weren't found, disable GoLang usage.
-                self.golang = False
-                self.library = None
-                logging.warning("Go binaries not found ==> Go usage has been disabled. \n"
-                                "To use Go implementations, see simulation/libraries/COMPILING_HOWTO.md \n"
-                                "about compiling GoLang for your operating system.\n")
-        else:
-            self.library = None
 
         # -------- Hash Key ---------
 
