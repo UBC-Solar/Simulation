@@ -268,9 +268,9 @@ class Simulation:
                 self.plotting.add_graph_page_to_queue(energy_graph)
 
                 # Plot indices and environment arrays
-                env_arrays = self.get_results(["temp", "closest_gis_indices", "closest_weather_indices",
+                env_arrays = self.get_results(["closest_gis_indices", "closest_weather_indices",
                                                "gradients", "time_zones", "gis_vehicle_bearings"])
-                env_labels = ["speed dist (m)", "gis ind", "weather ind",
+                env_labels = ["gis ind", "weather ind",
                               "gradients (m)", "time zones", "vehicle bearings"]
                 indices_and_environment_graph = GraphPage(env_arrays, env_labels, page_name="Indices and Environment")
                 self.plotting.add_graph_page_to_queue(indices_and_environment_graph)
@@ -290,11 +290,11 @@ class Simulation:
 
             self.plotting.plot_graph_pages(self.get_results("timestamps"), plot_portion=plot_portion)
 
-        if route_visualization:
-            if self.race_type == "FSGP":
-                helpers.route_visualization(self.gis.single_lap_path, visible=route_visualization)
-            elif self.race_type == "ASC":
-                helpers.route_visualization(self.gis.path, visible=route_visualization)
+        # if route_visualization:
+        #     if self.race_type == "FSGP":
+        #         helpers.route_visualization(self.gis.single_lap_path, visible=route_visualization)
+        #     elif self.race_type == "ASC":
+        #         helpers.route_visualization(self.gis.path, visible=route_visualization)
 
         get_return_type = {
             SimulationReturnType.time_taken: -1 * results[0],
