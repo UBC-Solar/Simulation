@@ -63,7 +63,9 @@ def main(settings):
 
     simulation_model.run_model(results_genetic, plot_results=True)
 
-    np.save(speeds_directory / (get_random_string(7) + ".npy"), results_genetic)
+    filename = get_random_string(7) + ".npy"
+    np.save(speeds_directory / filename, results_genetic)
+    print(f"Saved optimized results in: {filename}.npy\n")
 
 
 def get_random_string(length: int) -> str:
