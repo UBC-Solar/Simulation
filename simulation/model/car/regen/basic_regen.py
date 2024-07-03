@@ -21,7 +21,8 @@ class BasicRegen(BaseRegen):
         """
 
         # get the changes of energy from tick i to tick i + 1
-        delta_kinetic_energy = np.diff((1 / 2) * self.vehicle_mass * pow(speed_kmh, 2), append=[0])
+        speed_ms = speed_kmh / 3.6  # Convert to m/s from km/h
+        delta_kinetic_energy = np.diff((1 / 2) * self.vehicle_mass * pow(speed_ms, 2), append=[0])
         delta_potential_energy = np.diff(self.vehicle_mass * self.GRAVITY * gis_route_elevations, append=[0])
 
         # get the total change in energy at each tick
