@@ -167,8 +167,8 @@ class SolcastForecasts(BaseWeatherForecasts):
         """
         forecasts_array = core.weather_in_time(unix_timestamps.astype(np.int64), indices.astype(np.int64), self.weather_forecast, 0)
 
-        roll_by_tick = int(3600 / tick) * helpers.hour_from_unix_timestamp(forecasts_array[0, 0])
-        forecasts_array = np.roll(forecasts_array, -roll_by_tick, 0)
+        # roll_by_tick = int(3600 / tick) * helpers.hour_from_unix_timestamp(forecasts_array[0, 0])
+        # forecasts_array = np.roll(forecasts_array, -roll_by_tick, 0)
 
         weather_object = SolcastEnvironment()
 
