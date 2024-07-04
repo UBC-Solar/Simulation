@@ -1,5 +1,6 @@
 from simulation.model.car.regen import BaseRegen
 import numpy as np
+from simulation.common import BrightSide
 
 
 class BasicRegen(BaseRegen):
@@ -9,7 +10,7 @@ class BasicRegen(BaseRegen):
     def __init__(self):
         super().__init__()
         self.min_decel_mag = 0
-        self.vehicle_mass = 250
+        self.vehicle_mass = BrightSide.vehicle_mass
         self.kmh_to_mps = 0.278
 
     def calculate_produced_energy(self, speed_kmh, gis_route_elevations):
@@ -21,7 +22,8 @@ class BasicRegen(BaseRegen):
         """
 
         # get the changes of energy from tick i to tick i + 1
-        delta_kinetic_energy = np.diff((1 / 2) * self.vehicle_mass * pow(speed_kmh, 2), append=[0])
+        speed_ms = speed_kmh / 3.6  # Convert to m/s from km/h
+        delta_kinetic_energy = np.diff((1 / 2) * self.vehicle_mass * pow(speed_ms, 2), append=[0])
         delta_potential_energy = np.diff(self.vehicle_mass * self.GRAVITY * gis_route_elevations, append=[0])
 
         # get the total change in energy at each tick
