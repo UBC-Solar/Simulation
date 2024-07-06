@@ -2,7 +2,7 @@ import math
 import numpy as np
 
 from simulation.model.car.motor.base_motor import BaseMotor
-from simulation.common import DayBreak, constants, DayBreakEquations
+from simulation.common import DayBreak, BrightSide, constants, DayBreakEquations
 
 
 class BasicMotor(BaseMotor):
@@ -18,14 +18,14 @@ class BasicMotor(BaseMotor):
 
         # TODO: organize this mess
         self.input_power = 0
-        self.vehicle_mass = DayBreak.vehicle_mass
+        self.vehicle_mass = BrightSide.vehicle_mass
         self.acceleration_g = constants.ACCELERATION_G
-        self.road_friction = DayBreak.road_friction
-        self.tire_radius = DayBreak.tire_radius
+        self.road_friction = BrightSide.road_friction
+        self.tire_radius = BrightSide.tire_radius
 
         self.air_density = constants.AIR_DENSITY
-        self.vehicle_frontal_area = DayBreak.vehicle_frontal_area
-        self.drag_coefficient = DayBreak.drag_coefficient
+        self.vehicle_frontal_area = BrightSide.vehicle_frontal_area
+        self.drag_coefficient = BrightSide.drag_coefficient
 
         self.friction_force = (self.vehicle_mass * self.acceleration_g * self.road_friction)
 
