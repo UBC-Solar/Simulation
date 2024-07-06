@@ -117,6 +117,9 @@ class BasicMotor(BaseMotor):
 
         required_speed_ms = required_speed_kmh / 3.6
 
+        acceleration_ms2 = np.clip(np.diff(required_speed_ms, append=[0]), a_min=0, a_max=None)
+        acceleration_force = acceleration_ms2 * self.vehicle_mass
+
         required_angular_speed_rads = required_speed_ms / self.tire_radius
         required_angular_speed_rads_array = np.ones(len(gradients)) * required_angular_speed_rads
 
@@ -129,8 +132,8 @@ class BasicMotor(BaseMotor):
         road_friction_array = np.full_like(g_forces, fill_value=self.road_friction)
         road_friction_array = road_friction_array * self.vehicle_mass * self.acceleration_g * np.cos(angles)
 
-        motor_output_energies = required_angular_speed_rads_array * (
-                road_friction_array + drag_forces + g_forces) * self.tire_radius * tick
+        motor_output_energies = np.clip(required_angular_speed_rads_array * (
+                road_friction_array + drag_forces + g_forces + acceleration_force) * self.tire_radius * tick, a_min=0, a_max=None)
 
         e_m = self.calculate_motor_efficiency(required_angular_speed_rads_array, motor_output_energies, tick)
         e_mc = self.calculate_motor_controller_efficiency(required_angular_speed_rads_array,
