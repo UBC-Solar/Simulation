@@ -168,6 +168,7 @@ class Model:
                                                                                            self.gis_route_elevations_at_each_tick)
 
         self.not_charge = self.simulation.race.charging_boolean[self.simulation.start_time:]
+        self.not_race = self.simulation.race.driving_boolean[self.simulation.start_time:]
 
         if self.simulation.tick != 1:
             self.not_charge = self.not_charge[::self.simulation.tick]
@@ -176,7 +177,7 @@ class Model:
                                                     self.not_charge) * self.array_produced_energy
 
         # Apply not charge mask to only consume energy when we are racing else 0
-        self.consumed_energy = np.where(self.not_charge,
+        self.consumed_energy = np.where(self.not_race,
                                         self.motor_consumed_energy + self.lvs_consumed_energy, 0)
 
         self.produced_energy = self.array_produced_energy + self.regen_produced_energy
