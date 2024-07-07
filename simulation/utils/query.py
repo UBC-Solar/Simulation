@@ -469,16 +469,14 @@ def update_path_weather_forecast_solcast(coords, duration, period: WeatherPeriod
     - [6]: period end UTC (UNIX time), latitude, longitude, wind_speed (m/s), wind_direction (degrees), ghi (W/m^2)
 
     """
-    num_coords = len(coords)
-
-    weather_forecast = np.zeros((num_coords, duration * WeatherPeriod.possible_periods[period]['hourly_rate'] + 1, 6))
+    weather_forecast = []
 
     with tqdm(total=len(coords), file=sys.stdout, desc="Calling Solcast API") as pbar:
         for i, coord in enumerate(coords):
-            weather_forecast[i] = get_coord_weather_forecast_solcast(coord, period, duration, race, start_time)
+            weather_forecast.append(get_coord_weather_forecast_solcast(coord, period, duration, race, start_time))
             pbar.update(1)
 
-    return weather_forecast
+    return np.array(weather_forecast)
 
 
 def get_coord_weather_forecast_openweather(coord, weather_data_frequency, duration):
@@ -618,6 +616,7 @@ def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, dura
         longitude=coord[1],
         hours=duration,
         period=WeatherPeriod.possible_periods[period]['formatted'],
+        array_type="fixed",
         output_parameters=[
             'gti'
         ],
@@ -627,6 +626,7 @@ def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, dura
         latitude=coord[0],
         longitude=coord[1],
         hours=duration,
+        array_type="fixed",
         tilt=0,
         period=WeatherPeriod.possible_periods[period]['formatted'],
         output_parameters=[
