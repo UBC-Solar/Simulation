@@ -8,6 +8,8 @@ This document contains information on how to get setup with the Simulation frame
 
 For more detailed information on the inner workings of the simulation please refer to the [wiki](https://github.com/UBC-Solar/Simulation/wiki).
 
+For instructions on how to use the scripts provided, see our [usage guide](simulation/cmd/USAGE_GUIDE.md).
+
 ## Getting started
 
 ### Prerequisites
@@ -62,22 +64,7 @@ NOTE: Any Python version before 3.8 is not supported so please make sure that yo
 
     If neither work, you either do not have pip installed or are not in the correct directory.
 
-- Next, run the build command to complete the build which will attempt to compile a few libraries to improve performance.
-    ```bash
-    build_simulation
-    ```
-  You can also run the script directly by navigating to the "Simulation" project root directory. 
-    ```bash
-    python build.py
-    ```
-
-    If the above command doesn't work, try the one below:
-
-    ```bash
-    python3 build.py
-    ```
-
-- If all the commands worked, you should then be able to run the command `simulation_health_check`, which will ensure everything is working properly.
+- You should then be able to run the command `simulation_health_check`, which will ensure everything is working properly.
 
 ```bash
 simulation_health_check
