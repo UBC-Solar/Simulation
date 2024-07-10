@@ -78,7 +78,7 @@ def main(race: str, weather_provider: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--race", help="Race Acronym ['FSGP', 'ASC']")
+    parser.add_argument("--race", help="Race Acronym ['FSGP', 'ASC']", default="FSGP")
     parser.add_argument("--weather_provider", help="Weather Provider ['SOLCAST', 'OPENWEATHER]", default='SOLCAST',
                         required=False)
     args = parser.parse_args()
