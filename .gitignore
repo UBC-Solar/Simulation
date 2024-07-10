@@ -146,6 +146,7 @@ data/images/*.png
 
 # Results
 /results
+simulation/config/speeds/*.npy
 
 # idea
 .idea
