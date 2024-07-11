@@ -8,10 +8,10 @@
   "max_energy_capacity": 5400,
 
   "lvs_voltage": 12,
-  "lvs_current": 2.00,
+  "lvs_current": 1.50,
 
-  "vehicle_mass": 300,
-  "road_friction": 0.0055,
+  "vehicle_mass": 350,
+  "road_friction": 0.012,
   "tire_radius": 0.2032,
   "vehicle_frontal_area": 1.1853,
   "drag_coefficient": 0.11609,

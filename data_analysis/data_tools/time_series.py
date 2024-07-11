@@ -131,7 +131,7 @@ class TimeSeries(np.ndarray):
             index = self.index_of(item)
             return super(TimeSeries, data_to_slice).__getitem__(index)
 
-        if isinstance(item, slice):
+        elif isinstance(item, slice):
             if isinstance(item.start, float):
                 start_index = self.index_of(item.start)
             else:
