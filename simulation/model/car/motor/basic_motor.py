@@ -156,3 +156,9 @@ class BasicMotor(BaseMotor):
                 f"Acceleration of gravity: {self.acceleration_g}m/s^2\n"
                 f"Motor controller efficiency: {self.e_mc}%\n"
                 f"Motor efficiency: {self.e_m}%\n")
+
+
+if __name__ == "__main__":
+    motor = BasicMotor()
+    energies = motor.calculate_energy_in(np.array([10, 10]), np.array([0, 0]), np.array([0, 0]), 1)
+    energies = motor.calculate_energy_in(np.array([10, 10]), np.array([0, 0]), np.array([0, 0]), 1, [2.3, 1.12, 1.2, 1.233])

@@ -1,3 +1,5 @@
+import numpy as np
+
 from simulation.model.car.arrays.base_array import BaseArray
 from simulation.common import DayBreak
 
@@ -17,7 +19,7 @@ class BasicArray(BaseArray):
         # please do not use this.
         self.solar_irradiance = 1200
 
-    def calculate_produced_energy(self, solar_irradiance, tick):
+    def calculate_produced_energy(self, solar_irradiance, tick, parameters = None):
         """
 
         Returns a numpy array with the energy produced by the solar panels across
@@ -32,8 +34,13 @@ class BasicArray(BaseArray):
         :rtype: np.ndarray
 
         """
+        if parameters is None:
+            parameters = self.parameters
 
-        return solar_irradiance * self.panel_efficiency * self.panel_size * tick
+        produced_energy = solar_irradiance * self.panel_efficiency * self.panel_size * tick
+        produced_energy *= np.polyval([parameters[0], parameters[1]], produced_energy)
+
+        return produced_energy
 
     def __str__(self):
         return(f"BasicArray: incident_sunlight: {self.solar_irradiance}W/m^2\n"

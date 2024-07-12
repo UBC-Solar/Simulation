@@ -13,13 +13,15 @@ class BasicRegen(BaseRegen):
         self.vehicle_mass = BrightSide.vehicle_mass
         self.kmh_to_mps = 0.278
 
-    def calculate_produced_energy(self, speed_kmh, gis_route_elevations):
+    def calculate_produced_energy(self, speed_kmh, gis_route_elevations, parameters=None):
         """
         Returns a numpy array containing the energy produced by regen
         during each tick of the race based on the change in energy in that tick
         :param speed_kmh: an array containing the speeds at each tick
         :param gis_route_elevations: an array containing elevations on the route at each tick
         """
+        if parameters is None:
+            parameters = self.parameters
 
         # get the changes of energy from tick i to tick i + 1
         speed_ms = speed_kmh / 3.6  # Convert to m/s from km/h
@@ -32,6 +34,15 @@ class BasicRegen(BaseRegen):
         # create regen energy produced array
         # if delta_energy is negative, we regen that energy back at the set efficiency rate; else 0 energy regen
         self.produced_energy = np.where(delta_energy < 0, abs(delta_energy) * self.EFFICIENCY, 0)
+
+        # Regen does not occur below a certain speed
+        self.produced_energy = np.where(speed_ms >= parameters[0], self.produced_energy, 0)
+
+        # Regen power is capped by current limitations
+        self.produced_energy = np.clip(self.produced_energy, a_min=0, a_max=parameters[1])
+
+        # Perform scaling for fitting to data
+        self.produced_energy *= np.polyval([parameters[2], parameters[3]], self.produced_energy)
 
         return self.produced_energy
 

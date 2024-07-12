@@ -10,10 +10,25 @@ from typing import List
 ###################################  PARAMETERS  ######################################
 
 
+# Note: before performing curve fitting, these parameters should set to whatever
+# value such that they have NO EFFECT on the system.
+# Example: For polynomial scaling coefficients, the constant factor should be 1.0,
+# and all others should be 0.0.
+
 MOTOR_ACCELERATION_LINEAR_FACTOR = 0.0
 MOTOR_ACCELERATION_CONSTANT_FACTOR = 1.0
 MOTOR_POWER_LINEAR_FACTOR = 0.0
 MOTOR_POWER_CONSTANT_FACTOR = 1.0
+
+ARRAY_POWER_LINEAR_FACTOR = 0.0
+ARRAY_POWER_CONSTANT_FACTOR = 1.0
+
+LVS_CONSTANT_FACTOR = 1.0
+
+REGEN_SPEED_CUTOFF = 0.0      # Units: m/s
+REGEN_POWER_CUTOFF = 100000   # Units: W
+REGEN_LINEAR_FACTOR = 0.0
+REGEN_CONSTANT_FACTOR = 1.
 
 
 ###################################    LOOKUP    ######################################
@@ -21,10 +36,10 @@ MOTOR_POWER_CONSTANT_FACTOR = 1.0
 
 parameters = {
     "BasicMotor": [MOTOR_ACCELERATION_LINEAR_FACTOR, MOTOR_ACCELERATION_CONSTANT_FACTOR, MOTOR_POWER_LINEAR_FACTOR, MOTOR_POWER_CONSTANT_FACTOR],
-    "BasicLVS": [],
-    "BasicArray": [],
+    "BasicLVS": [LVS_CONSTANT_FACTOR],
+    "BasicArray": [ARRAY_POWER_LINEAR_FACTOR, ARRAY_POWER_CONSTANT_FACTOR],
     "BasicBattery": [],
-    "BasicRegen": []
+    "BasicRegen": [REGEN_SPEED_CUTOFF, REGEN_POWER_CUTOFF, REGEN_LINEAR_FACTOR, REGEN_CONSTANT_FACTOR]
 }
 
 
