@@ -2,11 +2,10 @@ import math
 import numpy as np
 
 from simulation.model.car.motor.base_motor import BaseMotor
-from simulation.common import DayBreak, BrightSide, constants, DayBreakEquations
-from simulation.config.coefficients import MOTOR_ACCELERATION_FACTOR, MOTOR_POWER_FACTOR
+from simulation.common import BrightSide, constants, DayBreakEquations
+
 
 class BasicMotor(BaseMotor):
-
     def __init__(self):
         super().__init__()
 
@@ -32,8 +31,6 @@ class BasicMotor(BaseMotor):
         self.e_mc = 0.98  # motor controller efficiency, subject to change
         self.e_m = 0.9  # motor efficiency, subject to change
 
-        self.coefficients = [MOTOR_ACCELERATION_FACTOR, MOTOR_POWER_FACTOR]
-
         # print("torque experienced by motor: {} Nm".format(self.constant_torque))
 
     @staticmethod
@@ -47,7 +44,7 @@ class BasicMotor(BaseMotor):
 
         :param np.ndarray motor_angular_speed: (float[N]) angular speed motor operates in rad/s
         :param np.ndarray motor_output_energy: (float[N]) energy motor outputs to the wheel in J
-        :param int tick: length of 1 update cycle in seconds
+        :param float tick: length of 1 update cycle in seconds
         :returns e_m: (float[N]) efficiency of the motor
         :rtype: np.ndarray
 
@@ -78,7 +75,7 @@ class BasicMotor(BaseMotor):
 
         :param np.ndarray motor_angular_speed: (float[N]) angular speed motor operates in rad/s
         :param np.ndarray motor_output_energy: (float[N]) energy motor outputs to the wheel in J
-        :param int tick: length of 1 update cycle in seconds
+        :param float tick: length of 1 update cycle in seconds
         :returns e_mc (float[N]) efficiency of the motor controller
         :rtype: np.ndarray
 
@@ -102,7 +99,7 @@ class BasicMotor(BaseMotor):
 
         return e_mc
 
-    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, tick, coefficients = None):
+    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, tick, parameters = None):
         """
 
         Create a function which takes in array of elevation, array of wind speed, required
@@ -111,18 +108,19 @@ class BasicMotor(BaseMotor):
         :param np.ndarray required_speed_kmh: (float[N]) required speed array in km/h
         :param np.ndarray gradients: (float[N]) gradient at parts of the road
         :param np.ndarray wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
-        :param int tick: length of 1 update cycle in seconds
+        :param float tick: length of 1 update cycle in seconds
         :returns: (float[N]) energy expended by the motor at every tick
         :rtype: np.ndarray
 
         """
-        if coefficients is None:
-            coefficients = self.coefficients
+        if parameters is None:
+            parameters = self.parameters
 
         required_speed_ms = required_speed_kmh / 3.6
 
         acceleration_ms2 = np.clip(np.gradient(required_speed_ms), a_min=0, a_max=None)
-        acceleration_force = acceleration_ms2 * self.vehicle_mass * coefficients[0]
+        acceleration_force = acceleration_ms2 * self.vehicle_mass
+        acceleration_force *= np.polyval([parameters[0], parameters[1]], acceleration_ms2)
 
         required_angular_speed_rads = required_speed_ms / self.tire_radius
 
@@ -134,12 +132,14 @@ class BasicMotor(BaseMotor):
 
         road_friction_array = self.road_friction * self.vehicle_mass * self.acceleration_g * np.cos(angles)
 
-        motor_output_energies = np.clip(required_angular_speed_rads * (
-                road_friction_array + drag_forces + g_forces + acceleration_force) * self.tire_radius * tick, a_min=0, a_max=None) * coefficients[1]
+        net_force = road_friction_array + drag_forces + g_forces + acceleration_force
+
+        motor_output_energies = required_angular_speed_rads * net_force * self.tire_radius * tick
+        motor_output_energies = np.clip(motor_output_energies, a_min=0, a_max=None)
+        motor_output_energies *= np.polyval([parameters[2], parameters[3]], motor_output_energies)
 
         e_m = self.calculate_motor_efficiency(required_angular_speed_rads, motor_output_energies, tick)
-        e_mc = self.calculate_motor_controller_efficiency(required_angular_speed_rads,
-                                                          motor_output_energies, tick)
+        e_mc = self.calculate_motor_controller_efficiency(required_angular_speed_rads, motor_output_energies, tick)
 
         motor_controller_input_energies = motor_output_energies / (e_m * e_mc)
 
