@@ -5,6 +5,7 @@ import enum
 
 from simulation.config import config_directory
 from simulation.cache.race import race_directory
+from geopy.distance import geodesic
 import os
 import json
 import pickle
@@ -48,6 +49,10 @@ class Race:
         self.date = (race_constants["start_year"], race_constants["start_month"], race_constants["start_day"])
 
         self.race_duration = len(self.days) * 24 * 60 * 60  # Duration (s)
+        self.cornering_radii = self.make_cornering_radii_array(race_constants["waypoints"])
+        print("_________CORNERING RADII____________")
+        print(self.cornering_radii)
+
         self.driving_boolean = self.make_time_boolean("driving")
         self.charging_boolean = self.make_time_boolean("charging")
 
@@ -71,7 +76,56 @@ class Race:
             boolean[tick] = begin <= time_of_day < end
 
         return boolean
+    
+    def make_cornering_radii_array(self, waypoints):
+        # pop off last coordinate since first and last coordinate are the same
+        waypoints = waypoints[:-1]
 
+        cornering_radii = np.empty(len(waypoints))
+        for i in range(len(waypoints)):
+            # if the next point or previous point is out of bounds, wrap the index around the array
+            i2 = (i - 1) % len(waypoints)
+            i3 = (i + 1) % len(waypoints)
+            current_point = waypoints[i]
+            previous_point = waypoints[i2]
+            next_point = waypoints[i3]
+
+            x1 = 0 
+            y1 = 0
+            x2, y2 = calculate_xy_distance(current_point, previous_point)
+            x3, y3 = calculate_xy_distance(current_point, next_point)
+            cornering_radii[i] = radius_of_curvature(x1, y1, x2, y2, x3, y3)
+        return cornering_radii
+def calculate_xy_distance(coord1, coord2):
+    lat1, lon1 = coord1
+    lat2, lon2 = coord2
+
+    # Base coordinate
+    coord_base = (lat1, lon1)
+    # Coordinate for latitude difference (keep longitude the same)
+    coord_lat = (lat2, lon1)
+    # Coordinate for longitude difference (keep latitude the same)
+    coord_long = (lat1, lon2)
+
+    # geodesic is a function from geopy that finds the distance between lat lon coords in meters with high percision
+    y_distance = geodesic(coord_base, coord_lat).meters
+    x_distance = geodesic(coord_base, coord_long).meters
+
+    return x_distance, y_distance
+
+# uses circumcircle formula
+def radius_of_curvature(x1, y1, x2, y2, x3, y3):
+    numerator = np.sqrt(
+        ((x3 - x2)**2 + (y3 - y2)**2) *
+        ((x1 - x3)**2 + (y1 - y3)**2) *
+        ((x2 - x1)**2 + (y2 - y1)**2)
+    )
+
+    denominator = 2 * abs(
+        ((x2 - x1) * (y1 - y3) - (x1 - x3) * (y2 - y1))
+    )
+
+    return numerator / denominator
 
 def load_race(race_type: Race.RaceType) -> Race:
     with open(race_directory / f"{str(race_type)}.pkl", 'rb') as infile:
