@@ -130,6 +130,44 @@ def radius_of_curvature(x1, y1, x2, y2, x3, y3):
 def load_race(race_type: Race.RaceType) -> Race:
     with open(race_directory / f"{str(race_type)}.pkl", 'rb') as infile:
         return pickle.load(infile)
+    
+
+
+
+
+
+def write_slip_angles(min_degrees, max_degrees, num_elements): 
+    # Step 1: Generate or define data points (slip angle, tire force)
+    # Example data, replace with your actual data
+    slip_angles = np.linspace(min_degrees, max_degrees, num_elements)
+    tire_forces = 1000 * np.sin(np.radians(slip_angles))  # Example tire force formula
+
+    with open(race_directory / "slip_angle_lookup.pkl", 'wb') as outfile:
+        pickle.dump((slip_angles, tire_forces), outfile)
+
+
+def read_slip_angles():
+    # Deserialize the data points from the file
+    with open('slip_angle_lookup.pkl', 'rb') as f:
+        slip_angles, tire_forces = pickle.load(f)
+
+    print("Lookup table data points have been loaded from 'lookup_table.pkl'.")
+    return slip_angles, tire_forces
+
+
+def get_slip_angle_for_tire_force(desired_tire_force):
+    # Read the lookup table data points
+    slip_angles, tire_forces = read_slip_angles()
+
+    # Use the numpy interpolation function to find slip angle for the given tire force
+    # interpolation estimates unknown slip angle from a tire force that lies between known tire forces (from the lookup table)
+    estimated_slip_angle = np.interp(desired_tire_force, tire_forces, slip_angles)
+    
+    
+    return estimated_slip_angle
+
+
+
 
 
 def compile_races():
@@ -138,3 +176,5 @@ def compile_races():
 
     asc = Race(Race.ASC)
     asc.write()
+
+    write_slip_angles(0, 15, 10000)
