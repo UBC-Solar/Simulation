@@ -3,6 +3,7 @@ import datetime
 from dateutil import parser
 import matplotlib.pyplot as plt
 import math
+import pandas as pd
 
 
 class TimeSeries(np.ndarray):
@@ -267,4 +268,43 @@ class TimeSeries(np.ndarray):
             new_args.append(new_array_interpolated)
 
         return new_args
+
+    @staticmethod
+    def from_query_dataframe(query_df: pd.DataFrame, granularity: float, field: str, units: str):
+        # Transform the DataFrame into a nicer format where we have our time-series data indexed by time
+        query_df['_time'] = pd.to_datetime(query_df['_time'])
+        query_df.set_index('_time', inplace=True)
+
+        # Get the x-axis in relative seconds (first element is t=0)
+        x_axis = query_df.index.map(lambda x: x.timestamp()).to_numpy()
+        x_axis -= x_axis[0]  # Subtract off first time, so the x_axis starts at 0 with units of seconds
+
+        # Reshape the x-axis to have the right number of elements for our needed granularity
+        temporal_length: float = x_axis[-1]  # Total time of the query in seconds
+        desired_num_elements: int = math.ceil(temporal_length / granularity)
+        desired_x_axis = np.linspace(0, temporal_length, desired_num_elements, endpoint=True)
+
+        # Re-interpolate our data on desired x-axis
+        wave = query_df[[field]].to_numpy().reshape(-1)
+        wave_interpolated = np.interp(desired_x_axis, x_axis, wave)
+
+        actual_granularity = np.mean(np.diff(desired_x_axis))
+
+        # Compile metadata
+        meta: dict = {
+            "start": query_df.index.to_numpy()[0].to_pydatetime(),
+            "stop": query_df.index.to_numpy()[-1].to_pydatetime(),
+            "car": query_df["car"][0],
+            "measurement": query_df["_measurement"][0],
+            "field": field,
+            "granularity": actual_granularity,
+            "length": temporal_length,
+            "units": units,
+        }
+
+        new_wave = TimeSeries(wave_interpolated, meta)
+
+        return new_wave
+
+
 
