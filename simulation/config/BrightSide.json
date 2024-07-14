@@ -2,8 +2,11 @@
   "panel_efficiency": 0.2432,
   "panel_size": 4.0,
 
-  "max_voltage": 127,
-  "min_voltage": 85,
+  "max_voltage": 134.4,
+  "min_voltage": 86.4,
+  "num_cells_per_module": 13,
+  "num_modules": 32,
+  "cell_charge_rating": 3300,
   "max_current_capacity": 48.9,
   "max_energy_capacity": 5400,
 

@@ -3,15 +3,11 @@ import argparse
 import numpy as np
 import subprocess
 import json
-import sys
 
 from simulation.model.Simulation import Simulation, SimulationReturnType
-from simulation.utils.InputBounds import InputBounds
 from simulation.config import config_directory, speeds_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
-from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
 from simulation.common.race import Race
-from tqdm import tqdm
 
 
 class SimulationSettings:
@@ -57,7 +53,7 @@ def main(settings: SimulationSettings, speeds_filename: str):
     driving_hours = simulation_model.get_driving_time_divisions()
 
     if speeds_filename is None:
-        input_speed = np.array([60] * driving_hours)
+        input_speed = np.array([45] * driving_hours)
     else:
         input_speed = np.load(speeds_directory / (speeds_filename + ".npy"))
         if len(input_speed) != driving_hours:
@@ -67,7 +63,6 @@ def main(settings: SimulationSettings, speeds_filename: str):
     unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=True,
                                                   verbose=settings.verbose,
                                                   route_visualization=settings.route_visualization)
-
 
     return unoptimized_time
 
@@ -148,20 +143,6 @@ def _health_check() -> None:
                                route_visualization=False)
 
     print("Simulation was successful!")
-
-
-def _execute_build_script() -> None:
-    """
-
-    This is an entrypoint to execute the build script.
-
-    """
-
-    try:
-        subprocess.run(["python", "compile.py"], check=True)
-
-    except subprocess.CalledProcessError:
-        exit(1)
 
 
 if __name__ == "__main__":
