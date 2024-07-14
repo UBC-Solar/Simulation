@@ -1,7 +1,7 @@
 import numpy as np
 
 from simulation.model.car.arrays.base_array import BaseArray
-from simulation.common import DayBreak
+from simulation.common import BrightSide
 
 
 class BasicArray(BaseArray):
@@ -11,10 +11,10 @@ class BasicArray(BaseArray):
         super().__init__()
 
         # solar cell efficiency
-        self.panel_efficiency = DayBreak.panel_efficiency
+        self.panel_efficiency = BrightSide.panel_efficiency
 
         # solar panel size in m^2
-        self.panel_size = DayBreak.panel_size
+        self.panel_size = BrightSide.panel_size
 
         # please do not use this.
         self.solar_irradiance = 1200

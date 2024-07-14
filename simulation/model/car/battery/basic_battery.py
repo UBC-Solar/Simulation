@@ -1,7 +1,7 @@
 import numpy as np
 
 from simulation.model.car.battery.base_battery import BaseBattery
-from simulation.common import DayBreak, BrightSide, DayBreakEquations as equations
+from simulation.common import BrightSide, DayBreakEquations as equations
 
 
 class BasicBattery(BaseBattery):

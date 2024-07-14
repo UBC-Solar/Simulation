@@ -1,5 +1,5 @@
 from simulation.model.car.lvs.base_lvs import BaseLVS
-from simulation.common import DayBreak
+from simulation.common import BrightSide
 
 
 class BasicLVS(BaseLVS):
@@ -18,5 +18,5 @@ class BasicLVS(BaseLVS):
             parameters = self.parameters
 
         # Constants for car are set in config > {car_name}.json
-        self.consumed_energy = DayBreak.lvs_current * DayBreak.lvs_voltage * tick * parameters[0]
+        self.consumed_energy = BrightSide.lvs_current * BrightSide.lvs_voltage * tick * parameters[0]
         return self.consumed_energy

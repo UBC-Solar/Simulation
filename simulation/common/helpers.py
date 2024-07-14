@@ -14,7 +14,7 @@ from bokeh.plotting import figure, show, output_file
 from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from numba import jit
-from simulation.common import DayBreak, Race
+from simulation.common import BrightSide, Race
 from haversine import haversine, Unit
 
 
@@ -142,7 +142,7 @@ def apply_deceleration(input_speed_array, tick):
     :rtype: np.ndarray
 
     """
-    max_deceleration_per_tick = DayBreak.max_deceleration_kmh_per_s*tick
+    max_deceleration_per_tick = BrightSide.max_deceleration_kmh_per_s*tick
 
     if input_speed_array is None:
         return np.array([])
@@ -173,7 +173,7 @@ def apply_acceleration(input_speed_array, tick):
     :rtype: np.ndarray
 
     """
-    max_acceleration_per_tick = DayBreak.max_acceleration_kmh_per_s*tick
+    max_acceleration_per_tick = BrightSide.max_acceleration_kmh_per_s*tick
 
     if input_speed_array is None:
         return np.array([])
