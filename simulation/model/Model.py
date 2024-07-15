@@ -160,6 +160,7 @@ class Model:
         self.motor_consumed_energy = self.simulation.basic_motor.calculate_energy_in(self.speed_kmh,
                                                                                      self.gradients,
                                                                                      self.wind_speeds,
+                                                                                     self.closest_gis_indices,
                                                                                      self.simulation.tick)
         self.array_produced_energy = self.simulation.basic_array.calculate_produced_energy(self.solar_irradiances,
                                                                                            self.simulation.tick)

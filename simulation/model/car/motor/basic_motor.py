@@ -2,8 +2,12 @@ import math
 import numpy as np
 
 from simulation.model.car.motor.base_motor import BaseMotor
-from simulation.common import DayBreak, constants, DayBreakEquations
+from simulation.common import DayBreak, Race, constants, DayBreakEquations
 
+from simulation.cache.race import race_directory
+from simulation.common.race import get_slip_angle_for_tire_force, load_race
+import matplotlib.pyplot as plt
+import json
 
 class BasicMotor(BaseMotor):
 
@@ -100,7 +104,7 @@ class BasicMotor(BaseMotor):
 
         return e_mc
 
-    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, tick):
+    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, closest_gis_indices, tick):
         """
 
         Create a function which takes in array of elevation, array of wind speed, required
@@ -129,13 +133,59 @@ class BasicMotor(BaseMotor):
         road_friction_array = np.full_like(g_forces, fill_value=self.road_friction)
         road_friction_array = road_friction_array * self.vehicle_mass * self.acceleration_g * np.cos(angles)
 
+
+        # hard coded for FSGP
+        current_race = load_race(Race.FSGP)
+        
+        # gis_indicies don't reset per lap
+        wrapped_indices = closest_gis_indices % current_race.cornering_radii.size
+        cornering_radii = current_race.cornering_radii[wrapped_indices]
+        next_waypoint_distances = current_race.next_waypoint_distances[wrapped_indices]
+        required_speed_ms = required_speed_kmh / 3.6
+        centripetal_lateral_force = DayBreak.vehicle_mass * (required_speed_ms ** 2) / cornering_radii
+        slip_angles_degrees = get_slip_angle_for_tire_force(centripetal_lateral_force)
+        slip_angles_radians = np.radians(slip_angles_degrees)
+
+        
+        slip_distances = np.tan(slip_angles_radians) * required_speed_ms * tick
+        cornering_friction_work = slip_distances * centripetal_lateral_force
+        print("total slip distances: ")
+        print(np.sum(slip_distances))
+        print("\ntotal cornering_firction_work: ")
+        print(np.sum(cornering_friction_work))
+        print("\n")
+
+        #   # Check for values above 8000 in centripetal_lateral_force
+        # for i, force in enumerate(centripetal_lateral_force):
+        #     if force > 8000:
+        #         print(f"High centripetal force detected: {force} N")
+        #         print(f"Speed: {required_speed_ms[i]} m/s")
+        #         print(f"Cornering Radius: {cornering_radii[i]} m")
+        #         print("\n \n")
+
+        print("here here brev brev")
+        print(DayBreak.vehicle_mass)
+        write_array_to_json(centripetal_lateral_force)
+        # Plotting the slip angles
+        plt.figure(figsize=(10, 6))
+        plt.plot(cornering_friction_work, marker='o', linestyle='-', color='b')
+        plt.title('plot')
+        plt.xlabel('index')
+        plt.ylabel('value')
+        plt.grid(True)
+        plt.show()
+        
+
+
+
+        
         motor_output_energies = required_angular_speed_rads_array * (
                 road_friction_array + drag_forces + g_forces) * self.tire_radius * tick
 
         e_m = self.calculate_motor_efficiency(required_angular_speed_rads_array, motor_output_energies, tick)
         e_mc = self.calculate_motor_controller_efficiency(required_angular_speed_rads_array,
                                                           motor_output_energies, tick)
-
+    
         motor_controller_input_energies = motor_output_energies / (e_m * e_mc)
 
         # Filter out and replace negative energy consumption as 0
@@ -151,3 +201,15 @@ class BasicMotor(BaseMotor):
                 f"Acceleration of gravity: {self.acceleration_g}m/s^2\n"
                 f"Motor controller efficiency: {self.e_mc}%\n"
                 f"Motor efficiency: {self.e_m}%\n")
+    
+
+
+
+
+
+def write_array_to_json(array):
+    data = {
+        "cornering_radii": array.tolist()
+    }
+    with open('cornering_radii.json', 'w') as json_file:
+        json.dump(data, json_file)

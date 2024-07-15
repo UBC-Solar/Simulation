@@ -5,7 +5,7 @@ import enum
 
 from simulation.config import config_directory
 from simulation.cache.race import race_directory
-from geopy.distance import geodesic
+from haversine import haversine, Unit
 import os
 import json
 import pickle
@@ -49,7 +49,9 @@ class Race:
         self.date = (race_constants["start_year"], race_constants["start_month"], race_constants["start_day"])
 
         self.race_duration = len(self.days) * 24 * 60 * 60  # Duration (s)
-        self.cornering_radii = self.make_cornering_radii_array(race_constants["waypoints"])
+        cornering_radii, next_waypoint_distances = self.calculate_radii_and_distances(race_constants["waypoints"])
+        self.cornering_radii = cornering_radii
+        self.next_waypoint_distances = next_waypoint_distances
         print("_________CORNERING RADII____________")
         print(self.cornering_radii)
 
@@ -77,11 +79,12 @@ class Race:
 
         return boolean
     
-    def make_cornering_radii_array(self, waypoints):
+    def calculate_radii_and_distances(self, waypoints):
         # pop off last coordinate since first and last coordinate are the same
         waypoints = waypoints[:-1]
 
         cornering_radii = np.empty(len(waypoints))
+        next_waypoint_distances = np.empty(len(waypoints))
         for i in range(len(waypoints)):
             # if the next point or previous point is out of bounds, wrap the index around the array
             i2 = (i - 1) % len(waypoints)
@@ -92,10 +95,20 @@ class Race:
 
             x1 = 0 
             y1 = 0
-            x2, y2 = calculate_xy_distance(current_point, previous_point)
-            x3, y3 = calculate_xy_distance(current_point, next_point)
+            x2, y2, distance_to_previous_waypoint = calculate_xy_distance(current_point, previous_point)
+            x3, y3, distance_to_next_waypoint = calculate_xy_distance(current_point, next_point)
             cornering_radii[i] = radius_of_curvature(x1, y1, x2, y2, x3, y3)
-        return cornering_radii
+            next_waypoint_distances[i] = distance_to_next_waypoint
+        return cornering_radii, next_waypoint_distances
+
+
+def load_race(race_type: Race.RaceType) -> Race:
+    with open(race_directory / f"{str(race_type)}.pkl", 'rb') as infile:
+        return pickle.load(infile)
+    
+
+
+
 def calculate_xy_distance(coord1, coord2):
     lat1, lon1 = coord1
     lat2, lon2 = coord2
@@ -107,11 +120,15 @@ def calculate_xy_distance(coord1, coord2):
     # Coordinate for longitude difference (keep latitude the same)
     coord_long = (lat1, lon2)
 
-    # geodesic is a function from geopy that finds the distance between lat lon coords in meters with high percision
-    y_distance = geodesic(coord_base, coord_lat).meters
-    x_distance = geodesic(coord_base, coord_long).meters
+    # Calculate y distance (latitude difference) using haversine function
+    y_distance = haversine(coord_base, coord_lat, unit=Unit.METERS)
+    # Calculate x distance (longitude difference) using haversine function
+    x_distance = haversine(coord_base, coord_long, unit=Unit.METERS)
 
-    return x_distance, y_distance
+    # Calculate the total distance between the two points using haversine function
+    total_distance = haversine(coord1, coord2, unit=Unit.METERS)
+
+    return x_distance, y_distance, total_distance
 
 # uses circumcircle formula
 def radius_of_curvature(x1, y1, x2, y2, x3, y3):
@@ -127,37 +144,49 @@ def radius_of_curvature(x1, y1, x2, y2, x3, y3):
 
     return numerator / denominator
 
-def load_race(race_type: Race.RaceType) -> Race:
-    with open(race_directory / f"{str(race_type)}.pkl", 'rb') as infile:
-        return pickle.load(infile)
-    
-
-
-
-
 
 def write_slip_angles(min_degrees, max_degrees, num_elements): 
-    # Step 1: Generate or define data points (slip angle, tire force)
-    # Example data, replace with your actual data
+    # coefficients for pacekja's majick formula
+    # https://www.edy.es/dev/docs/pacejka-94-parameters-explained-a-comprehensive-guide/
+    B = 10  # Stiffness (Example value for dry tarmac)
+    C = 1.3  # Shape (Example value for dry tarmac)
+    D = 1  # Peak (Example value for dry tarmac)
+    E = 0.97  # Curvature (Example value for dry tarmac)
+
+    # placeholder value, this is the mass in newtons of a toyota corolla
+    Fz = 250*9.81  # Normal load in Newtons
+
+
     slip_angles = np.linspace(min_degrees, max_degrees, num_elements)
-    tire_forces = 1000 * np.sin(np.radians(slip_angles))  # Example tire force formula
+    tire_forces = Fz * D * np.sin(C * np.arctan(B * slip_angles - E * (B * slip_angles - np.arctan(B * slip_angles))))
 
     with open(race_directory / "slip_angle_lookup.pkl", 'wb') as outfile:
         pickle.dump((slip_angles, tire_forces), outfile)
 
 
-def read_slip_angles():
+def read_slip_angle_lookup():
     # Deserialize the data points from the file
-    with open('slip_angle_lookup.pkl', 'rb') as f:
+    with open(race_directory / "slip_angle_lookup.pkl", 'rb') as f:
         slip_angles, tire_forces = pickle.load(f)
 
     print("Lookup table data points have been loaded from 'lookup_table.pkl'.")
+
+    # Plot the relationship between slip angle and lateral force
+    plt.figure(figsize=(10, 6))
+    plt.plot(slip_angles, tire_forces, marker='o', linestyle='-', color='r')
+    plt.title('Relationship between Slip Angle and Lateral Force')
+    plt.xlabel('Slip Angle (degrees)')
+    plt.ylabel('Lateral Force (N)')
+    plt.grid(True)
+    plt.show()
     return slip_angles, tire_forces
 
 
+import matplotlib.pyplot as plt
+
 def get_slip_angle_for_tire_force(desired_tire_force):
     # Read the lookup table data points
-    slip_angles, tire_forces = read_slip_angles()
+    slip_angles, tire_forces = read_slip_angle_lookup()
 
     # Use the numpy interpolation function to find slip angle for the given tire force
     # interpolation estimates unknown slip angle from a tire force that lies between known tire forces (from the lookup table)
@@ -177,4 +206,4 @@ def compile_races():
     asc = Race(Race.ASC)
     asc.write()
 
-    write_slip_angles(0, 15, 10000)
+    write_slip_angles(0, 8, 1000000)
