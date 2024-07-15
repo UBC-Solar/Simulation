@@ -325,7 +325,7 @@ class Simulation:
     @simulation_property
     def was_successful(self):
         state_of_charge = self.get_results("state_of_charge")
-        if np.min(np.abs(state_of_charge)) < 1e-03:
+        if np.min(state_of_charge) < 0.0:
             return False
         return True
 
