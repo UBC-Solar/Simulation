@@ -301,7 +301,7 @@
     [ 36.99932082, -86.37230251]
   ],
 
-  "tick": 1,
+  "tick": 10,
   "race_length": 0,
   "lvs_power_loss": 0,
 
@@ -323,7 +323,7 @@
       "driving": [32400, 61200]
     }
   },
-  "tiling": 600,
+  "tiling": 200,
   "start_year": 2024,
   "start_month": 7,
   "start_day": 9
