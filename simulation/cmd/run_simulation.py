@@ -1,7 +1,6 @@
 import argparse
 
 import numpy as np
-import subprocess
 import json
 
 from simulation.model.Simulation import Simulation, SimulationReturnType
@@ -25,17 +24,18 @@ class SimulationSettings:
         self.granularity = granularity
 
 
-def main(settings: SimulationSettings, speeds_filename: str):
+def run_simulation(settings: SimulationSettings, speeds_filename: str, plot_results: bool = True):
     """
     This is the entry point to Simulation.
 
     This method parses initial conditions for the simulation and store them in a simulationState object. Then, begin
     optimizing simulation with Bayesian optimization and then random optimization.
 
+    :param plot_results: plot results of Simulation
     :param SimulationSettings settings: object that stores settings for the simulation and optimization sequence
     :param str speeds_filename: name of the cached speeds file to use, otherwise a default array is used
     :return: returns the time taken for simulation to complete before optimization
-    :rtype: float
+    :rtype: Simulation
 
     """
 
@@ -60,11 +60,11 @@ def main(settings: SimulationSettings, speeds_filename: str):
             raise ValueError(f"Cached speeds {speeds_filename} has improper length!")
 
     # Run simulation model with the "guess" speed array
-    unoptimized_time = simulation_model.run_model(speed=input_speed, plot_results=True,
+    simulation_model.run_model(speed=input_speed, plot_results=plot_results,
                                                   verbose=settings.verbose,
                                                   route_visualization=settings.route_visualization)
 
-    return unoptimized_time
+    return simulation_model
 
 
 def run_unoptimized_and_export(input_speed=None, values=None, race_type=Race.FSGP, granularity=1):
@@ -160,4 +160,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(SimulationSettings(race_type=args.race_type, verbose=args.verbose, granularity=args.granularity), speeds_filename=args.speeds)
+    run_simulation(SimulationSettings(race_type=args.race_type, verbose=args.verbose, granularity=args.granularity), speeds_filename=args.speeds)

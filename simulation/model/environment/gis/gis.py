@@ -57,6 +57,7 @@ class GIS(BaseGIS):
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
                     self.speed_limits = route_data['speed_limits']
+                    self.num_unique_coords = route_data['num_unique_coords']
 
                     if current_coord is not None:
                         if not np.array_equal(current_coord, origin_coord):
@@ -76,6 +77,7 @@ class GIS(BaseGIS):
             exit()
 
         self.path_distances = helpers.calculate_path_distances(self.path)
+        self.path_length = np.cumsum(helpers.calculate_path_distances(self.path[:self.num_unique_coords]))[-1]
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations, self.path_distances)
 
     @staticmethod

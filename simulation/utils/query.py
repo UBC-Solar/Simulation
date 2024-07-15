@@ -58,8 +58,6 @@ def cache_gis(race):
 
         # Coords will be the same as waypoints for FSGP
         origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
-
-        tiling = race.tiling  # set tiling from config file
     else:
         race = load_race(Race.ASC)
         route_file = route_directory / "route_data.npz"
@@ -68,7 +66,7 @@ def cache_gis(race):
         # Coords may not contain all waypoints for ASC
         origin_coord, dest_coord, coords, waypoints = get_asc_coords()
 
-        tiling = race.tiling  # set tiling from config file
+    tiling = race.tiling  # set tiling from config file
 
     # Calculate speed limits and curvature
     curvature = calculate_curvature(coords)
@@ -83,13 +81,14 @@ def cache_gis(race):
     speed_limits = np.tile(speed_limits, tiling)
     path_elevations = np.tile(path_elevations, tiling)
     path_time_zones = np.tile(path_time_zones, tiling)
+    num_unique_coords = len(coords)
     coords = np.tile(coords, (tiling, 1))
 
     # Cache results
     with open(route_file, 'wb') as f:
         np.savez(f, path=coords, elevations=path_elevations, time_zones=path_time_zones,
                  origin_coord=origin_coord, dest_coord=dest_coord, speed_limits=speed_limits,
-                 waypoints=waypoints, hash=get_hash(origin_coord, dest_coord, waypoints))
+                 waypoints=waypoints, hash=get_hash(origin_coord, dest_coord, waypoints), num_unique_coords=num_unique_coords)
 
 
 def get_fsgp_coords():
