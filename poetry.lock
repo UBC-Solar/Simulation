@@ -978,6 +978,22 @@ python-dateutil = ">=2.7"
 dev = ["meson-python (>=0.13.1)", "numpy (>=1.25)", "pybind11 (>=2.6)", "setuptools (>=64)", "setuptools_scm (>=7)"]
 
 [[package]]
+name = "mplcursors"
+version = "0.5.3"
+description = "Interactive data selection cursors for Matplotlib."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "mplcursors-0.5.3.tar.gz", hash = "sha256:cb220c8dffaafde195e138faec5654737267f7685d1f0503618cdc333aca0966"},
+]
+
+[package.dependencies]
+matplotlib = ">=3.1,<3.7.1 || >3.7.1"
+
+[package.extras]
+docs = ["pandas", "pydata_sphinx_theme (!=0.10.1)", "sphinx", "sphinx-gallery"]
+
+[[package]]
 name = "numba"
 version = "0.57.1"
 description = "compiling Python code using LLVM"
@@ -1955,4 +1971,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "785c99bc760d42736c264236bca525803af09410950406336ce620a0a57b235c"
+content-hash = "5656661e41615c2a3fcb8888a3a94a2021f6a3e60e669a95ed63b50d12a83f22"
