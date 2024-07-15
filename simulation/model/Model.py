@@ -202,8 +202,8 @@ class Model:
         self.state_of_charge[np.abs(self.state_of_charge) < 1e-03] = 0
         self.raw_soc = self.simulation.basic_battery.get_raw_soc(np.cumsum(self.delta_energy))
 
-        # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
-        self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
+        # # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
+        # self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
 
         self.time_in_motion = np.logical_and(self.tick_array, self.speed_kmh) * self.simulation.tick
 

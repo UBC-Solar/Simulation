@@ -1,13 +1,13 @@
 {
-  "chromosome_size": 12,
+  "chromosome_size": 48,
   "parent_selection_type": "tournament",
-  "generation_limit": 5,
-  "num_parents": 6,
-  "k_tournament": 3,
+  "generation_limit": 200,
+  "num_parents": 16,
+  "k_tournament": 10,
   "crossover_type": "single_point",
-  "elitism": 4,
+  "elitism": 12,
   "mutation_type": "random",
   "mutation_percent": 25.0,
-  "max_mutation": 0.05,
-  "stopping_criteria": "saturate_15"
+  "max_mutation": 0.2,
+  "stopping_criteria": "saturate_30"
 }
