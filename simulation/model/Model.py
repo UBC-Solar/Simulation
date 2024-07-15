@@ -82,7 +82,7 @@ class Model:
         # ----- Tick array -----
 
         self.timestamps = np.arange(0, self.simulation.simulation_duration, self.simulation.tick)
-        self.tick_array = np.diff(self.timestamps) # can this not just be np.full(self.timestamps.shape, self.simulation.tick)?
+        self.tick_array = np.diff(self.timestamps)
         self.tick_array = np.insert(self.tick_array, 0, 0)
 
         # ----- Expected distance estimate -----
@@ -99,7 +99,7 @@ class Model:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        self.closest_gis_indices = self.simulation.gis.calculate_closest_gis_indices(self.cumulative_distances)
+        self.closest_gis_indices = self.simulation.gis.calculate_closest_gis_indices(self.distances)
 
         self.closest_weather_indices = self.simulation.weather.calculate_closest_weather_indices(self.cumulative_distances)
 
@@ -172,6 +172,7 @@ class Model:
 
         if self.simulation.tick != 1:
             self.not_charge = self.not_charge[::self.simulation.tick]
+            self.not_race = self.not_race[::self.simulation.tick]
 
         self.array_produced_energy = np.logical_and(self.array_produced_energy,
                                                     self.not_charge) * self.array_produced_energy

@@ -246,7 +246,7 @@ def reshape_speed_array(race: Race, speed, granularity, start_time: int, tick=1)
 
     speed_mapped = map_array_to_targets(speed, get_granularity_reduced_boolean(speed_boolean_array, granularity))
 
-    reshaped_tick_count = (race.race_duration - start_time) / tick
+    reshaped_tick_count = math.ceil((race.race_duration - start_time) / float(tick))
     speed_mapped_per_tick = reshape_and_repeat(speed_mapped, reshaped_tick_count)
     speed_smoothed_kmh = apply_deceleration(apply_acceleration(speed_mapped_per_tick, tick), tick)
 
@@ -303,7 +303,7 @@ def calculate_path_distances(coords):
     for u, v in zip(coords, coords_offset):
         path_distances.append(haversine(u, v, unit=Unit.METERS))
 
-    return path_distances
+    return np.array(path_distances)
 
 
 @jit(nopython=True)
