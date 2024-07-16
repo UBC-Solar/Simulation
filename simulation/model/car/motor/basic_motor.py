@@ -6,10 +6,6 @@ from simulation.common import DayBreak, Race, constants, DayBreakEquations
 
 from simulation.common.race import get_slip_angle_for_tire_force, load_race
 
-
-import matplotlib.pyplot as plt
-import json
-
 class BasicMotor(BaseMotor):
 
     def __init__(self):
@@ -179,9 +175,6 @@ def calculate_cornering_losses(required_speed_kmh, closest_gis_indices):
     #     print(f"Slip distance (meters): {slip_distances[i]:.6f}")
     #     print(f"Speed at this point (m/s): {required_speed_ms[i]:.6f}")
     #     print()
-
-    print("value of tick: ")
-    print(tick)
     cornering_friction_work = slip_distances * centripetal_lateral_force
     print("total slip distances: ")
     print(np.sum(slip_distances))
@@ -197,6 +190,7 @@ def calculate_cornering_losses(required_speed_kmh, closest_gis_indices):
     #         print(f"Cornering Radius: {cornering_radii[i]} m")
     #         print("\n \n")
     # Plotting the slip angles
+    import matplotlib.pyplot as plt
     plt.figure(figsize=(10, 6))
     plt.plot(slip_angles_degrees, marker='o', linestyle='-', color='b')
     plt.title('plot')
