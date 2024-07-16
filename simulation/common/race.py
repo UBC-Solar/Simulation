@@ -157,7 +157,7 @@ def write_slip_angles(min_degrees, max_degrees, num_elements):
     # https://www.edy.es/dev/docs/pacejka-94-parameters-explained-a-comprehensive-guide/
     B = 10  # Stiffness (Example value for dry tarmac)
     C = 1.3  # Shape (Example value for dry tarmac)
-    D = 1  # Peak (Example value for dry tarmac)
+    D = 1.2  # Peak (Example value for dry tarmac)
     E = 0.97  # Curvature (Example value for dry tarmac)
 
     # HARD CODED MASS OF DAYBREAK - 350 KG
@@ -198,6 +198,8 @@ def compile_races():
     asc = Race(Race.ASC)
     asc.write()
 
+    # write slip angles from 0 to 90 degrees
+    # slip angle of 90 degrees consumes infinite energy to move forward, thus capping the speed the car can take corners with
     write_slip_angles(0, 90, 1000000)
 
 # This function is a debugging tool that generates a map.html file in the root directory of simulation

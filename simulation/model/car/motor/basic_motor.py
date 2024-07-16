@@ -290,24 +290,22 @@ class BasicMotor(BaseMotor):
 
     
 def calculate_cornering_losses(required_speed_kmh, closest_gis_indices, tick):
+    required_speed_ms = required_speed_kmh / 3.6
+
     # hard coded for FSGP
     current_race = load_race(Race.FSGP)
+
     # gis_indicies don't reset per lap
     wrapped_indices = closest_gis_indices % current_race.cornering_radii.size
+
     cornering_radii = current_race.cornering_radii[wrapped_indices]
-    required_speed_ms = required_speed_kmh / 3.6
     centripetal_lateral_force = BrightSide.vehicle_mass * (required_speed_ms ** 2) / cornering_radii
+
     slip_angles_degrees = get_slip_angle_for_tire_force(centripetal_lateral_force)
     slip_angles_radians = np.radians(slip_angles_degrees)
 
     
     slip_distances = np.tan(slip_angles_radians) * required_speed_ms * tick
-    # for i in range(slip_angles_radians.size):
-    #     print(f"Slip angle (degrees): {slip_angles_degrees[i]:.6f}")
-    #     print(f"Slip angle (radians): {slip_angles_radians[i]:.6f}")
-    #     print(f"Slip distance (meters): {slip_distances[i]:.6f}")
-    #     print(f"Speed at this point (m/s): {required_speed_ms[i]:.6f}")
-    #     print()
     cornering_friction_work = slip_distances * centripetal_lateral_force
     print("total slip distances: ")
     print(np.sum(slip_distances))
@@ -323,16 +321,17 @@ def calculate_cornering_losses(required_speed_kmh, closest_gis_indices, tick):
     #         print(f"Cornering Radius: {cornering_radii[i]} m")
     #         print("\n \n")
     # Plotting the slip angles
-    import matplotlib.pyplot as plt
-    plt.figure(figsize=(10, 6))
-    plt.plot(slip_angles_degrees, marker='o', linestyle='-', color='b')
-    plt.title('plot')
-    plt.xlabel('index')
-    plt.ylabel('value')
-    plt.grid(True)
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(slip_angles_degrees, marker='o', linestyle='-', color='b')
+    # plt.title('plot')
+    # plt.xlabel('index')
+    # plt.ylabel('value')
+    # plt.grid(True)
+    # plt.show()
 
-    return cornering_friction_work
+    CORNERING_COEFFICIENT = 1
+    return cornering_friction_work * CORNERING_COEFFICIENT
 
 
 if __name__ == "__main__":
