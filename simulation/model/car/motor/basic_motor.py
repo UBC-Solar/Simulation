@@ -130,7 +130,7 @@ class BasicMotor(BaseMotor):
         road_friction_array = np.full_like(g_forces, fill_value=self.road_friction)
         road_friction_array = road_friction_array * self.vehicle_mass * self.acceleration_g * np.cos(angles)
         
-        cornering_friction_work = calculate_cornering_losses(required_speed_kmh, closest_gis_indices)
+        cornering_friction_work = calculate_cornering_losses(required_speed_kmh, closest_gis_indices, tick)
 
         motor_output_energies = required_angular_speed_rads_array * (
                 road_friction_array + drag_forces + g_forces) * self.tire_radius * tick + cornering_friction_work
@@ -156,7 +156,7 @@ class BasicMotor(BaseMotor):
                 f"Motor efficiency: {self.e_m}%\n")
     
 
-def calculate_cornering_losses(required_speed_kmh, closest_gis_indices):
+def calculate_cornering_losses(required_speed_kmh, closest_gis_indices, tick):
     # hard coded for FSGP
     current_race = load_race(Race.FSGP)
     # gis_indicies don't reset per lap
