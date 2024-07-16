@@ -4,8 +4,9 @@ import numpy as np
 from simulation.model.car.motor.base_motor import BaseMotor
 from simulation.common import DayBreak, Race, constants, DayBreakEquations
 
-from simulation.cache.race import race_directory
 from simulation.common.race import get_slip_angle_for_tire_force, load_race
+
+
 import matplotlib.pyplot as plt
 import json
 
@@ -132,61 +133,9 @@ class BasicMotor(BaseMotor):
 
         road_friction_array = np.full_like(g_forces, fill_value=self.road_friction)
         road_friction_array = road_friction_array * self.vehicle_mass * self.acceleration_g * np.cos(angles)
-
-
-        # hard coded for FSGP
-        current_race = load_race(Race.FSGP)
-        # gis_indicies don't reset per lap
-        wrapped_indices = closest_gis_indices % current_race.cornering_radii.size
-        cornering_radii = current_race.cornering_radii[wrapped_indices]
-        next_waypoint_distances = current_race.next_waypoint_distances[wrapped_indices]
-        required_speed_ms = required_speed_kmh / 3.6
-        centripetal_lateral_force = DayBreak.vehicle_mass * (required_speed_ms ** 2) / cornering_radii
-        slip_angles_degrees = get_slip_angle_for_tire_force(centripetal_lateral_force)
-        slip_angles_radians = np.radians(slip_angles_degrees)
-
         
-        slip_distances = np.tan(slip_angles_radians) * required_speed_ms * tick
-        # for i in range(slip_angles_radians.size):
-        #     print(f"Slip angle (degrees): {slip_angles_degrees[i]:.6f}")
-        #     print(f"Slip angle (radians): {slip_angles_radians[i]:.6f}")
-        #     print(f"Slip distance (meters): {slip_distances[i]:.6f}")
-        #     print(f"Speed at this point (m/s): {required_speed_ms[i]:.6f}")
-        #     print()
+        cornering_friction_work = calculate_cornering_losses(required_speed_kmh, closest_gis_indices)
 
-        print("value of tick: ")
-        print(tick)
-        cornering_friction_work = slip_distances * centripetal_lateral_force
-        print("total slip distances: ")
-        print(np.sum(slip_distances))
-        print("\ntotal cornering_firction_work: ")
-        print(np.sum(cornering_friction_work))
-        print("\n")
-
-        #   # Check for values above 8000 in centripetal_lateral_force
-        # for i, force in enumerate(centripetal_lateral_force):
-        #     if force > 8000:
-        #         print(f"High centripetal force detected: {force} N")
-        #         print(f"Speed: {required_speed_ms[i]} m/s")
-        #         print(f"Cornering Radius: {cornering_radii[i]} m")
-        #         print("\n \n")
-
-        print("here here brev brev")
-        print(DayBreak.vehicle_mass)
-        write_array_to_json(centripetal_lateral_force)
-        # Plotting the slip angles
-        plt.figure(figsize=(10, 6))
-        plt.plot(slip_distances, marker='o', linestyle='-', color='b')
-        plt.title('plot')
-        plt.xlabel('index')
-        plt.ylabel('value')
-        plt.grid(True)
-        plt.show()
-        
-
-
-
-        
         motor_output_energies = required_angular_speed_rads_array * (
                 road_friction_array + drag_forces + g_forces) * self.tire_radius * tick + cornering_friction_work
 
@@ -211,13 +160,47 @@ class BasicMotor(BaseMotor):
                 f"Motor efficiency: {self.e_m}%\n")
     
 
+def calculate_cornering_losses(required_speed_kmh, closest_gis_indices):
+    # hard coded for FSGP
+    current_race = load_race(Race.FSGP)
+    # gis_indicies don't reset per lap
+    wrapped_indices = closest_gis_indices % current_race.cornering_radii.size
+    cornering_radii = current_race.cornering_radii[wrapped_indices]
+    required_speed_ms = required_speed_kmh / 3.6
+    centripetal_lateral_force = DayBreak.vehicle_mass * (required_speed_ms ** 2) / cornering_radii
+    slip_angles_degrees = get_slip_angle_for_tire_force(centripetal_lateral_force)
+    slip_angles_radians = np.radians(slip_angles_degrees)
 
+    
+    slip_distances = np.tan(slip_angles_radians) * required_speed_ms * tick
+    # for i in range(slip_angles_radians.size):
+    #     print(f"Slip angle (degrees): {slip_angles_degrees[i]:.6f}")
+    #     print(f"Slip angle (radians): {slip_angles_radians[i]:.6f}")
+    #     print(f"Slip distance (meters): {slip_distances[i]:.6f}")
+    #     print(f"Speed at this point (m/s): {required_speed_ms[i]:.6f}")
+    #     print()
 
+    print("value of tick: ")
+    print(tick)
+    cornering_friction_work = slip_distances * centripetal_lateral_force
+    print("total slip distances: ")
+    print(np.sum(slip_distances))
+    print("\ntotal cornering_firction_work: ")
+    print(np.sum(cornering_friction_work))
+    print("\n")
 
-
-def write_array_to_json(array):
-    data = {
-        "cornering_radii": array.tolist()
-    }
-    with open('cornering_radii.json', 'w') as json_file:
-        json.dump(data, json_file)
+    #   # Check for values above 8000 in centripetal_lateral_force
+    # for i, force in enumerate(centripetal_lateral_force):
+    #     if force > 8000:
+    #         print(f"High centripetal force detected: {force} N")
+    #         print(f"Speed: {required_speed_ms[i]} m/s")
+    #         print(f"Cornering Radius: {cornering_radii[i]} m")
+    #         print("\n \n")
+    # Plotting the slip angles
+    plt.figure(figsize=(10, 6))
+    plt.plot(slip_angles_degrees, marker='o', linestyle='-', color='b')
+    plt.title('plot')
+    plt.xlabel('index')
+    plt.ylabel('value')
+    plt.grid(True)
+    plt.show()

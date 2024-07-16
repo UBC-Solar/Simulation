@@ -7,16 +7,11 @@ from simulation.config import config_directory
 from simulation.cache.race import race_directory
 
 from haversine import haversine, Unit
-from pyproj import Proj, Transformer
 
 import os
 import json
 import pickle
 import numpy as np
-
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
 
 class Race:
     class RaceType(enum.Enum):
@@ -83,6 +78,9 @@ class Race:
 
         return boolean
     
+def load_race(race_type: Race.RaceType) -> Race:
+    with open(race_directory / f"{str(race_type)}.pkl", 'rb') as infile:
+        return pickle.load(infile)
 
 
 def calculate_radii(waypoints):
@@ -91,8 +89,6 @@ def calculate_radii(waypoints):
     if waypoints[0] == waypoints[len(waypoints) - 1]:
         waypoints = waypoints[:-1]
         repeated_last_coordinate = True
-
-    print(waypoints)
 
     cornering_radii = np.empty(len(waypoints))
     for i in range(len(waypoints)):
@@ -107,20 +103,15 @@ def calculate_radii(waypoints):
         y1 = 0
         x2, y2 = calculate_meter_distance(current_point, previous_point)
         x3, y3 = calculate_meter_distance(current_point, next_point)
-        print(cornering_radii)
         cornering_radii[i] = radius_of_curvature(x1, y1, x2, y2, x3, y3)
     
     # If the last coordinate was removed, duplicate the first radius value to the end of the array
     if repeated_last_coordinate:
         cornering_radii = np.append(cornering_radii, cornering_radii[0])
 
-    plot_coordinates(waypoints, cornering_radii)
+    # uncomment the line below to create the map.html file
+    # plot_coordinates(waypoints, cornering_radii)
     return cornering_radii
-
-
-def load_race(race_type: Race.RaceType) -> Race:
-    with open(race_directory / f"{str(race_type)}.pkl", 'rb') as infile:
-        return pickle.load(infile)
     
 
 def calculate_meter_distance(coord1, coord2):
@@ -169,8 +160,8 @@ def write_slip_angles(min_degrees, max_degrees, num_elements):
     D = 1  # Peak (Example value for dry tarmac)
     E = 0.97  # Curvature (Example value for dry tarmac)
 
-    # placeholder value, this is the mass in newtons of a toyota corolla
-    Fz = 250*9.81  # Normal load in Newtons
+    # HARD CODED MASS OF DAYBREAK - 350 KG
+    Fz = 350*9.81  # Normal load in Newtons
 
 
     slip_angles = np.linspace(min_degrees, max_degrees, num_elements)
@@ -185,19 +176,7 @@ def read_slip_angle_lookup():
     with open(race_directory / "slip_angle_lookup.pkl", 'rb') as f:
         slip_angles, tire_forces = pickle.load(f)
 
-    print("Lookup table data points have been loaded from 'lookup_table.pkl'.")
-
-    # Plot the relationship between slip angle and lateral force
-    plt.figure(figsize=(10, 6))
-    plt.plot(slip_angles, tire_forces, marker='o', linestyle='-', color='r')
-    plt.title('Relationship between Slip Angle and Lateral Force')
-    plt.xlabel('Slip Angle (degrees)')
-    plt.ylabel('Lateral Force (N)')
-    plt.grid(True)
-    plt.show()
     return slip_angles, tire_forces
-
-
 
 
 def get_slip_angle_for_tire_force(desired_tire_force):
@@ -212,49 +191,40 @@ def get_slip_angle_for_tire_force(desired_tire_force):
     return estimated_slip_angle
 
 
-import folium
-from folium.plugins import MeasureControl
-
-def plot_coordinates(coords, data):
-    # Calculate the center of your map
-    center_lat = sum([coord[0] for coord in coords]) / len(coords)
-    center_lon = sum([coord[1] for coord in coords]) / len(coords)
-
-    # Create the map
-    my_map = folium.Map(location=[center_lat, center_lon], zoom_start=6)
-
-    # Add a measurement tool to the map for users to measure distance
-    my_map.add_child(MeasureControl())
-
-    # Add points with tooltips
-    for coord, datum in zip(coords, data):
-        folium.Marker(
-            [coord[0], coord[1]],
-            tooltip=folium.Tooltip(datum)
-        ).add_to(my_map)
-
-    # Save the map to an HTML file
-    my_map.save("map.html")
-
-# convert lat lon to utm format
-# for short distances, a linear projection is more accurate then a formula like haversine, which factors the curvature of the earth
-
-def latlon_to_utm(latitude, longitude):
-    # Calculate the UTM zone from the longitude
-    zone_number = int((longitude + 180) / 6) + 1
-    # Create a UTM projection string using the calculated zone and WGS84 datum
-    utm_crs = f"+proj=utm +zone={zone_number} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-    # Initialize a Transformer object to perform the transformation
-    transformer = Transformer.from_crs("epsg:4326", utm_crs, always_xy=True)
-    # Transform from geographic (lat, lon) to UTM (x, y)
-    x, y = transformer.transform(longitude, latitude)
-    return x, y
-
 def compile_races():
     fsgp = Race(Race.FSGP)
     fsgp.write()
 
-    # asc = Race(Race.ASC)
-    # asc.write()
+    asc = Race(Race.ASC)
+    asc.write()
 
-    write_slip_angles(0, 100, 1000000)
+    write_slip_angles(0, 90, 1000000)
+
+# This function is a debugging tool that generates a map.html file in the root directory of simulation
+# The file will plot each waypoint of the race, hovering over a waypoint will display the cornering radius calculated at that point
+# There is a measure tool in the top left corner which can be used to measure distances on the map
+# be sure to import folium to use this plotting function
+
+# import folium
+# from folium.plugins import MeasureControl
+
+# def plot_coordinates(coords, data):
+#     # Calculate the center of your map
+#     center_lat = sum([coord[0] for coord in coords]) / len(coords)
+#     center_lon = sum([coord[1] for coord in coords]) / len(coords)
+
+#     # Create the map
+#     my_map = folium.Map(location=[center_lat, center_lon], zoom_start=6)
+
+#     # Add a measurement tool to the map for users to measure distance
+#     my_map.add_child(MeasureControl())
+
+#     # Add points with tooltips
+#     for coord, datum in zip(coords, data):
+#         folium.Marker(
+#             [coord[0], coord[1]],
+#             tooltip=folium.Tooltip(datum)
+#         ).add_to(my_map)
+
+#     # Save the map to an HTML file
+#     my_map.save("map.html")
