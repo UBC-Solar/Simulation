@@ -33,6 +33,7 @@ class Model:
         self.route_length = None
         self.time_taken = None
         self.distance_travelled = None
+        self.wind_attack_angles = None
 
         # --------- Calculations ---------
 
@@ -143,6 +144,8 @@ class Model:
         self.wind_speeds = helpers.get_array_directional_wind_speed(self.gis_vehicle_bearings,
                                                                     self.absolute_wind_speeds,
                                                                     self.wind_directions)
+        # Get angles of attack of the wind for drag calculations
+        self.wind_attack_angles = helpers.get_wind_angles_of_attack(self.gis_vehicle_bearings, self.wind_directions)
 
         # Get an array of solar irradiance at every coordinate and time
         self.solar_irradiances = self.simulation.solar_calculations.calculate_array_GHI(
@@ -157,11 +160,14 @@ class Model:
 
         self.lvs_consumed_energy = self.simulation.basic_lvs.get_consumed_energy(self.simulation.tick)
 
+
         self.motor_consumed_energy = self.simulation.basic_motor.calculate_energy_in(self.speed_kmh,
-                                                                                     self.gradients,
-                                                                                     self.wind_speeds,
-                                                                                     self.closest_gis_indices,
-                                                                                     self.simulation.tick)
+                                                                                    self.gradients,
+                                                                                    self.wind_speeds,
+                                                                                    self.wind_attack_angles,
+                                                                                    self.closest_gis_indices,
+                                                                                    self.simulation.tick)
+
         self.array_produced_energy = self.simulation.basic_array.calculate_produced_energy(self.solar_irradiances,
                                                                                            self.simulation.tick)
 

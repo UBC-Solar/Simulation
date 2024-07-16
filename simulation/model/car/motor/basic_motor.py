@@ -6,6 +6,7 @@ from simulation.common import DayBreak, Race, constants, DayBreakEquations
 
 from simulation.common.race import get_slip_angle_for_tire_force, load_race
 
+
 class BasicMotor(BaseMotor):
 
     def __init__(self):
@@ -26,6 +27,8 @@ class BasicMotor(BaseMotor):
 
         self.air_density = constants.AIR_DENSITY
         self.vehicle_frontal_area = DayBreak.vehicle_frontal_area
+        print("drag COEF")
+        print(DayBreak.drag_coefficient)
         self.drag_coefficient = DayBreak.drag_coefficient
 
         self.friction_force = (self.vehicle_mass * self.acceleration_g * self.road_friction)
@@ -34,6 +37,83 @@ class BasicMotor(BaseMotor):
         self.e_m = 0.9  # motor efficiency, subject to change
 
         # print("torque experienced by motor: {} Nm".format(self.constant_torque))
+
+    def calculate_power_out(self):
+        """
+
+        Calculates the power transferred to the wheel by the motor and the motor controller
+    
+        :returns: the power transferred to the wheel in W
+        :rtype: float
+
+        """
+        power_in = self.dc_v * self.dc_i
+        power_controller = power_in * self.e_mc
+
+        # alternatively, power_controller = sqrt(3) / 2 * Vrms * Irms
+        power_out = power_controller * self.e_m
+
+        # alternatively, power_out = torque * Revolutions/min = Force* V_car
+        # torque = rwheel * Forcewheel, RPM = V/rwheel
+
+        return power_out
+
+    # For the motor, the energy consumed by the motor/motor controller depends on the voltage and
+    #   current supplied by the battery to the motor controller
+    def update_motor_input(self, dc_v, dc_i):
+        """
+
+        For the motor, the energy consumed by the motor/motor controller depends on the voltage 
+            and current supplied by the battery to the motor controller
+
+        """
+
+        self.dc_v = dc_v
+        self.dc_i = dc_i
+
+    def calculate_power_in(self, required_speed_kmh, gradient, wind_speed):
+        """
+
+        For a given road gradient, calculate the power that must be inputted into
+            the motor to maintain a required speed
+
+        :param np.ndarray required_speed_kmh: required speed in km/h
+        :param np.ndarray gradient: road gradient, where > 0 means uphill and < 0 means downhill
+        :param np.ndarray wind_speed: speed of wind in m/s, where > 0 means against the direction of the vehicle.
+        :returns: power required to travel at a speed and gradient in W
+        :rtype: np.ndarray
+
+        """
+
+        required_speed_ms = required_speed_kmh / 3.6
+        required_angular_speed_rads = required_speed_ms / self.tire_radius
+
+
+        # As far as I can tell, this function isn't actually being used anywhere, please let me know if I'm wrong - Felix
+        # drag_force = 0.5 * self.air_density * (
+        #         (required_speed_ms + wind_speed) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+        drag_force = -1000
+
+        g_force = self.vehicle_mass * self.acceleration_g * gradient
+
+        motor_output_power = required_angular_speed_rads * (self.friction_force + drag_force + g_force)
+
+        motor_input_power = motor_output_power / self.e_m
+
+        self.input_power = motor_input_power / self.e_mc
+
+    def update(self, tick):
+        """
+
+        For the motor, the update tick calculates a value for the energy expended in a period
+            of time.
+        
+        :param int tick: length of 1 update cycle in seconds
+
+        """
+
+        self.consumed_energy = self.input_power * tick
+
 
     @staticmethod
     def calculate_motor_efficiency(motor_angular_speed, motor_output_energy, tick):
@@ -100,8 +180,9 @@ class BasicMotor(BaseMotor):
         e_mc[e_mc > 1] = 1
 
         return e_mc
+    
+    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, wind_attack_angles, closest_gis_indices, tick):
 
-    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, closest_gis_indices, tick):
         """
 
         Create a function which takes in array of elevation, array of wind speed, required
@@ -110,6 +191,7 @@ class BasicMotor(BaseMotor):
         :param np.ndarray required_speed_kmh: (float[N]) required speed array in km/h
         :param np.ndarray gradients: (float[N]) gradient at parts of the road
         :param np.ndarray wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
+        :param np.ndarray wind_attack_angles: (float[N])
         :param int tick: length of 1 update cycle in seconds
         :returns: (float[N]) energy expended by the motor at every tick
         :rtype: np.ndarray
@@ -121,8 +203,14 @@ class BasicMotor(BaseMotor):
         required_angular_speed_rads = required_speed_ms / self.tire_radius
         required_angular_speed_rads_array = np.ones(len(gradients)) * required_angular_speed_rads
 
-        drag_forces = 0.5 * self.air_density * (
-                (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+
+        drag_forces = BasicMotor.calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms)
+        # Old Drag Force Calculations
+        # drag_forces2 = 0.5 * self.air_density * (
+        #         (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+        # plt.plot(drag_forces2)
+        # plt.plot(drag_forces)
+        # plt.show()
 
         angles = np.arctan(gradients)
         g_forces = self.vehicle_mass * self.acceleration_g * np.sin(angles)
@@ -146,6 +234,46 @@ class BasicMotor(BaseMotor):
                                                    motor_controller_input_energies, 0)
 
         return motor_controller_input_energies
+
+    @staticmethod
+    def calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms):
+        """
+                Calculate the force of drag acting in the direction opposite the movement of the car at every tick.
+
+                :param np.ndarray wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
+                :param np.ndarray wind_attack_angles: (float[N]) The attack angle of the wind for a given moment
+                :param np.ndarray required_speed_ms: (float[N]) required speed array in m/s
+                :returns: (float[N]) the drag force in Newtons at every tick of the race
+                :rtype: np.ndarray
+
+        """
+        #Lookup table mapping wind angle to drag values for a wind speed of 60 km/hr. Comes from CFD simulation in the google drive.
+        angle_to_unscaled_drag = {
+            0: 23.41,
+            18: 39.73,
+            36: 101.51,
+            54: 208.35,
+            72: 316.84,
+            90: 411.29,
+            108: 352.76,
+            126: 270.13,
+            144: 94.67,
+            162: 36.43,
+            180: 23.58
+        }
+
+        drag_forces = np.zeros_like(wind_speeds, dtype=float)
+        rounded_attack_angles = np.round(wind_attack_angles / 18) * 18
+        unscaled_wind_drag = np.array(list(map(lambda x: angle_to_unscaled_drag[x], rounded_attack_angles)))
+
+        # data from lookup table corresponds to wind speed of 16.667 m/s
+        direction = np.sign(wind_speeds)
+        wind_drag = direction * unscaled_wind_drag * (wind_speeds ** 2) / (16.667 ** 2)
+        car_drag = angle_to_unscaled_drag[0] * (required_speed_ms ** 2) / (16.667 ** 2)
+        drag_forces = wind_drag + car_drag
+
+        return drag_forces
+
 
     def __str__(self):
         return (f"Tire radius: {self.tire_radius}m\n"
@@ -198,5 +326,5 @@ def calculate_cornering_losses(required_speed_kmh, closest_gis_indices, tick):
     plt.ylabel('value')
     plt.grid(True)
     plt.show()
-    
+
     return cornering_friction_work

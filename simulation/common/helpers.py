@@ -306,7 +306,29 @@ def calculate_path_distances(coords):
     return path_distances
 
 
+def get_wind_angles_of_attack(vehicle_bearings, wind_directions):
+    """
+        Returns the angle of attack of the wind. The AoA is the angle between the oncoming wind
+        and the reference line of the car. The reference line of the car will be
+
+        :param np.ndarray vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
+        :param np.ndarray wind_directions: (float[N]) The wind direction in the meteorlogical convention. To convert from meteorological convention to azimuth angle, use (x + 180) % 360
+        :returns: The attack angles of the car from zero to 180
+    """
+    # manually calculated test suite
+    # vehicle_bearings = np.array([0, 50, 180, 0])
+    # wind_angles = np.array([180, 100, 40, 50])
+    # exp = np.array([0, 130, 40, 130])
+
+    # Angle attack of 0 means wind is head on with the car. If the angle of attack is greater then 180, it can be reduced
+    # to 360 minus angle of attack since drag values on either side of the car are symmetrical
+    return np.minimum(np.abs((wind_directions + 180) % 360 - vehicle_bearings),
+                      np.abs(360 - np.abs((wind_directions + 180) % 360 - vehicle_bearings)))
+
+
+
 @jit(nopython=True)
+
 def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directions):
     """
 
