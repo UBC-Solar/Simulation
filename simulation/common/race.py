@@ -58,9 +58,6 @@ class Race:
         cornering_radii = calculate_radii(race_constants["waypoints"])
         
         self.cornering_radii = cornering_radii
-        print("_________CORNERING RADII____________")
-        if(race_type == Race.RaceType.FSGP):
-            plot_coordinates(race_constants["waypoints"], self.cornering_radii)
 
         self.driving_boolean = self.make_time_boolean("driving")
         self.charging_boolean = self.make_time_boolean("charging")
@@ -90,8 +87,12 @@ class Race:
 
 def calculate_radii(waypoints):
     # pop off last coordinate if first and last coordinate are the same
+    repeated_last_coordinate = False
     if waypoints[0] == waypoints[len(waypoints) - 1]:
         waypoints = waypoints[:-1]
+        repeated_last_coordinate = True
+
+    print(waypoints)
 
     cornering_radii = np.empty(len(waypoints))
     for i in range(len(waypoints)):
@@ -106,7 +107,14 @@ def calculate_radii(waypoints):
         y1 = 0
         x2, y2 = calculate_meter_distance(current_point, previous_point)
         x3, y3 = calculate_meter_distance(current_point, next_point)
+        print(cornering_radii)
         cornering_radii[i] = radius_of_curvature(x1, y1, x2, y2, x3, y3)
+    
+    # If the last coordinate was removed, duplicate the first radius value to the end of the array
+    if repeated_last_coordinate:
+        cornering_radii = np.append(cornering_radii, cornering_radii[0])
+
+    plot_coordinates(waypoints, cornering_radii)
     return cornering_radii
 
 
@@ -119,13 +127,22 @@ def calculate_meter_distance(coord1, coord2):
     lat1, lon1 = coord1
     lat2, lon2 = coord2
 
-    # Convert geographic coordinates to UTM
-    x1, y1 = latlon_to_utm(lat1, lon1)
-    x2, y2 = latlon_to_utm(lat2, lon2)
+    # Base coordinate
+    coord_base = (lat1, lon1)
+    # Coordinate for latitude difference (keep longitude the same)
+    coord_lat = (lat2, lon1)
+    # Coordinate for longitude difference (keep latitude the same)
+    coord_long = (lat1, lon2)
 
-    # Calculate x and y distances as differences in UTM coordinates
-    x_distance = abs(x2 - x1)
-    y_distance = abs(y2 - y1)
+    # Calculate y distance (latitude difference) using haversine function
+    y_distance = haversine(coord_base, coord_lat, unit=Unit.METERS)
+    # Calculate x distance (longitude difference) using haversine function
+    x_distance = haversine(coord_base, coord_long, unit=Unit.METERS)
+
+    if lat2 < lat1:
+        y_distance = -y_distance
+    if lon2 < lon1:
+        x_distance = -x_distance
 
     return x_distance, y_distance
 
@@ -237,7 +254,7 @@ def compile_races():
     fsgp = Race(Race.FSGP)
     fsgp.write()
 
-    asc = Race(Race.ASC)
-    asc.write()
+    # asc = Race(Race.ASC)
+    # asc.write()
 
     write_slip_angles(0, 100, 1000000)
