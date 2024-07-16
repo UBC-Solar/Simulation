@@ -87,10 +87,10 @@ class BasicMotor(BaseMotor):
         required_angular_speed_rads = required_speed_ms / self.tire_radius
 
 
-        # As far as I can tell, this function isn't actually being used anywhere, please let me know if I'm wrong - Felix
-        # drag_force = 0.5 * self.air_density * (
-        #         (required_speed_ms + wind_speed) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
-        drag_force = -1000
+        # As far as I can tell, this function isn't actually being used anywhere
+        # Thus these drag calculations use the old method
+        drag_force = 0.5 * self.air_density * (
+                (required_speed_ms + wind_speed) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
 
         g_force = self.vehicle_mass * self.acceleration_g * gradient
 
@@ -211,6 +211,8 @@ class BasicMotor(BaseMotor):
         # Old Drag Force Calculations
         # drag_forces2 = 0.5 * self.air_density * (
         #         (required_speed_ms + wind_speeds) ** 2) * self.drag_coefficient * self.vehicle_frontal_area
+        
+        # import matplotlib.pyplot as plt
         # plt.plot(drag_forces2)
         # plt.plot(drag_forces)
         # plt.show()
