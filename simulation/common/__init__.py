@@ -7,5 +7,5 @@ from simulation.common.car import Car
 from simulation.common.race import Race, load_race
 from simulation.common.equations import DayBreakEquations
 
-DayBreak = Car('DayBreak')
+
 BrightSide = Car('BrightSide')

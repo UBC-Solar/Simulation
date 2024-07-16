@@ -1,7 +1,7 @@
-from abc import ABC, abstractmethod
+from simulation.common.component import Component
 
 
-class Producer(ABC):
+class Producer(Component):
     """
 
     The base producer model
@@ -11,5 +11,6 @@ class Producer(ABC):
     """
 
     def __init__(self, produced_energy=0):
+        super().__init__()
         self.produced_energy = produced_energy
 

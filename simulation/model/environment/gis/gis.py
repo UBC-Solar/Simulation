@@ -57,6 +57,7 @@ class GIS(BaseGIS):
                     self.path_elevations = route_data['elevations']
                     self.path_time_zones = route_data['time_zones']
                     self.speed_limits = route_data['speed_limits']
+                    self.num_unique_coords = route_data['num_unique_coords']
 
                     if current_coord is not None:
                         if not np.array_equal(current_coord, origin_coord):
@@ -76,6 +77,7 @@ class GIS(BaseGIS):
             exit()
 
         self.path_distances = helpers.calculate_path_distances(self.path)
+        self.path_length = np.cumsum(helpers.calculate_path_distances(self.path[:self.num_unique_coords]))[-1]
         self.path_gradients = helpers.calculate_path_gradients(self.path_elevations, self.path_distances)
 
     @staticmethod
@@ -97,7 +99,7 @@ class GIS(BaseGIS):
             # Google Earth exports coordinates in order longitude, latitude, when we want the opposite
             return np.roll(coordinates, 1, axis=1)
 
-    def calculate_closest_gis_indices(self, cumulative_distances):
+    def calculate_closest_gis_indices(self, distances):
         """
 
         Takes in an array of point distances from starting point, returns a list of
@@ -109,17 +111,10 @@ class GIS(BaseGIS):
         :rtype: np.ndarray
 
         """
-
-        path_distances = self.path_distances.copy()
-        cumulative_path_distances = np.cumsum(path_distances)
-        cumulative_path_distances[::2] *= -1
-        average_distances = np.abs(np.diff(cumulative_path_distances) / 2)
-
-
-        return core.closest_gis_indices_loop(cumulative_distances, average_distances)
+        return core.closest_gis_indices_loop(distances, self.path_distances)
 
     @staticmethod
-    def _python_calculate_closest_gis_indices(cumulative_distances, average_distances):
+    def _python_calculate_closest_gis_indices(distances, path_distances):
         """
 
         Python implementation of rust core.closest_gis_indices_loop. See parent function for documentation details.
@@ -129,18 +124,19 @@ class GIS(BaseGIS):
         current_coordinate_index = 0
         result = []
 
-        with tqdm(total=len(cumulative_distances), file=sys.stdout, desc="Calculating closest GIS indices") as pbar:
-            for distance in np.nditer(cumulative_distances):
-                if distance > average_distances[current_coordinate_index]:
-                    if current_coordinate_index > len(average_distances) - 1:
-                        current_coordinate_index = len(average_distances) - 1
-                    else:
-                        current_coordinate_index += 1
-                        if current_coordinate_index > len(average_distances) - 1:
-                            current_coordinate_index = len(average_distances) - 1
+        with tqdm(total=len(distances), file=sys.stdout, desc="Calculating closest GIS indices") as pbar:
+            distance_travelled = 0
+            for distance in np.nditer(distances):
+                distance_travelled += distance
+
+                while distance_travelled > path_distances[current_coordinate_index]:
+                    distance_travelled -= path_distances[current_coordinate_index]
+                    current_coordinate_index += 1
+
+                    if current_coordinate_index >= len(path_distances) - 1:
+                        current_coordinate_index = len(path_distances) - 1
 
                 result.append(current_coordinate_index)
-
                 pbar.update(1)
 
         return np.array(result)

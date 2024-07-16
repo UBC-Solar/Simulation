@@ -83,7 +83,7 @@ class Model:
         # ----- Tick array -----
 
         self.timestamps = np.arange(0, self.simulation.simulation_duration, self.simulation.tick)
-        self.tick_array = np.diff(self.timestamps) # can this not just be np.full(self.timestamps.shape, self.simulation.tick)?
+        self.tick_array = np.diff(self.timestamps)
         self.tick_array = np.insert(self.tick_array, 0, 0)
 
         # ----- Expected distance estimate -----
@@ -100,7 +100,7 @@ class Model:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        self.closest_gis_indices = self.simulation.gis.calculate_closest_gis_indices(self.cumulative_distances)
+        self.closest_gis_indices = self.simulation.gis.calculate_closest_gis_indices(self.distances)
 
         self.closest_weather_indices = self.simulation.weather.calculate_closest_weather_indices(self.cumulative_distances)
 
@@ -175,15 +175,17 @@ class Model:
                                                                                            self.gis_route_elevations_at_each_tick)
 
         self.not_charge = self.simulation.race.charging_boolean[self.simulation.start_time:]
+        self.not_race = self.simulation.race.driving_boolean[self.simulation.start_time:]
 
         if self.simulation.tick != 1:
             self.not_charge = self.not_charge[::self.simulation.tick]
+            self.not_race = self.not_race[::self.simulation.tick]
 
         self.array_produced_energy = np.logical_and(self.array_produced_energy,
                                                     self.not_charge) * self.array_produced_energy
 
         # Apply not charge mask to only consume energy when we are racing else 0
-        self.consumed_energy = np.where(self.not_charge,
+        self.consumed_energy = np.where(self.not_race,
                                         self.motor_consumed_energy + self.lvs_consumed_energy, 0)
 
         self.produced_energy = self.array_produced_energy + self.regen_produced_energy
@@ -207,8 +209,8 @@ class Model:
         self.state_of_charge[np.abs(self.state_of_charge) < 1e-03] = 0
         self.raw_soc = self.simulation.basic_battery.get_raw_soc(np.cumsum(self.delta_energy))
 
-        # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
-        self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
+        # # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
+        # self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
 
         self.time_in_motion = np.logical_and(self.tick_array, self.speed_kmh) * self.simulation.tick
 

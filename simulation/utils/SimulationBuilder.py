@@ -30,7 +30,7 @@ class SimulationBuilder:
 
     def set_initial_conditions(self, args):
         self.current_coord = args["current_coord"]
-        self.start_time = args["start_time"]
+        self.start_time = int(args["start_time"]) + int(args["timezone_offset"])
         self.initial_battery_charge = args["initial_battery_charge"]
 
         return self

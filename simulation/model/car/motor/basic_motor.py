@@ -2,13 +2,13 @@ import math
 import numpy as np
 
 from simulation.model.car.motor.base_motor import BaseMotor
-from simulation.common import DayBreak, Race, constants, DayBreakEquations
 
+from simulation.common import BrightSide, constants, DayBreakEquations
+
+from simulation.common.race import Race
 from simulation.common.race import get_slip_angle_for_tire_force, load_race
 
-
 class BasicMotor(BaseMotor):
-
     def __init__(self):
         super().__init__()
 
@@ -20,16 +20,14 @@ class BasicMotor(BaseMotor):
 
         # TODO: organize this mess
         self.input_power = 0
-        self.vehicle_mass = DayBreak.vehicle_mass
+        self.vehicle_mass = BrightSide.vehicle_mass
         self.acceleration_g = constants.ACCELERATION_G
-        self.road_friction = DayBreak.road_friction
-        self.tire_radius = DayBreak.tire_radius
+        self.road_friction = BrightSide.road_friction
+        self.tire_radius = BrightSide.tire_radius
 
         self.air_density = constants.AIR_DENSITY
-        self.vehicle_frontal_area = DayBreak.vehicle_frontal_area
-        print("drag COEF")
-        print(DayBreak.drag_coefficient)
-        self.drag_coefficient = DayBreak.drag_coefficient
+        self.vehicle_frontal_area = BrightSide.vehicle_frontal_area
+        self.drag_coefficient = BrightSide.drag_coefficient
 
         self.friction_force = (self.vehicle_mass * self.acceleration_g * self.road_friction)
 
@@ -126,7 +124,7 @@ class BasicMotor(BaseMotor):
 
         :param np.ndarray motor_angular_speed: (float[N]) angular speed motor operates in rad/s
         :param np.ndarray motor_output_energy: (float[N]) energy motor outputs to the wheel in J
-        :param int tick: length of 1 update cycle in seconds
+        :param float tick: length of 1 update cycle in seconds
         :returns e_m: (float[N]) efficiency of the motor
         :rtype: np.ndarray
 
@@ -157,7 +155,7 @@ class BasicMotor(BaseMotor):
 
         :param np.ndarray motor_angular_speed: (float[N]) angular speed motor operates in rad/s
         :param np.ndarray motor_output_energy: (float[N]) energy motor outputs to the wheel in J
-        :param int tick: length of 1 update cycle in seconds
+        :param float tick: length of 1 update cycle in seconds
         :returns e_mc (float[N]) efficiency of the motor controller
         :rtype: np.ndarray
 
@@ -181,8 +179,7 @@ class BasicMotor(BaseMotor):
 
         return e_mc
     
-    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, wind_attack_angles, closest_gis_indices, tick):
-
+    def calculate_energy_in(self, required_speed_kmh, gradients, wind_speeds, wind_attack_angles, closest_gis_indices, tick, parameters = None):
         """
 
         Create a function which takes in array of elevation, array of wind speed, required
@@ -193,15 +190,21 @@ class BasicMotor(BaseMotor):
         :param np.ndarray wind_speeds: (float[N]) speeds of wind in m/s, where > 0 means against the direction of the vehicle
         :param np.ndarray wind_attack_angles: (float[N])
         :param int tick: length of 1 update cycle in seconds
+        :param float tick: length of 1 update cycle in seconds
         :returns: (float[N]) energy expended by the motor at every tick
         :rtype: np.ndarray
 
         """
+        if parameters is None:
+            parameters = self.parameters
 
         required_speed_ms = required_speed_kmh / 3.6
 
+        acceleration_ms2 = np.clip(np.gradient(required_speed_ms), a_min=0, a_max=None)
+        acceleration_force = acceleration_ms2 * self.vehicle_mass
+        acceleration_force *= np.polyval([parameters[0], parameters[1]], acceleration_ms2)
+
         required_angular_speed_rads = required_speed_ms / self.tire_radius
-        required_angular_speed_rads_array = np.ones(len(gradients)) * required_angular_speed_rads
 
 
         drag_forces = BasicMotor.calculate_drag_force(wind_speeds, wind_attack_angles, required_speed_ms)
@@ -215,18 +218,20 @@ class BasicMotor(BaseMotor):
         angles = np.arctan(gradients)
         g_forces = self.vehicle_mass * self.acceleration_g * np.sin(angles)
 
-        road_friction_array = np.full_like(g_forces, fill_value=self.road_friction)
-        road_friction_array = road_friction_array * self.vehicle_mass * self.acceleration_g * np.cos(angles)
-        
+
+        road_friction_array = self.road_friction * self.vehicle_mass * self.acceleration_g * np.cos(angles)
+
+        net_force = road_friction_array + drag_forces + g_forces + acceleration_force
+
         cornering_friction_work = calculate_cornering_losses(required_speed_kmh, closest_gis_indices, tick)
 
-        motor_output_energies = required_angular_speed_rads_array * (
-                road_friction_array + drag_forces + g_forces) * self.tire_radius * tick + cornering_friction_work
+        motor_output_energies = required_angular_speed_rads * net_force * self.tire_radius * tick + cornering_friction_work
+        motor_output_energies = np.clip(motor_output_energies, a_min=0, a_max=None)
+        motor_output_energies *= np.polyval([parameters[2], parameters[3]], motor_output_energies)
 
-        e_m = self.calculate_motor_efficiency(required_angular_speed_rads_array, motor_output_energies, tick)
-        e_mc = self.calculate_motor_controller_efficiency(required_angular_speed_rads_array,
-                                                          motor_output_energies, tick)
-    
+        e_m = self.calculate_motor_efficiency(required_angular_speed_rads, motor_output_energies, tick)
+        e_mc = self.calculate_motor_controller_efficiency(required_angular_speed_rads, motor_output_energies, tick)
+
         motor_controller_input_energies = motor_output_energies / (e_m * e_mc)
 
         # Filter out and replace negative energy consumption as 0
@@ -282,8 +287,8 @@ class BasicMotor(BaseMotor):
                 f"Acceleration of gravity: {self.acceleration_g}m/s^2\n"
                 f"Motor controller efficiency: {self.e_mc}%\n"
                 f"Motor efficiency: {self.e_m}%\n")
-    
 
+    
 def calculate_cornering_losses(required_speed_kmh, closest_gis_indices, tick):
     # hard coded for FSGP
     current_race = load_race(Race.FSGP)
@@ -291,7 +296,7 @@ def calculate_cornering_losses(required_speed_kmh, closest_gis_indices, tick):
     wrapped_indices = closest_gis_indices % current_race.cornering_radii.size
     cornering_radii = current_race.cornering_radii[wrapped_indices]
     required_speed_ms = required_speed_kmh / 3.6
-    centripetal_lateral_force = DayBreak.vehicle_mass * (required_speed_ms ** 2) / cornering_radii
+    centripetal_lateral_force = BrightSide.vehicle_mass * (required_speed_ms ** 2) / cornering_radii
     slip_angles_degrees = get_slip_angle_for_tire_force(centripetal_lateral_force)
     slip_angles_radians = np.radians(slip_angles_degrees)
 
@@ -328,3 +333,9 @@ def calculate_cornering_losses(required_speed_kmh, closest_gis_indices, tick):
     plt.show()
 
     return cornering_friction_work
+
+
+if __name__ == "__main__":
+    motor = BasicMotor()
+    energies = motor.calculate_energy_in(np.array([10, 10]), np.array([0, 0]), np.array([0, 0]), 1)
+    energies = motor.calculate_energy_in(np.array([10, 10]), np.array([0, 0]), np.array([0, 0]), 1, [2.3, 1.12, 1.2, 1.233])

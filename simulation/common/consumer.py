@@ -1,7 +1,8 @@
-from abc import ABC, abstractmethod
+from simulation.common.component import Component
+from simulation.config.parameters import get_parameters
 
 
-class Consumer(ABC):
+class Consumer(Component):
     """
 
     The base consumer model
@@ -11,6 +12,7 @@ class Consumer(ABC):
     """
 
     def __init__(self, consumed_energy):
+        super().__init__()
         self.consumed_energy = consumed_energy
 
     def get_consumed_energy(self):

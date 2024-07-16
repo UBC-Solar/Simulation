@@ -1,7 +1,7 @@
 import numpy as np
 
 from simulation.model.car.battery.base_battery import BaseBattery
-from simulation.common import DayBreak, DayBreakEquations as equations
+from simulation.common import BrightSide, DayBreakEquations as equations
 
 
 class BasicBattery(BaseBattery):
@@ -31,10 +31,10 @@ class BasicBattery(BaseBattery):
 
         # ----- DayBreak battery constants -----
 
-        self.max_voltage = DayBreak.max_voltage
-        self.min_voltage = DayBreak.min_voltage
-        self.max_current_capacity = DayBreak.max_current_capacity
-        self.max_energy_capacity = DayBreak.max_energy_capacity
+        self.max_voltage = BrightSide.max_voltage
+        self.min_voltage = BrightSide.min_voltage
+        self.max_current_capacity = BrightSide.max_current_capacity
+        self.max_energy_capacity = BrightSide.max_energy_capacity
 
         # ----- DayBreak battery equations -----
 

@@ -58,8 +58,6 @@ def cache_gis(race):
 
         # Coords will be the same as waypoints for FSGP
         origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
-
-        tiling = race.tiling  # set tiling from config file
     else:
         race = load_race(Race.ASC)
         route_file = route_directory / "route_data.npz"
@@ -68,7 +66,7 @@ def cache_gis(race):
         # Coords may not contain all waypoints for ASC
         origin_coord, dest_coord, coords, waypoints = get_asc_coords()
 
-        tiling = race.tiling  # set tiling from config file
+    tiling = race.tiling  # set tiling from config file
 
     # Calculate speed limits and curvature
     curvature = calculate_curvature(coords)
@@ -83,13 +81,14 @@ def cache_gis(race):
     speed_limits = np.tile(speed_limits, tiling)
     path_elevations = np.tile(path_elevations, tiling)
     path_time_zones = np.tile(path_time_zones, tiling)
+    num_unique_coords = len(coords)
     coords = np.tile(coords, (tiling, 1))
 
     # Cache results
     with open(route_file, 'wb') as f:
         np.savez(f, path=coords, elevations=path_elevations, time_zones=path_time_zones,
                  origin_coord=origin_coord, dest_coord=dest_coord, speed_limits=speed_limits,
-                 waypoints=waypoints, hash=get_hash(origin_coord, dest_coord, waypoints))
+                 waypoints=waypoints, hash=get_hash(origin_coord, dest_coord, waypoints), num_unique_coords=num_unique_coords)
 
 
 def get_fsgp_coords():
@@ -469,16 +468,14 @@ def update_path_weather_forecast_solcast(coords, duration, period: WeatherPeriod
     - [6]: period end UTC (UNIX time), latitude, longitude, wind_speed (m/s), wind_direction (degrees), ghi (W/m^2)
 
     """
-    num_coords = len(coords)
-
-    weather_forecast = np.zeros((num_coords, duration * WeatherPeriod.possible_periods[period]['hourly_rate'] + 1, 6))
+    weather_forecast = []
 
     with tqdm(total=len(coords), file=sys.stdout, desc="Calling Solcast API") as pbar:
         for i, coord in enumerate(coords):
-            weather_forecast[i] = get_coord_weather_forecast_solcast(coord, period, duration, race, start_time)
+            weather_forecast.append(get_coord_weather_forecast_solcast(coord, period, duration, race, start_time))
             pbar.update(1)
 
-    return weather_forecast
+    return np.array(weather_forecast)
 
 
 def get_coord_weather_forecast_openweather(coord, weather_data_frequency, duration):
@@ -618,6 +615,7 @@ def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, dura
         longitude=coord[1],
         hours=duration,
         period=WeatherPeriod.possible_periods[period]['formatted'],
+        array_type="fixed",
         output_parameters=[
             'gti'
         ],
@@ -627,6 +625,7 @@ def get_coord_weather_forecast_solcast(coord, period: WeatherPeriod.Period, dura
         latitude=coord[0],
         longitude=coord[1],
         hours=duration,
+        array_type="fixed",
         tilt=0,
         period=WeatherPeriod.possible_periods[period]['formatted'],
         output_parameters=[

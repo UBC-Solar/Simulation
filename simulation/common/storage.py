@@ -1,7 +1,7 @@
-from abc import ABC, abstractmethod
+from simulation.common.component import Component
 
 
-class Storage(ABC):
+class Storage(Component):
     """
 
     The base storage model
@@ -11,5 +11,6 @@ class Storage(ABC):
     """
 
     def __init__(self, stored_energy=0):
+        super().__init__()
         self.stored_energy = stored_energy
 
