@@ -198,3 +198,5 @@ def calculate_cornering_losses(required_speed_kmh, closest_gis_indices, tick):
     plt.ylabel('value')
     plt.grid(True)
     plt.show()
+    
+    return cornering_friction_work
