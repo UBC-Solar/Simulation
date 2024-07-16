@@ -5,12 +5,18 @@ import enum
 
 from simulation.config import config_directory
 from simulation.cache.race import race_directory
+
 from haversine import haversine, Unit
+from pyproj import Proj, Transformer
+
 import os
 import json
 import pickle
 import numpy as np
 
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
 
 class Race:
     class RaceType(enum.Enum):
@@ -49,11 +55,12 @@ class Race:
         self.date = (race_constants["start_year"], race_constants["start_month"], race_constants["start_day"])
 
         self.race_duration = len(self.days) * 24 * 60 * 60  # Duration (s)
-        cornering_radii, next_waypoint_distances = self.calculate_radii_and_distances(race_constants["waypoints"])
+        cornering_radii = calculate_radii(race_constants["waypoints"])
+        
         self.cornering_radii = cornering_radii
-        self.next_waypoint_distances = next_waypoint_distances
         print("_________CORNERING RADII____________")
-        print(self.cornering_radii)
+        if(race_type == Race.RaceType.FSGP):
+            plot_coordinates(race_constants["waypoints"], self.cornering_radii)
 
         self.driving_boolean = self.make_time_boolean("driving")
         self.charging_boolean = self.make_time_boolean("charging")
@@ -79,27 +86,28 @@ class Race:
 
         return boolean
     
-    def calculate_radii_and_distances(self, waypoints):
-        # pop off last coordinate since first and last coordinate are the same
+
+
+def calculate_radii(waypoints):
+    # pop off last coordinate if first and last coordinate are the same
+    if waypoints[0] == waypoints[len(waypoints) - 1]:
         waypoints = waypoints[:-1]
 
-        cornering_radii = np.empty(len(waypoints))
-        next_waypoint_distances = np.empty(len(waypoints))
-        for i in range(len(waypoints)):
-            # if the next point or previous point is out of bounds, wrap the index around the array
-            i2 = (i - 1) % len(waypoints)
-            i3 = (i + 1) % len(waypoints)
-            current_point = waypoints[i]
-            previous_point = waypoints[i2]
-            next_point = waypoints[i3]
+    cornering_radii = np.empty(len(waypoints))
+    for i in range(len(waypoints)):
+        # if the next point or previous point is out of bounds, wrap the index around the array
+        i2 = (i - 1) % len(waypoints)
+        i3 = (i + 1) % len(waypoints)
+        current_point = waypoints[i]
+        previous_point = waypoints[i2]
+        next_point = waypoints[i3]
 
-            x1 = 0 
-            y1 = 0
-            x2, y2, distance_to_previous_waypoint = calculate_xy_distance(current_point, previous_point)
-            x3, y3, distance_to_next_waypoint = calculate_xy_distance(current_point, next_point)
-            cornering_radii[i] = radius_of_curvature(x1, y1, x2, y2, x3, y3)
-            next_waypoint_distances[i] = distance_to_next_waypoint
-        return cornering_radii, next_waypoint_distances
+        x1 = 0 
+        y1 = 0
+        x2, y2 = calculate_meter_distance(current_point, previous_point)
+        x3, y3 = calculate_meter_distance(current_point, next_point)
+        cornering_radii[i] = radius_of_curvature(x1, y1, x2, y2, x3, y3)
+    return cornering_radii
 
 
 def load_race(race_type: Race.RaceType) -> Race:
@@ -107,28 +115,19 @@ def load_race(race_type: Race.RaceType) -> Race:
         return pickle.load(infile)
     
 
-
-
-def calculate_xy_distance(coord1, coord2):
+def calculate_meter_distance(coord1, coord2):
     lat1, lon1 = coord1
     lat2, lon2 = coord2
 
-    # Base coordinate
-    coord_base = (lat1, lon1)
-    # Coordinate for latitude difference (keep longitude the same)
-    coord_lat = (lat2, lon1)
-    # Coordinate for longitude difference (keep latitude the same)
-    coord_long = (lat1, lon2)
+    # Convert geographic coordinates to UTM
+    x1, y1 = latlon_to_utm(lat1, lon1)
+    x2, y2 = latlon_to_utm(lat2, lon2)
 
-    # Calculate y distance (latitude difference) using haversine function
-    y_distance = haversine(coord_base, coord_lat, unit=Unit.METERS)
-    # Calculate x distance (longitude difference) using haversine function
-    x_distance = haversine(coord_base, coord_long, unit=Unit.METERS)
+    # Calculate x and y distances as differences in UTM coordinates
+    x_distance = abs(x2 - x1)
+    y_distance = abs(y2 - y1)
 
-    # Calculate the total distance between the two points using haversine function
-    total_distance = haversine(coord1, coord2, unit=Unit.METERS)
-
-    return x_distance, y_distance, total_distance
+    return x_distance, y_distance
 
 # uses circumcircle formula
 def radius_of_curvature(x1, y1, x2, y2, x3, y3):
@@ -182,7 +181,7 @@ def read_slip_angle_lookup():
     return slip_angles, tire_forces
 
 
-import matplotlib.pyplot as plt
+
 
 def get_slip_angle_for_tire_force(desired_tire_force):
     # Read the lookup table data points
@@ -196,8 +195,43 @@ def get_slip_angle_for_tire_force(desired_tire_force):
     return estimated_slip_angle
 
 
+import folium
+from folium.plugins import MeasureControl
 
+def plot_coordinates(coords, data):
+    # Calculate the center of your map
+    center_lat = sum([coord[0] for coord in coords]) / len(coords)
+    center_lon = sum([coord[1] for coord in coords]) / len(coords)
 
+    # Create the map
+    my_map = folium.Map(location=[center_lat, center_lon], zoom_start=6)
+
+    # Add a measurement tool to the map for users to measure distance
+    my_map.add_child(MeasureControl())
+
+    # Add points with tooltips
+    for coord, datum in zip(coords, data):
+        folium.Marker(
+            [coord[0], coord[1]],
+            tooltip=folium.Tooltip(datum)
+        ).add_to(my_map)
+
+    # Save the map to an HTML file
+    my_map.save("map.html")
+
+# convert lat lon to utm format
+# for short distances, a linear projection is more accurate then a formula like haversine, which factors the curvature of the earth
+
+def latlon_to_utm(latitude, longitude):
+    # Calculate the UTM zone from the longitude
+    zone_number = int((longitude + 180) / 6) + 1
+    # Create a UTM projection string using the calculated zone and WGS84 datum
+    utm_crs = f"+proj=utm +zone={zone_number} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+    # Initialize a Transformer object to perform the transformation
+    transformer = Transformer.from_crs("epsg:4326", utm_crs, always_xy=True)
+    # Transform from geographic (lat, lon) to UTM (x, y)
+    x, y = transformer.transform(longitude, latitude)
+    return x, y
 
 def compile_races():
     fsgp = Race(Race.FSGP)
@@ -206,4 +240,4 @@ def compile_races():
     asc = Race(Race.ASC)
     asc.write()
 
-    write_slip_angles(0, 8, 1000000)
+    write_slip_angles(0, 100, 1000000)

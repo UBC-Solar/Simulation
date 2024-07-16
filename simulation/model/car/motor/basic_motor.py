@@ -136,7 +136,6 @@ class BasicMotor(BaseMotor):
 
         # hard coded for FSGP
         current_race = load_race(Race.FSGP)
-        
         # gis_indicies don't reset per lap
         wrapped_indices = closest_gis_indices % current_race.cornering_radii.size
         cornering_radii = current_race.cornering_radii[wrapped_indices]
@@ -148,6 +147,15 @@ class BasicMotor(BaseMotor):
 
         
         slip_distances = np.tan(slip_angles_radians) * required_speed_ms * tick
+        # for i in range(slip_angles_radians.size):
+        #     print(f"Slip angle (degrees): {slip_angles_degrees[i]:.6f}")
+        #     print(f"Slip angle (radians): {slip_angles_radians[i]:.6f}")
+        #     print(f"Slip distance (meters): {slip_distances[i]:.6f}")
+        #     print(f"Speed at this point (m/s): {required_speed_ms[i]:.6f}")
+        #     print()
+
+        print("value of tick: ")
+        print(tick)
         cornering_friction_work = slip_distances * centripetal_lateral_force
         print("total slip distances: ")
         print(np.sum(slip_distances))
@@ -168,7 +176,7 @@ class BasicMotor(BaseMotor):
         write_array_to_json(centripetal_lateral_force)
         # Plotting the slip angles
         plt.figure(figsize=(10, 6))
-        plt.plot(cornering_friction_work, marker='o', linestyle='-', color='b')
+        plt.plot(slip_distances, marker='o', linestyle='-', color='b')
         plt.title('plot')
         plt.xlabel('index')
         plt.ylabel('value')
@@ -180,7 +188,7 @@ class BasicMotor(BaseMotor):
 
         
         motor_output_energies = required_angular_speed_rads_array * (
-                road_friction_array + drag_forces + g_forces) * self.tire_radius * tick
+                road_friction_array + drag_forces + g_forces) * self.tire_radius * tick + cornering_friction_work
 
         e_m = self.calculate_motor_efficiency(required_angular_speed_rads_array, motor_output_energies, tick)
         e_mc = self.calculate_motor_controller_efficiency(required_angular_speed_rads_array,
