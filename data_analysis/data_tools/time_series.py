@@ -4,6 +4,7 @@ from dateutil import parser
 import matplotlib.pyplot as plt
 import math
 import pandas as pd
+import re
 
 
 class TimeSeries(np.ndarray):
@@ -305,6 +306,21 @@ class TimeSeries(np.ndarray):
         new_wave = TimeSeries(wave_interpolated, meta)
 
         return new_wave
+
+    @staticmethod
+    def from_csv(path, granularity, field):
+        df = pd.read_csv(path)
+
+        fields = df['_field'].unique()
+        assert len(fields) == 1, "more than one field type in table"
+        tuple_arr = np.stack((pd.to_datetime(df['_time']), df['_value']), axis=1)
+        result = np.fromiter(map(lambda x: re.sub("[^0-9|.]", "", x), tuple_arr[:, 1]), dtype=float)
+
+        return result
+
+
+if __name__ == "__main__":
+    pack_current = TimeSeries.from_csv("data_analysis/data/FSGP Current Data.csv", 0.1, "BatteryCurrent")
 
 
 
