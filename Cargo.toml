@@ -13,3 +13,7 @@ crate-type = ["cdylib"]
 numpy = "0.20.0"
 pyo3 = { version = "0.20.0", features = ["extension-module"] }
 chrono = "0.4.34"
+syn = "2.0.71"
+quote = "1.0.36"
+python_wrappers = { path = "python_wrappers" }
+pyo3-macros = "0.22.2"

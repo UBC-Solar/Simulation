@@ -1,0 +1,14 @@
+[package]
+name = "python_wrappers"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+numpy = "0.20.0"
+pyo3 = { version = "0.20.0", features = ["extension-module"] }
+syn = "2.0.71"
+quote = "1.0.36"
+pyo3-macros = "0.22.2"
