@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "UBC-Solar-Simulation"
 authors = [
-    {name = "UBC Solar", email = "software@ubcsolar.com"},
+    {name = "UBC Solar", email = "strategy@ubcsolar.com"},
     {name = "Fisher Xue"},
     {name = "Mihir Nimgade"},
     {name = "Chris Chang"},
@@ -26,7 +26,7 @@ authors = [
     {name = "Joshua Riefman"}
 ]
 maintainers = [
-    {name = "UBC Solar", email = "software@ubcsolar.com"},
+    {name = "UBC Solar", email = "strategy@ubcsolar.com"},
     {name = "Joshua Riefman", email = "joshuariefman@gmail.com"},
     {name = "Renu Rajamagmesh"},
     {name = "Felix Toft"},
