@@ -21,6 +21,7 @@ from simulation.common.helpers import PJWHash
 from simulation.config import config_directory
 from simulation.cache.route import route_directory
 from simulation.cache.weather import weather_directory
+from simulation.cache.race import race_directory
 from simulation.common import constants, BrightSide, helpers, Race, load_race
 
 # load API keys from environment variables
@@ -53,13 +54,13 @@ def cache_gis(race):
 
     # Get path for race from setting JSONs
     if race == "FSGP":
-        race = load_race(Race.FSGP)
+        race = load_race(Race.FSGP, race_directory)
         route_file = route_directory / "route_data_FSGP.npz"
 
         # Coords will be the same as waypoints for FSGP
         origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
     else:
-        race = load_race(Race.ASC)
+        race = load_race(Race.ASC, race_directory)
         route_file = route_directory / "route_data.npz"
 
         # Get directions/path from directions API
@@ -343,9 +344,10 @@ def cache_weather(race: Race, weather_provider: WeatherProvider):
         conditions = json.load(conditions_file)
 
     if weather_provider == WeatherProvider.OPENWEATHER:
+        simulation_duration = len(race.days) * 24 * 60 * 60
         weather_forecast = update_path_weather_forecast_openweather(coords,
                                                                     race_configs["weather_freq"],
-                                                                    int(race_configs["simulation_duration"] / 3600))
+                                                                    int(simulation_duration / 3600))
         with open(weather_file, 'wb') as f:
             np.savez(f, weather_forecast=weather_forecast, origin_coord=origin_coord,
                      dest_coord=dest_coord, hash=get_hash(origin_coord, dest_coord, waypoints),
@@ -773,7 +775,7 @@ def get_hash(origin_coord, dest_coord, waypoints):
 class Query:
     def __init__(self, api_type, race_type, weather_provider):
         self.api: APIType = APIType(api_type)
-        self.race: Race = load_race(race_type)
+        self.race: Race = load_race(race_type, race_directory)
         self.provider: WeatherProvider = WeatherProvider(weather_provider)
 
     def make(self):

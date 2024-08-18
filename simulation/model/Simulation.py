@@ -1,6 +1,5 @@
 import simulation
 import functools
-import logging
 import core
 import numpy as np
 
@@ -9,9 +8,12 @@ from strenum import StrEnum
 from dotenv import load_dotenv
 
 from simulation.common import helpers
-from simulation.common.exceptions import LibrariesNotFound
 from simulation.common import Race, load_race
 from simulation.utils.Plotting import GraphPage
+from simulation.common import BrightSide
+from simulation.cache.route import route_directory
+from simulation.cache.race import race_directory
+from simulation.cache.weather import weather_directory
 
 
 def simulation_property(func):
@@ -61,15 +63,12 @@ class Simulation:
         race_type: string defining which race, ASC or FSGP, is being simulated
         granularity: controls how granular (detailed) the driving speeds array is
         initial_battery_charge: starting charge of the battery
-        golang: define whether Go implementations should be used when applicable
-        library: manages and locates Go shared libraries (if possible)
         origin_coord: array containing latitude and longitude of route start point
         dest_coord: array containing latitude and longitude of route end point
         waypoints: array containing latitude and longitude pairs of route waypoints
         tick: length of simulation's discrete time step (in seconds)
         simulation_duration: length of simulated time (in seconds)
         lvs_power_loss: a constant approximating the power consumption of our low-voltage components
-        start_hour: describes the hour to start the simulation (typically either 7 or 9, these
         represent 7am and 9am respectively)
 
     """
@@ -97,7 +96,7 @@ class Simulation:
         assert builder.race_type in Race.RaceType, f"{builder.race_type} is not a valid race type!"
 
         self.race_type = builder.race_type
-        self.race = load_race(self.race_type)
+        self.race = load_race(self.race_type, race_directory)
         self.weather_provider = builder.weather_provider
 
         # ---- Granularity -----
@@ -122,36 +121,63 @@ class Simulation:
 
         load_dotenv()
 
-
         # -------- Hash Key ---------
 
         self.hash_key = self.__hash__()
 
         # ----- Component initialisation -----
 
-        self.basic_array = simulation.BasicArray()
+        self.basic_array = simulation.BasicArray(
+            BrightSide.panel_efficiency,
+            BrightSide.panel_size
+        )
 
-        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)
+        self.basic_battery = simulation.BasicBattery(
+            self.initial_battery_charge,
+            BrightSide.max_voltage,
+            BrightSide.min_voltage,
+            BrightSide.max_current_capacity,
+            BrightSide.max_energy_capacity
+        )
 
-        self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)
+        self.basic_lvs = simulation.BasicLVS(
+            self.lvs_power_loss * self.tick,
+            BrightSide.lvs_voltage,
+            BrightSide.lvs_current
+        )
 
-        self.basic_motor = simulation.BasicMotor()
+        self.basic_motor = simulation.BasicMotor(
+            BrightSide.vehicle_mass,
+            BrightSide.road_friction,
+            BrightSide.tire_radius,
+            BrightSide.vehicle_frontal_area,
+            BrightSide.drag_coefficient
+        )
 
-        self.basic_regen = simulation.BasicRegen()
+        self.basic_regen = simulation.BasicRegen(
+            BrightSide.vehicle_mass
+        )
 
-        self.gis = simulation.GIS(self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, current_coord=self.current_coord, hash_key=self.hash_key)
+        self.gis = simulation.GIS(
+            self.origin_coord,
+            self.dest_coord,
+            self.waypoints,
+            self.race_type,
+            route_directory,
+            current_coord=self.current_coord,
+            hash_key=self.hash_key
+        )
 
         self.route_coords = self.gis.get_path()
-
-        self.basic_regen = simulation.BasicRegen()
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
         self.weather = simulation.SolcastForecasts(self.route_coords,
                                                    self.race,
+                                                   weather_directory,
                                                    origin_coord=self.gis.launch_point,
-                                                   hash_key=self.hash_key)
+                                                   hash_key=self.hash_key,
+                                                   )
 
         self.time_of_initialization = self.weather.last_updated_time  # Real Time
 
@@ -229,7 +255,7 @@ class Simulation:
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
-        speed_kmh = core.constrain_speeds(self.gis.speed_limits.astype(float), speed_kmh, self.tick)
+        # speed_kmh = core.constrain_speeds(self.gis.speed_limits.astype(float), speed_kmh, self.tick)
 
         # ------ Run calculations and get result and modified speed array -------
         self._model = simulation.Model(self, speed_kmh)
@@ -345,7 +371,8 @@ class Simulation:
 
         """
 
-        return helpers.get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:], self.granularity).sum().astype(int)
+        return helpers.get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:],
+                                                       self.granularity).sum().astype(int)
 
     def get_race_length(self):
         try:

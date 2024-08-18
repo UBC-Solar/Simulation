@@ -10,7 +10,8 @@ from tzlocal import get_localzone
 from simulation.utils import Query
 from simulation.utils.query import APIType
 from simulation.config import config_directory
-from simulation.common.race import Race, load_race
+from simulation.cache.race import race_directory
+from physics.environment.race import Race, load_race
 
 
 load_dotenv()
@@ -22,7 +23,7 @@ def main(race: str, weather_provider: str):
     with open(config_path) as f:
         race_constants = json.load(f)
 
-    race = load_race(Race.RaceType(race))
+    race = load_race(Race.RaceType(race), race_directory)
 
     # We need to get the timezone offset from the current position to the race position
     # for testing so that weather lines up properly

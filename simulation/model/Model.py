@@ -165,7 +165,9 @@ class Model:
                                                                                            self.simulation.tick)
 
         self.regen_produced_energy = self.simulation.basic_regen.calculate_produced_energy(self.speed_kmh,
-                                                                                           self.gis_route_elevations_at_each_tick)
+                                                                                           self.gis_route_elevations_at_each_tick,
+                                                                                           0.0,
+                                                                                           10000.0)
 
         self.not_charge = self.simulation.race.charging_boolean[self.simulation.start_time:]
         self.not_race = self.simulation.race.driving_boolean[self.simulation.start_time:]

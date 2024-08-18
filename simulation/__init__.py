@@ -5,21 +5,21 @@ from simulation.common import Storage
 from simulation.common import BatteryEmptyError
 from simulation.common import PrematureDataRecoveryError
 
-from simulation.model.car.arrays import BaseArray
-from simulation.model.car.battery import BaseBattery
-from simulation.model.car.lvs import BaseLVS
-from simulation.model.car.motor import BaseMotor
-from simulation.model.car.regen import BaseRegen
+from physics.models.arrays import BaseArray
+from physics.models.battery import BaseBattery
+from physics.models.lvs import BaseLVS
+from physics.models.motor import BaseMotor
+from physics.models.regen import BaseRegen
 
-from simulation.model.car.arrays import BasicArray
-from simulation.model.car.battery import BasicBattery
-from simulation.model.car.lvs import BasicLVS
-from simulation.model.car.motor import BasicMotor
-from simulation.model.car.regen import BasicRegen
+from physics.models.arrays import BasicArray
+from physics.models.battery import BasicBattery
+from physics.models.lvs import BasicLVS
+from physics.models.motor import BasicMotor
+from physics.models.regen import BasicRegen
 
-from simulation.model.environment.gis import GIS
-from simulation.model.environment.solar_calculations import OpenweatherSolarCalculations, SolcastSolarCalculations
-from simulation.model.environment.weather_forecasts import OpenWeatherForecast, SolcastForecasts
+from physics.environment.gis import GIS
+from physics.environment.solar_calculations import OpenweatherSolarCalculations, SolcastSolarCalculations
+from physics.environment.weather_forecasts import OpenWeatherForecast, SolcastForecasts
 
 from simulation.utils.Plotting import Plotting
 

@@ -6,7 +6,7 @@ import json
 from simulation.model.Simulation import Simulation, SimulationReturnType
 from simulation.config import config_directory, speeds_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
-from simulation.common.race import Race
+from physics.environment.race import Race
 
 
 class SimulationSettings:
