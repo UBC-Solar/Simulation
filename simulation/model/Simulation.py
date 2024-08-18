@@ -1,4 +1,3 @@
-import simulation
 import functools
 import core
 import numpy as np
@@ -8,12 +7,25 @@ from strenum import StrEnum
 from dotenv import load_dotenv
 
 from simulation.common import helpers
-from simulation.common import Race, load_race
 from simulation.utils.Plotting import GraphPage
 from simulation.common import BrightSide
 from simulation.cache.route import route_directory
 from simulation.cache.race import race_directory
 from simulation.cache.weather import weather_directory
+from simulation.common.exceptions import PrematureDataRecoveryError
+from simulation.utils.Plotting import Plotting
+from simulation.model.Model import Model
+
+from physics.models.arrays import BasicArray
+from physics.models.battery import BasicBattery
+from physics.models.lvs import BasicLVS
+from physics.models.motor import BasicMotor
+from physics.models.regen import BasicRegen
+
+from physics.environment.gis import GIS
+from physics.environment.solar_calculations import OpenweatherSolarCalculations, SolcastSolarCalculations
+from physics.environment.weather_forecasts import OpenWeatherForecast, SolcastForecasts
+from physics.environment.race import Race, load_race
 
 
 def simulation_property(func):
@@ -30,8 +42,8 @@ def simulation_property(func):
     def property_wrapper(*args, **kwargs):
         assert isinstance(args[0], Simulation), "simulation_property wrapper applied to non-Simulation function!"
         if not args[0].calculations_have_happened():
-            raise simulation.PrematureDataRecoveryError("You are attempting to collect information before simulation "
-                                                        "model calculations have completed.")
+            raise PrematureDataRecoveryError("You are attempting to collect information before simulation "
+                                             "model calculations have completed.")
         value = func(*args, **kwargs)
         return value
 
@@ -127,12 +139,12 @@ class Simulation:
 
         # ----- Component initialisation -----
 
-        self.basic_array = simulation.BasicArray(
+        self.basic_array = BasicArray(
             BrightSide.panel_efficiency,
             BrightSide.panel_size
         )
 
-        self.basic_battery = simulation.BasicBattery(
+        self.basic_battery = BasicBattery(
             self.initial_battery_charge,
             BrightSide.max_voltage,
             BrightSide.min_voltage,
@@ -140,13 +152,13 @@ class Simulation:
             BrightSide.max_energy_capacity
         )
 
-        self.basic_lvs = simulation.BasicLVS(
+        self.basic_lvs = BasicLVS(
             self.lvs_power_loss * self.tick,
             BrightSide.lvs_voltage,
             BrightSide.lvs_current
         )
 
-        self.basic_motor = simulation.BasicMotor(
+        self.basic_motor = BasicMotor(
             BrightSide.vehicle_mass,
             BrightSide.road_friction,
             BrightSide.tire_radius,
@@ -154,11 +166,11 @@ class Simulation:
             BrightSide.drag_coefficient
         )
 
-        self.basic_regen = simulation.BasicRegen(
+        self.basic_regen = BasicRegen(
             BrightSide.vehicle_mass
         )
 
-        self.gis = simulation.GIS(
+        self.gis = GIS(
             self.origin_coord,
             self.dest_coord,
             self.waypoints,
@@ -172,20 +184,20 @@ class Simulation:
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
-        self.weather = simulation.SolcastForecasts(self.route_coords,
-                                                   self.race,
-                                                   weather_directory,
-                                                   origin_coord=self.gis.launch_point,
-                                                   hash_key=self.hash_key,
-                                                   )
+        self.weather = SolcastForecasts(self.route_coords,
+                                        self.race,
+                                        weather_directory,
+                                        origin_coord=self.gis.launch_point,
+                                        hash_key=self.hash_key,
+                                        )
 
         self.time_of_initialization = self.weather.last_updated_time  # Real Time
 
         self.simulation_duration = builder.race_duration * 3600 * 24 - self.start_time
 
-        self.solar_calculations = simulation.SolcastSolarCalculations(race=self.race)
+        self.solar_calculations = SolcastSolarCalculations(race=self.race)
 
-        self.plotting = simulation.Plotting()
+        self.plotting = Plotting()
 
         # All attributes ABOVE will NOT be modified when the model is simulated. All attributes BELOW this WILL be
         # mutated over the course of simulation. Ensure that when you modify the behaviour of Simulation that this
@@ -258,7 +270,7 @@ class Simulation:
         # speed_kmh = core.constrain_speeds(self.gis.speed_limits.astype(float), speed_kmh, self.tick)
 
         # ------ Run calculations and get result and modified speed array -------
-        self._model = simulation.Model(self, speed_kmh)
+        self._model = Model(self, speed_kmh)
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
@@ -377,10 +389,10 @@ class Simulation:
     def get_race_length(self):
         try:
             value = self.get_results("max_route_distance")
-        except simulation.PrematureDataRecoveryError:
+        except PrematureDataRecoveryError:
             speed_kmh = np.array([30] * self.get_driving_time_divisions())
             if self._model is None:
-                self._model = simulation.Model(self, speed_kmh)
+                self._model = Model(self, speed_kmh)
             self._model.run_simulation_calculations()
             value = self.get_results("max_route_distance")
 

@@ -3,9 +3,9 @@ import argparse
 import numpy as np
 import json
 
-from simulation.model.Simulation import Simulation, SimulationReturnType
 from simulation.config import config_directory, speeds_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
+from simulation.model.Simulation import Simulation, SimulationReturnType
 from physics.environment.race import Race
 
 

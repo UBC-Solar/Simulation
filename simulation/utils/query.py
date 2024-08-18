@@ -22,7 +22,8 @@ from simulation.config import config_directory
 from simulation.cache.route import route_directory
 from simulation.cache.weather import weather_directory
 from simulation.cache.race import race_directory
-from simulation.common import constants, BrightSide, helpers, Race, load_race
+from simulation.common import BrightSide, helpers
+from physics.environment.race import Race, load_race
 
 # load API keys from environment variables
 load_dotenv()
@@ -293,7 +294,7 @@ def calculate_time_zones(coords, race: Race):
 
 
 # ------------------- Weather API -------------------
-def cache_weather(race: Race, weather_provider: WeatherProvider):
+def cache_weather(race: Race, weather_provider: WeatherProvider, reduction_factor: int = 625):
     """
 
     Makes calls to Weather API for a given race and caches the results to a .npz file
@@ -326,11 +327,11 @@ def cache_weather(race: Race, weather_provider: WeatherProvider):
                 origin_coord = gis_data['origin_coord']
                 dest_coord = gis_data['dest_coord']
                 waypoints = gis_data['waypoints']
-                coords = coords[::constants.REDUCTION_FACTOR]
+                coords = coords[::reduction_factor]
 
         else:  # no cached file found -> get coords
             origin_coord, dest_coord, coords, waypoints = get_asc_coords()
-            coords = coords[::constants.REDUCTION_FACTOR]
+            coords = coords[::reduction_factor]
 
         weather_file = weather_directory / f"weather_data_{str(weather_provider)}.npz"
 
