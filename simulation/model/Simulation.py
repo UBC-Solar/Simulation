@@ -267,7 +267,7 @@ class Simulation:
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
-        # speed_kmh = core.constrain_speeds(self.gis.speed_limits.astype(float), speed_kmh, self.tick)
+        speed_kmh = core.constrain_speeds(self.gis.speed_limits.astype(float), speed_kmh, self.tick)
 
         # ------ Run calculations and get result and modified speed array -------
         self._model = Model(self, speed_kmh)
