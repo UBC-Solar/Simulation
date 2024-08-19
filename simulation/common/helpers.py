@@ -1,6 +1,8 @@
 import datetime
 import functools
 import math
+import os
+import pathlib
 
 import numpy as np
 import pandas as pd
@@ -589,16 +591,6 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
         end_index = int(len(timestamps) * plot_portion[1])
         timestamps = timestamps[beginning_index:end_index]
 
-    if plot_portion != (0.0, 1.0):
-        for index, array in enumerate(arrays_to_plot):
-            beginning_index = int(len(array) * plot_portion[0])
-            end_index = int(len(array) * plot_portion[1])
-            arrays_to_plot[index] = array[beginning_index:end_index]
-
-        beginning_index = int(len(timestamps) * plot_portion[0])
-        end_index = int(len(timestamps) * plot_portion[1])
-        timestamps = timestamps[beginning_index:end_index]
-
     compress_constant = max(int(timestamps.shape[0] / 5000), 1)
 
     for index, array in enumerate(arrays_to_plot):
@@ -629,11 +621,13 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
 
         figures[index].add_tools(hover_tool)
 
-    grid = gridplot(figures, sizing_mode="scale_both",
-                    ncols=3, plot_height=200, plot_width=300)
+    grid = gridplot(figures, ncols=3)
 
     if save:
-        output_file(filename=graph_title + '.html', title=graph_title)
+        filename = graph_title + '.html'
+        filepath = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "html"
+        os.makedirs(filepath / "html", exist_ok=True)
+        output_file(filename=str(filepath / filename), title=graph_title)
 
     show(grid)
 

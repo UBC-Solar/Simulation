@@ -35,9 +35,8 @@ package-mode = false
 packages = ["simulation"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 bayesian_optimization = "^1.4.3"
-bokeh = "^2.3.3"
 matplotlib = "^3.7.2"
 Pillow = "^9.4.0"
 plotly = "^5.6.0"
@@ -66,5 +65,6 @@ dill = "^0.3.8"
 solcast = "^1.2.3"
 tzlocal = "^5.2"
 mplcursors = "^0.5.3"
-ubc-solar-physics = {git = "https://github.com/UBC-Solar/physics", rev = "main"}
 pandas = "^2.2.2"
+ubc-solar-physics = {git = "https://github.com/UBC-Solar/physics.git", rev = "main"}
+bokeh = "^3.5.1"
