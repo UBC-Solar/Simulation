@@ -101,7 +101,7 @@ class Model:
 
         self.closest_gis_indices = self.simulation.gis.calculate_closest_gis_indices(self.distances)
 
-        self.closest_weather_indices = self.simulation.weather.calculate_closest_weather_indices(self.cumulative_distances)
+        self.simulation.meteorology.spatially_localize(self.cumulative_distances)
 
         self.path_distances = self.simulation.gis.get_path_distances()
         self.cumulative_distances = np.cumsum(self.path_distances)  # [cumulative_distances] = meters
@@ -127,29 +127,35 @@ class Model:
         self.time_zones = self.simulation.gis.get_time_zones(self.closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = helpers.adjust_timestamps_to_local_times(self.timestamps,
-                                                               self.simulation.time_of_initialization,
-                                                               self.time_zones)
+        local_times = helpers.adjust_timestamps_to_local_times(
+            self.timestamps,
+            self.simulation.time_of_initialization,
+            self.time_zones
+        )
 
         # Get the weather at every location
-        weather_forecasts = self.simulation.weather.get_weather_forecast_in_time(self.closest_weather_indices,
-                                                                                 local_times, self.simulation.start_time,
-                                                                                 self.simulation.tick)
+        self.simulation.meteorology.temporally_localize(
+            local_times,
+            self.simulation.start_time,
+            self.simulation.tick
+        )
 
-        self.absolute_wind_speeds = weather_forecasts.wind_speed
-        self.wind_directions = weather_forecasts.wind_direction
+        self.absolute_wind_speeds = self.simulation.meteorology.wind_speed
+        self.wind_directions = self.simulation.meteorology.wind_direction
 
         # Get the wind speeds at every location
-        self.wind_speeds = helpers.get_array_directional_wind_speed(self.gis_vehicle_bearings,
-                                                                    self.absolute_wind_speeds,
-                                                                    self.wind_directions)
+        self.wind_speeds = helpers.get_array_directional_wind_speed(
+            self.gis_vehicle_bearings,
+            self.absolute_wind_speeds,
+            self.wind_directions
+        )
 
         # Get an array of solar irradiance at every coordinate and time
-        self.solar_irradiances = self.simulation.solar_calculations.calculate_array_GHI(
+        self.solar_irradiances = self.simulation.meteorology.calculate_solar_irradiances(
             self.simulation.route_coords[self.closest_gis_indices],
             self.time_zones, local_times,
-            self.gis_route_elevations_at_each_tick,
-            weather_forecasts)
+            self.gis_route_elevations_at_each_tick
+        )
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
@@ -157,17 +163,24 @@ class Model:
 
         self.lvs_consumed_energy = self.simulation.basic_lvs.get_consumed_energy(self.simulation.tick)
 
-        self.motor_consumed_energy = self.simulation.basic_motor.calculate_energy_in(self.speed_kmh,
-                                                                                     self.gradients,
-                                                                                     self.wind_speeds,
-                                                                                     self.simulation.tick)
-        self.array_produced_energy = self.simulation.basic_array.calculate_produced_energy(self.solar_irradiances,
-                                                                                           self.simulation.tick)
+        self.motor_consumed_energy = self.simulation.basic_motor.calculate_energy_in(
+            self.speed_kmh,
+            self.gradients,
+            self.wind_speeds,
+            self.simulation.tick
+        )
 
-        self.regen_produced_energy = self.simulation.basic_regen.calculate_produced_energy(self.speed_kmh,
-                                                                                           self.gis_route_elevations_at_each_tick,
-                                                                                           0.0,
-                                                                                           10000.0)
+        self.array_produced_energy = self.simulation.basic_array.calculate_produced_energy(
+            self.solar_irradiances,
+            self.simulation.tick
+        )
+
+        self.regen_produced_energy = self.simulation.basic_regen.calculate_produced_energy(
+            self.speed_kmh,
+            self.gis_route_elevations_at_each_tick,
+            0.0,
+            10000.0
+        )
 
         self.not_charge = self.simulation.race.charging_boolean[self.simulation.start_time:]
         self.not_race = self.simulation.race.driving_boolean[self.simulation.start_time:]
@@ -176,12 +189,17 @@ class Model:
             self.not_charge = self.not_charge[::self.simulation.tick]
             self.not_race = self.not_race[::self.simulation.tick]
 
-        self.array_produced_energy = np.logical_and(self.array_produced_energy,
-                                                    self.not_charge) * self.array_produced_energy
+        self.array_produced_energy = self.array_produced_energy * np.logical_and(
+            self.array_produced_energy,
+            self.not_charge
+        )
 
         # Apply not charge mask to only consume energy when we are racing else 0
-        self.consumed_energy = np.where(self.not_race,
-                                        self.motor_consumed_energy + self.lvs_consumed_energy, 0)
+        self.consumed_energy = np.where(
+            self.not_race,
+            self.motor_consumed_energy + self.lvs_consumed_energy,
+            0
+        )
 
         self.produced_energy = self.array_produced_energy + self.regen_produced_energy
 

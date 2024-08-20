@@ -3,7 +3,6 @@ import os
 import sys
 import json
 
-import dill
 import pytz
 import requests
 import datetime
@@ -13,17 +12,17 @@ import pandas as pd
 from tqdm import tqdm
 from scipy import signal
 from strenum import StrEnum
-from dotenv import load_dotenv
 from solcast import forecast
+from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 
 from simulation.common.helpers import PJWHash
 from simulation.config import config_directory
-from simulation.cache.route import route_directory
-from simulation.cache.weather import weather_directory
 from simulation.cache.race import race_directory
 from simulation.common import BrightSide, helpers
 from physics.environment.race import Race, load_race
+from simulation.cache import store_npz_to_cache, query_npz_from_cache
+
 
 # load API keys from environment variables
 load_dotenv()
@@ -56,13 +55,13 @@ def cache_gis(race):
     # Get path for race from setting JSONs
     if race == "FSGP":
         race = load_race(Race.FSGP, race_directory)
-        route_file = route_directory / "route_data_FSGP.npz"
+        route_file = "route_data_FSGP"
 
         # Coords will be the same as waypoints for FSGP
         origin_coord, dest_coord, coords, waypoints = get_fsgp_coords()
     else:
         race = load_race(Race.ASC, race_directory)
-        route_file = route_directory / "route_data.npz"
+        route_file = "route_data"
 
         # Get directions/path from directions API
         # Coords may not contain all waypoints for ASC
@@ -87,10 +86,20 @@ def cache_gis(race):
     coords = np.tile(coords, (tiling, 1))
 
     # Cache results
-    with open(route_file, 'wb') as f:
-        np.savez(f, path=coords, elevations=path_elevations, time_zones=path_time_zones,
-                 origin_coord=origin_coord, dest_coord=dest_coord, speed_limits=speed_limits,
-                 waypoints=waypoints, hash=get_hash(origin_coord, dest_coord, waypoints), num_unique_coords=num_unique_coords)
+    store_npz_to_cache(
+        "route",
+        route_file,
+        {
+            "path": coords,
+            "elevations": path_elevations,
+            "time_zones": path_time_zones,
+            "origin_coord": origin_coord,
+            "dest_coord": dest_coord,
+            "speed_limits": speed_limits,
+            "waypoints": waypoints,
+            "num_unique_coords": num_unique_coords
+        },
+        hash=str(get_hash(origin_coord, dest_coord, waypoints)))
 
 
 def get_fsgp_coords():
@@ -315,25 +324,26 @@ def cache_weather(race: Race, weather_provider: WeatherProvider, reduction_facto
         # throughout the track, so just get weather for the first point
         coords = np.array([coords[0], coords[-1]])[0:1]
 
-        weather_file = weather_directory / f"weather_data_FSGP_{str(weather_provider)}.npz"
+        weather_file = f"weather_data_FSGP_{str(weather_provider)}.npz"
 
     elif race.race_type == Race.ASC:
         # Get path/coords from cached file
-        route_file = route_directory / "route_data.npz"
+        route_file = "route_data.npz"
 
-        if os.path.isfile(route_file):  # check there is a cached gis file
-            with np.load(route_file) as gis_data:
-                coords = gis_data['path']
-                origin_coord = gis_data['origin_coord']
-                dest_coord = gis_data['dest_coord']
-                waypoints = gis_data['waypoints']
-                coords = coords[::reduction_factor]
+        try:
+            gis_data = query_npz_from_cache("route", route_file, match_hash=False)
 
-        else:  # no cached file found -> get coords
+            coords = gis_data['path']
+            origin_coord = gis_data['origin_coord']
+            dest_coord = gis_data['dest_coord']
+            waypoints = gis_data['waypoints']
+            coords = coords[::reduction_factor]
+
+        except FileNotFoundError:
             origin_coord, dest_coord, coords, waypoints = get_asc_coords()
             coords = coords[::reduction_factor]
 
-        weather_file = weather_directory / f"weather_data_{str(weather_provider)}.npz"
+        weather_file = f"weather_data_{str(weather_provider)}"
 
     else:
         raise NotImplementedError(f"Unsupported race type: {str(race)}!")
@@ -349,10 +359,18 @@ def cache_weather(race: Race, weather_provider: WeatherProvider, reduction_facto
         weather_forecast = update_path_weather_forecast_openweather(coords,
                                                                     race_configs["weather_freq"],
                                                                     int(simulation_duration / 3600))
-        with open(weather_file, 'wb') as f:
-            np.savez(f, weather_forecast=weather_forecast, origin_coord=origin_coord,
-                     dest_coord=dest_coord, hash=get_hash(origin_coord, dest_coord, waypoints),
-                     provider=str(weather_provider))
+
+        store_npz_to_cache(
+            "weather",
+            weather_file,
+            {
+                "weather_forecast": weather_forecast,
+                "origin_coord": origin_coord,
+                "dest_coord": dest_coord,
+                "provider": str(weather_provider)
+            },
+            hash=str(get_hash(origin_coord, dest_coord, waypoints))
+        )
 
     elif weather_provider == WeatherProvider.SOLCAST:
         racing_hours = len(race.days) * 24
@@ -365,14 +383,18 @@ def cache_weather(race: Race, weather_provider: WeatherProvider, reduction_facto
                                                                 race,
                                                                 start_time)
 
-        with open(weather_file, 'wb') as f:
-            dill.dump({
-                'weather_forecast': weather_forecast,
-                'origin_coord': origin_coord,
-                'dest_coord': dest_coord,
-                'hash': get_hash(origin_coord, dest_coord, waypoints),
-                'provider': str(weather_provider)
-            }, f)
+        store_npz_to_cache(
+            "weather",
+            weather_file,
+            {
+                "weather_forecast": weather_forecast,
+                "origin_coord": origin_coord,
+                "dest_coord": dest_coord,
+                "provider": str(weather_provider)
+            },
+            hash=str(get_hash(origin_coord, dest_coord, waypoints))
+        )
+
     else:
         raise NotImplementedError(f"Unsupported weather provider: {str(weather_provider)}!")
 
