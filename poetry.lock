@@ -2326,8 +2326,8 @@ zipp = "3.20.0"
 [package.source]
 type = "git"
 url = "https://github.com/UBC-Solar/physics.git"
-reference = "meteorology_refactor"
-resolved_reference = "d5d0fc93094fa075b94f78fbd5bc0f89e0933195"
+reference = "main"
+resolved_reference = "15c108c5056a36ffe6b53e74bab70921d536c71e"
 
 [[package]]
 name = "uritemplate"
@@ -2386,4 +2386,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "c1cce20379a309457d690eb7beae3bae98a3f6edc1915d9a5d8cb4d3668a097e"
+content-hash = "2c03b356c196104a64c80cb4637d567f12e3434391c417fdae57420693c430e5"
