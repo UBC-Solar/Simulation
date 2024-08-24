@@ -14,10 +14,9 @@ For instructions on how to use the scripts provided, see our [usage guide](simul
 
 ### Prerequisites
 
-- Python 3.9 or above (https://www.python.org/downloads/)
+- Python 3.10 or above (https://www.python.org/downloads/)
 - Git version control (https://git-scm.com/downloads)
-- pip Python package installer (should come with your Python installation)
-- Rustc (Rust compiler) and Cargo (Rust package manager), versions >=1.77.2 recommended
+- Poetry dependency manager (https://python-poetry.org/docs/)
 
 Open up your terminal/command prompt and execute the following commands to check your installations.
 
@@ -33,11 +32,10 @@ git --version
 python3 --version
 ```
 
-Simulation uses compiled Rust to accelerate performance-critical functions. You'll need a Rust compiler. Check that your Rust compiler and package manager are accessible.
+- Check your Poetry installation by running:
 
 ```bash
-rustc --version
-cargo --version
+poetry --version
 ```
 
 ## Installation
@@ -54,12 +52,13 @@ cargo --version
     cd Simulation
     ```
 
-- Simulation uses `poetry` to manage dependencies. First, we will create a virtual environment. _Note: the second line is platform-dependent, and may be different for you._
+- Simulation uses `poetry` to manage dependencies. First, we will create a virtual environment.
+
+> On Windows, the command to activate a virtual environment is `.venv\Scripts\activate` instead of `source .venv/bin/activate`. 
 
   ```bash
   python3 -m venv .venv
   source .venv/bin/activate
-  pip3 install poetry
   ```
 
   - Now, use `poetry` to install dependencies.
@@ -67,23 +66,19 @@ cargo --version
   ```bash
   poetry install
   ```
-  
-  - Finally, compile the Rust libraries.
-  ```bash
-  maturin develop 
-  ```
 
 - You should then be able to run the command `simulation_health_check`, which will ensure everything is working properly.
 
   ```bash
   simulation_health_check
   ```
+  
   You should see a dump of information ending with a "Simulation was successful!", indicating that everything worked properly.
 
 ## Preparing Simulation
 
-- Simulation requires external data in order to construct the physical environment that our cars will traverse. As such, you'll need API keys for Google Maps's Directions API, and Solcast's Irradiance and Weather Forecast API. _UBC Solar members can acquire these from the Strategy Lead_.
-  - Once you have acquired the necessary API keys, place them in a `.env` file, replacing `$your_key$` with your API keys.
+- Simulation requires external data in order to construct the physical environment that our cars will traverse. As such, you'll need API keys for Google Maps's Directions API, and one of Solcast's Irradiance and Weather Forecast API or Openweather's One Call API. _UBC Solar members can acquire these from the Strategy Lead_.
+  - Once you have acquired the necessary API keys, you can either set the global environment variables `GOOGLE_MAPS_API_KEY` and `SOLCAST_API_KEY` or `OPENWEATHER_API_KEY`, or you can place them in a `.env` file, replacing `$your_key$` with your API keys.
     ```
     GOOGLE_MAPS_API_KEY=$your_key$
     SOLCAST_API_KEY=$your_key$
@@ -108,4 +103,4 @@ You may run into Python path shenanigans, which is usually indicated by trying t
 PYTHONPATH="/path/to/Simulation:$PYTHONPATH" && export PYTHONPATH
 ```
 
-If you are having errors related to a specific package, it is likely that your system has installed an incompatible (usually too recent) version. It is known that the newest versions of Bokeh and Bayesian Optimization **WILL** cause errors to be raised.
+If you are having errors related to a specific package, it is likely that your system has installed an incompatible (usually too recent) version. Double check that you installed the exact versions of suspect packages.
