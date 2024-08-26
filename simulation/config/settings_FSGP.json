@@ -300,30 +300,31 @@
     [ 36.99924349, -86.37245211],
     [ 36.99932082, -86.37230251]
   ],
-  "tick": 1,
+
+  "tick": 10,
   "race_length": 0,
   "lvs_power_loss": 0,
 
-  "period": "30min",
+  "period": "5min",
   "weather_freq": "daily",
   "weather_provider": "OPENWEATHER",
 
   "days": {
     "0": {
-      "charging": [28800, 72000],
-      "driving": [32400, 64800]
+      "charging": [25200, 72000],
+      "driving": [36000, 57600]
     },
     "1": {
-      "charging": [28800, 72000],
-      "driving": [32400, 64800]
+      "charging": [25200, 72000],
+      "driving": [32400, 61200]
     },
     "2": {
-      "charging": [28800, 72000],
-      "driving": [32400, 64800]
+      "charging": [25200, 72000],
+      "driving": [32400, 61200]
     }
   },
-  "tiling": 600,
+  "tiling": 200,
   "start_year": 2024,
   "start_month": 7,
-  "start_day": 1
+  "start_day": 15
 }

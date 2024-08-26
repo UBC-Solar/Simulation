@@ -207,7 +207,6 @@ class GeneticOptimization(BaseOptimization):
         self.bounds = bounds.get_bounds_list()
         self.settings = settings if settings is not None else OptimizationSettings()
         self.output_hyperparameters = plot_fitness
-        self.did_finish_race = None
 
         # Define the function that will be used to determine the fitness of each chromosome
         fitness_function = self.fitness
@@ -469,17 +468,9 @@ class GeneticOptimization(BaseOptimization):
 
         # If Simulation did not complete successfully (SOC dropped below 0) then return the distance when that occurred.
         distance_travelled_real = distance_travelled if self.model.was_successful() \
-            else self.model.get_distance_before_exhaustion()
+            else 0.0
 
-        self.did_finish_race = True if distance_travelled_real == distance_travelled else False
         fitness = (691200 / time_taken) * (distance_travelled_real / 2466)
-        # distance_travelled is scaled such that optimization REALLY prioritizes finishing the race
-        distance_scaled = distance_travelled_real * self.fitness_sigmoid(distance_travelled_real)
-        # optimization really likes even small reductions in time taken
-        time_taken_scaled = time_taken / self.fitness_amplifier(time_taken)
-
-        # combined_fitness = distance travelled (km) / time_taken (days) = distance travelled per day
-        combined_fitness = distance_scaled / (time_taken_scaled / 86400)
 
         return fitness
 

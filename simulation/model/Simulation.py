@@ -1,6 +1,4 @@
-import simulation
 import functools
-import logging
 import core
 import numpy as np
 
@@ -9,9 +7,23 @@ from strenum import StrEnum
 from dotenv import load_dotenv
 
 from simulation.common import helpers
-from simulation.common.exceptions import LibrariesNotFound
-from simulation.common import Race, load_race
 from simulation.utils.Plotting import GraphPage
+from simulation.common import BrightSide
+from simulation.cache.race import race_directory
+from simulation.cache import query_npz_from_cache
+from simulation.common.exceptions import PrematureDataRecoveryError
+from simulation.utils.Plotting import Plotting
+from simulation.model.Model import Model
+
+from physics.models.arrays import BasicArray
+from physics.models.battery import BasicBattery
+from physics.models.lvs import BasicLVS
+from physics.models.motor import BasicMotor
+from physics.models.regen import BasicRegen
+
+from physics.environment.gis import GIS
+from physics.environment.meteorology import IrradiantMeteorology, CloudedMeteorology
+from physics.environment.race import Race, load_race
 
 
 def simulation_property(func):
@@ -28,8 +40,8 @@ def simulation_property(func):
     def property_wrapper(*args, **kwargs):
         assert isinstance(args[0], Simulation), "simulation_property wrapper applied to non-Simulation function!"
         if not args[0].calculations_have_happened():
-            raise simulation.PrematureDataRecoveryError("You are attempting to collect information before simulation "
-                                                        "model calculations have completed.")
+            raise PrematureDataRecoveryError("You are attempting to collect information before simulation "
+                                             "model calculations have completed.")
         value = func(*args, **kwargs)
         return value
 
@@ -61,15 +73,12 @@ class Simulation:
         race_type: string defining which race, ASC or FSGP, is being simulated
         granularity: controls how granular (detailed) the driving speeds array is
         initial_battery_charge: starting charge of the battery
-        golang: define whether Go implementations should be used when applicable
-        library: manages and locates Go shared libraries (if possible)
         origin_coord: array containing latitude and longitude of route start point
         dest_coord: array containing latitude and longitude of route end point
         waypoints: array containing latitude and longitude pairs of route waypoints
         tick: length of simulation's discrete time step (in seconds)
         simulation_duration: length of simulated time (in seconds)
         lvs_power_loss: a constant approximating the power consumption of our low-voltage components
-        start_hour: describes the hour to start the simulation (typically either 7 or 9, these
         represent 7am and 9am respectively)
 
     """
@@ -97,7 +106,7 @@ class Simulation:
         assert builder.race_type in Race.RaceType, f"{builder.race_type} is not a valid race type!"
 
         self.race_type = builder.race_type
-        self.race = load_race(self.race_type)
+        self.race = load_race(self.race_type, race_directory)
         self.weather_provider = builder.weather_provider
 
         # ---- Granularity -----
@@ -122,44 +131,60 @@ class Simulation:
 
         load_dotenv()
 
-
         # -------- Hash Key ---------
 
         self.hash_key = self.__hash__()
 
         # ----- Component initialisation -----
 
-        self.basic_array = simulation.BasicArray()
+        self.basic_array = BasicArray(
+            BrightSide.panel_efficiency,
+            BrightSide.panel_size
+        )
 
-        self.basic_battery = simulation.BasicBattery(self.initial_battery_charge)
+        self.basic_battery = BasicBattery(
+            self.initial_battery_charge,
+            BrightSide.max_voltage,
+            BrightSide.min_voltage,
+            BrightSide.max_current_capacity,
+            BrightSide.max_energy_capacity
+        )
 
-        self.basic_lvs = simulation.BasicLVS(self.lvs_power_loss * self.tick)
+        self.basic_lvs = BasicLVS(
+            self.lvs_power_loss * self.tick,
+            BrightSide.lvs_voltage,
+            BrightSide.lvs_current
+        )
 
-        self.basic_motor = simulation.BasicMotor()
+        self.basic_motor = BasicMotor(
+            BrightSide.vehicle_mass,
+            BrightSide.road_friction,
+            BrightSide.tire_radius,
+            BrightSide.vehicle_frontal_area,
+            BrightSide.drag_coefficient
+        )
 
-        self.basic_regen = simulation.BasicRegen()
+        self.basic_regen = BasicRegen(
+            BrightSide.vehicle_mass
+        )
 
-        self.gis = simulation.GIS(self.origin_coord, self.dest_coord, self.waypoints,
-                                  self.race_type, current_coord=self.current_coord, hash_key=self.hash_key)
+        self.route_data = query_npz_from_cache("route", f"route_data_{self.race_type}", str(self.hash_key))
+
+        self.gis = GIS(
+            self.route_data,
+            self.origin_coord,
+            self.current_coord
+        )
 
         self.route_coords = self.gis.get_path()
 
-        self.basic_regen = simulation.BasicRegen()
-
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
-        self.weather = simulation.SolcastForecasts(self.route_coords,
-                                                   self.race,
-                                                   origin_coord=self.gis.launch_point,
-                                                   hash_key=self.hash_key)
-
-        self.time_of_initialization = self.weather.last_updated_time  # Real Time
+        self.weather_forecasts = query_npz_from_cache("weather", f"weather_data_{self.race_type}_SOLCAST", str(self.hash_key))["weather_forecast"]
 
         self.simulation_duration = builder.race_duration * 3600 * 24 - self.start_time
 
-        self.solar_calculations = simulation.SolcastSolarCalculations(race=self.race)
-
-        self.plotting = simulation.Plotting()
+        self.plotting = Plotting()
 
         # All attributes ABOVE will NOT be modified when the model is simulated. All attributes BELOW this WILL be
         # mutated over the course of simulation. Ensure that when you modify the behaviour of Simulation that this
@@ -168,6 +193,14 @@ class Simulation:
 
         # A Model is a (mostly) immutable container for simulation calculations and results
         self._model = None
+
+        # Object carrying and calculating meteorological state - could move this into Model
+        self.meteorology = IrradiantMeteorology(
+            race=self.race,
+            weather_forecasts=self.weather_forecasts
+        )
+
+        self.time_of_initialization = self.meteorology.last_updated_time  # Real Time
 
     def __hash__(self):
         hash_string = str(self.origin_coord) + str(self.dest_coord)
@@ -229,10 +262,10 @@ class Simulation:
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
-        speed_kmh = core.constrain_speeds(self.gis.speed_limits.astype(float), speed_kmh, self.tick)
+        speed_kmh = core.constrain_speeds(self.route_data["speed_limits"].astype(float), speed_kmh, self.tick)
 
         # ------ Run calculations and get result and modified speed array -------
-        self._model = simulation.Model(self, speed_kmh)
+        self._model = Model(self, speed_kmh)
         self._model.run_simulation_calculations()
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
@@ -325,7 +358,7 @@ class Simulation:
     @simulation_property
     def was_successful(self):
         state_of_charge = self.get_results("state_of_charge")
-        if np.min(np.abs(state_of_charge)) < 1e-03:
+        if np.min(state_of_charge) < 0.0:
             return False
         return True
 
@@ -345,15 +378,16 @@ class Simulation:
 
         """
 
-        return helpers.get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:], self.granularity).sum().astype(int)
+        return helpers.get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:],
+                                                       self.granularity).sum().astype(int)
 
     def get_race_length(self):
         try:
             value = self.get_results("max_route_distance")
-        except simulation.PrematureDataRecoveryError:
+        except PrematureDataRecoveryError:
             speed_kmh = np.array([30] * self.get_driving_time_divisions())
             if self._model is None:
-                self._model = simulation.Model(self, speed_kmh)
+                self._model = Model(self, speed_kmh)
             self._model.run_simulation_calculations()
             value = self.get_results("max_route_distance")
 

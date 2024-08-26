@@ -1,6 +1,8 @@
 import datetime
 import functools
 import math
+import os
+import pathlib
 
 import numpy as np
 import pandas as pd
@@ -14,7 +16,8 @@ from bokeh.plotting import figure, show, output_file
 from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from numba import jit
-from simulation.common import DayBreak, Race
+from simulation.common import BrightSide
+from physics.environment.race import Race
 from haversine import haversine, Unit
 
 
@@ -142,7 +145,7 @@ def apply_deceleration(input_speed_array, tick):
     :rtype: np.ndarray
 
     """
-    max_deceleration_per_tick = DayBreak.max_deceleration_kmh_per_s*tick
+    max_deceleration_per_tick = BrightSide.max_deceleration_kmh_per_s*tick
 
     if input_speed_array is None:
         return np.array([])
@@ -173,7 +176,7 @@ def apply_acceleration(input_speed_array, tick):
     :rtype: np.ndarray
 
     """
-    max_acceleration_per_tick = DayBreak.max_acceleration_kmh_per_s*tick
+    max_acceleration_per_tick = BrightSide.max_acceleration_kmh_per_s*tick
 
     if input_speed_array is None:
         return np.array([])
@@ -246,7 +249,7 @@ def reshape_speed_array(race: Race, speed, granularity, start_time: int, tick=1)
 
     speed_mapped = map_array_to_targets(speed, get_granularity_reduced_boolean(speed_boolean_array, granularity))
 
-    reshaped_tick_count = (race.race_duration - start_time) / tick
+    reshaped_tick_count = math.ceil((race.race_duration - start_time) / float(tick))
     speed_mapped_per_tick = reshape_and_repeat(speed_mapped, reshaped_tick_count)
     speed_smoothed_kmh = apply_deceleration(apply_acceleration(speed_mapped_per_tick, tick), tick)
 
@@ -303,7 +306,7 @@ def calculate_path_distances(coords):
     for u, v in zip(coords, coords_offset):
         path_distances.append(haversine(u, v, unit=Unit.METERS))
 
-    return path_distances
+    return np.array(path_distances)
 
 
 @jit(nopython=True)
@@ -588,16 +591,6 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
         end_index = int(len(timestamps) * plot_portion[1])
         timestamps = timestamps[beginning_index:end_index]
 
-    if plot_portion != (0.0, 1.0):
-        for index, array in enumerate(arrays_to_plot):
-            beginning_index = int(len(array) * plot_portion[0])
-            end_index = int(len(array) * plot_portion[1])
-            arrays_to_plot[index] = array[beginning_index:end_index]
-
-        beginning_index = int(len(timestamps) * plot_portion[0])
-        end_index = int(len(timestamps) * plot_portion[1])
-        timestamps = timestamps[beginning_index:end_index]
-
     compress_constant = max(int(timestamps.shape[0] / 5000), 1)
 
     for index, array in enumerate(arrays_to_plot):
@@ -628,11 +621,13 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
 
         figures[index].add_tools(hover_tool)
 
-    grid = gridplot(figures, sizing_mode="scale_both",
-                    ncols=3, plot_height=200, plot_width=300)
+    grid = gridplot(figures, ncols=3)
 
     if save:
-        output_file(filename=graph_title + '.html', title=graph_title)
+        filename = graph_title + '.html'
+        filepath = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "html"
+        os.makedirs(filepath / "html", exist_ok=True)
+        output_file(filename=str(filepath / filename), title=graph_title)
 
     show(grid)
 

@@ -1,109 +1,70 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm", "setuptools-git-versioning", "setuptools-rust"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
-name = "UBC-Solar-Simulation"
+[tool.poetry]
+name = "ubc-solar-simulation"
+version = "1.1.0"
 authors = [
-    {name = "UBC Solar", email = "software@ubcsolar.com"},
-    {name = "Fisher Xue"},
-    {name = "Mihir Nimgade"},
-    {name = "Chris Chang"},
-    {name = "David Widjaja"},
-    {name = "Justin Hua"},
-    {name = "Ilya Veksler"},
-    {name = "Renu Rajamagesh"},
-    {name = "Ritchie Xia"},
-    {name = "Erik Langille"},
-    {name = "Chris Aung"},
-    {name = "Nicolas Ric"},
-    {name = "Ishaan Trivedi"},
-    {name = "Jason Liang"},
-    {name = "Felix Toft"},
-    {name = "Mack Wilson"},
-    {name = "Jonah Lee"},
-    {name = "Tamzeed Quazi"},
-    {name = "Joshua Riefman"}
+    "UBC Solar Strategy Team <strategy@ubcsolar.com>",
+    "Joshua Riefman <joshuariefman@gmail.com>"
 ]
 maintainers = [
-    {name = "UBC Solar", email = "software@ubcsolar.com"},
-    {name = "Joshua Riefman", email = "joshuariefman@gmail.com"},
-    {name = "Renu Rajamagmesh"},
-    {name = "Felix Toft"},
-    {name = "Mack Wilson"},
-    {name = "Jonah Lee"},
-    {name = "Tamzeed Quazi"},
+    "UBC Solar Strategy Team <strategy@ubcsolar.com>",
+    "Joshua Riefman <joshuariefman@gmail.com>"
 ]
 description = "UBC Solar's Simulation Environment"
 readme = "README.md"
-requires-python = ">=3.8"
 keywords = ["car", "simulation", "solar"]
-license = { file = "LICENSE"}
+license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Rust",
     "Natural Language :: English",
     "Topic :: Scientific/Engineering :: Physics"
 ]
-dependencies = [
-    "bayesian_optimization==1.4.3",
-    "bokeh==2.3.3",
-    "matplotlib",
-    "numpy",
-    "pandas",
-    "Pillow==9.4.0",
-    "plotly==5.6.0",
-    "polyline==1.4.0",
-    "pytest==7.1.1",
-    "python-dotenv==1.0.0",
-    "pytz==2021.3",
-    "requests==2.26.0",
-    "scikit_learn==1.2.2",
-    "setuptools==61.2.0 ",
-    "timezonefinder==6.0.1",
-    "tqdm==4.64.0",
-    "strenum==0.4.15",
-    "perlin-noise==1.12",
-    "cffi==1.15.1",
-    "numba==0.57.1",
-    "pygad==3.0.1",
-    "perlin-noise==1.12",
-    "haversine==2.8.1",
-    "gitpython==3.1.42",
-    "google-api-core==2.17.1",
-    "google-api-python-client==2.120.0",
-    "google-auth==2.28.1",
-    "google-auth-httplib2==0.2.0",
-    "google-auth-oauthlib==1.2.0",
-    "googleapis-common-protos==1.62.0",
-    "dill==0.3.8",
-    "solcast==1.2.3"
+homepage = "https://ubcsolar.com"
+repository = "https://github.com/UBC-Solar/Simulation"
+documentation = "https://wiki.ubcsolar.com"
+packages = [
+    {include = "simulation"}
 ]
-dynamic = ["version"]
-
-[project.urls]
-Homepage = "https://ubcsolar.com"
-Repository = "https://github.com/UBC-Solar/Simulation"
-Documentation = "https://wiki.ubcsolar.com"
-
-[tool.setuptools-git-versioning]
-enabled = true
+package-mode = false
 
 [tool.setuptools]
 packages = ["simulation"]
 
-[project.scripts]
-run_simulation = "simulation.cmd.run_simulation:main"
-simulation_health_check = "simulation.cmd.run_simulation:_health_check"
-build_simulation = "simulation.cmd.run_simulation:_execute_build_script"
-
-[[tool.setuptools-rust.ext-modules]]
-# Private Rust extension module to be nested into the Python package
-target = "core"
-
-path = "Cargo.toml"      # Default value, can be omitted
-binding = "PyO3"         # Default value, can be omitted
-py-limited-api = "auto"  # Default value, can be omitted
-
-[tool.maturin]
-features = ["pyo3/extension-module"]
+[tool.poetry.dependencies]
+python = "^3.10"
+bayesian_optimization = "^1.4.3"
+matplotlib = "^3.7.2"
+Pillow = "^9.4.0"
+plotly = "^5.6.0"
+polyline = "^1.4.0"
+pytest = "^7.1.1"
+python-dotenv = "^1.0.0"
+pytz = "^2021.3"
+requests = "^2.26.0"
+scikit_learn = "^1.2.2"
+setuptools = "^61.2.0 "
+timezonefinder = "^6.0.1"
+tqdm = "^4.64.0"
+strenum = "^0.4.15"
+perlin-noise = "^1.12"
+cffi = "^1.15.1"
+pygad = "^3.0.1"
+haversine = "^2.8.1"
+gitpython = "^3.1.42"
+google-api-core = "^2.17.1"
+google-api-python-client = "^2.120.0"
+google-auth = "^2.28.1"
+google-auth-httplib2 = "^0.2.0"
+google-auth-oauthlib = "^1.2.0"
+googleapis-common-protos = "^1.62.0"
+dill = "^0.3.8"
+solcast = "^1.2.3"
+tzlocal = "^5.2"
+mplcursors = "^0.5.3"
+pandas = "^2.2.2"
+bokeh = "^3.5.1"
+ubc-solar-physics = {git = "https://github.com/UBC-Solar/physics.git", rev = "main"}

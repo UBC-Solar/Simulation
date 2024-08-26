@@ -65,7 +65,7 @@ def main(settings):
 
     filename = get_random_string(7) + ".npy"
     np.save(speeds_directory / filename, results_genetic)
-    print(f"Saved optimized results in: {filename}.npy\n")
+    print(f"Saved optimized results in: {filename}\n")
 
 
 def get_random_string(length: int) -> str:

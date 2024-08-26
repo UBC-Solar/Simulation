@@ -8,13 +8,15 @@ This document contains information on how to get setup with the Simulation frame
 
 For more detailed information on the inner workings of the simulation please refer to the [wiki](https://github.com/UBC-Solar/Simulation/wiki).
 
+For instructions on how to use the scripts provided, see our [usage guide](simulation/cmd/USAGE_GUIDE.md).
+
 ## Getting started
 
 ### Prerequisites
 
-- Python 3.8 or above (https://www.python.org/downloads/)
+- Python 3.10 or above (https://www.python.org/downloads/)
 - Git version control (https://git-scm.com/downloads)
-- pip Python package installer (should come with your Python installation)
+- Poetry dependency manager (https://python-poetry.org/docs/)
 
 Open up your terminal/command prompt and execute the following commands to check your installations.
 
@@ -24,15 +26,17 @@ Open up your terminal/command prompt and execute the following commands to check
 git --version
 ```
 
-The above command should return a version number if you have Git installed.
-
 - Check your Python installation by running:
 
 ```bash
-python --version
+python3 --version
 ```
 
-NOTE: Any Python version before 3.8 is not supported so please make sure that your Python version is in the format 3.8.x or above.
+- Check your Poetry installation by running:
+
+```bash
+poetry --version
+```
 
 ## Installation
 
@@ -48,106 +52,55 @@ NOTE: Any Python version before 3.8 is not supported so please make sure that yo
     cd Simulation
     ```
 
-- To install the simulation package, run the following:
+- Simulation uses `poetry` to manage dependencies. First, we will create a virtual environment.
 
-    ```bash
-    pip install .
-    ```
+> On Windows, the command to activate a virtual environment is `.venv\Scripts\activate` instead of `source .venv/bin/activate`. 
 
-    If the above command doesn't work, try the one below:
+  ```bash
+  python3 -m venv .venv
+  source .venv/bin/activate
+  ```
 
-    ```bash
-    pip3 install .
-    ```
+  - Now, use `poetry` to install dependencies.
+  
+  ```bash
+  poetry install
+  ```
 
-    If neither work, you either do not have pip installed or are not in the correct directory.
+- You should then be able to run the command `simulation_health_check`, which will ensure everything is working properly.
 
-- Next, run the build command to complete the build which will attempt to compile a few libraries to improve performance.
-    ```bash
-    build_simulation
-    ```
-  You can also run the script directly by navigating to the "Simulation" project root directory. 
-    ```bash
-    python build.py
-    ```
-
-    If the above command doesn't work, try the one below:
-
-    ```bash
-    python3 build.py
-    ```
-
-- If all the commands worked, you should then be able to run the command `simulation_health_check`, which will ensure everything is working properly.
-
-```bash
-simulation_health_check
-```
+  ```bash
+  simulation_health_check
+  ```
+  
   You should see a dump of information ending with a "Simulation was successful!", indicating that everything worked properly.
+
+## Preparing Simulation
+
+- Simulation requires external data in order to construct the physical environment that our cars will traverse. As such, you'll need API keys for Google Maps's Directions API, and one of Solcast's Irradiance and Weather Forecast API or Openweather's One Call API. _UBC Solar members can acquire these from the Strategy Lead_.
+  - Once you have acquired the necessary API keys, you can either set the global environment variables `GOOGLE_MAPS_API_KEY` and `SOLCAST_API_KEY` or `OPENWEATHER_API_KEY`, or you can place them in a `.env` file, replacing `$your_key$` with your API keys.
+    ```
+    GOOGLE_MAPS_API_KEY=$your_key$
+    SOLCAST_API_KEY=$your_key$
+    ```
+  - If you are trying to simulate FSGP, for example, modify `start_year`, `start_month`, and `start_day` in `simulation/config/settings_FSGP.json` as needed such that you are trying to simulate at a valid time for FSGP. Simulation can _only simulate the near future_, so if the dates are such that FSGP is in the past or distant future (beyond the length of the race) then it will fail to gather weather forecasts.
+  - Now, run the following commands to invoke requests to the necessary APIs, which will cache the necessary data. See the [usage guide](simulation/cmd/USAGE_GUIDE.md) for further details on the scripts being invoked.
+    ```bash
+    python3 simulation/cmd/compile_races.py
+    python3 simulation/cmd/cache_data.py --api WEATHER --race FSGP
+    python3 simulation/cmd/update_environment.py --race FSGP
+    ```
 
 ## Run Simulation
 
-To run Simulation, you can run the command `run_simulation`. This section covers command-line usage; to use Simulation as a part of a project, review the [wiki](https://github.com/UBC-Solar/Simulation/wiki).
-
-```bash
-run_simulation
-```
-
-#### Windows
-Or, you can run the script directly. Before running the following commands make sure you have navigated to the "Simulation" directory. Please note support those in `examples` and `examples/archive` has discontinued.
-
-#### Unix
-
-```bash
-python3 simulation/cmd/run_simulation.py
-```
-#### Windows
-
-```bash
-python .\simulation\cmd\run_simulation.py
-```
-
-### Arguments
-In both cases, you can pass a set of execution parameters.
-You can view a list of valid arguments and settings that Simulation can accept with the `-help` command.
-
-#### Unix
-
-```bash
-python3 simulation/cmd/run_simulation.py -help
-```
-#### Windows
-
-```bash
-python .\simulation\cmd\run_simulation.py -help
-```
-
-### Testing
-
-To run the pre-written tests and ensure the simulation package is functioning correctly, navigate to the "Simulation" folder on your terminal, and run:
-
-``` bash
-pytest
-```
-
-To run the tests and show the test coverage, do 
-```
-pip install pytest-cov
-pytest --cov=simulation tests/
-```
-
-If your terminal returns something like "pytest is not recognized as an internal or external command...", install PyTest by executing the following:
-
-``` bash
-pip install -U pytest
-```
-
-Or:
-
-```bash
-pip3 install -U pytest
-```
+In order to learn how to use Simulation, please see our [usage guide](simulation/cmd/USAGE_GUIDE.md).
 
 
 ### Troubleshooting
 
-If you are having errors related to a specific package, it is likely that your system has installed an incompatible (usually too recent) version. It is known that the newest versions of Bokeh and Bayesian Optimization **WILL** cause errors to be raised.
+You may run into Python path shenanigans, which is usually indicated by trying to run Simulation and getting `ModuleNotFoundError: no module named simulation.utils`. If this is the case, StackOverflow and Google will be your best friend but you can try the following command.
+```bash
+PYTHONPATH="/path/to/Simulation:$PYTHONPATH" && export PYTHONPATH
+```
+
+If you are having errors related to a specific package, it is likely that your system has installed an incompatible (usually too recent) version. Double check that you installed the exact versions of suspect packages.
