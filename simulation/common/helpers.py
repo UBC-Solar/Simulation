@@ -25,6 +25,7 @@ from haversine import haversine, Unit
 Description: contains the simulation's helper functions.
 """
 
+
 def timeit(func):
     """
 
@@ -621,7 +622,7 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
 
         figures[index].add_tools(hover_tool)
 
-    grid = gridplot(figures, ncols=3)
+    grid = gridplot(figures, ncols=3, height=400, width=450)
 
     if save:
         filename = graph_title + '.html'

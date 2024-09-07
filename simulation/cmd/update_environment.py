@@ -7,8 +7,7 @@ from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 import pytz
 from tzlocal import get_localzone
-from simulation.utils import Query
-from simulation.utils.query import APIType
+from simulation.utils import Query, APIType
 from simulation.config import config_directory
 from simulation.cache.race import race_directory
 from physics.environment.race import Race, load_race
