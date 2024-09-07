@@ -1,5 +1,7 @@
 # UBC Solar's ASC and FSGP Simulation
 
+<!-- marker-index-start -->
+
 [![Build Status](https://app.travis-ci.com/UBC-Solar/Simulation.svg?branch=master)](https://app.travis-ci.com/UBC-Solar/Simulation)
 
 Welcome to UBC Solar's race strategy simulation environment! The objective of this simulation is to guide UBC Solar's race strategy by creating a model to predict the performance of the UBC Solar cars in the American Solar Challenge (ASC) and Formula Sun Grand Prix (FSGP). 
@@ -104,3 +106,5 @@ PYTHONPATH="/path/to/Simulation:$PYTHONPATH" && export PYTHONPATH
 ```
 
 If you are having errors related to a specific package, it is likely that your system has installed an incompatible (usually too recent) version. Double check that you installed the exact versions of suspect packages.
+
+<!-- marker-index-end -->

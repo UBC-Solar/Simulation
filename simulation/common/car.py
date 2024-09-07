@@ -8,6 +8,14 @@ This class stores constants for UBC Solar's solar-powered vehicles.
 
 
 class Car:
+    """
+    This class stores all physical constants describing a specific car.
+
+    Data will be read from a "`car`.json" file located in `simulation/config/` for a given `car`.
+
+    Data will be read in at runtime and made available through
+    attribute access, such as `car.mass` or `car.tire_radius`.
+    """
     def __init__(self, name: str):
         config_path = os.path.join(config_directory, f"{name}.json")
 
