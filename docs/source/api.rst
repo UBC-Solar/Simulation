@@ -9,3 +9,5 @@ API Reference
    common/index
    data/index
    model/index
+   optimization/index
+   utils/index

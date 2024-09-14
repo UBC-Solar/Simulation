@@ -19,55 +19,6 @@ from simulation.config import config_directory
 from simulation.utils import InputBounds
 from simulation.model.Simulation import Simulation, SimulationReturnType
 
-"""
-
-Genetic Optimization (also known as Genetic Algorithm, or GA) follows the following primary steps:
-
-Fitness Evaluation -> Parent Selection -> Offspring Creation -> Repeat
-
-See the following resources for explanations of genetic algorithms and different hyperparameters:
-1. start here:
-    https://blog.derlin.ch/genetic-algorithms-with-pygad 
-2. pygad:
-    https://pygad.readthedocs.io/en/latest/pygad.html
-3. genetic algorithm:
-    https://towardsdatascience.com/introduction-to-optimization-with-genetic-algorithm-2f5001d9964b
-4. parent selection:
-    https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)
-5. crossover types:
-    https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)
-
-Notable Vocabulary:
-
-1. Chromosome: a chromosome is a set of genes that describe a potential solution. In the context of UBC Solar's 
-Simulation where we are optimizing driving speeds, a chromosome is a driving speeds array.
-
-2. Gene: a gene is an element of a chromosome and genes are what will be modified through the course of optimization.
-In our context where a chromosome is an abstraction of a driving speeds array, a gene represents the value for
-a single driving speed interval. 
-
-3. Generation: a generation can be thought of as a single iteration of the optimization sequence. The members of a 
-generation will be evaluated, parents selected from, and then mated to create offspring. Depending on hyperparameters,
-some chromosomes from a given generation may proceed to be a member of the following generation.
-
-3. Population: the set of chromosomes that exist within a generation, a generation's population is 
-the possible solutions that are "participating" in the optimization process during a given generation. 
-To begin the optimization process, we create an initial population of guess solutions as a launching point.
-
-5. Offspring: the resulting chromosome from crossover and mutation of parents that have been selected following
-fitness evaluation. Usually, all offspring proceed to the next generation where they will then be evaluated, and 
-process continues.
-
-6. Convergence: in the context of GA, convergence is how quickly GA arrives at a maximum (local or global) fitness 
-value. On a Fitness vs Generation graph, convergence is the rate in which fitness plateaus. 
-
-7. "Successful Simulation": in its current state, Simulation can simulate a driving speeds array that 
-results in state of charge dropping below 0%, which is a physical impossibility. A successful simulation is 
-one where this does not occur, and a successful/valid driving speeds array is one that will result in a successful
-simulation.
-
-"""
-
 
 class OptimizationSettings:
     """
@@ -179,21 +130,56 @@ class OptimizationSettings:
 
 class GeneticOptimization(BaseOptimization):
     """
+    Genetic Optimization (also known as Genetic Algorithm, or GA) follows the following primary steps:
 
-    GeneticOptimization uses the PyGAD module to implement a genetic algorithm-based optimization sequence.
+    Fitness Evaluation -> Parent Selection -> Offspring Creation -> Repeat
+
+    See the following resources for explanations of genetic algorithms and different hyperparameters:
+    1. start here:
+        https://blog.derlin.ch/genetic-algorithms-with-pygad
+    2. pygad:
+        https://pygad.readthedocs.io/en/latest/pygad.html
+    3. genetic algorithm:
+        https://towardsdatascience.com/introduction-to-optimization-with-genetic-algorithm-2f5001d9964b
+    4. parent selection:
+        https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)
+    5. crossover types:
+        https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)
+
+    Notable Vocabulary:
+
+    1. Chromosome: a chromosome is a set of genes that describe a potential solution. In the context of UBC Solar's
+    Simulation where we are optimizing driving speeds, a chromosome is a driving speeds array.
+
+    2. Gene: a gene is an element of a chromosome and genes are what will be modified through the course of optimization.
+    In our context where a chromosome is an abstraction of a driving speeds array, a gene represents the value for
+    a single driving speed interval.
+
+    3. Generation: a generation can be thought of as a single iteration of the optimization sequence. The members of a
+    generation will be evaluated, parents selected from, and then mated to create offspring. Depending on hyperparameters,
+    some chromosomes from a given generation may proceed to be a member of the following generation.
+
+    3. Population: the set of chromosomes that exist within a generation, a generation's population is
+    the possible solutions that are "participating" in the optimization process during a given generation.
+    To begin the optimization process, we create an initial population of guess solutions as a launching point.
+
+    5. Offspring: the resulting chromosome from crossover and mutation of parents that have been selected following
+    fitness evaluation. Usually, all offspring proceed to the next generation where they will then be evaluated, and
+    process continues.
+
+    6. Convergence: in the context of GA, convergence is how quickly GA arrives at a maximum (local or global) fitness
+    value. On a Fitness vs Generation graph, convergence is the rate in which fitness plateaus.
+
+    7. "Successful Simulation": in its current state, Simulation can simulate a driving speeds array that
+    results in state of charge dropping below 0%, which is a physical impossibility. A successful simulation is
+    one where this does not occur, and a successful/valid driving speeds array is one that will result in a successful
+    simulation.
 
     Briefly, GA begins by evaluating an initial population, selecting certain potential solutions (chromosomes) to be
     parents, creating offspring solutions from the parents, and repeating for a certain number of generations or
     until a stopping condition is met.
 
-    To learn how GA works, read the resources enumerated at the top of this file (`genetic.py`).
-
-    To modify GA's default hyperparameters, modify the default parameters of OptimizationSettings' constructor.
-
-    To evaluate different hyperparameter configurations, use the "run_hyperparameter_search"
-    method in `run_simulation.py`. To view already evaluated hyperparameters, view the "Hyperparameter Search"
-    folder in UBC Solar's Software Google Drive.
-
+    To modify GA's default hyperparameters, modify `optimization_settings.json` in `simulation/config/`.
     """
 
     def __init__(self, model: Simulation, bounds: InputBounds, force_new_population_flag: bool = False,

@@ -6,7 +6,6 @@ UBC Solar Simulation Documentation
    :maxdepth: 3
    :caption: Contents:
 
-   README.md
    api
 
 .. include:: ../../README.md
