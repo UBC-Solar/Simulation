@@ -89,13 +89,9 @@ poetry --version
   - Now, run the following commands to invoke requests to the necessary APIs, which will cache the necessary data. See the [usage guide](simulation/cmd/USAGE_GUIDE.md) for further details on the scripts being invoked.
     ```bash
     python3 simulation/cmd/compile_races.py
-    python3 simulation/cmd/cache_data.py --api WEATHER --race FSGP
+    python3 simulation/cmd/cache_data.py --api GIS --race FSGP
     python3 simulation/cmd/update_environment.py --race FSGP
     ```
-
-## Run Simulation
-
-In order to learn how to use Simulation, please see our [usage guide](simulation/cmd/USAGE_GUIDE.md).
 
 
 ### Troubleshooting
