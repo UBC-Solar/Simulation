@@ -110,7 +110,7 @@ twine==5.1.1
 typing_extensions==4.12.2
 tzdata==2024.1
 tzlocal==5.2
-ubc-solar-physics @ git+https://github.com/UBC-Solar/physics.git@15c108c5056a36ffe6b53e74bab70921d536c71e
+ubc-solar-physics @ git+https://github.com/UBC-Solar/physics.git@9e917435d307823cbd41c6cf53b6665e0c36dbe8
 uritemplate==4.1.1
 urllib3==2.2.2
 xyzservices==2024.6.0
