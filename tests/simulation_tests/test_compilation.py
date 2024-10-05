@@ -42,13 +42,14 @@ def test_consistent_race_data():
             "start_day": 15
         }
     )
-    Race("FSGP", data)
+    race = Race("FSGP", data)
     initial_conditions, model_parameters = data
     simulation_builder = SimulationBuilder() \
         .set_initial_conditions(initial_conditions) \
-        .set_model_parameters(model_parameters, Race.RaceType(race_type)) \
+        .set_model_parameters(model_parameters, Race.RaceType("FSGP")) \
         .set_return_type(SimulationReturnType.void) \
-        .set_granularity(granularity)
+        .set_granularity(1) \
+        .set_race_data(race)
     simulation_builder.get()
 
 
@@ -129,13 +130,14 @@ def test_inconsistent_race_data():
             "start_day": 15
         }
     )
-    Race("FSGP", data2)
+    race = Race("FSGP", data2)
     initial_conditions, model_parameters = data
     simulation_builder = SimulationBuilder() \
         .set_initial_conditions(initial_conditions) \
-        .set_model_parameters(model_parameters, Race.RaceType(race_type)) \
+        .set_model_parameters(model_parameters, Race.RaceType("FSGP")) \
         .set_return_type(SimulationReturnType.void) \
-        .set_granularity(granularity)
+        .set_granularity(1) \
+        .set_race_data(race)
 
     with pytest.raises(RaceConstantsInconsistentError):
         simulation_builder.get()
