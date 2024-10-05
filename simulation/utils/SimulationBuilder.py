@@ -1,3 +1,7 @@
+import json
+
+from simulation.cmd.run_simulation import RaceDataNotMatching
+from simulation.config import config_directory
 from simulation.model.Simulation import Simulation, SimulationReturnType
 
 
@@ -62,4 +66,12 @@ class SimulationBuilder:
         return self
 
     def get(self):
-        return Simulation(self)
+        param1 = self.race_constants()
+        config_path = config_directory / f"settings_{self.race_type}.json"
+        with open(config_path) as f:
+            param2 = json.load(f)
+        if param1 == param2:
+            return Simulation(self)
+        else:
+            raise RaceDataNotMatching
+

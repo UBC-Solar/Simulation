@@ -1,4 +1,6 @@
 import pytest
+
+from simulation.cmd.run_simulation import RaceDataNotMatching
 from simulation.utils.SimulationBuilder import SimulationBuilder
 from simulation.model.Simulation import Simulation, SimulationReturnType
 from physics.environment.race import Race
@@ -139,5 +141,5 @@ def test_inconsistent_race_data():
         .set_granularity(1) \
         .set_race_data(race)
 
-    with pytest.raises(RaceConstantsInconsistentError):
+    with pytest.raises(RaceDataNotMatching):
         simulation_builder.get()

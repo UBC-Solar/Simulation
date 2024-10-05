@@ -1,8 +1,10 @@
 import argparse
+import os
 
 import numpy as np
 import json
 
+from simulation.cache.race import race_directory
 from simulation.config import config_directory, speeds_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
 from simulation.model.Simulation import Simulation, SimulationReturnType
@@ -24,6 +26,11 @@ class SimulationSettings:
         self.granularity = granularity
 
 
+class RaceDataNotMatching(Exception):
+    "Raised when race data does not match config data"
+    pass
+
+
 def run_simulation(settings: SimulationSettings, speeds_filename: str, plot_results: bool = True):
     """
     This is the entry point to Simulation.
@@ -39,15 +46,11 @@ def run_simulation(settings: SimulationSettings, speeds_filename: str, plot_resu
 
     """
 
-    # Build simulation model
-    initial_conditions, model_parameters = get_default_settings(Race.RaceType(settings.race_type))
-    simulation_builder = SimulationBuilder() \
-        .set_initial_conditions(initial_conditions) \
-        .set_model_parameters(model_parameters, Race.RaceType(settings.race_type)) \
-        .set_return_type(settings.return_type) \
-        .set_granularity(settings.granularity)
-
-    simulation_model = simulation_builder.get()
+    try:
+        simulation_model = build_model(settings)
+    except RaceDataNotMatching:
+        compile_race()
+        simulation_model = build_model(settings)
 
     # Initialize a "guess" speed array
     driving_hours = simulation_model.get_driving_time_divisions()
@@ -144,6 +147,32 @@ def _health_check() -> None:
 
     print("Simulation was successful!")
 
+def build_model(settings: SimulationSettings):
+    # Build simulation model
+    initial_conditions, model_parameters = get_default_settings(Race.RaceType(settings.race_type))
+    simulation_builder = SimulationBuilder() \
+        .set_initial_conditions(initial_conditions) \
+        .set_model_parameters(model_parameters, Race.RaceType(settings.race_type)) \
+        .set_return_type(settings.return_type) \
+        .set_granularity(settings.granularity)
+
+    return simulation_builder.get()
+
+def compile_race():
+    fsgp_config_path = os.path.join(config_directory, f"settings_FSGP.json")
+    asc_config_path = os.path.join(config_directory, f"settings_ASC.json")
+
+    with open(fsgp_config_path) as f:
+        fsgp_race_constants = json.load(f)
+
+    with open(asc_config_path) as f:
+        asc_race_constants = json.load(f)
+
+    fsgp = Race(Race.FSGP, fsgp_race_constants)
+    fsgp.write(race_directory)
+
+    asc = Race(Race.ASC, asc_race_constants)
+    asc.write(race_directory)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
