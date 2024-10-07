@@ -14,7 +14,7 @@ from simulation.cache import query_npz_from_cache
 from simulation.common.exceptions import PrematureDataRecoveryError
 from simulation.utils.Plotting import Plotting
 from simulation.model.Model import Model
-from simulation.common import Race, load_race
+from simulation.common.race import Race, load_race
 
 from physics.models.arrays import BasicArray
 from physics.models.battery import BasicBattery

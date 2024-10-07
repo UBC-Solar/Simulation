@@ -8,7 +8,7 @@ from timezonefinder import TimezoneFinder
 import pytz
 from tzlocal import get_localzone
 from simulation.utils import Query, APIType
-from simulation.common import Race, load_race
+from simulation.common.race import Race, load_race
 from simulation.config import config_directory
 from simulation.cache.race import race_directory
 
