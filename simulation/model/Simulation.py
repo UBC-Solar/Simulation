@@ -14,6 +14,7 @@ from simulation.cache import query_npz_from_cache
 from simulation.common.exceptions import PrematureDataRecoveryError
 from simulation.utils.Plotting import Plotting
 from simulation.model.Model import Model
+from simulation.common import Race, load_race
 
 from physics.models.arrays import BasicArray
 from physics.models.battery import BasicBattery
@@ -23,7 +24,6 @@ from physics.models.regen import BasicRegen
 
 from physics.environment.gis import GIS
 from physics.environment.meteorology import IrradiantMeteorology, CloudedMeteorology
-from physics.environment.race import Race, load_race
 
 
 def simulation_property(func):
