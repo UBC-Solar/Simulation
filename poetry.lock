@@ -1170,35 +1170,6 @@ python-dateutil = ">=2.7"
 dev = ["meson-python (>=0.13.1)", "numpy (>=1.25)", "pybind11 (>=2.6)", "setuptools (>=64)", "setuptools_scm (>=7)"]
 
 [[package]]
-name = "maturin"
-version = "1.7.0"
-description = "Build and publish crates with pyo3, cffi and uniffi bindings as well as rust binaries as python packages"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "maturin-1.7.0-py3-none-linux_armv6l.whl", hash = "sha256:15fe7920391a128897714f6ed38ebbc771150410b795a55cefca73f089d5aecb"},
-    {file = "maturin-1.7.0-py3-none-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:87a1fae70f1a6ad694832c735abf9f010edc4971c5cf89d2e7a54651a1a3792a"},
-    {file = "maturin-1.7.0-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:6fd312c56846d3cafa7c45e362d96b526170e79b9adb5b8ea02a10c88906069c"},
-    {file = "maturin-1.7.0-py3-none-manylinux_2_12_i686.manylinux2010_i686.musllinux_1_1_i686.whl", hash = "sha256:928b82ceba924b1642c53f6684271e814b5ce5049cb4d35ff36bed078837eb83"},
-    {file = "maturin-1.7.0-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl", hash = "sha256:7460122333971b2492154c102d2981ae337ae0486dde7f4df7e645d724de59a5"},
-    {file = "maturin-1.7.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:1f521ebe0344db8260df0d12779aefc06c1f763cd654151cf4a238fe14f65dc1"},
-    {file = "maturin-1.7.0-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.musllinux_1_1_armv7l.whl", hash = "sha256:0af4f2a4cfb99206d414dec138dd3aac3f506eb8928b7e38dfac570461b393d6"},
-    {file = "maturin-1.7.0-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.musllinux_1_1_ppc64le.whl", hash = "sha256:29187d5c3e1e166c14eaadc63a8adc25b6bbb3e5b055d1bc87f6ca92b4b6e331"},
-    {file = "maturin-1.7.0-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:e9cd5b992b6c131c5f47c85e7bc266bf5bf94f29720856678431ce6c91b726df"},
-    {file = "maturin-1.7.0-py3-none-win32.whl", hash = "sha256:c1ae0b4162fb1152aea83098bf1b66a7bf6dd73fd1b108e6c4e22160118a997c"},
-    {file = "maturin-1.7.0-py3-none-win_amd64.whl", hash = "sha256:2bd8227e020a9308c076253f29224c53b08b2a4ed41fcd94b4eb9349684fcfe7"},
-    {file = "maturin-1.7.0-py3-none-win_arm64.whl", hash = "sha256:7c05226547778f31b73d48a19d11f57792bcc44f4047b84c73ea66cae2e62473"},
-    {file = "maturin-1.7.0.tar.gz", hash = "sha256:1ba5277dd7832dc6181d69a005182b97b3520945825058484ffd9296f2efb59c"},
-]
-
-[package.dependencies]
-tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
-
-[package.extras]
-patchelf = ["patchelf"]
-zig = ["ziglang (>=0.10.0,<0.13.0)"]
-
-[[package]]
 name = "mdurl"
 version = "0.1.2"
 description = "Markdown URL utilities"
@@ -2233,28 +2204,6 @@ slack = ["slack-sdk"]
 telegram = ["requests"]
 
 [[package]]
-name = "twine"
-version = "5.1.1"
-description = "Collection of utilities for publishing packages on PyPI"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "twine-5.1.1-py3-none-any.whl", hash = "sha256:215dbe7b4b94c2c50a7315c0275d2258399280fbb7d04182c7e55e24b5f93997"},
-    {file = "twine-5.1.1.tar.gz", hash = "sha256:9aa0825139c02b3434d913545c7b847a21c835e11597f5255842d457da2322db"},
-]
-
-[package.dependencies]
-importlib-metadata = ">=3.6"
-keyring = ">=15.1"
-pkginfo = ">=1.8.1,<1.11"
-readme-renderer = ">=35.0"
-requests = ">=2.20"
-requests-toolbelt = ">=0.8.0,<0.9.0 || >0.9.0"
-rfc3986 = ">=1.4.0"
-rich = ">=12.0.0"
-urllib3 = ">=1.26.0"
-
-[[package]]
 name = "tzdata"
 version = "2024.1"
 description = "Provider of IANA time zone data"
@@ -2284,12 +2233,38 @@ devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)
 
 [[package]]
 name = "ubc-solar-physics"
-version = "0.1.11"
+version = "1.1.0"
 description = "UBC Solar's Simulation Environment"
 optional = false
 python-versions = ">=3.9"
-files = []
-develop = false
+files = [
+    {file = "ubc_solar_physics-1.1.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d9fea7aeddad3a6645e2ff432c8e2bca455c4cca4f5d7f3ba37faa15f31bba8b"},
+    {file = "ubc_solar_physics-1.1.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:18a0428862b9229f36cf73ad62a86d3db4923db0ea9bcc8f18b1a13e55e83b45"},
+    {file = "ubc_solar_physics-1.1.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1ef67dcad65a110e71afa404fbe27bbb6ac72c27d42f7aac7325e8308018daa8"},
+    {file = "ubc_solar_physics-1.1.0-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6003edd522531c19da6edfc263fc083b9119010502667d44fc01b736c1d543c0"},
+    {file = "ubc_solar_physics-1.1.0-cp310-cp310-win_amd64.whl", hash = "sha256:214e88bcec2de7aad56ddb69dee1bc1460cb4a9fdc4458e3bbb50f531edc851a"},
+    {file = "ubc_solar_physics-1.1.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:40edd46fd9ca2d2e17e33a282f5e4b7e0173d9a46dd4651c37fa62b0a0e81a08"},
+    {file = "ubc_solar_physics-1.1.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:09b8964f7ed42f052d7d5dc348011d7b23013d34c3cfd645a6d6715873a543b7"},
+    {file = "ubc_solar_physics-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4d18be1a8331dd6eacbcd3d750f00a94a748bd9928b8c2f91f9c8e4e20fcc33b"},
+    {file = "ubc_solar_physics-1.1.0-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:8ed72aa9a89d5da363cd7c372fc80ca9b71b9222851111f69d7e2f83d62319b5"},
+    {file = "ubc_solar_physics-1.1.0-cp311-cp311-win_amd64.whl", hash = "sha256:ab5df16b8cc6d3c53c8f19feb19df4462fc77f82388553ab06b35a92dfcb5f98"},
+    {file = "ubc_solar_physics-1.1.0-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:a887bdcaff331a9d181866e65581a9646d6fd153aa0bad342bcfcf55f78c2ee7"},
+    {file = "ubc_solar_physics-1.1.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:74238ad3270f839d7178aa50d23ec0181c360a6a73f46965eaa6605c7dcb1bfc"},
+    {file = "ubc_solar_physics-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:befbfa4e345b66371027a51b4147774e4b0f5049b88729b13dae727e53765a75"},
+    {file = "ubc_solar_physics-1.1.0-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7b25d6152ab9986a8d17f2c98f3ff8cabf78fbd7a84945ffb3555438b21d9583"},
+    {file = "ubc_solar_physics-1.1.0-cp312-cp312-win_amd64.whl", hash = "sha256:1a36fafbaf9cca9fce02519afc1977198ddfb75b6cdb43530b02da424780b6df"},
+    {file = "ubc_solar_physics-1.1.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:dd4ef433f2bae2dee252d20cac2d7bd911e23f9725536030e77cf26f5579b84b"},
+    {file = "ubc_solar_physics-1.1.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:1b5ed46570fdee9119a5eedc72d5f48132412884d6b1637145fb461ff201fdeb"},
+    {file = "ubc_solar_physics-1.1.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a66ef3bbb9aba8504ef74b1be818b5b8cdae3f5daa6a53c221bbc982b6713bee"},
+    {file = "ubc_solar_physics-1.1.0-cp313-cp313-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7afa8544914d03d7281c6f8fd5b8e7ae322ad6f1e868d49e277af4e1c7012edd"},
+    {file = "ubc_solar_physics-1.1.0-cp313-cp313-win_amd64.whl", hash = "sha256:1276f222b176138acebe853b393ec5cdda472e567f346c1d3bc950f7e066b04a"},
+    {file = "ubc_solar_physics-1.1.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:c607a681be3a9d7501001dc8dd044fcb3d84f211c486368566940355b1f75ecd"},
+    {file = "ubc_solar_physics-1.1.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:152d2c06b0017147696f685847d72256cd8d76a9a0b22d0aa368a2bcd4a0adc1"},
+    {file = "ubc_solar_physics-1.1.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8f2f2ab3db259b4717ef9bb6743205e9d7c4dcf333ddfd3d418019c5eb908d99"},
+    {file = "ubc_solar_physics-1.1.0-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:f1eb1ce701ddc1d66275b40cc6abb4b2e657bd9cb8e2a15a351a747cb010ecba"},
+    {file = "ubc_solar_physics-1.1.0-cp39-cp39-win_amd64.whl", hash = "sha256:5326f9ef2372338003da3be0e8ce9eb19385cf3110e9bf595b487b7c132da202"},
+    {file = "ubc_solar_physics-1.1.0.tar.gz", hash = "sha256:36b46d141cf6eac842eacf0eef9e726e3c46830e710011f752325ef73b4e6153"},
+]
 
 [package.dependencies]
 "backports.tarfile" = "1.2.0"
@@ -2305,7 +2280,6 @@ importlib_metadata = "8.2.0"
 keyring = "25.3.0"
 llvmlite = "0.43.0"
 markdown-it-py = "3.0.0"
-maturin = "1.7.0"
 mdurl = "0.1.2"
 more-itertools = "10.4.0"
 nh3 = "0.2.18"
@@ -2319,15 +2293,8 @@ requests-toolbelt = "1.0.0"
 rfc3986 = "2.0.0"
 rich = "13.7.1"
 tqdm = "4.66.5"
-twine = "5.1.1"
 urllib3 = "2.2.2"
 zipp = "3.20.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/UBC-Solar/physics.git"
-reference = "main"
-resolved_reference = "15c108c5056a36ffe6b53e74bab70921d536c71e"
 
 [[package]]
 name = "uritemplate"
@@ -2386,4 +2353,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "2c03b356c196104a64c80cb4637d567f12e3434391c417fdae57420693c430e5"
+content-hash = "16142d08af67f980766009885bc28b8e736ba491bd423c14484e482537756e4e"
