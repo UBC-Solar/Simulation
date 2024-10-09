@@ -67,4 +67,4 @@ tzlocal = "^5.2"
 mplcursors = "^0.5.3"
 pandas = "^2.2.2"
 bokeh = "^3.5.1"
-ubc-solar-physics = {git = "https://github.com/UBC-Solar/physics.git", rev = "main"}
+ubc-solar-physics = "^1.1.0"

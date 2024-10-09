@@ -1,4 +1,4 @@
-from physics.environment.race import compile_races
+from simulation.common import compile_races
 from simulation.cache.race import race_directory
 from simulation.config import config_directory
 

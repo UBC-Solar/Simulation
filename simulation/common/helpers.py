@@ -17,7 +17,7 @@ from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from numba import jit
 from simulation.common import BrightSide
-from physics.environment.race import Race
+from simulation.common.race import Race
 from haversine import haversine, Unit
 
 
