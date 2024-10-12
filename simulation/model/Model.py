@@ -101,7 +101,7 @@ class Model:
 
         self.closest_gis_indices = self.simulation.gis.calculate_closest_gis_indices(self.distances)
 
-        self.simulation.meteorology.spatially_localize(self.cumulative_distances)
+        self.simulation.meteorology.spatially_localize(self.cumulative_distances, simplify_weather=True)
 
         self.path_distances = self.simulation.gis.get_path_distances()
         self.cumulative_distances = np.cumsum(self.path_distances)  # [cumulative_distances] = meters

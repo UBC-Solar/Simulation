@@ -20,7 +20,7 @@ from simulation.common.helpers import PJWHash
 from simulation.config import config_directory
 from simulation.cache.race import race_directory
 from simulation.common import BrightSide, helpers
-from physics.environment.race import Race, load_race
+from simulation.common.race import Race, load_race
 from simulation.cache import store_npz_to_cache, query_npz_from_cache
 
 
