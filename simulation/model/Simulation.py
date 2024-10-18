@@ -14,7 +14,8 @@ from simulation.cache import query_npz_from_cache
 from simulation.common.exceptions import PrematureDataRecoveryError
 from simulation.utils.Plotting import Plotting
 from simulation.model.Model import Model
-from simulation.common.race import Race, load_race
+from simulation.common.race import Race
+
 
 from physics.models.arrays import BasicArray
 from physics.models.battery import BasicBattery
@@ -106,7 +107,7 @@ class Simulation:
         assert builder.race_type in Race.RaceType, f"{builder.race_type} is not a valid race type!"
 
         self.race_type = builder.race_type
-        self.race = load_race(self.race_type, race_directory)
+        self.race = builder.race_data
         self.weather_provider = builder.weather_provider
 
         # ---- Granularity -----

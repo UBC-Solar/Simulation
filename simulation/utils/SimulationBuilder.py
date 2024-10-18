@@ -1,9 +1,13 @@
 import json
 
-from simulation.cmd.run_simulation import RaceDataNotMatching
+from simulation.common.race import hash_dict
 from simulation.config import config_directory
 from simulation.model.Simulation import Simulation, SimulationReturnType
 
+
+class RaceDataNotMatching(Exception):
+    "Raised when race data does not match config data"
+    pass
 
 class SimulationBuilder:
     """
@@ -12,6 +16,9 @@ class SimulationBuilder:
 
     """
     def __init__(self):
+
+        self.model_parameters = None
+        self.race_data = None
 
         # Initial Conditions
         self.current_coord = None
@@ -49,6 +56,7 @@ class SimulationBuilder:
         self.tick = args['tick']
         self.weather_provider = args['weather_provider']
         self.race_duration = len(args['days'])
+        self.model_parameters = args
 
         return self
 
@@ -65,13 +73,19 @@ class SimulationBuilder:
 
         return self
 
+    def set_race_data(self, race_data):
+        self.race_data = race_data
+
+        return self
+
     def get(self):
-        param1 = self.race_constants()
-        config_path = config_directory / f"settings_{self.race_type}.json"
-        with open(config_path) as f:
-            param2 = json.load(f)
+        param1 = self.race_data.race_data_hash
+        param2 = hash_dict(self.model_parameters)
+        print(f"Hash of race_data: {param1}")
+        print(f"Hash of model_parameters: {param2}")
         if param1 == param2:
             return Simulation(self)
         else:
             raise RaceDataNotMatching
+
 

@@ -1,5 +1,7 @@
 import argparse
 import os
+import pathlib
+import pickle
 
 import numpy as np
 import json
@@ -8,7 +10,8 @@ from simulation.cache.race import race_directory
 from simulation.config import config_directory, speeds_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
 from simulation.model.Simulation import Simulation, SimulationReturnType
-from simulation.common.race import Race
+from simulation.common.race import Race, load_race
+from simulation.utils.SimulationBuilder import RaceDataNotMatching
 
 
 class SimulationSettings:
@@ -26,9 +29,6 @@ class SimulationSettings:
         self.granularity = granularity
 
 
-class RaceDataNotMatching(Exception):
-    "Raised when race data does not match config data"
-    pass
 
 
 def run_simulation(settings: SimulationSettings, speeds_filename: str, plot_results: bool = True):
@@ -124,8 +124,11 @@ def build_basic_model(race_type: Race.RaceType = Race.FSGP, granularity: float =
         .set_initial_conditions(initial_conditions) \
         .set_model_parameters(model_parameters, Race.RaceType(race_type)) \
         .set_return_type(SimulationReturnType.void) \
-        .set_granularity(granularity)
+        .set_granularity(granularity) \
+        .set_race_data(load_race(race_type, pathlib.Path(__file__).parent))
     return simulation_builder.get()
+
+
 
 
 def _health_check() -> None:
@@ -154,7 +157,8 @@ def build_model(settings: SimulationSettings):
         .set_initial_conditions(initial_conditions) \
         .set_model_parameters(model_parameters, Race.RaceType(settings.race_type)) \
         .set_return_type(settings.return_type) \
-        .set_granularity(settings.granularity)
+        .set_granularity(settings.granularity) \
+        .set_race_data(load_race(Race.RaceType(settings.race_type), pathlib.Path(__file__).parent))
 
     return simulation_builder.get()
 

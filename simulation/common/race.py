@@ -34,6 +34,8 @@ class Race:
     ASC = RaceType.ASC
     FSGP = RaceType.FSGP
 
+
+
     def __init__(self, race_type: RaceType, race_constants: dict):
         self.race_type = race_type
 
@@ -44,6 +46,8 @@ class Race:
         self.race_duration = len(self.days) * 24 * 60 * 60  # Duration (s)
         self.driving_boolean = self.make_time_boolean("driving")
         self.charging_boolean = self.make_time_boolean("charging")
+
+        self.race_data_hash = hash_dict(race_constants)
 
     def __str__(self):
         return str(self.race_type)
@@ -71,7 +75,6 @@ def load_race(race_type: Race.RaceType, race_directory: pathlib.Path) -> Race:
     with open(race_directory / f"{str(race_type)}.pkl", 'rb') as infile:
         return pickle.load(infile)
 
-
 def compile_races(config_directory: pathlib.Path, race_directory: pathlib.Path):
     fsgp_config_path = os.path.join(config_directory, f"settings_FSGP.json")
     asc_config_path = os.path.join(config_directory, f"settings_ASC.json")
@@ -87,3 +90,17 @@ def compile_races(config_directory: pathlib.Path, race_directory: pathlib.Path):
 
     asc = Race(Race.ASC, asc_race_constants)
     asc.write(race_directory)
+
+
+def hash_dict(value):
+    """
+    Recursively convert dictionaries and lists to tuples so that they can be hashed.
+    """
+    if isinstance(value, dict):
+        # Convert dictionary to a tuple of sorted key-value pairs (both keys and values must be hashable)
+        return tuple((k, hash_dict(v)) for k, v in sorted(value.items()))
+    elif isinstance(value, list):
+        # Convert lists to tuples to make them hashable
+        return tuple(hash_dict(i) for i in value)
+    return value  # Base case: leave everything else (like strings, ints) unchanged
+
