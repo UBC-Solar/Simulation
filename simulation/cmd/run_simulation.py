@@ -32,9 +32,6 @@ class SimulationSettings:
         self.granularity = granularity
 
 
-
-
-
 def run_simulation(settings: SimulationSettings, speeds_filename: str, plot_results: bool = True):
     """
     This is the entry point to Simulation.
@@ -134,8 +131,6 @@ def build_basic_model(race_type: Race.RaceType = Race.FSGP, granularity: float =
     return simulation_builder.get()
 
 
-
-
 def _health_check() -> None:
     """
 
@@ -155,6 +150,7 @@ def _health_check() -> None:
 
     print("Simulation was successful!")
 
+
 def build_model(settings: SimulationSettings):
 
     # Build simulation model
@@ -171,6 +167,7 @@ def build_model(settings: SimulationSettings):
         .set_weather_forecasts(weather['weather_forecast'])
 
     return simulation_builder.get()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
