@@ -80,26 +80,11 @@ def compile_race(config_directory: pathlib.Path, race_directory: pathlib.Path, r
     """
     Compile the specified race based on the RaceType provided.
     """
-    if race_type == Race.RaceType.FSGP:
-        # Compile FSGP race
-        fsgp_config_path = os.path.join(config_directory, "settings_FSGP.json")
-        with open(fsgp_config_path) as f:
-            fsgp_race_constants = json.load(f)
+    config_path = os.path.join(config_directory, f"settings_{race_type}.json")
+    with open(config_path) as f:
+        race_constants = json.load(f)
 
-        fsgp = Race(Race.FSGP, fsgp_race_constants)
-        fsgp.write(race_directory)
-
-
-    elif race_type == Race.RaceType.ASC:
-        # Compile ASC race
-        asc_config_path = os.path.join(config_directory, "settings_ASC.json")
-        with open(asc_config_path) as f:
-            asc_race_constants = json.load(f)
-
-        asc = Race(Race.ASC, asc_race_constants)
-        asc.write(race_directory)
-
-    else:
-        raise ValueError(f"Unsupported RaceType: {race_type}")
+    race = Race(race_type, race_constants)
+    race.write(race_directory)
 
     print(f"Compiling {race_type} race")

@@ -101,12 +101,9 @@ class SimulationBuilder:
         Raises:
             RaceDataNotMatching: If hashes do not match.
             """
-        param1 = self.race_data.race_data_hash
-        param2 = hash_dict(self.model_parameters)
-        if param1 == param2:
+        currHash = self.race_data.race_data_hash
+        newHash = hash_dict(self.model_parameters)
+        if currHash == newHash:
             return Simulation(self)
         else:
             raise RaceDataNotMatching
-
-
-
