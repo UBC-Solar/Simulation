@@ -49,7 +49,7 @@ def query_npz_from_cache(cache_dir: str, filename: str, expected_hash: str = Non
             raise OSError(f"Could not load {cache_dir}:{filename} from cache! Possible cache corruption. \n") from e
 
     else:
-        raise FileNotFoundError(f"Cache directory {dir} does not contain file: {filename}!")
+        raise FileNotFoundError(f"Cache directory {cache_dir} does not contain file: {filename}!")
 
 
 def store_npz_to_cache(cache_dir: str, filename: str, data: Dict[str, np.ndarray], hash: str):
