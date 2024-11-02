@@ -22,6 +22,7 @@ from simulation.cache.race import race_directory
 from simulation.common import BrightSide, helpers
 from simulation.common.race import Race, load_race
 from simulation.cache import store_npz_to_cache, query_npz_from_cache
+from simulation.utils.hash_util import hash_dict
 
 
 # load API keys from environment variables
@@ -351,6 +352,7 @@ def cache_weather(race: Race, weather_provider: WeatherProvider, reduction_facto
     with open(os.path.join(config_directory, f"settings_{str(race)}.json"), 'rt') as settings_file:
         race_configs = json.load(settings_file)
 
+
     with open(os.path.join(config_directory, f"initial_conditions_{str(race)}.json"), 'rt') as conditions_file:
         conditions = json.load(conditions_file)
 
@@ -369,7 +371,7 @@ def cache_weather(race: Race, weather_provider: WeatherProvider, reduction_facto
                 "dest_coord": dest_coord,
                 "provider": str(weather_provider)
             },
-            hash=str(get_hash(origin_coord, dest_coord, waypoints))
+            hash=hash_dict(race_configs)
         )
 
     elif weather_provider == WeatherProvider.SOLCAST:
@@ -392,7 +394,7 @@ def cache_weather(race: Race, weather_provider: WeatherProvider, reduction_facto
                 "dest_coord": dest_coord,
                 "provider": str(weather_provider)
             },
-            hash=str(get_hash(origin_coord, dest_coord, waypoints))
+            hash=hash_dict(race_configs)
         )
 
     else:

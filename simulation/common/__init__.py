@@ -2,7 +2,7 @@ from simulation.common.car import Car
 
 from .race import (
     Race,
-    compile_races,
+    compile_race,
     load_race
 )
 

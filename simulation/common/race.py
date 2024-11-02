@@ -1,6 +1,7 @@
 """
 This class collects the constants that are related to a specific competition.
 """
+from simulation.utils.hash_util import hash_dict
 import pathlib
 
 import numpy as np
@@ -8,7 +9,6 @@ import pickle
 import enum
 import json
 import os
-
 
 class Race:
     class RaceType(enum.Enum):
@@ -75,32 +75,38 @@ def load_race(race_type: Race.RaceType, race_directory: pathlib.Path) -> Race:
     with open(race_directory / f"{str(race_type)}.pkl", 'rb') as infile:
         return pickle.load(infile)
 
-def compile_races(config_directory: pathlib.Path, race_directory: pathlib.Path):
-    fsgp_config_path = os.path.join(config_directory, f"settings_FSGP.json")
-    asc_config_path = os.path.join(config_directory, f"settings_ASC.json")
 
-    with open(fsgp_config_path) as f:
-        fsgp_race_constants = json.load(f)
+def compile_race(config_directory: pathlib.Path, race_directory: pathlib.Path, race_type: Race.RaceType):
+    """
+    Compile the specified race based on the RaceType provided.
+    """
+    if race_type == Race.RaceType.FSGP:
+        # Compile FSGP race
+        fsgp_config_path = os.path.join(config_directory, "settings_FSGP.json")
+        with open(fsgp_config_path) as f:
+            fsgp_race_constants = json.load(f)
+
+        fsgp = Race(Race.FSGP, fsgp_race_constants)
+        fsgp.write(race_directory)
+
+    elif race_type == Race.RaceType.ASC:
+        # Compile ASC race
+        asc_config_path = os.path.join(config_directory, "settings_ASC.json")
+        with open(asc_config_path) as f:
+            asc_race_constants = json.load(f)
+
+        asc = Race(Race.ASC, asc_race_constants)
+        asc.write(race_directory)
+
+    else:
+        raise ValueError(f"Unsupported RaceType: {race_type}")
+
+
+def compile_ASC(config_directory: pathlib.Path, race_directory: pathlib.Path):
+    asc_config_path = os.path.join(config_directory, f"settings_ASC.json")
 
     with open(asc_config_path) as f:
         asc_race_constants = json.load(f)
 
-    fsgp = Race(Race.FSGP, fsgp_race_constants)
-    fsgp.write(race_directory)
-
     asc = Race(Race.ASC, asc_race_constants)
     asc.write(race_directory)
-
-
-def hash_dict(value):
-    """
-    Recursively convert dictionaries and lists to tuples so that they can be hashed.
-    """
-    if isinstance(value, dict):
-        # Convert dictionary to a tuple of sorted key-value pairs (both keys and values must be hashable)
-        return tuple((k, hash_dict(v)) for k, v in sorted(value.items()))
-    elif isinstance(value, list):
-        # Convert lists to tuples to make them hashable
-        return tuple(hash_dict(i) for i in value)
-    return value  # Base case: leave everything else (like strings, ints) unchanged
-

@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import os
 import pathlib
 import pickle
@@ -6,12 +7,14 @@ import pickle
 import numpy as np
 import json
 
-from simulation.cache.race import race_directory
+from simulation.cache import query_npz_from_cache
 from simulation.config import config_directory, speeds_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
 from simulation.model.Simulation import Simulation, SimulationReturnType
-from simulation.common.race import Race, load_race
+from simulation.common.race import Race, load_race, compile_race
 from simulation.utils.SimulationBuilder import RaceDataNotMatching
+from simulation.cache.race import race_directory
+from simulation.utils.hash_util import hash_dict
 
 
 class SimulationSettings:
@@ -31,6 +34,7 @@ class SimulationSettings:
 
 
 
+
 def run_simulation(settings: SimulationSettings, speeds_filename: str, plot_results: bool = True):
     """
     This is the entry point to Simulation.
@@ -46,10 +50,11 @@ def run_simulation(settings: SimulationSettings, speeds_filename: str, plot_resu
 
     """
 
+    # Try to build model, if race data needs updating it will be updated before building
     try:
         simulation_model = build_model(settings)
     except RaceDataNotMatching:
-        compile_race()
+        compile_race(settings.race_type)
         simulation_model = build_model(settings)
 
     # Initialize a "guess" speed array
@@ -151,14 +156,19 @@ def _health_check() -> None:
     print("Simulation was successful!")
 
 def build_model(settings: SimulationSettings):
+
     # Build simulation model
     initial_conditions, model_parameters = get_default_settings(Race.RaceType(settings.race_type))
+    hash_key = hash_dict(model_parameters)
     simulation_builder = SimulationBuilder() \
         .set_initial_conditions(initial_conditions) \
         .set_model_parameters(model_parameters, Race.RaceType(settings.race_type)) \
         .set_return_type(settings.return_type) \
         .set_granularity(settings.granularity) \
-        .set_race_data(load_race(Race.RaceType(settings.race_type), pathlib.Path(__file__).parent))
+        .set_race_data(load_race(Race.RaceType(settings.race_type), race_directory)) \
+        .set_route_data(query_npz_from_cache("route", f"route_data_{Race.RaceType(settings.race_type)}",
+                                             str(hash_key))) \
+        .set_weather_forecasts(query_npz_from_cache("weather", f"weather_data_{Race.RaceType(settings.race_type)}_SOLCAST", str(hash_key))["weather_forecast"])
 
     return simulation_builder.get()
 

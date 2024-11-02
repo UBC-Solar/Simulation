@@ -1,8 +1,8 @@
+import hashlib
 import json
 
-from simulation.common.race import hash_dict
-from simulation.config import config_directory
 from simulation.model.Simulation import Simulation, SimulationReturnType
+from simulation.utils.hash_util import hash_dict
 
 
 class RaceDataNotMatching(Exception):
@@ -19,6 +19,8 @@ class SimulationBuilder:
 
         self.model_parameters = None
         self.race_data = None
+        self.route_data = None
+        self.weather_forecasts = None
 
         # Initial Conditions
         self.current_coord = None
@@ -78,14 +80,33 @@ class SimulationBuilder:
 
         return self
 
+    def set_route_data(self, route_data):
+        self.route_data = route_data
+
+        return self
+
+    def set_weather_forecasts(self, weather_forecasts):
+        self.weather_forecasts = weather_forecasts
+
+        return self
+
     def get(self):
+        """
+        Returns a Simulation object if race data matches the model parameters' hash.
+        Compares the hash of race data with model parameters. Raises RaceDataNotMatching if they differ.
+
+        Returns:
+            Simulation: A new Simulation object.
+
+        Raises:
+            RaceDataNotMatching: If hashes do not match.
+            """
         param1 = self.race_data.race_data_hash
         param2 = hash_dict(self.model_parameters)
-        print(f"Hash of race_data: {param1}")
-        print(f"Hash of model_parameters: {param2}")
         if param1 == param2:
             return Simulation(self)
         else:
             raise RaceDataNotMatching
+
 
 
