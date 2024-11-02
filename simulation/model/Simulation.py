@@ -14,7 +14,8 @@ from simulation.cache import query_npz_from_cache
 from simulation.common.exceptions import PrematureDataRecoveryError
 from simulation.utils.Plotting import Plotting
 from simulation.model.Model import Model
-from simulation.common.race import Race, load_race
+from simulation.common.race import Race
+
 
 from physics.models.arrays import BasicArray
 from physics.models.battery import BasicBattery
@@ -106,7 +107,7 @@ class Simulation:
         assert builder.race_type in Race.RaceType, f"{builder.race_type} is not a valid race type!"
 
         self.race_type = builder.race_type
-        self.race = load_race(self.race_type, race_directory)
+        self.race = builder.race_data
         self.weather_provider = builder.weather_provider
 
         # ---- Granularity -----
@@ -168,7 +169,7 @@ class Simulation:
             BrightSide.vehicle_mass
         )
 
-        self.route_data = query_npz_from_cache("route", f"route_data_{self.race_type}", str(self.hash_key))
+        self.route_data = builder.route_data
 
         self.gis = GIS(
             self.route_data,
@@ -180,7 +181,7 @@ class Simulation:
 
         self.vehicle_bearings = self.gis.calculate_current_heading_array()
 
-        self.weather_forecasts = query_npz_from_cache("weather", f"weather_data_{self.race_type}_SOLCAST", str(self.hash_key))["weather_forecast"]
+        self.weather_forecasts = builder.weather_forecasts
 
         self.simulation_duration = builder.race_duration * 3600 * 24 - self.start_time
 
@@ -208,6 +209,9 @@ class Simulation:
             hash_string += str(value)
         filtered_hash_string = "".join(filter(str.isnumeric, hash_string))
         return helpers.PJWHash(filtered_hash_string)
+
+    def get_hash(self):
+        return self.__hash__()
 
     def run_model(self, speed=None, plot_results=False, verbose=False,
                   route_visualization=False, plot_portion=(0.0, 1.0), is_optimizer: bool = False, **kwargs):

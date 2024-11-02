@@ -1,6 +1,7 @@
 """
 This class collects the constants that are related to a specific competition.
 """
+from simulation.utils.hash_util import hash_dict
 import pathlib
 
 import numpy as np
@@ -8,7 +9,6 @@ import pickle
 import enum
 import json
 import os
-
 
 class Race:
     class RaceType(enum.Enum):
@@ -34,6 +34,8 @@ class Race:
     ASC = RaceType.ASC
     FSGP = RaceType.FSGP
 
+
+
     def __init__(self, race_type: RaceType, race_constants: dict):
         self.race_type = race_type
 
@@ -44,6 +46,8 @@ class Race:
         self.race_duration = len(self.days) * 24 * 60 * 60  # Duration (s)
         self.driving_boolean = self.make_time_boolean("driving")
         self.charging_boolean = self.make_time_boolean("charging")
+
+        self.race_data_hash = hash_dict(race_constants)
 
     def __str__(self):
         return str(self.race_type)
@@ -72,18 +76,15 @@ def load_race(race_type: Race.RaceType, race_directory: pathlib.Path) -> Race:
         return pickle.load(infile)
 
 
-def compile_races(config_directory: pathlib.Path, race_directory: pathlib.Path):
-    fsgp_config_path = os.path.join(config_directory, f"settings_FSGP.json")
-    asc_config_path = os.path.join(config_directory, f"settings_ASC.json")
+def compile_race(config_directory: pathlib.Path, race_directory: pathlib.Path, race_type: Race.RaceType):
+    """
+    Compile the specified race based on the RaceType provided.
+    """
+    config_path = os.path.join(config_directory, f"settings_{race_type}.json")
+    with open(config_path) as f:
+        race_constants = json.load(f)
 
-    with open(fsgp_config_path) as f:
-        fsgp_race_constants = json.load(f)
+    race = Race(race_type, race_constants)
+    race.write(race_directory)
 
-    with open(asc_config_path) as f:
-        asc_race_constants = json.load(f)
-
-    fsgp = Race(Race.FSGP, fsgp_race_constants)
-    fsgp.write(race_directory)
-
-    asc = Race(Race.ASC, asc_race_constants)
-    asc.write(race_directory)
+    print(f"Compiling {race_type} race")

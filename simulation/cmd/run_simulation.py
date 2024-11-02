@@ -1,12 +1,20 @@
 import argparse
+import hashlib
+import os
+import pathlib
+import pickle
 
 import numpy as np
 import json
 
+from simulation.cache import query_npz_from_cache
 from simulation.config import config_directory, speeds_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
 from simulation.model.Simulation import Simulation, SimulationReturnType
-from simulation.common.race import Race
+from simulation.common.race import Race, load_race, compile_race
+from simulation.utils.SimulationBuilder import RaceDataNotMatching
+from simulation.cache.race import race_directory
+from simulation.utils.hash_util import hash_dict
 
 
 class SimulationSettings:
@@ -39,15 +47,12 @@ def run_simulation(settings: SimulationSettings, speeds_filename: str, plot_resu
 
     """
 
-    # Build simulation model
-    initial_conditions, model_parameters = get_default_settings(Race.RaceType(settings.race_type))
-    simulation_builder = SimulationBuilder() \
-        .set_initial_conditions(initial_conditions) \
-        .set_model_parameters(model_parameters, Race.RaceType(settings.race_type)) \
-        .set_return_type(settings.return_type) \
-        .set_granularity(settings.granularity)
-
-    simulation_model = simulation_builder.get()
+    # Try to build model, if race data needs updating it will be updated before building
+    try:
+        simulation_model = build_model(settings)
+    except RaceDataNotMatching:
+        compile_race(config_directory, race_directory, Race.RaceType[settings.race_type])
+        simulation_model = build_model(settings)
 
     # Initialize a "guess" speed array
     driving_hours = simulation_model.get_driving_time_divisions()
@@ -121,7 +126,8 @@ def build_basic_model(race_type: Race.RaceType = Race.FSGP, granularity: float =
         .set_initial_conditions(initial_conditions) \
         .set_model_parameters(model_parameters, Race.RaceType(race_type)) \
         .set_return_type(SimulationReturnType.void) \
-        .set_granularity(granularity)
+        .set_granularity(granularity) \
+        .set_race_data(load_race(race_type, pathlib.Path(__file__).parent))
     return simulation_builder.get()
 
 
@@ -143,6 +149,24 @@ def _health_check() -> None:
                                route_visualization=False)
 
     print("Simulation was successful!")
+
+
+def build_model(settings: SimulationSettings):
+
+    # Build simulation model
+    initial_conditions, model_parameters = get_default_settings(Race.RaceType(settings.race_type))
+    weather = query_npz_from_cache("weather", f"weather_data_{Race.RaceType(settings.race_type)}_SOLCAST", match_hash=False)
+    simulation_builder = SimulationBuilder() \
+        .set_initial_conditions(initial_conditions) \
+        .set_model_parameters(model_parameters, Race.RaceType(settings.race_type)) \
+        .set_return_type(settings.return_type) \
+        .set_granularity(settings.granularity) \
+        .set_race_data(load_race(Race.RaceType(settings.race_type), race_directory)) \
+        .set_route_data(query_npz_from_cache("route", f"route_data_{Race.RaceType(settings.race_type)}",
+                                             match_hash=False)) \
+        .set_weather_forecasts(weather['weather_forecast'])
+
+    return simulation_builder.get()
 
 
 if __name__ == "__main__":
