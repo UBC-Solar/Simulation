@@ -89,6 +89,7 @@ def compile_race(config_directory: pathlib.Path, race_directory: pathlib.Path, r
         fsgp = Race(Race.FSGP, fsgp_race_constants)
         fsgp.write(race_directory)
 
+
     elif race_type == Race.RaceType.ASC:
         # Compile ASC race
         asc_config_path = os.path.join(config_directory, "settings_ASC.json")
@@ -101,12 +102,4 @@ def compile_race(config_directory: pathlib.Path, race_directory: pathlib.Path, r
     else:
         raise ValueError(f"Unsupported RaceType: {race_type}")
 
-
-def compile_ASC(config_directory: pathlib.Path, race_directory: pathlib.Path):
-    asc_config_path = os.path.join(config_directory, f"settings_ASC.json")
-
-    with open(asc_config_path) as f:
-        asc_race_constants = json.load(f)
-
-    asc = Race(Race.ASC, asc_race_constants)
-    asc.write(race_directory)
+    print(f"Compiling {race_type} race")

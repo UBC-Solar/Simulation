@@ -54,7 +54,7 @@ def run_simulation(settings: SimulationSettings, speeds_filename: str, plot_resu
     try:
         simulation_model = build_model(settings)
     except RaceDataNotMatching:
-        compile_race(settings.race_type)
+        compile_race(config_directory, race_directory, Race.RaceType[settings.race_type])
         simulation_model = build_model(settings)
 
     # Initialize a "guess" speed array
@@ -159,7 +159,7 @@ def build_model(settings: SimulationSettings):
 
     # Build simulation model
     initial_conditions, model_parameters = get_default_settings(Race.RaceType(settings.race_type))
-    hash_key = hash_dict(model_parameters)
+    weather = query_npz_from_cache("weather", f"weather_data_{Race.RaceType(settings.race_type)}_SOLCAST", match_hash=False)
     simulation_builder = SimulationBuilder() \
         .set_initial_conditions(initial_conditions) \
         .set_model_parameters(model_parameters, Race.RaceType(settings.race_type)) \
@@ -167,26 +167,10 @@ def build_model(settings: SimulationSettings):
         .set_granularity(settings.granularity) \
         .set_race_data(load_race(Race.RaceType(settings.race_type), race_directory)) \
         .set_route_data(query_npz_from_cache("route", f"route_data_{Race.RaceType(settings.race_type)}",
-                                             str(hash_key))) \
-        .set_weather_forecasts(query_npz_from_cache("weather", f"weather_data_{Race.RaceType(settings.race_type)}_SOLCAST", str(hash_key))["weather_forecast"])
+                                             match_hash=False)) \
+        .set_weather_forecasts(weather['weather_forecast'])
 
     return simulation_builder.get()
-
-def compile_race():
-    fsgp_config_path = os.path.join(config_directory, f"settings_FSGP.json")
-    asc_config_path = os.path.join(config_directory, f"settings_ASC.json")
-
-    with open(fsgp_config_path) as f:
-        fsgp_race_constants = json.load(f)
-
-    with open(asc_config_path) as f:
-        asc_race_constants = json.load(f)
-
-    fsgp = Race(Race.FSGP, fsgp_race_constants)
-    fsgp.write(race_directory)
-
-    asc = Race(Race.ASC, asc_race_constants)
-    asc.write(race_directory)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
