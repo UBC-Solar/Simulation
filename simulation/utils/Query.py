@@ -22,6 +22,7 @@ from simulation.cache.race import race_directory
 from simulation.common import BrightSide, helpers
 from simulation.common.race import Race, load_race
 from simulation.cache import store_npz_to_cache, query_npz_from_cache
+from simulation.model import Simulation
 from simulation.utils.hash_util import hash_dict
 
 
@@ -73,18 +74,22 @@ def cache_gis(race):
     # Calculate speed limits and curvature
     curvature = calculate_curvature(coords)
     coords = coords[:len(coords) - 1]  # Get rid of superfluous path coordinate at end
-    speed_limits = calculate_speed_limits(coords, curvature)
+    # speed_limits = calculate_speed_limits(coords, curvature)
+    # print(speed_limits.shape)
 
     # Call Google Maps API
     path_elevations = calculate_path_elevations(coords)
     path_time_zones = calculate_time_zones(coords, race)
 
     # Tile results
-    speed_limits = np.tile(speed_limits, tiling)
+    # speed_limits = np.tile(speed_limits, tiling)
     path_elevations = np.tile(path_elevations, tiling)
     path_time_zones = np.tile(path_time_zones, tiling)
     num_unique_coords = len(coords)
     coords = np.tile(coords, (tiling, 1))
+
+    # Call speed limit array
+    speed_limits = np.load("simulation/cache/route/fixed_speed_constraints.npz")['data']
 
     # Cache results
     store_npz_to_cache(
