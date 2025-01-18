@@ -73,14 +73,15 @@ def cache_gis(race):
 
     # Calculate speed limits and curvature
     coords = coords[:len(coords) - 1]  # Get rid of superfluous path coordinate at end
-    speed_limits = np.load("simulation/cache/route/fixed_speed_constraints.npz")['data'] # Call speed limit array
+    speed_limits_per_coordinate = np.load("simulation/cache/route/fixed_speed_constraints.npz")['data'] # Call speed limit array
+    speed_limits = calculate_speed_limits(coords, speed_limits_per_coordinate) # transforms speed limit per coord to per meter
 
     # Call Google Maps API
     path_elevations = calculate_path_elevations(coords)
     path_time_zones = calculate_time_zones(coords, race)
 
     # Tile results
-    speed_limits = np.tile(speed_limits, (tiling*20)) # *20 to ensure there are enough limits for all laps
+    speed_limits = np.tile(speed_limits, tiling)
     path_elevations = np.tile(path_elevations, tiling)
     path_time_zones = np.tile(path_time_zones, tiling)
     num_unique_coords = len(coords)
@@ -740,16 +741,14 @@ def linearly_interpolate(x, y, t):
     return (y - x) * t + x
 
 
-def calculate_speed_limits(path, curvature) -> np.ndarray:
+def calculate_speed_limits(path, speed_limits_per_coordinate) -> np.ndarray:
     cumulative_path_distances = np.cumsum(helpers.calculate_path_distances(path))
     speed_limits = np.empty([int(cumulative_path_distances[-1]) + 1], dtype=int)
 
-    for i in range(int(cumulative_path_distances[-1]) + 1):
-        gis_index = closest_index(i, cumulative_path_distances)
-        speed_limit = linearly_interpolate(BrightSide.max_cruising_speed,
-                                           BrightSide.max_speed_during_turn,
-                                           curvature[gis_index])
-        speed_limits[i] = speed_limit
+    for position in range(int(cumulative_path_distances[-1]) + 1):
+        gis_index = closest_index(position, cumulative_path_distances)
+        speed_limit = speed_limits_per_coordinate[gis_index]
+        speed_limits[position] = speed_limit
 
     return speed_limits
 
