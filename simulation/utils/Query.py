@@ -72,24 +72,19 @@ def cache_gis(race):
     tiling = race.tiling  # set tiling from config file
 
     # Calculate speed limits and curvature
-    curvature = calculate_curvature(coords)
     coords = coords[:len(coords) - 1]  # Get rid of superfluous path coordinate at end
-    # speed_limits = calculate_speed_limits(coords, curvature)
-    # print(speed_limits.shape)
+    speed_limits = np.load("simulation/cache/route/fixed_speed_constraints.npz")['data'] # Call speed limit array
 
     # Call Google Maps API
     path_elevations = calculate_path_elevations(coords)
     path_time_zones = calculate_time_zones(coords, race)
 
     # Tile results
-    # speed_limits = np.tile(speed_limits, tiling)
+    speed_limits = np.tile(speed_limits, (tiling*20)) # *20 to ensure there are enough limits for all laps
     path_elevations = np.tile(path_elevations, tiling)
     path_time_zones = np.tile(path_time_zones, tiling)
     num_unique_coords = len(coords)
     coords = np.tile(coords, (tiling, 1))
-
-    # Call speed limit array
-    speed_limits = np.load("simulation/cache/route/fixed_speed_constraints.npz")['data']
 
     # Cache results
     store_npz_to_cache(
