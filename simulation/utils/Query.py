@@ -70,10 +70,10 @@ def cache_gis(race):
 
     tiling = race.tiling  # set tiling from config file
 
-    # Calculate speed limits and curvature
-    curvature = calculate_curvature(coords)
+    # Calculate speed limits
     coords = coords[:len(coords) - 1]  # Get rid of superfluous path coordinate at end
-    speed_limits = calculate_speed_limits(coords, curvature)
+    speed_limits_per_coordinate = query_npz_from_cache("route", "fixed_speed_constraints", match_hash=False)
+    speed_limits = calculate_speed_limits(coords, speed_limits_per_coordinate['data']) # transforms speed limit per coord to per meter
 
     # Call Google Maps API
     path_elevations = calculate_path_elevations(coords)
@@ -740,16 +740,14 @@ def linearly_interpolate(x, y, t):
     return (y - x) * t + x
 
 
-def calculate_speed_limits(path, curvature) -> np.ndarray:
+def calculate_speed_limits(path, speed_limits_per_coordinate) -> np.ndarray:
     cumulative_path_distances = np.cumsum(helpers.calculate_path_distances(path))
     speed_limits = np.empty([int(cumulative_path_distances[-1]) + 1], dtype=int)
 
-    for i in range(int(cumulative_path_distances[-1]) + 1):
-        gis_index = closest_index(i, cumulative_path_distances)
-        speed_limit = linearly_interpolate(BrightSide.max_cruising_speed,
-                                           BrightSide.max_speed_during_turn,
-                                           curvature[gis_index])
-        speed_limits[i] = speed_limit
+    for position in range(int(cumulative_path_distances[-1]) + 1):
+        gis_index = closest_index(position, cumulative_path_distances)
+        speed_limit = speed_limits_per_coordinate[gis_index]
+        speed_limits[position] = speed_limit
 
     return speed_limits
 

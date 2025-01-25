@@ -30,7 +30,6 @@ def query_npz_from_cache(cache_dir: str, filename: str, expected_hash: str = Non
         raise FileNotFoundError(f"Cache does not contain directory: {cache_dir}!")
 
     filepath = abs_dir / (filename + ".npz")
-
     if os.path.isfile(filepath):
         try:
             with np.load(str(filepath), allow_pickle=True) as cached_data:

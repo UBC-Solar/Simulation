@@ -1,6 +1,6 @@
 from simulation.common.car import Car
 
-from .race import (
+from simulation.common.race import (
     Race,
     compile_race,
     load_race
