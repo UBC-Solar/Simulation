@@ -2804,12 +2804,12 @@ devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)
 
 [[package]]
 name = "ubc-solar-data-tools"
-version = "1.4.0"
+version = "1.5.1"
 description = "UBC Solar's data analysis and querying tools"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "ubc_solar_data_tools-1.4.0.tar.gz", hash = "sha256:f2256276c0d575af9f4c3d547ff65f61697c3044e6e6b12c9bfe89d7102c791b"},
+    {file = "ubc_solar_data_tools-1.5.1.tar.gz", hash = "sha256:6ff135d2f1cb3321ae124bbd068f4edc6830137316757b8e6583620f015bd5cb"},
 ]
 
 [package.dependencies]
@@ -2934,4 +2934,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "f91fedfd7ca71d3644a860b7f00c40142ef7f0e23fe73206b694ac51bd479af2"
+content-hash = "cdb4e1645b44e29d9b31a4de15552e2e6644b274b6c293837aa253fd9bb901c8"
