@@ -1,8 +1,9 @@
 import hashlib
 import json
+from typing import Dict
 
 
-def hash_dict(value):
+def hash_dict(value: Dict) -> str:
     """
     Create a consistent hash for a dictionary by converting it to a string with sorted keys
     and then applying a SHA-256 hash.
