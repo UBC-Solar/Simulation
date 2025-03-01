@@ -10,6 +10,10 @@ from ._track import (
     CompetitionType
 )
 
+from ._conditions import (
+    InitialConditions
+)
+
 
 config_directory = pathlib.Path(__file__).parent
 speeds_directory = config_directory / "speeds"

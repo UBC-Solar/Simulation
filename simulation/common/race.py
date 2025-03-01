@@ -9,6 +9,8 @@ import pickle
 import enum
 import json
 import os
+from simulation.config import CompetitionConfig, CompetitionType
+
 
 class Race:
     class RaceType(enum.Enum):
@@ -34,14 +36,14 @@ class Race:
     ASC = RaceType.ASC
     FSGP = RaceType.FSGP
 
+    def __init__(self, config: CompetitionConfig):
+        self.race_type: CompetitionType = config.competition_type
 
+        self.charging_times = config.charging_times
+        self.driving_times = config.driving_times
 
-    def __init__(self, race_type: RaceType, race_constants: dict):
-        self.race_type = race_type
-
-        self.days = race_constants["days"]
-        self.tiling = race_constants["tiling"]
-        self.date = (race_constants["start_year"], race_constants["start_month"], race_constants["start_day"])
+        self.tiling = getattr(config, "tiling", 1)
+        self.date = config.date
 
         self.race_duration = len(self.days) * 24 * 60 * 60  # Duration (s)
         self.driving_boolean = self.make_time_boolean("driving")

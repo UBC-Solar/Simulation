@@ -7,3 +7,4 @@ from simulation.common.race import (
 )
 
 BrightSide = Car('BrightSide')
+Coordinate = tuple[float, float]
