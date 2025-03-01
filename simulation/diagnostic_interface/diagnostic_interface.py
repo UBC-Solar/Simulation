@@ -15,13 +15,15 @@ from data_tools import SunbeamClient
 # Dictionary to store help messages for each plot
 HELP_MESSAGES = {
     "VehicleVelocity": "This plot shows velocity over time.\n\n"
-                        "- X-axis: Time (s)\n"
-                        "- Y-axis: Velocity (m/s)\n"
-                        "- Data is sourced from the car's telemetry system.\n",
+                       "- X-axis: Time (s)\n"
+                       "- Y-axis: Velocity (m/s)\n"
+                       "- Data is sourced from the car's telemetry system.\n",
 }
+
 
 class CustomNavigationToolbar(NavigationToolbar):
     """Custom toolbar with tooltips for each button."""
+
     def __init__(self, canvas, parent=None):
         super().__init__(canvas, parent)
 
@@ -40,6 +42,7 @@ class CustomNavigationToolbar(NavigationToolbar):
             text = action.text()
             if text in tooltips:
                 action.setToolTip(tooltips[text])
+
 
 class PlotCanvas(FigureCanvas):
     def __init__(self, parent=None):
@@ -119,13 +122,13 @@ class MainWindow(QMainWindow):
         # Setting up events
         form_layout = QFormLayout()
         self.event_input = QComboBox()
-        events = client.distinct("event", {"origin" : "influxdb_cache"}) # Checks all the events available in Sunbeam
+        events = client.distinct("event", {"origin": "influxdb_cache"})  # Checks all the events available in Sunbeam
         self.event_input.addItems(events)
         self.event_input.setStyleSheet("background-color: white")
 
         # Setting up data types that can be queried
         self.data_input = QComboBox()
-        names = client.distinct( "name", {"origin" : "influxdb_cache"}) # Checks all the data types available in Sunbeam
+        names = client.distinct("name", {"origin": "influxdb_cache"})  # Checks all the data types available in Sunbeam
         self.data_input.addItems(names)
         self.data_input.setStyleSheet("background-color: white")
 
@@ -171,7 +174,6 @@ class MainWindow(QMainWindow):
         self.tabs.setCurrentWidget(plot_widget)
 
         canvas.query_and_plot(event, data_name)
-
 
     def close_tab(self, widget):
         index = self.tabs.indexOf(widget)
