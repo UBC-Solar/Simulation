@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Tuple, Mapping, List, Dict
 from strenum import StrEnum
 from simulation.config import Config, ConfigDict
+from pydantic import BaseModel
+from numpy.typing import NDArray
 
 
 class RouteConfig(Config):
@@ -34,12 +36,15 @@ class CompetitionConfig(Config):
     # Ex. [1, "charging"] -> (32400, 61200) means that on day 1, charging is allowed from 9AM to 5PM.
     time_ranges: Mapping[int, Mapping[str, Tuple[float, float]]]
 
+    def route_hash(self):
+        return hash(self.route)
+
 
 class TrackCompetitionConfig(CompetitionConfig):
-    """
-    A model which contains the information required
-    """
-    tiling: int                                         # The number of times to tile the route to build the route
+    tiling: int  # The number of times to tile the route to build the route
+
+    def route_hash(self):
+        return hash(self.route) + self.tiling
 
 
 class RoadCompetitionConfig(CompetitionConfig):
@@ -57,6 +62,17 @@ class RoadCompetition:
 class TrackCompetition:
     def __init__(self, config: TrackCompetitionConfig):
         pass
+
+
+class Route(BaseModel):
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    speed_limits: NDArray[float]
+    path_elevations: NDArray[float]
+    path_time_zones: NDArray[float]
+    coords: NDArray[float]
+    num_unique_coords: int
+    tiling: int
 
 
 if __name__ == "__main__":

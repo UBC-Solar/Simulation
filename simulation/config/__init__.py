@@ -7,11 +7,32 @@ from ._config import (
 
 from ._track import (
     CompetitionConfig,
-    CompetitionType
+    TrackCompetitionConfig,
+    CompetitionType,
+    RouteConfig,
+    Route
 )
 
 from ._conditions import (
     InitialConditions
+)
+
+from ._weather import (
+    WeatherConfig,
+    WeatherProvider,
+    SolcastConfig,
+    OpenweatherConfig,
+    OpenweatherPeriod,
+    SolcastWeatherPeriod
+)
+
+from ._environment import (
+    EnvironmentConfig
+)
+
+from ._hyperparameters import (
+    SimulationHyperparametersConfig,
+    SimulationReturnType
 )
 
 
