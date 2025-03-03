@@ -12,9 +12,8 @@ ConfigType = TypeVar('ConfigType', bound=Config)
 
 
 class Query[ConfigType](ABC):
-    def __init__(self, config: ConfigType, cache: Cache):
+    def __init__(self, config: ConfigType):
         self._config: ConfigType = config
-        self._cache = cache
 
     @abstractmethod
     def make(self):

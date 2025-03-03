@@ -8,14 +8,13 @@ import numpy as np
 from tqdm import tqdm
 from timezonefinder import TimezoneFinder
 from simulation.config import CompetitionConfig
-from simulation.cache import Cache
 from numpy.typing import NDArray, ArrayLike
 from simulation.query import Query
 
 
 class TrackRouteQuery(Query[CompetitionConfig]):
-    def __init__(self, config: CompetitionConfig, cache: Cache):
-        super().__init__(config, cache)
+    def __init__(self, config: CompetitionConfig):
+        super().__init__(config)
 
     def make(self) -> tuple[NDArray, NDArray, NDArray, int]:
         coordinates: NDArray = np.array(self._config.route.coordinates)
@@ -32,8 +31,8 @@ class TrackRouteQuery(Query[CompetitionConfig]):
 
 
 class RoadRouteQuery[CompetitionConfig](Query):
-    def __init__(self, config: CompetitionConfig, cache: Cache, ):
-        super().__init__(config, cache)
+    def __init__(self, config: CompetitionConfig):
+        super().__init__(config)
 
     def make(self):
         raise NotImplementedError("Support for ASC was deprecated in favour of building a more capable FSGP simulation."
