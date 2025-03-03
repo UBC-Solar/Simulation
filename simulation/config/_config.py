@@ -1,6 +1,6 @@
 import abc
-from pydantic import BaseModel, ConfigDict as _ConfigDict
-from typing import List, Type, Dict
+from pydantic import BaseModel, ConfigDict as _ConfigDict, model_validator
+from typing import List, Type, Dict, Any
 from simulation.utils import hash_dict
 from anytree import Node
 
@@ -59,13 +59,15 @@ class Config(BaseModel, abc.ABC):
         if (subclass_field := getattr(cls, "model_config", {}).get("subclass_field")) is not None:
             try:
                 subclass_type = config_dict[subclass_field]
-                subclass_type_name = subclass_type + "Config"   # We need to manually add `Config` to the end
+                subclass_type_name = subclass_type + "Config"  # We need to manually add `Config` to the end
 
                 subclasses: List[Type[Config]] = cls.subclasses()
 
                 # Try to find a subclass with the name that matches our key
                 for subclass in subclasses:
                     if subclass_type_name == subclass.__name__:
+                        config_dict.update(config_dict[subclass_type])
+
                         return subclass.model_validate(config_dict)
 
                 else:
@@ -73,10 +75,31 @@ class Config(BaseModel, abc.ABC):
                                     f"{cls.__name__} with name {subclass_type_name}!")
 
             except NotImplementedError:
-                pass    # Fall through to the case where `map` doesn't exist
+                pass  # Fall through to the case where `map` doesn't exist
 
         # Otherwise, we should just build the object from here.
         return cls.model_validate(config_dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def intercept_nested_configs(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """Intercepts and ensures nested Config instances use build_from."""
+        for field_name, field_annotation in cls.model_fields.items():
+            try:
+                annotation = field_annotation.annotation
+                if issubclass(annotation, Config):
+                    try:
+                        field_data = values[field_name]
+                        values[field_name] = annotation.build_from(field_data)
+
+                    except KeyError:
+                        pass
+
+            # An annotation like `tuple[float]` will cause a TypeError in issubclass, but we don't care anyway
+            except TypeError:
+                continue
+
+        return values
 
     def __hash__(self):
         return hash_dict(self.model_dump())

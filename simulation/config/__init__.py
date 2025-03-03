@@ -18,7 +18,7 @@ from ._conditions import (
 )
 
 from ._weather import (
-    WeatherConfig,
+    WeatherQuery,
     WeatherProvider,
     SolcastConfig,
     OpenweatherConfig,
