@@ -8,9 +8,7 @@ from dotenv import load_dotenv
 
 from simulation.common import helpers
 from simulation.utils.Plotting import GraphPage
-from simulation.common import BrightSide
 from simulation.cache.race import race_directory
-from simulation.cache import query_npz_from_cache
 from simulation.common.exceptions import PrematureDataRecoveryError
 from simulation.utils.Plotting import Plotting
 from simulation.model.Model import Model
@@ -47,19 +45,6 @@ def simulation_property(func):
         return value
 
     return property_wrapper
-
-
-class SimulationReturnType(StrEnum):
-    """
-
-    This enum exists to discretize different data types run_model should return.
-
-    """
-
-    time_taken = "time_taken"
-    distance_travelled = "distance_travelled"
-    distance_and_time = "distance_and_time"
-    void = "void"
 
 
 class Simulation:
