@@ -26,15 +26,23 @@ class CompetitionConfig(Config):
     """
     model_config = ConfigDict(frozen=True, subclass_field="competition_type")
 
+    competition_name: str               # The name of the competition
     competition_type: CompetitionType   # The type of competition
-    route: RouteConfig                  # The route that the competition will follow
+    route_config: RouteConfig           # The route that the competition will follow
     date: datetime                      # The beginning date that the competition will take place (day/month/year)
 
-    # A map from the day number and then some activity ("charging", "driving) to a 2-tuple where the first
+    # A map from some activity ("charging", "driving") and then the day number to a 2-tuple where the first
     # element is the time since midnight in seconds where the activity is allowed, and the last element is
     # the time, in the same format, where the activity is no longer allowed.
-    # Ex. [1, "charging"] -> (32400, 61200) means that on day 1, charging is allowed from 9AM to 5PM.
-    time_ranges: Mapping[int, Mapping[str, Tuple[float, float]]]
+    # Ex. ["charging", 1] -> (32400, 61200) means that on day 1, charging is allowed from 9AM to 5PM.
+    time_ranges: Mapping[str, Mapping[int, Tuple[float, float]]]
+
+    @property
+    def duration(self) -> int:
+        """
+        Obtain the number of days that the competition encompasses
+        """
+        return len(self.time_ranges.keys())
 
     def route_hash(self):
         return hash(self.route)
@@ -44,7 +52,7 @@ class TrackCompetitionConfig(CompetitionConfig):
     tiling: int  # The number of times to tile the route to build the route
 
     def route_hash(self):
-        return hash(self.route) + self.tiling
+        return hash(hash(self.route) + hash(self.tiling))
 
 
 class RoadCompetitionConfig(CompetitionConfig):
