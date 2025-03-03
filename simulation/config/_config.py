@@ -2,6 +2,7 @@ import abc
 from pydantic import BaseModel, ConfigDict as _ConfigDict
 from typing import List, Type, Dict
 from simulation.utils import hash_dict
+from anytree import Node
 
 
 class ConfigDict(_ConfigDict):
@@ -26,6 +27,23 @@ class Config(BaseModel, abc.ABC):
         """
         subclasses = cls.__subclasses__()
         return subclasses + [g for s in subclasses for g in s.subclasses()]
+
+    @classmethod
+    def tree(cls, parent: Node = None):
+        fields = cls.model_fields
+
+        node = Node(cls.__name__, parent=parent)
+
+        for _, field in fields.items():
+            field_class = field.annotation
+
+            if hasattr(field_class, "tree"):
+                field_class.tree(node)
+
+            else:
+                Node(field_class.__name__, parent=node)
+
+        return node
 
     @classmethod
     def build_from(cls, config_dict: Dict) -> "Config":
