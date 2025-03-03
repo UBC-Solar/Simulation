@@ -23,7 +23,7 @@ class SimulationReturnType(StrEnum):
 class SimulationHyperparametersConfig(Config):
     model_config = ConfigDict(frozen=True)
 
-    vehicle_speed_period: int   # The temporal period that an element of the vehicle speed array will control, in s
-    return_type: SimulationReturnType  # The kind of data that simulation will immediately return
-    simulation_dt: int          # The discrete temporal timestep of Simulation, in s
+    vehicle_speed_period: int           # The period that an element of the vehicle speed array will control, in s
+    return_type: SimulationReturnType   # The kind of data that simulation will immediately return
+    simulation_period: int              # The discrete temporal timestep of Simulation, in s
 
