@@ -179,7 +179,7 @@ class MainWindow(QMainWindow):
 
         # Load and add the team logo
         logo_label = QLabel()
-        logo_label.setPixmap(QPixmap("Solar_Logo.png").scaled(800, 600, Qt.KeepAspectRatio)) # Add UBC Solar logo
+        logo_label.setPixmap(QPixmap("Solar_Logo.png").scaled(800, 600, Qt.KeepAspectRatio))
         logo_label.setAlignment(Qt.AlignCenter)  # Center the image
         layout.addWidget(logo_label)
 
@@ -189,34 +189,33 @@ class MainWindow(QMainWindow):
         layout.addWidget(title_label)
         form_layout = QFormLayout()
 
-        # add a callback QCombobox.currentTextchanged.connect(self.on?combobox?changed)
-
-        #Setting up origin
+        # Dropdown menus
         self.origin_input = QComboBox()
-        origins = client.distinct("origin", [])
-        self.origin_input.addItems(origins)
-        self.origin_input.setStyleSheet("background-color: white")
-        form_layout.addRow("Origin:", self.origin_input)
-
-        #Setting up source
-        self.source_input = QComboBox()
-        sources = client.distinct("source", [])
-        self.source_input.addItems(sources)
-        self.source_input.setStyleSheet("background-color: white")
-        form_layout.addRow("Source:", self.source_input)
-
-        # Setting up events
         self.event_input = QComboBox()
-        events = client.distinct("event", [])  # Checks all the events available in Sunbeam
-        self.event_input.addItems(events)
-        self.event_input.setStyleSheet("background-color: white")
-        form_layout.addRow("Event:", self.event_input)
-
-        # Setting up data types that can be queried
+        self.source_input = QComboBox()
         self.data_input = QComboBox()
-        names = client.distinct("name", [])  # Checks all the data types available in Sunbeam
-        self.data_input.addItems(names)
-        self.data_input.setStyleSheet("background-color: white")
+
+        # Load initial data
+        self.origins = client.distinct("origin", [])
+        self.origin_input.addItems(self.origins)
+
+        self.events = client.distinct("event", [])
+        self.event_input.addItems(self.events)
+
+        self.sources = client.distinct("source", [])
+        self.source_input.addItems(self.sources)
+
+        self.data_types = client.distinct("name", [])
+        self.data_input.addItems(self.data_types)
+
+        # Style of the drowpdown menus
+        for combo in [self.origin_input, self.source_input, self.event_input, self.data_input]:
+            combo.setStyleSheet("background-color: white")
+
+        # Add to form layout
+        form_layout.addRow("Origin:", self.origin_input)
+        form_layout.addRow("Event:", self.event_input)
+        form_layout.addRow("Source:", self.source_input)
         form_layout.addRow("Data:", self.data_input)
 
         layout.addLayout(form_layout)
@@ -229,6 +228,89 @@ class MainWindow(QMainWindow):
 
         home_widget.setLayout(layout)
         self.tabs.addTab(home_widget, "Home")
+
+        # Callbacks to update dropdowns to only show existing query combinations
+        self.origin_input.currentTextChanged.connect(self.update_filters)
+        self.event_input.currentTextChanged.connect(self.update_filters)
+        self.source_input.currentTextChanged.connect(self.update_filters)
+
+    def update_filters(self) -> None:
+        """
+        Updates all dropdown options based on selected values. This way, you should only
+        be able to form query combinations that make sense. For example, if you choose
+        'realtime' as your origin, in the events dropdown you should only see 'FSGP_2024_Day_1'
+        because that is the only event associated to the 'realtime' pipeline.
+
+        :raises Exception: if there is an error while updating the dropdown options.
+        """
+        try:
+            client = SunbeamClient()
+
+            # Initial text
+            selected_origin = self.origin_input.currentText()
+            selected_source = self.source_input.currentText()
+            selected_event = self.event_input.currentText()
+            selected_data = self.data_input.currentText()
+
+            # Get valid events based on origin
+            available_events = set(client.distinct("event", []))  # Start with all events
+            if selected_origin:
+                available_events &= set(client.distinct("event", {"origin": selected_origin})) # Filter by origin
+
+            # Get valid sources based on origin and event
+            available_sources = set(client.distinct("source", []))  # Start with all
+            if selected_origin:
+                available_sources &= set(client.distinct("source", {"origin": selected_origin})) # Filter by origin
+            if selected_event:
+                available_sources &= set(client.distinct("source", {"event": selected_event})) # Filter by event
+
+            # Get valid data types based on origin, source, and event
+            available_data = set(client.distinct("name", [])) # Start with all data
+            if selected_origin:
+                available_data &= set(client.distinct("name", {"origin": selected_origin})) # Filter by origin
+            if selected_event:
+                available_data &= set(client.distinct("name", {"event": selected_event})) # Filter by event
+            if selected_source:
+                available_data &= set(client.distinct("name", {"source": selected_source})) # Filter by source
+
+            # Convert back to lists
+            available_sources = list(available_sources)
+            available_events = list(available_events)
+            available_data = list(available_data)
+
+            # Update dropdowns safely
+            self.source_input.blockSignals(True) # Shuts down ability to take input
+            self.source_input.clear()
+            self.source_input.addItems(available_sources)
+            # Set the selected source to the first available or keep it if it exists
+            if selected_source in available_sources:
+                self.source_input.setCurrentText(selected_source)
+            elif available_sources:
+                self.source_input.setCurrentText(available_sources[0])  # Select first available option
+            self.source_input.blockSignals(False) # Can take inputs again
+
+            self.event_input.blockSignals(True) # Can't take inputs
+            self.event_input.clear()
+            self.event_input.addItems(available_events)
+            # Set the selected event to the first available or keep it if it exists
+            if selected_event in available_events:
+                self.event_input.setCurrentText(selected_event)
+            elif available_events:
+                self.event_input.setCurrentText(available_events[0])  # Select first available option
+            self.event_input.blockSignals(False) # Can take inputs again
+
+            self.data_input.blockSignals(True) # Can't take inputs
+            self.data_input.clear()
+            self.data_input.addItems(available_data)
+            # Set the selected data to the first available or keep it if it exists
+            if selected_data in available_data:
+                self.data_input.setCurrentText(selected_data)
+            elif available_data:
+                self.data_input.setCurrentText(available_data[0])  # Select first available option
+            self.data_input.blockSignals(False) # Can take inputs again
+
+        except Exception as e:
+            print(f"Error updating filters: {e}")
 
     def create_plot_tab(self) -> None:
         """
