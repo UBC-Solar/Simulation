@@ -6,13 +6,15 @@ class VehicleConfig(Config):
     model_config = ConfigDict(frozen=True)
 
     vehicle_mass: float            # Vehicle mass in kg
+    max_acceleration: float        # Maximum acceleration allowed in m/s^2
+    max_deceleration: float        # Maximum deceleration allowed in m/s^2
 
 
 class ArrayConfig(Config):
     model_config = ConfigDict(frozen=True)
 
     panel_efficiency: float = Field(ge=0.0, le=1.0)  # Efficiency at turning solar irradiance into electrical power
-    panel_size: float                                # Effective panel area in in m^2
+    panel_size: float                                # Effective panel area in m^2
 
 
 class LVSConfig(Config):

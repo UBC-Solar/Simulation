@@ -66,7 +66,10 @@ class Model:
             regen: BaseRegen,
             lvs: BaseLVS,
             gis: BaseGIS,
-            meteorology: BaseMeteorology
+            meteorology: BaseMeteorology,
+            max_acceleration: float,
+            max_deceleration: float,
+            start_time: int
     ):
         """
 
@@ -90,11 +93,11 @@ class Model:
         self.gis = gis
         self.meteorology = meteorology
         self.lvs = lvs
+        self.max_acceleration = max_acceleration
+        self.max_deceleration = max_deceleration
+        self.start_time = start_time
 
         self.time_of_initialization = self.meteorology.last_updated_time  # Real Time
-
-        # Fix this!
-        self.start_time = 74313
 
         self.simulation_duration = race.race_duration - self.start_time
 
@@ -160,7 +163,7 @@ class Model:
                                                                  f"{self.get_driving_time_divisions()} is needed!")
 
         # ----- Reshape speed array -----
-        speed_kmh = helpers.reshape_speed_array(self.race, speed, self.speed_dt, self.start_time, self.simulation_dt)
+        speed_kmh = helpers.reshape_speed_array(self.race, speed, self.speed_dt, self.start_time, self.simulation_dt, self.max_acceleration, self.max_deceleration)
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()

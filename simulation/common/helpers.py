@@ -124,7 +124,7 @@ def reshape_and_repeat(input_array, reshape_length):
         return result
 
 
-def apply_deceleration(input_speed_array, tick):
+def apply_deceleration(input_speed_array, tick, max_deceleration: float):
     """
 
     Remove sudden drops in speed from input_speed_array
@@ -135,12 +135,12 @@ def apply_deceleration(input_speed_array, tick):
 
     :param np.ndarray input_speed_array: array to be modified
     :param int tick: time interval between each value in input_speed_array
+    :param float max_deceleration: the maximum allowed deceleration in m/s^2
     :return: modified array
     :rtype: np.ndarray
 
     """
-    # TODO: Get from config!
-    max_deceleration_per_tick = 6 * tick
+    max_deceleration_per_tick = max_deceleration * tick
 
     if input_speed_array is None:
         return np.array([])
@@ -155,7 +155,7 @@ def apply_deceleration(input_speed_array, tick):
     return input_speed_array
 
 
-def apply_acceleration(input_speed_array, tick):
+def apply_acceleration(input_speed_array, tick, max_acceleration: float):
     """
 
     Remove sudden increases in speed from input_speed_array
@@ -167,12 +167,12 @@ def apply_acceleration(input_speed_array, tick):
 
     :param np.ndarray input_speed_array: array to be modified
     :param int tick: time interval between each value in input_speed_array
+    :param float max_acceleration: the maximum allowed acceleration in m/s^2
     :return: modified array
     :rtype: np.ndarray
 
     """
-    # TODO: Fix this too! Get from config
-    max_acceleration_per_tick = 6 * tick
+    max_acceleration_per_tick = max_acceleration * tick
 
     if input_speed_array is None:
         return np.array([])
@@ -221,7 +221,15 @@ def get_granularity_reduced_boolean(boolean: np.ndarray, granularity: int | floa
     return ~reduced_boolean
 
 
-def reshape_speed_array(race: Race, speed, granularity, start_time: int, tick=1):
+def reshape_speed_array(
+        race: Race,
+        speed,
+        granularity,
+        start_time: int,
+        tick=1,
+        max_acceleration: float = 6,
+        max_deceleration: float = 6
+):
     """
 
     Modify the speed array to reflect:
@@ -237,6 +245,8 @@ def reshape_speed_array(race: Race, speed, granularity, start_time: int, tick=1)
                               where 1 is hourly and 0.5 is twice per hour.
     :param int start_time: time since start of the race that simulation is beginning
     :param int tick: The time interval in seconds between each speed in the speed array
+    :param float max_acceleration: the maximum allowed acceleration in m/s^2
+    :param float max_deceleration: the maximum allowed deceleration in m/s^2
     :return: A modified speed array which reflects race constraints and the car's acceleration/deceleration
     :rtype: np.ndarray
 
@@ -247,7 +257,7 @@ def reshape_speed_array(race: Race, speed, granularity, start_time: int, tick=1)
 
     reshaped_tick_count = math.ceil((race.race_duration - start_time) / float(tick))
     speed_mapped_per_tick = reshape_and_repeat(speed_mapped, reshaped_tick_count)
-    speed_smoothed_kmh = apply_deceleration(apply_acceleration(speed_mapped_per_tick, tick), tick)
+    speed_smoothed_kmh = apply_deceleration(apply_acceleration(speed_mapped_per_tick, tick, max_acceleration), tick, max_deceleration)
 
     return speed_smoothed_kmh
 

@@ -12,13 +12,15 @@ from simulation.config import (SimulationHyperparametersConfig, OpenweatherConfi
                                EnvironmentConfig, InitialConditions, Route, CompetitionType)
 
 from physics.models.arrays import BaseArray, BasicArray
-from physics.models.battery import BaseBattery, BasicBattery
+from physics.models.battery import BaseBattery, BasicBattery, BatteryModel
 from physics.models.lvs import BaseLVS, BasicLVS
 from physics.models.motor import BaseMotor, BasicMotor
 from physics.models.regen import BaseRegen, BasicRegen
 from typing import Optional
 from physics.environment.gis import BaseGIS, GIS
 from physics.environment.meteorology import BaseMeteorology, IrradiantMeteorology, CloudedMeteorology
+from simulation.model.Model import Model
+
 
 load_dotenv()
 
@@ -47,6 +49,8 @@ class ModelBuilder:
         self.motor: Optional[BaseMotor] = None
         self.battery: Optional[BaseBattery] = None
         self.regen: Optional[BaseRegen] = None
+        self.max_acceleration: Optional[float] = None
+        self.max_deceleration: Optional[float] = None
 
         # Environment
         self.race_data: Optional[Race] = None
@@ -61,6 +65,7 @@ class ModelBuilder:
         # Initial Conditions
         self.current_coord: Optional[NDArray] = None
         self.initial_battery_charge: Optional[float] = None
+        self.start_time: Optional[int] = None
 
         # Hyperparameters
         self.simulation_period: Optional[int] = None
@@ -92,6 +97,7 @@ class ModelBuilder:
 
         self.current_coord = initial_conditions.current_coord
         self.initial_battery_charge = initial_conditions.initial_battery_soc
+        self.start_time = initial_conditions.start_time
 
     @staticmethod
     def _truncate_hash(hashed: int, num_chars: int = 12) -> str:
@@ -245,11 +251,29 @@ class ModelBuilder:
         self.weather_provider = weather_query_config.weather_provider
 
     def compile(self):
-        self._set_competition_data()
+        if self._environment_config is None:
+            raise RuntimeError("You are trying to compile before setting environment configuration! Please"
+                               "use `set_environment_config` first!")
         self._set_weather_data()
         self._set_route_data()
+        self._set_competition_data()
+
+        if self._initial_conditions is None:
+            raise RuntimeError("You are trying to compile before setting initial conditions! Please"
+                               "use `set_initial_conditions` first!")
         self._set_initial_conditions()
+
+        if self._hyperparameter_config is None:
+            raise RuntimeError("You are trying to compile before setting hyperparameters! Please"
+                               "use `set_hyperparameters` first!")
         self._set_hyperparameters()
+
+        if self._car_config is None:
+            raise RuntimeError("You are trying to compile before binding a car configuration! Please"
+                               "use `set_car_config` first!")
+
+        self.max_acceleration = self._car_config.car_config.max_acceleration
+        self.max_deceleration = self._car_config.car_config.max_deceleration
 
         self.array = BasicArray(
             **self._car_config.array_config.model_dump()
@@ -268,11 +292,11 @@ class ModelBuilder:
                     **self._car_config.battery_config.model_dump()
                 )
 
-            # case "BatteryModel":
-            #     self.battery = BatteryModel(
-            #         self._car_config.battery_config,
-            #         self.initial_battery_charge
-            #     )
+            case "BatteryModel":
+                self.battery = BatteryModel(
+                    self._car_config.battery_config,
+                    self.initial_battery_charge
+                )
 
         self.motor = BasicMotor(
             vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
@@ -305,8 +329,7 @@ class ModelBuilder:
                 )
 
             case WeatherProvider.Openweather:
-                # TODO: We are forcing Solcast use
-                self.meteorology = IrradiantMeteorology(
+                self.meteorology = CloudedMeteorology(
                     race=self.race_data,
                     weather_forecasts=self.weather_forecasts
                 )
@@ -326,9 +349,8 @@ class ModelBuilder:
         Raises:
             RaceDataNotMatching: If hashes do not match.
             """
-        # We do a delayed import because we want to avoid a circular import. We want Model to have access to
-        # ModelBuilder so that type hints work properly.
-        from simulation.model.Model import Model
+        if not self._compiled:
+            raise RuntimeError("Model has not been compiled! Please use `compile` before trying to get an instance.")
 
         return Model(
             return_type=self.return_type,
@@ -343,4 +365,7 @@ class ModelBuilder:
             regen=self.regen,
             gis=self.gis,
             meteorology=self.meteorology,
+            max_acceleration=self.max_acceleration,
+            max_deceleration=self.max_deceleration,
+            start_time=self.start_time
         )

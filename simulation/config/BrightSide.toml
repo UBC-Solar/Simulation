@@ -21,17 +21,11 @@ lvs_current = 1.50
 
 [vehicle_config]
 vehicle_mass = 350
+max_acceleration = 6
+max_deceleration = 6
 
 [motor_config]
 road_friction = 0.012
 tire_radius = 0.2032
 vehicle_frontal_area = 1.1853
 drag_coefficient = 0.11609
-
-#{
-#  "max_acceleration_kmh_per_s": 6,
-#  "max_deceleration_kmh_per_s": 6,
-#
-#  "max_speed_during_turn": 20,
-#  "max_cruising_speed": 80
-#}
