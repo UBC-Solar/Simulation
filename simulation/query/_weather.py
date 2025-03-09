@@ -6,6 +6,17 @@ from simulation.config import SolcastConfig, OpenweatherConfig, OpenweatherPerio
 from numpy.typing import NDArray, ArrayLike
 from simulation.common import Coordinate
 from simulation.query import Query
+from pyowm import OWM
+from pyowm.utils import config
+from pyowm.utils import timestamps
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+
+owm = OWM(os.environ['OPENWEATHER_API_KEY'])
+mgr = owm.weather_manager()
 
 
 class SolcastQuery(Query[SolcastConfig]):
@@ -118,7 +129,7 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
 
         exclude_string = ",".join(weather_periods).lower()
 
-        url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
+        url = f"https://api.openweathermap.org/data/3.0/onecall?lat={coord[0]}&lon={coord[1]}" \
               f"&exclude=minutely,{exclude_string}&appid={os.environ['OPENWEATHER_API_KEY']}"
 
         # ----- Calling OpenWeatherAPI ------
@@ -129,15 +140,16 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
         # ----- Processing API response -----
 
         # Ensures that response[weather_data_frequency] is always a list of dictionaries
-        if isinstance(response[weather_period], dict):
-            weather_data_list = [response[weather_period]]
+        weather_period_str = str(weather_period).lower()
+        if isinstance(response[weather_period_str], dict):
+            weather_data_list = [response[weather_period_str]]
         else:
-            weather_data_list = response[weather_period]
+            weather_data_list = response[weather_period_str]
 
         # If the weather data is too long, then append the daily requests as well.
         if weather_period == "Hourly" and duration > 24:
 
-            url = f"https://api.openweathermap.org/data/2.5/onecall?lat={coord[0]}&lon={coord[1]}" \
+            url = f"https://api.openweathermap.org/data/3.0/onecall?lat={coord[0]}&lon={coord[1]}" \
                   f"&exclude=minutely,hourly,current&appid={os.environ['OPENWEATHER_API_KEY']}"
 
             r = requests.get(url)

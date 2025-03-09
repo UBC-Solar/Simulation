@@ -12,7 +12,6 @@ from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from numba import jit
 from simulation.common.race import Race
-from haversine import haversine, Unit
 
 
 """
@@ -140,7 +139,8 @@ def apply_deceleration(input_speed_array, tick):
     :rtype: np.ndarray
 
     """
-    max_deceleration_per_tick = BrightSide.max_deceleration_kmh_per_s*tick
+    # TODO: Get from config!
+    max_deceleration_per_tick = 6 * tick
 
     if input_speed_array is None:
         return np.array([])
@@ -171,7 +171,8 @@ def apply_acceleration(input_speed_array, tick):
     :rtype: np.ndarray
 
     """
-    max_acceleration_per_tick = BrightSide.max_acceleration_kmh_per_s*tick
+    # TODO: Fix this too! Get from config
+    max_acceleration_per_tick = 6 * tick
 
     if input_speed_array is None:
         return np.array([])
@@ -281,27 +282,6 @@ def adjust_timestamps_to_local_times(timestamps, starting_drive_time, time_zones
     """
 
     return np.array(timestamps + starting_drive_time - (time_zones[0] - time_zones), dtype=np.uint64)
-
-
-def calculate_path_distances(coords):
-    """
-
-    Obtain the distance between each coordinate by approximating the spline between them
-    as a straight line, and use the Haversine formula (https://en.wikipedia.org/wiki/Haversine_formula)
-    to calculate distance between coordinates on a sphere.
-
-    :param np.ndarray coords: A NumPy array [n][latitude, longitude]
-    :returns path_distances: a NumPy array [n-1][distances],
-    :rtype: np.ndarray
-
-    """
-
-    coords_offset = np.roll(coords, (1, 1))
-    path_distances = []
-    for u, v in zip(coords, coords_offset):
-        path_distances.append(haversine(u, v, unit=Unit.METERS))
-
-    return np.array(path_distances)
 
 
 @jit(nopython=True)

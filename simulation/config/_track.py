@@ -52,7 +52,7 @@ class TrackCompetitionConfig(CompetitionConfig):
     tiling: int  # The number of times to tile the route to build the route
 
     def route_hash(self):
-        return hash(hash(self.route) + hash(self.tiling))
+        return hash(hash(self.route_config) + hash(self.tiling))
 
 
 class RoadCompetitionConfig(CompetitionConfig):
@@ -62,16 +62,6 @@ class RoadCompetitionConfig(CompetitionConfig):
     pass
 
 
-class RoadCompetition:
-    def __init__(self, config: RoadCompetitionConfig):
-        pass
-
-
-class TrackCompetition:
-    def __init__(self, config: TrackCompetitionConfig):
-        pass
-
-
 class Route(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
@@ -79,17 +69,4 @@ class Route(BaseModel):
     path_elevations: NDArray[float]
     path_time_zones: NDArray[float]
     coords: NDArray[float]
-    num_unique_coords: int
     tiling: int
-
-
-if __name__ == "__main__":
-    config_dict = {
-        "competition_type": "TrackCompetition",
-        "date": datetime.now(),
-        "route": {"coordinates": [(10, 10), (5, 5), (3, 3)]},
-        "tiling": 100
-    }
-    competition_config = CompetitionConfig.build_from(config_dict)
-
-    pass

@@ -1,24 +1,26 @@
 import argparse
-import hashlib
-import os
-import pathlib
-import pickle
-
 import numpy as np
 import tomllib as toml
 from simulation.config import config_directory, speeds_directory, SimulationReturnType
 from simulation.model.Simulation import Simulation
-from simulation.model.SimulationBuilder import SimulationBuilder
-from simulation.config import EnvironmentConfig, SimulationHyperparametersConfig, InitialConditions
+from simulation.model.ModelBuilder import ModelBuilder
+from simulation.config import EnvironmentConfig, SimulationHyperparametersConfig, InitialConditions, CarConfig
 
 
-def run_simulation(competition_name: str, speeds_filename: str, plot_results: bool, verbose: bool, vehicle_speed_period: int):
+def run_simulation(
+        competition_name: str,
+        speeds_filename: str,
+        plot_results: bool,
+        verbose: bool,
+        vehicle_speed_period: int, car: str
+):
     """
     This is the entry point to Simulation.
 
     This method parses initial conditions for the simulation and store them in a simulationState object. Then, begin
     optimizing simulation with Bayesian optimization and then random optimization.
 
+    :param car: The name of the car to be simulated, should match a config file.
     :param vehicle_speed_period:
     :param verbose:
     :param competition_name:
@@ -29,7 +31,7 @@ def run_simulation(competition_name: str, speeds_filename: str, plot_results: bo
 
     """
 
-    initial_conditions, environment = get_default_settings(competition_name)
+    initial_conditions, environment, car_config = get_default_settings(competition_name, car)
 
     hyperparameters = SimulationHyperparametersConfig.build_from(
         {
@@ -38,7 +40,7 @@ def run_simulation(competition_name: str, speeds_filename: str, plot_results: bo
             "vehicle_speed_period": vehicle_speed_period
         }
     )
-    simulation_model = build_model(environment, hyperparameters, initial_conditions)
+    simulation_model = build_model(environment, hyperparameters, initial_conditions, car_config)
 
     # Initialize a "guess" speed array
     driving_hours = simulation_model.get_driving_time_divisions()
@@ -58,7 +60,10 @@ def run_simulation(competition_name: str, speeds_filename: str, plot_results: bo
     return simulation_model
 
 
-def get_default_settings(competition_name: str = "FSGP") -> tuple[InitialConditions, EnvironmentConfig]:
+def get_default_settings(
+        competition_name: str = "FSGP",
+        car_name: str = "BrightSide"
+) -> tuple[InitialConditions, EnvironmentConfig, CarConfig]:
     #  ----- Load initial conditions -----
     config_path = config_directory / f"initial_conditions_{competition_name}.toml"
     with open(config_path, "rb") as f:
@@ -71,14 +76,23 @@ def get_default_settings(competition_name: str = "FSGP") -> tuple[InitialConditi
         model_parameters_data = toml.load(f)
         environment_config = EnvironmentConfig.build_from(model_parameters_data)
 
-    return initial_conditions, environment_config
+    #  ----- Load car -----
+    config_path = config_directory / f"{car_name}.toml"
+    with open(config_path, "rb") as f:
+        car_config_data = toml.load(f)
+        car_config = CarConfig.build_from(car_config_data)
+
+    return initial_conditions, environment_config, car_config
 
 
-def build_model(environment: EnvironmentConfig, hyperparameters: SimulationHyperparametersConfig,
-                initial_conditions: InitialConditions):
+def build_model(environment: EnvironmentConfig,
+                hyperparameters: SimulationHyperparametersConfig,
+                initial_conditions: InitialConditions,
+                car_config: CarConfig
+                ):
     # Build simulation model
-    simulation_builder = SimulationBuilder().set_environment_config(environment).set_hyperparameters(
-        hyperparameters).set_initial_conditions(initial_conditions)
+    simulation_builder = ModelBuilder().set_environment_config(environment).set_hyperparameters(
+        hyperparameters).set_initial_conditions(initial_conditions).set_car_config(car_config)
     simulation_builder.compile()
 
     return simulation_builder.get()
@@ -101,6 +115,9 @@ if __name__ == "__main__":
     parser.add_argument('-p', "--plot_results", required=False, default=True, type=bool,
                         help="Plot results or not")
 
+    parser.add_argument('-c,' '--car_name', required=False, default="Brightside", type=str,
+                        help="Name of car model")
+
     args = parser.parse_args()
 
     run_simulation(
@@ -108,5 +125,6 @@ if __name__ == "__main__":
         verbose=args.verbose,
         vehicle_speed_period=args.granularity,
         speeds_filename=args.speeds,
-        plot_results=args.plot_results
+        plot_results=args.plot_results,
+        car="Brightside"
     )

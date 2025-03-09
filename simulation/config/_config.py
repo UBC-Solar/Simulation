@@ -53,7 +53,7 @@ class Config(BaseModel, abc.ABC):
         a subclass type name.
 
         :param config_dict: the dictionary that will be built into a configuration object
-        :return: a configuration object
+        :return: a configuration object of type `cls` OR a subclass of `cls`.
         """
         # Find if we have a setting that specifies how to identify subclasses
         if (subclass_field := getattr(cls, "model_config", {}).get("subclass_field")) is not None:
@@ -66,6 +66,9 @@ class Config(BaseModel, abc.ABC):
                 # Try to find a subclass with the name that matches our key
                 for subclass in subclasses:
                     if subclass_type_name == subclass.__name__:
+                        # Here, we promote the data belonging to the subclass
+                        # to be top-level keys in the dictionary so that Pydantic can find
+                        # them when validating the model.
                         config_dict.update(config_dict[subclass_type])
 
                         return subclass.model_validate(config_dict)
@@ -83,12 +86,19 @@ class Config(BaseModel, abc.ABC):
     @model_validator(mode="before")
     @classmethod
     def intercept_nested_configs(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        """Intercepts and ensures nested Config instances use build_from."""
+        """
+        Before model_validate runs, go through the model's fields and check for any nested configuration objects
+        to properly build them with `Config.build_from` to ensure that they are properly promoted to the correct
+        subclass when necessary.
+        """
         for field_name, field_annotation in cls.model_fields.items():
             try:
-                annotation = field_annotation.annotation
+                annotation: Type = field_annotation.annotation
                 if issubclass(annotation, Config):
+                    # TODO: Test if this try-except has a valid purpose since looking now I'm not convinced that
+                    #  KeyError should be suppressed
                     try:
+                        # Replace the dictionary data with an actual instance of the subclass
                         field_data = values[field_name]
                         values[field_name] = annotation.build_from(field_data)
 

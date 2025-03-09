@@ -35,6 +35,18 @@ from ._hyperparameters import (
     SimulationReturnType
 )
 
+from ._car import (
+    ArrayConfig,
+    LVSConfig,
+    BatteryConfig,
+    BasicBatteryConfig,
+    BatteryModelConfig,
+    MotorConfig,
+    RegenConfig,
+    VehicleConfig,
+    CarConfig
+)
+
 
 config_directory = pathlib.Path(__file__).parent
 speeds_directory = config_directory / "speeds"

@@ -1,340 +1,287 @@
-"""
-Contain calculations and results of Simulation.
-"""
-
+import functools
+import core
 import numpy as np
-from typing import Union
-from simulation.common import helpers
 
-Iterable = Union[np.ndarray, list, set, tuple]
+from typing import Union
+from numpy.typing import NDArray
+
+from simulation.common import helpers
+from simulation.utils.Plotting import GraphPage
+from simulation.common.exceptions import PrematureDataRecoveryError
+from simulation.utils.Plotting import Plotting
+from simulation.model.Simulation import Simulation
+from simulation.common.race import Race
+from simulation.config import SimulationReturnType
+
+from physics.models.arrays import BaseArray
+from physics.models.battery import BaseBattery
+from physics.models.lvs import BaseLVS
+from physics.models.motor import BaseMotor
+from physics.models.regen import BaseRegen
+
+from physics.environment.gis import BaseGIS
+from physics.environment.meteorology import BaseMeteorology
+
+
+def simulation_property(func):
+    """
+
+    Apply this decorator to all functions that intend to get data from a Simulation model.
+    This protects the data from being pulled from Simulation before the model has been simulated.
+
+    :param func: function that will be used to get data
+
+    """
+
+    @functools.wraps(func)
+    def property_wrapper(*args, **kwargs):
+        assert isinstance(args[0], Simulation), "simulation_property wrapper applied to non-Simulation function!"
+        if not args[0].calculations_have_happened():
+            raise PrematureDataRecoveryError("You are attempting to collect information before simulation "
+                                             "model calculations have completed.")
+        value = func(*args, **kwargs)
+        return value
+
+    return property_wrapper
 
 
 class Model:
     """
-    Models should be considered to be immutable. Instantiate a new model when you want to run a different simulation.
+
+    Note: The first time that run_model is called will be SIGNIFICANTLY slower than future calls. This is because
+    Simulation components contain many Numba JIT targets, which must be compiled at runtime the first time they are
+    called.
     """
 
-    def __init__(self, simulation, speed_kmh):
-        self.simulation = simulation
-        self.speed_kmh = speed_kmh
-
-        self.calculations_have_happened = False
-
-        # --------- Results ---------
-
-        self.distances = None
-        self.state_of_charge = None
-        self.delta_energy = None
-        self.solar_irradiances = None
-        self.wind_speeds = None
-        self.gis_route_elevations_at_each_tick = None
-        self.cloud_covers = None
-        self.distance = None
-        self.route_length = None
-        self.time_taken = None
-        self.distance_travelled = None
-
-        # --------- Calculations ---------
-
-        self.timestamps = None
-        self.tick_array = None
-        self.time_zones = None
-        self.distances = None
-        self.cumulative_distances = None
-        self.closest_gis_indices = None
-        self.closest_weather_indices = None
-        self.path_distances = None
-        self.max_route_distance = None
-        self.gis_route_elevations_at_each_tick = None
-        self.gis_vehicle_bearings = None
-        self.gradients = None
-        self.absolute_wind_speeds = None
-        self.wind_directions = None
-        self.lvs_consumed_energy = None
-        self.motor_consumed_energy = None
-        self.array_produced_energy = None
-        self.regen_produced_energy = None
-        self.raw_soc = None
-        self.not_charge = None
-        self.consumed_energy = None
-        self.produced_energy = None
-        self.time_in_motion = None
-        self.final_soc = None
-        self.map_data_indices = None
-
-    def run_simulation_calculations(self) -> None:
+    def __init__(
+            self,
+            return_type: SimulationReturnType,
+            race: Race,
+            speed_dt: int,
+            simulation_dt: int,
+            speed_limits: NDArray,
+            array: BaseArray,
+            battery: BaseBattery,
+            motor: BaseMotor,
+            regen: BaseRegen,
+            lvs: BaseLVS,
+            gis: BaseGIS,
+            meteorology: BaseMeteorology
+    ):
         """
 
-        Simulate the model by sequentially running calculations for the entire simulation duration at once.
+        Instantiates a simple model of the car.
 
-        To begin, we use the driving speeds array to obtain the theoretical position of the car at every tick.
-        Then, we map the position of the car at every tick to a GIS coordinate and to a Weather coordinate. Next,
-        we use the GIS coordinates to calculate gradients, vehicle bearings, and we also determine the time in which we
-        arrive at each position. Then, we use the time and Weather coordinate to map each tick to a weather
-        forecast. From the weather, we can calculate wind speeds, cloud cover, and estimate solar irradiance.
-        From the aforementioned calculations, we can determine the energy needed for the motor, and the energy
-        that the solar arrays will collect; from those two, we can determine the delta energy at every tick.
-        Then, we use the delta energy to determine how much energy we are drawing or storing from/into the battery
-        which allows us to determine the battery's state of charge for the entire simulation duration.
+        Do NOT call this constructor directly. Please create a SimulationBuilder and use
+        SimulationBuilder.get() after setting parameters and initial conditions.
+
+        :param builder: a SimulationBuilder object that provides settings for the Simulation
 
         """
+        self.return_type = return_type
+        self.race = race
+        self.speed_limits = speed_limits
+        self.speed_dt = speed_dt
+        self.simulation_dt = simulation_dt
+        self.solar_array = array
+        self.motor = motor
+        self.regen = regen
+        self.batter = battery
+        self.gis = gis
+        self.meteorology = meteorology
+        self.lvs = lvs
 
-        # ----- Tick array -----
+        self.time_of_initialization = self.meteorology.last_updated_time  # Real Time
 
-        self.timestamps = np.arange(0, self.simulation.simulation_duration, self.simulation.tick)
-        self.tick_array = np.diff(self.timestamps)
-        self.tick_array = np.insert(self.tick_array, 0, 0)
+        # Fix this!
+        self.start_time = 0
 
-        # ----- Expected distance estimate -----
+        self.simulation_duration = race.race_duration - self.start_time
 
-        # Array of cumulative distances theoretically achievable via the speed array
-        self.distances = self.tick_array * self.speed_kmh / 3.6
-        self.cumulative_distances = np.cumsum(self.distances)
+        self.plotting = Plotting()
 
-        # ----- Weather and location calculations -----
+        # All attributes ABOVE will NOT be modified when the model is simulated. All attributes BELOW this WILL be
+        # mutated over the course of simulation. Ensure that when you modify the behaviour of Simulation that this
+        # fact is maintained, else the stability of the optimization process WILL be threatened, as it assumes
+        # that the attributes above are independent of whether the model has been previously simulated.
 
-        """ closest_gis_indices is a 1:1 mapping between each point which has within it a timestamp and cumulative
-                distance from a starting point, to its closest point on a map.
+        # A Model is a (mostly) immutable container for simulation calculations and results
+        self._model = None
 
-            closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
+    def run_model(self, speed=None, plot_results=False, verbose=False,
+                  route_visualization=False, plot_portion=(0.0, 1.0), is_optimizer: bool = False, **kwargs):
         """
 
-        self.closest_gis_indices = self.simulation.gis.calculate_closest_gis_indices(self.distances)
+        Given an array of driving speeds, simulate the model by running calculations sequentially for the entire
+        simulation duration. Returns either time taken, distance travelled, or void. This function is mostly a wrapper
+        around run_simulation_calculations, which is where the magic happens, that deals with processing the driving
+        speeds array as well as plotting and handling the calculation results.
 
-        self.simulation.meteorology.spatially_localize(self.cumulative_distances, simplify_weather=True)
+        Note: if the speed remains constant throughout this update, and knowing the starting
+              time, the cumulative distance at every time can be known. From the cumulative
+              distance, the GIS class updates the new location of the vehicle. From the location
+              of the vehicle at every tick, the gradients at every tick, the weather at every
+              tick, the GHI at every tick, is known.
 
-        self.path_distances = self.simulation.gis.get_path_distances()
-        self.cumulative_distances = np.cumsum(self.path_distances)  # [cumulative_distances] = meters
+        Note 2: currently, the simulation can only be run for times during which weather data is available
 
-        self.max_route_distance = self.cumulative_distances[-1]
-
-        self.route_length = self.max_route_distance / 1000.0  # store the route length in kilometers
-
-        # Array of elevations at every route point
-        gis_route_elevations = self.simulation.gis.get_path_elevations()
-
-        self.gis_route_elevations_at_each_tick = gis_route_elevations[self.closest_gis_indices]
-
-        # Get the azimuth angle of the vehicle at every location
-        self.gis_vehicle_bearings = self.simulation.vehicle_bearings[self.closest_gis_indices]
-
-        # Get array of path gradients
-        self.gradients = self.simulation.gis.get_gradients(self.closest_gis_indices)
-
-        # ----- Timing Calculations -----
-
-        # Get time zones at each point on the GIS path
-        self.time_zones = self.simulation.gis.get_time_zones(self.closest_gis_indices)
-
-        # Local times in UNIX timestamps
-        local_times = helpers.adjust_timestamps_to_local_times(
-            self.timestamps,
-            self.simulation.time_of_initialization,
-            self.time_zones
-        )
-
-        # Get the weather at every location
-        self.simulation.meteorology.temporally_localize(
-            local_times,
-            self.simulation.start_time,
-            self.simulation.tick
-        )
-
-        self.absolute_wind_speeds = self.simulation.meteorology.wind_speed
-        self.wind_directions = self.simulation.meteorology.wind_direction
-
-        # Get the wind speeds at every location
-        self.wind_speeds = helpers.get_array_directional_wind_speed(
-            self.gis_vehicle_bearings,
-            self.absolute_wind_speeds,
-            self.wind_directions
-        )
-
-        # Get an array of solar irradiance at every coordinate and time
-        self.solar_irradiances = self.simulation.meteorology.calculate_solar_irradiances(
-            self.simulation.route_coords[self.closest_gis_indices],
-            self.time_zones, local_times,
-            self.gis_route_elevations_at_each_tick
-        )
-
-        # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
-
-        # ----- Energy Calculations -----
-
-        self.lvs_consumed_energy = self.simulation.basic_lvs.get_consumed_energy(self.simulation.tick)
-
-        self.motor_consumed_energy = self.simulation.basic_motor.calculate_energy_in(
-            self.speed_kmh,
-            self.gradients,
-            self.wind_speeds,
-            self.simulation.tick
-        )
-
-        self.array_produced_energy = self.simulation.basic_array.calculate_produced_energy(
-            self.solar_irradiances,
-            self.simulation.tick
-        )
-
-        self.regen_produced_energy = self.simulation.basic_regen.calculate_produced_energy(
-            self.speed_kmh,
-            self.gis_route_elevations_at_each_tick,
-            0.0,
-            10000.0
-        )
-
-        self.not_charge = self.simulation.race.charging_boolean[self.simulation.start_time:]
-        self.not_race = self.simulation.race.driving_boolean[self.simulation.start_time:]
-
-        if self.simulation.tick != 1:
-            self.not_charge = self.not_charge[::self.simulation.tick]
-            self.not_race = self.not_race[::self.simulation.tick]
-
-        self.array_produced_energy = self.array_produced_energy * np.logical_and(
-            self.array_produced_energy,
-            self.not_charge
-        )
-
-        # Apply not charge mask to only consume energy when we are racing else 0
-        self.consumed_energy = np.where(
-            self.not_race,
-            self.motor_consumed_energy + self.lvs_consumed_energy,
-            0
-        )
-
-        self.produced_energy = self.array_produced_energy + self.regen_produced_energy
-
-        # net energy added to the battery
-        self.delta_energy = self.produced_energy - self.consumed_energy
-
-        # ----- Array initialisation -----
-
-        # used to calculate the time the car was in motion
-        self.tick_array = np.full_like(self.timestamps, fill_value=self.simulation.tick, dtype='f4')
-        self.tick_array[0] = 0
-
-        # ----- Array calculations -----
-
-        cumulative_delta_energy = np.cumsum(self.delta_energy)
-        battery_variables_array = self.simulation.basic_battery.update_array(cumulative_delta_energy)
-
-        # stores the battery SOC at each time step
-        self.state_of_charge = battery_variables_array[0]
-        self.state_of_charge[np.abs(self.state_of_charge) < 1e-03] = 0
-        self.raw_soc = self.simulation.basic_battery.get_raw_soc(np.cumsum(self.delta_energy))
-
-        # # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
-        # self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
-
-        self.time_in_motion = np.logical_and(self.tick_array, self.speed_kmh) * self.simulation.tick
-
-        self.final_soc = self.state_of_charge[-1] * 100 + 0.
-
-        self.distance = self.speed_kmh * (self.time_in_motion / 3600)
-        self.distances = np.cumsum(self.distance)
-
-        # Car cannot exceed Max distance, and it is not in motion after exceeded
-        self.distances = self.distances.clip(0, self.max_route_distance / 1000)
-
-        self.map_data_indices = helpers.get_map_data_indices(self.closest_gis_indices)
-
-        self.distance_travelled = self.distances[-1]
-
-        if self.distance_travelled >= self.route_length:
-            self.time_taken = self.timestamps[helpers.calculate_completion_index(self.route_length, self.distances)]
-        else:
-            self.time_taken = self.simulation.simulation_duration
-
-        self.calculations_have_happened = True
-
-    def get_results(self, requested_properties: Union[Iterable, str]) -> Union[list, np.ndarray, float]:
+        :param np.ndarray speed: array that specifies the solar car's driving speed at each time step
+        :param bool plot_results: set to True to plot the results of the simulation
+        :param bool verbose: Boolean to control logging and debugging behaviour
+        :param bool route_visualization: Flag to control route_visualization plot visibility
+        :param tuple[float] plot_portion: A tuple containing the beginning and end of the portion of the array we'd
+        like to plot, as percentages (0 <= plot_portion <= 1).
+        :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
+            Overrides the speed parameter.
+        :param plot_portion: A tuple containing the beginning and end of the portion of the array we'd
+        like to plot as percentages.
+        :param bool is_optimizer: flag to set whether this method is being run by an optimizer. Reduces verbosity
+            when true.
         """
 
-        Extract data from a Simulation model.
+        if speed is None:
+            speed = np.array([30] * self.get_driving_time_divisions())
 
-        For example, input ["speed_kmh","delta_energy"] to extract speed_kmh and delta_energy. Use
-        "default" to extract the properties that used to be in the deprecated SimulationResults object.
+        # Used by the optimization function as it passes values as keyword arguments instead of a numpy array
+        if kwargs or is_optimizer:
+            if kwargs:
+                speed = np.fromiter(kwargs.values(), dtype=float)
 
-        Note: Multiple properties are returned as a list. If a single property is requested, it will be returned
-        without being wrapped in a list.
+            # Don't plot results since this code is run by the optimizer
+            plot_results = False
+            verbose = False
 
-        Valid Keywords:
-            speed_kmh, distances, state_of_charge, delta_energy, solar_irradiances, wind_speeds,
-            gis_route_elevations_at_each_tick, cloud_covers, distance, route_length, time_taken,
-            tick_array, timestamps, time_zones, cumulative_distances, temp, closest_gis_indices,
-            closest_weather_indices, path_distances, max_route_distance, gis_vehicle_bearings,
-            gradients, absolute_wind_speeds, wind_directions, lvs_consumed_energy, motor_consumed_energy,
-            array_produced_energy, not_charge, consumed_energy, produced_energy, time_in_motion, final_soc,
-            distance_travelled, map_data_indices, path_coordinates, raw_soc
+        assert len(speed) == self.get_driving_time_divisions(), ("Input driving speeds array must have length equal to "
+                                                                 "get_driving_time_divisions()! Current length is "
+                                                                 f"{len(speed)} and length of "
+                                                                 f"{self.get_driving_time_divisions()} is needed!")
 
-        :param requested_properties: an iterable of strings, or a single string equal to a valid keyword.
-        :returns: the Simulation properties requested, in the order provided.
-        :rtype: Union[list, np.ndarray, float]
+        # ----- Reshape speed array -----
+        speed_kmh = helpers.reshape_speed_array(self.race, speed, self.speed_dt, self.start_time, self.simulation_dt)
 
-        """
+        # ----- Preserve raw speed -----
+        raw_speed = speed_kmh.copy()
+        # speed_kmh = core.constrain_speeds(self.speed_limits.astype(float), speed_kmh, self.simulation_dt)
 
-        simulation_results = {
-            "speed_kmh": self.speed_kmh,
-            "distances": self.distances,
-            "state_of_charge": self.state_of_charge,
-            "delta_energy": self.delta_energy,
-            "solar_irradiances": self.solar_irradiances,
-            "wind_speeds": self.wind_speeds,
-            "gis_route_elevations_at_each_tick": self.gis_route_elevations_at_each_tick,
-            "cloud_covers": self.cloud_covers,
-            "distance": self.distance,
-            "route_length": self.route_length,
-            "time_taken": self.time_taken,
-            "tick_array": self.tick_array,
-            "timestamps": self.timestamps,
-            "time_zones": self.time_zones,
-            "cumulative_distances": self.cumulative_distances,
-            "closest_gis_indices": self.closest_gis_indices,
-            "closest_weather_indices": self.closest_weather_indices,
-            "path_distances": self.path_distances,
-            "max_route_distance": self.max_route_distance,
-            "gis_vehicle_bearings": self.gis_vehicle_bearings,
-            "gradients": self.gradients,
-            "absolute_wind_speeds": self.absolute_wind_speeds,
-            "wind_directions": self.wind_directions,
-            "lvs_consumed_energy": self.lvs_consumed_energy,
-            "motor_consumed_energy": self.motor_consumed_energy,
-            "array_produced_energy": self.array_produced_energy,
-            "regen_produced_energy": self.regen_produced_energy,
-            "not_charge": self.not_charge,
-            "consumed_energy": self.consumed_energy,
-            "produced_energy": self.produced_energy,
-            "time_in_motion": self.time_in_motion,
-            "final_soc": self.final_soc,
-            "distance_travelled": self.distance_travelled,
-            "map_data_indices": self.map_data_indices,
-            "path_coordinates": self.simulation.gis.get_path(),
-            "raw_soc": self.raw_soc
+        # ------ Run calculations and get result and modified speed array -------
+        self._model = Simulation(self, speed_kmh)
+        self._model.run_simulation_calculations()
+
+        results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
+
+        if not kwargs and not is_optimizer:
+            print(f"Simulation successful!\n"
+                  f"Time taken: {results[0]}\n"
+                  f"Route length: {results[1]:.2f}km\n"
+                  f"Maximum distance traversable: {results[2]:.2f}km\n"
+                  f"Average speed: {np.average(results[3]):.2f}km/h\n"
+                  f"Final battery SOC: {results[4]:.2f}%\n")
+
+        # ----- Plotting -----
+
+        if plot_results:
+            results_arrays = self.get_results(["speed_kmh", "distances", "state_of_charge", "delta_energy",
+                                               "solar_irradiances", "wind_speeds",
+                                               "gis_route_elevations_at_each_tick",
+                                               "raw_soc"]) + [raw_speed]
+            results_labels = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
+                              "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
+                              "Raw SOC (%)", "Raw Speed (km/h)"]
+
+            self.plotting.add_graph_page_to_queue(GraphPage(results_arrays, results_labels, page_name="Results"))
+
+            if verbose:
+                # Plot energy arrays
+                energy_arrays = self.get_results(["motor_consumed_energy", "array_produced_energy", "delta_energy"])
+                energy_labels = ["Motor Consumed Energy (J)", "Array Produced Energy (J)", "Delta Energy (J)"]
+                energy_graph = GraphPage(energy_arrays, energy_labels, page_name="Energy Calculations")
+                self.plotting.add_graph_page_to_queue(energy_graph)
+
+                # Plot indices and environment arrays
+                env_arrays = self.get_results(["closest_gis_indices", "closest_weather_indices",
+                                               "gradients", "time_zones", "gis_vehicle_bearings"])
+                env_labels = ["gis ind", "weather ind",
+                              "gradients (m)", "time zones", "vehicle bearings"]
+                indices_and_environment_graph = GraphPage(env_arrays, env_labels, page_name="Indices and Environment")
+                self.plotting.add_graph_page_to_queue(indices_and_environment_graph)
+
+                # Plot speed boolean and SOC arrays
+                arrays_to_plot = self.get_results(["speed_kmh", "state_of_charge"])
+                logical_arrays = []
+                for arr in arrays_to_plot:
+                    speed_kmh = arrays_to_plot[0]
+                    speed_kmh = np.logical_and(speed_kmh, arr) * speed_kmh
+                    logical_arrays.append(speed_kmh)
+
+                boolean_arrays = arrays_to_plot + logical_arrays
+                boolean_labels = ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"]
+                boolean_graph = GraphPage(boolean_arrays, boolean_labels, page_name="Speed Boolean Operations")
+                self.plotting.add_graph_page_to_queue(boolean_graph)
+
+            self.plotting.plot_graph_pages(self.get_results("timestamps"), plot_portion=plot_portion)
+
+        get_return_type = {
+            SimulationReturnType.time_taken: -1 * results[0],
+            SimulationReturnType.distance_travelled: results[2],
+            SimulationReturnType.distance_and_time: (results[2], results[0]),
+            SimulationReturnType.void: None
         }
 
-        if "default" in requested_properties or requested_properties == "default":
-            # If just "default" was provided, replace values with a list containing the default values
-            if isinstance(requested_properties, str):
-                requested_properties = ["speed_kmh", "distances", "state_of_charge", "delta_energy",
-                                        "solar_irradiances",
-                                        "wind_speeds", "gis_route_elevations_at_each_tick", "cloud_covers",
-                                        "distance_travelled", "time_taken", "final_soc"]
-            else:
-                # If default was instead an element in a list of requested properties, insert the default properties
-                # where "default" is in the request
-                default_index = requested_properties.index("default")
-                requested_properties.pop(default_index)
-                default_values = ["speed_kmh", "distances", "state_of_charge", "delta_energy", "solar_irradiances",
-                                  "wind_speeds", "gis_route_elevations_at_each_tick", "cloud_covers",
-                                  "distance_travelled", "time_taken", "final_soc"]
-                for index, default_value in enumerate(default_values):
-                    if default_value not in requested_properties:
-                        requested_properties.insert(index + default_index, default_value)
+        return get_return_type[self.return_type]
 
-        # If just a single value was requested, return it without wrapping it in a list
-        if isinstance(requested_properties, str) and requested_properties != "default":
-            return simulation_results[requested_properties]
+    def calculations_have_happened(self):
+        return self._model.calculations_have_happened
 
-        results = []
-        for value in requested_properties:
-            results.append(simulation_results[value])
-        return results
+    @simulation_property
+    def get_results(self, values: Union[np.ndarray, list, tuple, set, str]) -> Union[list, np.ndarray, float]:
+        """
+
+        Use this function to extract data from a Simulation model.
+        For example, input ["speed_kmh","delta_energy"] to extract speed_kmh and delta_energy. Use
+        "default" to extract the properties that used to be in the SimulationResults object.
+
+        :param values: an iterable of strings that should correspond to a certain property of simulation.
+        :returns: a list of Simulation properties in the order provided.
+        :rtype: list
+
+        """
+
+        return self._model.get_results(values)
+
+    @simulation_property
+    def was_successful(self):
+        state_of_charge = self.get_results("state_of_charge")
+        if np.min(state_of_charge) < 0.0:
+            return False
+        return True
+
+    @simulation_property
+    def get_distance_before_exhaustion(self):
+        state_of_charge, distances = self.get_results(["state_of_charge", "distances"])
+        index = np.argmax(np.abs(state_of_charge) < 1e-03)
+        return distances[index]
+
+    def get_driving_time_divisions(self) -> int:
+        """
+
+        Returns the number of time divisions (based on granularity) that the car is permitted to be driving.
+        Dependent on rules in get_race_timing_constraints_boolean() function in common/helpers.
+
+        :return: number of hours as an integer
+
+        """
+
+        return helpers.get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:],
+                                                       self.speed_dt).sum().astype(int)
+
+    def get_race_length(self):
+        try:
+            value = self.get_results("max_route_distance")
+        except PrematureDataRecoveryError:
+            speed_kmh = np.array([30] * self.get_driving_time_divisions())
+            if self._model is None:
+                self._model = Model(self, speed_kmh)
+            self._model.run_simulation_calculations()
+            value = self.get_results("max_route_distance")
+
+        return value

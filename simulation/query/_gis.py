@@ -17,7 +17,7 @@ class TrackRouteQuery(Query[CompetitionConfig]):
         super().__init__(config)
 
     def make(self) -> tuple[NDArray, NDArray, NDArray, int]:
-        coordinates: NDArray = np.array(self._config.route.coordinates)
+        coordinates: NDArray = np.array(self._config.route_config.coordinates)
         tiling: int = getattr(self._config, "tiling", 1)
 
         # Call Google Maps API
