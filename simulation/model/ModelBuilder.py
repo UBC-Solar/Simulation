@@ -72,6 +72,11 @@ class ModelBuilder:
         self.return_type: Optional[SimulationReturnType] = None
         self.vehicle_speed_period: Optional[int] = None
 
+        # Flags
+        self._rebuild_route_cache: bool = False
+        self._rebuild_weather_cache: bool = False
+        self._rebuild_competition_cache: bool = False
+
     def set_initial_conditions(self, initial_conditions: InitialConditions):
         self._initial_conditions = initial_conditions
 
@@ -82,8 +87,17 @@ class ModelBuilder:
 
         return self
 
-    def set_environment_config(self, environment_config: EnvironmentConfig):
+    def set_environment_config(
+            self,
+            environment_config: EnvironmentConfig,
+            rebuild_weather_cache: bool = True,
+            rebuild_competition_cache: bool = True,
+            rebuild_route_cache: bool = True
+    ):
         self._environment_config = environment_config
+        self._rebuild_weather_cache = rebuild_weather_cache
+        self._rebuild_competition_cache = rebuild_competition_cache
+        self._rebuild_route_cache = rebuild_route_cache
 
         return self
 
@@ -111,8 +125,10 @@ class ModelBuilder:
 
         # Try to find cached race data
         try:
+            if self._rebuild_competition_cache:
+                raise KeyError  # Raise a KeyError so that we go to the except block where we rebuild the cache
+
             race = self._cache.get(competition_data_path)
-            raise KeyError
         # Generate new race data
         except KeyError:
             race = Race(competition_config)
@@ -187,6 +203,9 @@ class ModelBuilder:
 
         # Try to find cached route data
         try:
+            if self._rebuild_route_cache:
+                raise KeyError  # Raise a KeyError so that we go to the except block where we rebuild the cache
+
             route: Route = self._cache.get(route_data_path)
 
         # Generate new route data data
@@ -229,6 +248,9 @@ class ModelBuilder:
 
         # Try to find cached weather data
         try:
+            if self._rebuild_weather_cache:
+                raise KeyError  # Raise a KeyError so that we go to the except block where we rebuild the cache
+
             weather_data = self._cache.get(weather_data_path)
 
         # Generate new weather data
@@ -272,8 +294,8 @@ class ModelBuilder:
             raise RuntimeError("You are trying to compile before binding a car configuration! Please"
                                "use `set_car_config` first!")
 
-        self.max_acceleration = self._car_config.car_config.max_acceleration
-        self.max_deceleration = self._car_config.car_config.max_deceleration
+        self.max_acceleration = self._car_config.vehicle_config.max_acceleration
+        self.max_deceleration = self._car_config.vehicle_config.max_deceleration
 
         self.array = BasicArray(
             **self._car_config.array_config.model_dump()
@@ -287,9 +309,12 @@ class ModelBuilder:
 
         match self._car_config.battery_config.battery_type:
             case "BasicBattery":
+                arguments = self._car_config.battery_config.model_dump()
+                del arguments["battery_type"]
+
                 self.battery = BasicBattery(
                     self.initial_battery_charge,
-                    **self._car_config.battery_config.model_dump()
+                    **arguments
                 )
 
             case "BatteryModel":
@@ -329,7 +354,8 @@ class ModelBuilder:
                 )
 
             case WeatherProvider.Openweather:
-                self.meteorology = CloudedMeteorology(
+                # TODO: We are forcing Solcast
+                self.meteorology = IrradiantMeteorology(
                     race=self.race_data,
                     weather_forecasts=self.weather_forecasts
                 )
