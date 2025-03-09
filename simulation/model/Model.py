@@ -35,7 +35,7 @@ def simulation_property(func):
 
     @functools.wraps(func)
     def property_wrapper(*args, **kwargs):
-        assert isinstance(args[0], Simulation), "simulation_property wrapper applied to non-Simulation function!"
+        assert isinstance(args[0], Model), "simulation_property wrapper applied to non-Simulation function!"
         if not args[0].calculations_have_happened():
             raise PrematureDataRecoveryError("You are attempting to collect information before simulation "
                                              "model calculations have completed.")
@@ -86,7 +86,7 @@ class Model:
         self.solar_array = array
         self.motor = motor
         self.regen = regen
-        self.batter = battery
+        self.battery = battery
         self.gis = gis
         self.meteorology = meteorology
         self.lvs = lvs
@@ -94,9 +94,12 @@ class Model:
         self.time_of_initialization = self.meteorology.last_updated_time  # Real Time
 
         # Fix this!
-        self.start_time = 0
+        self.start_time = 74313
 
         self.simulation_duration = race.race_duration - self.start_time
+
+        self.vehicle_bearings = self.gis.calculate_current_heading_array()
+        self.route_coords = self.gis.get_path()
 
         self.plotting = Plotting()
 

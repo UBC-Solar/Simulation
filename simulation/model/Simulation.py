@@ -137,7 +137,7 @@ class Simulation:
         self.simulation.meteorology.temporally_localize(
             local_times,
             self.simulation.start_time,
-            self.simulation.tick
+            self.simulation.simulation_dt
         )
 
         self.absolute_wind_speeds = self.simulation.meteorology.wind_speed
@@ -161,21 +161,21 @@ class Simulation:
 
         # ----- Energy Calculations -----
 
-        self.lvs_consumed_energy = self.simulation.basic_lvs.get_consumed_energy(self.simulation.tick)
+        self.lvs_consumed_energy = self.simulation.lvs.get_consumed_energy(self.simulation.simulation_dt)
 
-        self.motor_consumed_energy = self.simulation.basic_motor.calculate_energy_in(
+        self.motor_consumed_energy = self.simulation.motor.calculate_energy_in(
             self.speed_kmh,
             self.gradients,
             self.wind_speeds,
-            self.simulation.tick
+            self.simulation.simulation_dt
         )
 
-        self.array_produced_energy = self.simulation.basic_array.calculate_produced_energy(
+        self.array_produced_energy = self.simulation.solar_array.calculate_produced_energy(
             self.solar_irradiances,
-            self.simulation.tick
+            self.simulation.simulation_dt
         )
 
-        self.regen_produced_energy = self.simulation.basic_regen.calculate_produced_energy(
+        self.regen_produced_energy = self.simulation.regen.calculate_produced_energy(
             self.speed_kmh,
             self.gis_route_elevations_at_each_tick,
             0.0,
@@ -185,9 +185,9 @@ class Simulation:
         self.not_charge = self.simulation.race.charging_boolean[self.simulation.start_time:]
         self.not_race = self.simulation.race.driving_boolean[self.simulation.start_time:]
 
-        if self.simulation.tick != 1:
-            self.not_charge = self.not_charge[::self.simulation.tick]
-            self.not_race = self.not_race[::self.simulation.tick]
+        if self.simulation.simulation_dt != 1:
+            self.not_charge = self.not_charge[::self.simulation.simulation_dt]
+            self.not_race = self.not_race[::self.simulation.simulation_dt]
 
         self.array_produced_energy = self.array_produced_energy * np.logical_and(
             self.array_produced_energy,
@@ -209,23 +209,23 @@ class Simulation:
         # ----- Array initialisation -----
 
         # used to calculate the time the car was in motion
-        self.tick_array = np.full_like(self.timestamps, fill_value=self.simulation.tick, dtype='f4')
+        self.tick_array = np.full_like(self.timestamps, fill_value=self.simulation.simulation_dt, dtype='f4')
         self.tick_array[0] = 0
 
         # ----- Array calculations -----
 
         cumulative_delta_energy = np.cumsum(self.delta_energy)
-        battery_variables_array = self.simulation.basic_battery.update_array(cumulative_delta_energy)
+        battery_variables_array = self.simulation.battery.update_array(cumulative_delta_energy)
 
         # stores the battery SOC at each time step
         self.state_of_charge = battery_variables_array[0]
         self.state_of_charge[np.abs(self.state_of_charge) < 1e-03] = 0
-        self.raw_soc = self.simulation.basic_battery.get_raw_soc(np.cumsum(self.delta_energy))
+        self.raw_soc = self.simulation.battery.get_raw_soc(np.cumsum(self.delta_energy))
 
         # # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
         # self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
 
-        self.time_in_motion = np.logical_and(self.tick_array, self.speed_kmh) * self.simulation.tick
+        self.time_in_motion = np.logical_and(self.tick_array, self.speed_kmh) * self.simulation.simulation_dt
 
         self.final_soc = self.state_of_charge[-1] * 100 + 0.
 

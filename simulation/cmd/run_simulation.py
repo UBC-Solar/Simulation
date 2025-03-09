@@ -35,7 +35,7 @@ def run_simulation(
 
     hyperparameters = SimulationHyperparametersConfig.build_from(
         {
-            "simulation_period": 8,
+            "simulation_period": 10,
             "return_type": SimulationReturnType.distance_and_time,
             "vehicle_speed_period": vehicle_speed_period
         }

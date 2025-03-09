@@ -42,7 +42,7 @@ class CompetitionConfig(Config):
         """
         Obtain the number of days that the competition encompasses
         """
-        return len(self.time_ranges.keys())
+        return len(self.time_ranges["driving"].keys())
 
     def route_hash(self):
         return hash(self.route)

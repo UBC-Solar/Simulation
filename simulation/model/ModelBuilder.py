@@ -106,7 +106,7 @@ class ModelBuilder:
         # Try to find cached race data
         try:
             race = self._cache.get(competition_data_path)
-
+            raise KeyError
         # Generate new race data
         except KeyError:
             race = Race(competition_config)
@@ -305,7 +305,8 @@ class ModelBuilder:
                 )
 
             case WeatherProvider.Openweather:
-                self.meteorology = CloudedMeteorology(
+                # TODO: We are forcing Solcast use
+                self.meteorology = IrradiantMeteorology(
                     race=self.race_data,
                     weather_forecasts=self.weather_forecasts
                 )

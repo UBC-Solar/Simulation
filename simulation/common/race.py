@@ -17,8 +17,8 @@ class Race:
         self.date = config.date
 
         self.race_duration = config.duration * 24 * 60 * 60         # Duration (s)
-        self.driving_boolean = self.make_time_boolean(self.charging_times)
-        self.charging_boolean = self.make_time_boolean(self.driving_times)
+        self.driving_boolean = self.make_time_boolean(self.driving_times)
+        self.charging_boolean = self.make_time_boolean(self.charging_times)
 
     def __str__(self):
         return str(self.race_type)
