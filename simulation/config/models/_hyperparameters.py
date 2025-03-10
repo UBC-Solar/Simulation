@@ -1,5 +1,5 @@
 from strenum import StrEnum
-from simulation.config import Config, ConfigDict
+from simulation.config.models import Config, ConfigDict
 
 
 class SimulationReturnType(StrEnum):

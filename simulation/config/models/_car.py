@@ -1,5 +1,5 @@
 from pydantic import Field
-from simulation.config import Config, ConfigDict
+from simulation.config.models import Config, ConfigDict
 
 
 class VehicleConfig(Config):

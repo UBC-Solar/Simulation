@@ -171,7 +171,7 @@ class Model:
 
         # ------ Run calculations and get result and modified speed array -------
         self._simulation = Simulation(self)
-        self._simulation.run_simulation_calculations(speed)
+        self._simulation.run_simulation_calculations(speed_kmh)
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
 
@@ -236,7 +236,7 @@ class Model:
         return get_return_type[self.return_type]
 
     def calculations_have_happened(self):
-        return self._model.calculations_have_happened
+        return self._simulation.calculations_have_happened
 
     @simulation_property
     def get_results(self, values: Union[np.ndarray, list, tuple, set, str]) -> Union[list, np.ndarray, float]:
@@ -252,7 +252,7 @@ class Model:
 
         """
 
-        return self._model.get_results(values)
+        return self._simulation.get_results(values)
 
     @simulation_property
     def was_successful(self):

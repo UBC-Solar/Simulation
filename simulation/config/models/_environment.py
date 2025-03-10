@@ -1,4 +1,4 @@
-from simulation.config import Config, ConfigDict, CompetitionConfig, WeatherQuery
+from simulation.config.models import Config, ConfigDict, CompetitionConfig, WeatherQuery
 from anytree.exporter import DotExporter
 
 

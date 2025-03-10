@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Tuple, Mapping, List
 from strenum import StrEnum
-from simulation.config import Config, ConfigDict
+from simulation.config.models import Config, ConfigDict
 from pydantic import BaseModel
 from numpy.typing import NDArray
 

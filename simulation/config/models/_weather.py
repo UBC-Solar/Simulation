@@ -1,6 +1,6 @@
 from strenum import StrEnum
 from enum import Enum
-from simulation.config import Config, ConfigDict
+from simulation.config.models import Config, ConfigDict
 
 
 # Enum to discretize between different weather providers we have available
