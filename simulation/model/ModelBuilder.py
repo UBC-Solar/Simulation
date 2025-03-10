@@ -90,9 +90,9 @@ class ModelBuilder:
     def set_environment_config(
             self,
             environment_config: EnvironmentConfig,
-            rebuild_weather_cache: bool = True,
-            rebuild_competition_cache: bool = True,
-            rebuild_route_cache: bool = True
+            rebuild_weather_cache: bool = False,
+            rebuild_competition_cache: bool = False,
+            rebuild_route_cache: bool = False
     ):
         self._environment_config = environment_config
         self._rebuild_weather_cache = rebuild_weather_cache
@@ -126,7 +126,7 @@ class ModelBuilder:
         # Try to find cached race data
         try:
             if self._rebuild_competition_cache:
-                raise KeyError  # Raise a KeyError so that we go to the except block where we rebuild the cache
+                raise KeyError()  # Raise a KeyError so that we go to the except block where we rebuild the cache
 
             race = self._cache.get(competition_data_path)
         # Generate new race data
@@ -204,7 +204,7 @@ class ModelBuilder:
         # Try to find cached route data
         try:
             if self._rebuild_route_cache:
-                raise KeyError  # Raise a KeyError so that we go to the except block where we rebuild the cache
+                raise KeyError()  # Raise a KeyError so that we go to the except block where we rebuild the cache
 
             route: Route = self._cache.get(route_data_path)
 
@@ -249,7 +249,7 @@ class ModelBuilder:
         # Try to find cached weather data
         try:
             if self._rebuild_weather_cache:
-                raise KeyError  # Raise a KeyError so that we go to the except block where we rebuild the cache
+                raise KeyError()  # Raise a KeyError so that we go to the except block where we rebuild the cache
 
             weather_data = self._cache.get(weather_data_path)
 
@@ -354,8 +354,7 @@ class ModelBuilder:
                 )
 
             case WeatherProvider.Openweather:
-                # TODO: We are forcing Solcast
-                self.meteorology = IrradiantMeteorology(
+                self.meteorology = CloudedMeteorology(
                     race=self.race_data,
                     weather_forecasts=self.weather_forecasts
                 )
