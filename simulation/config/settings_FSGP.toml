@@ -17,10 +17,13 @@ tiling = 200
 2 = [32400, 61200]
 
 [weather_query_config]
-weather_provider = "Openweather"
+weather_provider = "Solcast"
 
 [weather_query_config.Openweather]
 weather_period = "Daily"
+
+[weather_query_config.Solcast]
+weather_period = "15min"
 
 [competition_config.route_config]
  coordinates = [
