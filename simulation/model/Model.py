@@ -114,8 +114,15 @@ class Model:
         # A Model is a (mostly) immutable container for simulation calculations and results
         self._simulation = None
 
-    def run_model(self, speed=None, plot_results=False, verbose=False,
-                  route_visualization=False, plot_portion=(0.0, 1.0), is_optimizer: bool = False, **kwargs):
+    def run_model(
+            self,
+            speed=None,
+            plot_results=False,
+            verbose=False,
+            plot_portion=(0.0, 1.0),
+            is_optimizer: bool = False,
+            **kwargs
+    ):
         """
 
         Given an array of driving speeds, simulate the model by running calculations sequentially for the entire
@@ -134,7 +141,6 @@ class Model:
         :param np.ndarray speed: array that specifies the solar car's driving speed at each time step
         :param bool plot_results: set to True to plot the results of the simulation
         :param bool verbose: Boolean to control logging and debugging behaviour
-        :param bool route_visualization: Flag to control route_visualization plot visibility
         :param tuple[float] plot_portion: A tuple containing the beginning and end of the portion of the array we'd
         like to plot, as percentages (0 <= plot_portion <= 1).
         :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
@@ -163,7 +169,15 @@ class Model:
                                                                  f"{self.get_driving_time_divisions()} is needed!")
 
         # ----- Reshape speed array -----
-        speed_kmh = helpers.reshape_speed_array(self.race, speed, self.speed_dt, self.start_time, self.simulation_dt, self.max_acceleration, self.max_deceleration)
+        speed_kmh = helpers.reshape_speed_array(
+            self.race,
+            speed,
+            self.speed_dt,
+            self.start_time,
+            self.simulation_dt,
+            self.max_acceleration,
+            self.max_deceleration
+        )
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
@@ -279,15 +293,3 @@ class Model:
 
         return helpers.get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:],
                                                        self.speed_dt).sum().astype(int)
-
-    def get_race_length(self):
-        try:
-            value = self.get_results("max_route_distance")
-        except PrematureDataRecoveryError:
-            speed_kmh = np.array([30] * self.get_driving_time_divisions())
-            if self._model is None:
-                self._model = Model(self, speed_kmh)
-            self._model.run_simulation_calculations()
-            value = self.get_results("max_route_distance")
-
-        return value
