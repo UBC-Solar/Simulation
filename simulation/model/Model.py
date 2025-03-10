@@ -112,7 +112,7 @@ class Model:
         # that the attributes above are independent of whether the model has been previously simulated.
 
         # A Model is a (mostly) immutable container for simulation calculations and results
-        self._model = None
+        self._simulation = None
 
     def run_model(self, speed=None, plot_results=False, verbose=False,
                   route_visualization=False, plot_portion=(0.0, 1.0), is_optimizer: bool = False, **kwargs):
@@ -167,11 +167,11 @@ class Model:
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
-        # speed_kmh = core.constrain_speeds(self.speed_limits.astype(float), speed_kmh, self.simulation_dt)
+        #speed_kmh = core.constrain_speeds(self.speed_limits.astype(float), speed_kmh, self.simulation_dt)
 
         # ------ Run calculations and get result and modified speed array -------
-        self._model = Simulation(self, speed_kmh)
-        self._model.run_simulation_calculations()
+        self._simulation = Simulation(self)
+        self._simulation.run_simulation_calculations(speed)
 
         results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
 

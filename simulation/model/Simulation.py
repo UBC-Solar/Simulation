@@ -14,9 +14,9 @@ class Simulation:
     Models should be considered to be immutable. Instantiate a new model when you want to run a different simulation.
     """
 
-    def __init__(self, simulation, speed_kmh):
+    def __init__(self, simulation):
         self.simulation = simulation
-        self.speed_kmh = speed_kmh
+        self.speed_kmh = None
 
         self.calculations_have_happened = False
 
@@ -62,7 +62,7 @@ class Simulation:
         self.final_soc = None
         self.map_data_indices = None
 
-    def run_simulation_calculations(self) -> None:
+    def run_simulation_calculations(self, speed_kmh) -> None:
         """
 
         Simulate the model by sequentially running calculations for the entire simulation duration at once.
@@ -78,9 +78,9 @@ class Simulation:
         which allows us to determine the battery's state of charge for the entire simulation duration.
 
         """
+        self.speed_kmh = speed_kmh
 
         # ----- Tick array -----
-
         self.timestamps = np.arange(0, self.simulation.simulation_duration, self.simulation.simulation_dt)
         self.tick_array = np.diff(self.timestamps)
         self.tick_array = np.insert(self.tick_array, 0, 0)
