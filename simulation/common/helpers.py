@@ -1,8 +1,6 @@
 import datetime
 import functools
 import math
-import os
-import pathlib
 
 import numpy as np
 import pandas as pd
@@ -10,15 +8,10 @@ import plotly.express as px
 import time as timer
 
 from typing import Union
-from bokeh.layouts import gridplot
-from bokeh.models import HoverTool
-from bokeh.plotting import figure, show, output_file
 from cffi.backend_ctypes import long
 from matplotlib import pyplot as plt
 from numba import jit
-from simulation.common import BrightSide
 from simulation.common.race import Race
-from haversine import haversine, Unit
 
 
 """
@@ -131,7 +124,7 @@ def reshape_and_repeat(input_array, reshape_length):
         return result
 
 
-def apply_deceleration(input_speed_array, tick):
+def apply_deceleration(input_speed_array, tick, max_deceleration: float):
     """
 
     Remove sudden drops in speed from input_speed_array
@@ -142,11 +135,12 @@ def apply_deceleration(input_speed_array, tick):
 
     :param np.ndarray input_speed_array: array to be modified
     :param int tick: time interval between each value in input_speed_array
+    :param float max_deceleration: the maximum allowed deceleration in m/s^2
     :return: modified array
     :rtype: np.ndarray
 
     """
-    max_deceleration_per_tick = BrightSide.max_deceleration_kmh_per_s*tick
+    max_deceleration_per_tick = max_deceleration * tick
 
     if input_speed_array is None:
         return np.array([])
@@ -161,7 +155,7 @@ def apply_deceleration(input_speed_array, tick):
     return input_speed_array
 
 
-def apply_acceleration(input_speed_array, tick):
+def apply_acceleration(input_speed_array, tick, max_acceleration: float):
     """
 
     Remove sudden increases in speed from input_speed_array
@@ -173,11 +167,12 @@ def apply_acceleration(input_speed_array, tick):
 
     :param np.ndarray input_speed_array: array to be modified
     :param int tick: time interval between each value in input_speed_array
+    :param float max_acceleration: the maximum allowed acceleration in m/s^2
     :return: modified array
     :rtype: np.ndarray
 
     """
-    max_acceleration_per_tick = BrightSide.max_acceleration_kmh_per_s*tick
+    max_acceleration_per_tick = max_acceleration * tick
 
     if input_speed_array is None:
         return np.array([])
@@ -226,7 +221,15 @@ def get_granularity_reduced_boolean(boolean: np.ndarray, granularity: int | floa
     return ~reduced_boolean
 
 
-def reshape_speed_array(race: Race, speed, granularity, start_time: int, tick=1):
+def reshape_speed_array(
+        race: Race,
+        speed,
+        granularity,
+        start_time: int,
+        tick=1,
+        max_acceleration: float = 6,
+        max_deceleration: float = 6
+):
     """
 
     Modify the speed array to reflect:
@@ -242,6 +245,8 @@ def reshape_speed_array(race: Race, speed, granularity, start_time: int, tick=1)
                               where 1 is hourly and 0.5 is twice per hour.
     :param int start_time: time since start of the race that simulation is beginning
     :param int tick: The time interval in seconds between each speed in the speed array
+    :param float max_acceleration: the maximum allowed acceleration in m/s^2
+    :param float max_deceleration: the maximum allowed deceleration in m/s^2
     :return: A modified speed array which reflects race constraints and the car's acceleration/deceleration
     :rtype: np.ndarray
 
@@ -252,7 +257,7 @@ def reshape_speed_array(race: Race, speed, granularity, start_time: int, tick=1)
 
     reshaped_tick_count = math.ceil((race.race_duration - start_time) / float(tick))
     speed_mapped_per_tick = reshape_and_repeat(speed_mapped, reshaped_tick_count)
-    speed_smoothed_kmh = apply_deceleration(apply_acceleration(speed_mapped_per_tick, tick), tick)
+    speed_smoothed_kmh = apply_deceleration(apply_acceleration(speed_mapped_per_tick, tick, max_acceleration), tick, max_deceleration)
 
     return speed_smoothed_kmh
 
@@ -287,27 +292,6 @@ def adjust_timestamps_to_local_times(timestamps, starting_drive_time, time_zones
     """
 
     return np.array(timestamps + starting_drive_time - (time_zones[0] - time_zones), dtype=np.uint64)
-
-
-def calculate_path_distances(coords):
-    """
-
-    Obtain the distance between each coordinate by approximating the spline between them
-    as a straight line, and use the Haversine formula (https://en.wikipedia.org/wiki/Haversine_formula)
-    to calculate distance between coordinates on a sphere.
-
-    :param np.ndarray coords: A NumPy array [n][latitude, longitude]
-    :returns path_distances: a NumPy array [n-1][distances],
-    :rtype: np.ndarray
-
-    """
-
-    coords_offset = np.roll(coords, (1, 1))
-    path_distances = []
-    for u, v in zip(coords, coords_offset):
-        path_distances.append(haversine(u, v, unit=Unit.METERS))
-
-    return np.array(path_distances)
 
 
 @jit(nopython=True)
@@ -553,86 +537,6 @@ def find_multi_index_runs(x):
     multi_index_run_lengths = run_lengths[multi_index_run_indices]
 
     return multi_index_run_values, multi_index_run_starts, multi_index_run_lengths
-
-
-def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
-               plot_portion: tuple[float] = (0.0, 1.0)):
-    """
-
-    This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
-    The precondition of this function is that the length of arrays_to_plot and array_labels are equal.
-
-    This is because there be a 1:1 mapping of each entry of arrays_to_plot to array_labels such that:
-        arrays_to_plot[n] has label array_labels[n]
-
-    Result:
-        Produces a 3 x ceil(len(arrays_to_plot) / 3) plot
-        If save is enabled, save html file
-
-    Another precondition of this function is that each of the arrays within arrays_to_plot also have the
-    same length. This is each of them will share the same time axis.
-
-    :param np.ndarray timestamps: An array of timestamps for the race
-    :param list arrays_to_plot: An array of NumPy arrays to plot
-    :param list array_labels: An array of strings for the individual plot titles
-    :param str graph_title: A string that serves as the plot's main title
-    :param bool save: Boolean flag to control whether to save an .html file
-    :param plot_portion: tuple containing beginning and end of arrays that we want to plot as percentages which is
-    useful if we only want to plot for example the second half of the race in which case we would input (0.5, 1.0).
-
-    """
-
-    if plot_portion != (0.0, 1.0):
-        for index, array in enumerate(arrays_to_plot):
-            beginning_index = int(len(array) * plot_portion[0])
-            end_index = int(len(array) * plot_portion[1])
-            arrays_to_plot[index] = array[beginning_index:end_index]
-
-        beginning_index = int(len(timestamps) * plot_portion[0])
-        end_index = int(len(timestamps) * plot_portion[1])
-        timestamps = timestamps[beginning_index:end_index]
-
-    compress_constant = max(int(timestamps.shape[0] / 5000), 1)
-
-    for index, array in enumerate(arrays_to_plot):
-        arrays_to_plot[index] = array[::compress_constant]
-
-    figures = list()
-
-    hover_tool = HoverTool()
-    hover_tool.formatters = {"x": "datetime"}
-    hover_tool.tooltips = [
-        ("time", "$x"),
-        ("data", "$y")
-    ]
-
-    for index, data_array in enumerate(arrays_to_plot):
-        # create figures and put them in list
-        figures.append(figure(title=array_labels[index], x_axis_label="Time (hr)",
-                              y_axis_label=array_labels[index], x_axis_type="datetime"))
-
-        # add line renderers to each figure
-        colours = (
-            '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889', '#fa1b9a',
-            '#F05223', '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889',
-            '#fa1b9a', '#F05223', '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3',
-            '#892889', '#fa1b9a', '#F05223', '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#EC1557', '#F05223')
-        figures[index].line(timestamps[::compress_constant] * 1000, data_array, line_color=colours[index],
-                            line_width=2)
-
-        figures[index].add_tools(hover_tool)
-
-    grid = gridplot(figures, ncols=3, height=400, width=450)
-
-    if save:
-        filename = graph_title + '.html'
-        filepath = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "html"
-        os.makedirs(filepath / "html", exist_ok=True)
-        output_file(filename=str(filepath / filename), title=graph_title)
-
-    show(grid)
-
-    return
 
 
 def route_visualization(coords, visible=True):

@@ -1,8 +1,8 @@
-from .Simulation import SimulationReturnType, Simulation
+from .Simulation import Simulation
 from .Model import Model
+from .ModelBuilder import ModelBuilder
 
 __all__ = [
-    "SimulationReturnType",
     "Simulation",
     "Model"
 ]
