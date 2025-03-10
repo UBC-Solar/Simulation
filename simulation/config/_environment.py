@@ -1,12 +1,5 @@
-from datetime import datetime
-from typing import Tuple, Mapping, List, Dict
-from strenum import StrEnum
-from enum import Enum
 from simulation.config import Config, ConfigDict, CompetitionConfig, WeatherQuery
-from pydantic import BaseModel
-from numpy.typing import NDArray
 from anytree.exporter import DotExporter
-from anytree import Node, RenderTree
 
 
 class EnvironmentConfig(Config):

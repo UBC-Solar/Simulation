@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Tuple, Mapping, List, Dict
+from typing import Tuple, Mapping, List
 from strenum import StrEnum
 from simulation.config import Config, ConfigDict
 from pydantic import BaseModel
