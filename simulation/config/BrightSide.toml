@@ -1,0 +1,31 @@
+name = "Brightside"
+
+[array_config]
+panel_efficiency = 0.2432
+panel_size = 4.0
+
+[battery_config]
+battery_type = "BasicBattery"
+
+[battery_config.BasicBattery]
+max_voltage = 134.4
+min_voltage = 86.4
+max_current_capacity = 48.9
+max_energy_capacity = 5400
+
+[lvs_config]
+lvs_voltage = 12
+lvs_current = 1.50
+
+[regen_config]
+
+[vehicle_config]
+vehicle_mass = 350
+max_acceleration = 6
+max_deceleration = 6
+
+[motor_config]
+road_friction = 0.012
+tire_radius = 0.2032
+vehicle_frontal_area = 1.1853
+drag_coefficient = 0.11609
