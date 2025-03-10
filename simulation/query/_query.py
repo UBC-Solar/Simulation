@@ -1,6 +1,5 @@
 from dotenv import load_dotenv
 from simulation.config import Config
-from simulation.cache import Cache
 from abc import ABC, abstractmethod
 from typing import TypeVar
 

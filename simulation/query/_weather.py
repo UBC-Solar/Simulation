@@ -6,17 +6,10 @@ from simulation.config import SolcastConfig, OpenweatherConfig, OpenweatherPerio
 from numpy.typing import NDArray, ArrayLike
 from simulation.common import Coordinate
 from simulation.query import Query
-from pyowm import OWM
-from pyowm.utils import config
-from pyowm.utils import timestamps
 from dotenv import load_dotenv
 
 
 load_dotenv()
-
-
-owm = OWM(os.environ['OPENWEATHER_API_KEY'])
-mgr = owm.weather_manager()
 
 
 class SolcastQuery(Query[SolcastConfig]):
