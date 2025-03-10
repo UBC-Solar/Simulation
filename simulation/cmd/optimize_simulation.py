@@ -5,12 +5,14 @@ import sys
 import random
 import string
 
+from simulation.cache import query_npz_from_cache
+from simulation.cache.race import race_directory
 from simulation.utils.InputBounds import InputBounds
 from simulation.config import speeds_directory
 from simulation.utils.SimulationBuilder import SimulationBuilder
 from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
 from simulation.cmd.run_simulation import SimulationSettings, get_default_settings
-from simulation.common.race import Race
+from simulation.common.race import Race, load_race
 from tqdm import tqdm
 
 
@@ -28,11 +30,17 @@ def main(settings):
 
     # Build simulation model
     initial_conditions, model_parameters = get_default_settings(Race.RaceType(settings.race_type))
+    weather = query_npz_from_cache("weather", f"weather_data_{Race.RaceType(settings.race_type)}_SOLCAST",
+                                   match_hash=False)
     simulation_builder = SimulationBuilder() \
         .set_initial_conditions(initial_conditions) \
         .set_model_parameters(model_parameters, Race.RaceType(settings.race_type)) \
         .set_return_type(settings.return_type) \
-        .set_granularity(settings.granularity)
+        .set_granularity(settings.granularity) \
+        .set_race_data(load_race(Race.RaceType(settings.race_type), race_directory)) \
+        .set_route_data(query_npz_from_cache("route", f"route_data_{Race.RaceType(settings.race_type)}",
+                                             match_hash=False)) \
+        .set_weather_forecasts(weather['weather_forecast'])
 
     simulation_model = simulation_builder.get()
 
