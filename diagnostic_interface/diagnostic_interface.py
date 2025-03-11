@@ -1,4 +1,6 @@
 import sys
+
+import numpy as np
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton,
@@ -6,7 +8,7 @@ from PyQt5.QtWidgets import (
     QTabWidget, QToolTip, QMessageBox, QAction, QFileDialog
 )
 from PyQt5.QtGui import QPixmap, QIcon
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
@@ -120,10 +122,10 @@ class PlotCanvas(FigureCanvas):
             self.current_origin = origin
             self.current_source = source
             self.ax.clear()
-            self.ax.plot(data)
+            self.ax.plot(data.datetime_x_axis,data)
             self.ax.set_title(f"{data_name} - {event} - {origin} - {source}")
-            self.ax.set_xlabel("Time (s)")
-            self.ax.set_ylabel(f"{data_name} (units)")
+            self.ax.set_xlabel("Time")
+            self.ax.set_ylabel(f"{data_name} ({data.units})")
             self.draw()
             return True
         except Exception as e:
@@ -163,6 +165,25 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
         self.create_home_tab()
+
+        # Create a timer to refresh plots
+        self.refresh_timer = QTimer(self)
+        self.refresh_timer.timeout.connect(self.refresh_all_tabs)
+        self.refresh_timer.start(5000) # 5 seconds refresh time
+
+    def refresh_all_tabs(self):
+        """
+        Refreshes all open plot tabs by requerying data.
+        """
+        for i in range(self.tabs.count()):
+            widget = self.tabs.widget(i)  # This is a QWidget (plot_widget)
+            plot_canvas = widget.findChild(PlotCanvas)  # Find PlotCanvas inside
+
+            if plot_canvas:  # Ensure there's a plot inside
+                print("We're actually updating")
+                plot_canvas.query_and_plot(plot_canvas.current_origin, plot_canvas.current_source,
+                                           plot_canvas.current_event, plot_canvas.current_data_name)
+
 
     def create_home_tab(self) -> None:
         """
