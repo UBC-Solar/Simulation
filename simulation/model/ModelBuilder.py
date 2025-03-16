@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 from numpy.typing import NDArray
 from dotenv import load_dotenv
-from simulation.common import Race
+from simulation.race import Race
 from haversine import haversine, Unit
 from simulation.cache import SimulationCache, Cache, RoutePath, RacePath, WeatherPath
 from simulation.config import CarConfig, WeatherProvider, SimulationReturnType

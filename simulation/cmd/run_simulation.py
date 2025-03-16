@@ -12,7 +12,8 @@ def run_simulation(
         speeds_filename: str,
         plot_results: bool,
         verbose: bool,
-        vehicle_speed_period: int, car: str
+        speed_dt: int,
+        car: str
 ):
     """
     This is the entry point to Simulation.
@@ -21,7 +22,7 @@ def run_simulation(
     optimizing simulation with Bayesian optimization and then random optimization.
 
     :param car: The name of the car to be simulated, should match a config file.
-    :param vehicle_speed_period:
+    :param speed_dt:
     :param verbose:
     :param competition_name:
     :param plot_results: plot results of Simulation
@@ -37,7 +38,7 @@ def run_simulation(
         {
             "simulation_period": 10,
             "return_type": SimulationReturnType.distance_and_time,
-            "vehicle_speed_period": vehicle_speed_period
+            "speed_dt": speed_dt
         }
     )
     simulation_model = build_model(environment, hyperparameters, initial_conditions, car_config)
@@ -95,7 +96,7 @@ def build_model(environment: EnvironmentConfig,
                           .set_environment_config(environment,
                                                   rebuild_weather_cache=False,
                                                   rebuild_route_cache=False,
-                                                  rebuild_competition_cache=False)
+                                                  rebuild_competition_cache=True)
                           .set_hyperparameters(hyperparameters)
                           .set_initial_conditions(initial_conditions)
                           .set_car_config(car_config))
@@ -109,8 +110,8 @@ if __name__ == "__main__":
     parser.add_argument("--race_type", required=False, default="FSGP",
                         help="Define which race should be simulated.", type=str)
 
-    parser.add_argument("--granularity", required=False, default=1, type=int,
-                        help="Define how granular the speed array should be, where 1 is hourly and 2 is bi-hourly.")
+    parser.add_argument("--granularity", required=False, default=60, type=int,
+                        help="Define how granular (period) the speed array should be, in seconds per element.")
 
     parser.add_argument("-v", "--verbose", required=False, default=False, action="store_true",
                         help="Set to nake simulation execute as verbose.")
@@ -129,7 +130,7 @@ if __name__ == "__main__":
     run_simulation(
         competition_name=args.race_type,
         verbose=args.verbose,
-        vehicle_speed_period=args.granularity,
+        speed_dt=args.granularity,
         speeds_filename=args.speeds,
         plot_results=args.plot_results,
         car="Brightside"

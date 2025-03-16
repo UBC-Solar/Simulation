@@ -1,16 +1,13 @@
-import functools
 import core
 import numpy as np
 
 from typing import Union
 from numpy.typing import NDArray
 
-from simulation.common import helpers
 from simulation.utils.Plotting import GraphPage
-from simulation.common.exceptions import PrematureDataRecoveryError
 from simulation.utils.Plotting import Plotting
 from simulation.model.Simulation import Simulation
-from simulation.common.race import Race
+from simulation.race import Race, reshape_speed_array, get_granularity_reduced_boolean
 from simulation.config import SimulationReturnType
 
 from physics.models.arrays import BaseArray
@@ -21,28 +18,6 @@ from physics.models.regen import BaseRegen
 
 from physics.environment.gis import BaseGIS
 from physics.environment.meteorology import BaseMeteorology
-
-
-def simulation_property(func):
-    """
-
-    Apply this decorator to all functions that intend to get data from a Simulation model.
-    This protects the data from being pulled from Simulation before the model has been simulated.
-
-    :param func: function that will be used to get data
-
-    """
-
-    @functools.wraps(func)
-    def property_wrapper(*args, **kwargs):
-        assert isinstance(args[0], Model), "simulation_property wrapper applied to non-Simulation function!"
-        if not args[0].calculations_have_happened():
-            raise PrematureDataRecoveryError("You are attempting to collect information before simulation "
-                                             "model calculations have completed.")
-        value = func(*args, **kwargs)
-        return value
-
-    return property_wrapper
 
 
 class Model:
@@ -73,12 +48,7 @@ class Model:
     ):
         """
 
-        Instantiates a simple model of the car.
-
-        Do NOT call this constructor directly. Please create a SimulationBuilder and use
-        SimulationBuilder.get() after setting parameters and initial conditions.
-
-        :param builder: a SimulationBuilder object that provides settings for the Simulation
+        Instantiates a model of the car.
 
         """
         self.return_type = return_type
@@ -154,22 +124,13 @@ class Model:
         if speed is None:
             speed = np.array([30] * self.get_driving_time_divisions())
 
-        # Used by the optimization function as it passes values as keyword arguments instead of a numpy array
-        if kwargs or is_optimizer:
-            if kwargs:
-                speed = np.fromiter(kwargs.values(), dtype=float)
-
-            # Don't plot results since this code is run by the optimizer
-            plot_results = False
-            verbose = False
-
         assert len(speed) == self.get_driving_time_divisions(), ("Input driving speeds array must have length equal to "
                                                                  "get_driving_time_divisions()! Current length is "
                                                                  f"{len(speed)} and length of "
                                                                  f"{self.get_driving_time_divisions()} is needed!")
 
         # ----- Reshape speed array -----
-        speed_kmh = helpers.reshape_speed_array(
+        speed_kmh = reshape_speed_array(
             self.race,
             speed,
             self.speed_dt,
@@ -252,7 +213,6 @@ class Model:
     def calculations_have_happened(self):
         return self._simulation.calculations_have_happened
 
-    @simulation_property
     def get_results(self, values: Union[np.ndarray, list, tuple, set, str]) -> Union[list, np.ndarray, float]:
         """
 
@@ -268,14 +228,12 @@ class Model:
 
         return self._simulation.get_results(values)
 
-    @simulation_property
     def was_successful(self):
         state_of_charge = self.get_results("state_of_charge")
         if np.min(state_of_charge) < 0.0:
             return False
         return True
 
-    @simulation_property
     def get_distance_before_exhaustion(self):
         state_of_charge, distances = self.get_results(["state_of_charge", "distances"])
         index = np.argmax(np.abs(state_of_charge) < 1e-03)
@@ -291,5 +249,5 @@ class Model:
 
         """
 
-        return helpers.get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:],
-                                                       self.speed_dt).sum().astype(int)
+        return get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:],
+                                               self.speed_dt).sum().astype(int)

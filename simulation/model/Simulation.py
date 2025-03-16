@@ -4,9 +4,12 @@ Contain calculations and results of Simulation.
 
 import numpy as np
 from typing import Union
-from simulation.common import helpers
-
-Iterable = Union[np.ndarray, list, set, tuple]
+from simulation.race import (
+    calculate_completion_index,
+    get_map_data_indices,
+    get_array_directional_wind_speed,
+    adjust_timestamps_to_local_times
+)
 
 
 class Simulation:
@@ -56,6 +59,7 @@ class Simulation:
         self.regen_produced_energy = None
         self.raw_soc = None
         self.not_charge = None
+        self.not_race = None
         self.consumed_energy = None
         self.produced_energy = None
         self.time_in_motion = None
@@ -127,7 +131,7 @@ class Simulation:
         self.time_zones = self.simulation.gis.get_time_zones(self.closest_gis_indices)
 
         # Local times in UNIX timestamps
-        local_times = helpers.adjust_timestamps_to_local_times(
+        local_times = adjust_timestamps_to_local_times(
             self.timestamps,
             self.simulation.time_of_initialization,
             self.time_zones
@@ -144,7 +148,7 @@ class Simulation:
         self.wind_directions = self.simulation.meteorology.wind_direction
 
         # Get the wind speeds at every location
-        self.wind_speeds = helpers.get_array_directional_wind_speed(
+        self.wind_speeds = get_array_directional_wind_speed(
             self.gis_vehicle_bearings,
             self.absolute_wind_speeds,
             self.wind_directions
@@ -235,18 +239,18 @@ class Simulation:
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         self.distances = self.distances.clip(0, self.max_route_distance / 1000)
 
-        self.map_data_indices = helpers.get_map_data_indices(self.closest_gis_indices)
+        self.map_data_indices = get_map_data_indices(self.closest_gis_indices)
 
         self.distance_travelled = self.distances[-1]
 
         if self.distance_travelled >= self.route_length:
-            self.time_taken = self.timestamps[helpers.calculate_completion_index(self.route_length, self.distances)]
+            self.time_taken = self.timestamps[calculate_completion_index(self.route_length, self.distances)]
         else:
             self.time_taken = self.simulation.simulation_duration
 
         self.calculations_have_happened = True
 
-    def get_results(self, requested_properties: Union[Iterable, str]) -> Union[list, np.ndarray, float]:
+    def get_results(self, requested_properties: Union[list, str]) -> Union[list, np.ndarray, float]:
         """
 
         Extract data from a Simulation model.

@@ -4,7 +4,7 @@ import requests
 import numpy as np
 from simulation.config import SolcastConfig, OpenweatherConfig, OpenweatherPeriod, EnvironmentConfig, CompetitionConfig
 from numpy.typing import NDArray, ArrayLike
-from simulation.common import Coordinate
+from simulation.race import Coordinate
 from simulation.query import Query
 from dotenv import load_dotenv
 
