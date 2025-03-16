@@ -1,20 +1,20 @@
-import pathlib
-import pickle
-from io import BytesIO
-
-import numpy as np
-import os
-from pathlib import Path
-from pickle import UnpicklingError
-from typing import Dict, Union, TypeAlias, Any
-from abc import ABC, abstractmethod
-import shelve
+from simulation.cache import Cache
 from dill import Unpickler, Pickler
-
-HashLike: TypeAlias = Union[str, list, np.ndarray, int]
+from io import BytesIO
+from typing import Any
+import pathlib
+import shelve
+import pickle
+import os
 
 
 class DillShelf(shelve.DbfilenameShelf):
+    """
+    A drop-in replacement for the default `Shelf` from the `shelve` module which uses `dill` for serialization
+    and deserialization rather than `pickle`.
+    """
+    # NOTE: ALL of this code is copied from the CPython 3.13 implementation of `Shelf` class in `shelve/shelf.py`, with
+    # references to `pickle` replaced with `dill`. That is, don't blame ME for your IDE complaining.
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -37,20 +37,15 @@ class DillShelf(shelve.DbfilenameShelf):
         self.dict[key.encode(self.keyencoding)] = f.getvalue()
 
 
-class Cache(ABC):
-    """
-    An interface to a persistent storage system
-    """
-    @abstractmethod
-    def get(self, file_path: os.PathLike) -> Any:
-        raise NotImplementedError
-
-    @abstractmethod
-    def put(self, obj: Any, file_path: os.PathLike):
-        raise NotImplementedError
-
-
 class FSCache(Cache):
+    """
+    FSCache is an implementation of the `Cache` interface using `dill` for serialization, which permits
+    any arbitrary object to be stored without loss of functionality.
+
+    FSCache uses the `shelve` module to create a simple filesystem persistent cache.
+
+    FSCache is not thread-safe.
+    """
     def __init__(self, shelve_dir: pathlib.Path):
         self._shelve_dir = shelve_dir
 
@@ -61,3 +56,6 @@ class FSCache(Cache):
     def put(self, obj: Any, file_path: os.PathLike):
         with DillShelf(self._shelve_dir, protocol=pickle.HIGHEST_PROTOCOL) as db:
             db[str(file_path)] = obj
+
+
+SimulationCache: Cache = FSCache(pathlib.Path(__file__).parent)

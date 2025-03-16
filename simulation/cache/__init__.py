@@ -1,11 +1,17 @@
-from .cache import (
-    FSCache,
-    Cache
+from ._cache import (
+    Cache,
+    RoutePath,
+    WeatherPath,
+    RacePath
 )
 
-import pathlib
+from ._fs_cache import (
+    FSCache,
+    SimulationCache
+)
 
-SimulationCache: Cache = FSCache(pathlib.Path(__file__).parent)
-RoutePath: pathlib.Path = pathlib.Path("route")
-WeatherPath: pathlib.Path = pathlib.Path("weather")
-RacePath: pathlib.Path = pathlib.Path("race")
+
+__all__ = [
+    "Cache",
+    "FSCache"
+]
