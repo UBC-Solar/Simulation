@@ -34,14 +34,14 @@ class Config(BaseModel, abc.ABC):
 
         node = Node(cls.__name__, parent=parent)
 
-        for _, field in fields.items():
+        for name, field in fields.items():
             field_class = field.annotation
 
             if hasattr(field_class, "tree"):
                 field_class.tree(node)
 
             else:
-                Node(field_class.__name__, parent=node)
+                Node(f"{str(name)}: {field_class.__name__}", parent=node)
 
         return node
 
