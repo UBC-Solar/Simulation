@@ -110,7 +110,7 @@ if __name__ == "__main__":
     parser.add_argument("--race_type", required=False, default="FSGP",
                         help="Define which race should be simulated.", type=str)
 
-    parser.add_argument("--granularity", required=False, default=60, type=int,
+    parser.add_argument("--granularity", required=False, default=1, type=int,
                         help="Define how granular (period) the speed array should be, in seconds per element.")
 
     parser.add_argument("-v", "--verbose", required=False, default=False, action="store_true",
