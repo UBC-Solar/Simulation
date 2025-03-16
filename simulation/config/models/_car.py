@@ -20,8 +20,8 @@ class ArrayConfig(Config):
 class LVSConfig(Config):
     model_config = ConfigDict(frozen=True)
 
-    lvs_voltage: float | int    # Voltage of LVS, assumed to be constant
-    lvs_current: float | int    # Current consumption of LVS, assumed to be constant
+    lvs_voltage: float    # Voltage of LVS, assumed to be constant
+    lvs_current: float    # Current consumption of LVS, assumed to be constant
 
 
 class BatteryConfig(Config):
