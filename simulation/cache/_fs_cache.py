@@ -47,7 +47,7 @@ class FSCache(Cache):
     FSCache is not thread-safe.
     """
     def __init__(self, shelve_dir: pathlib.Path):
-        self._shelve_dir = shelve_dir
+        self._shelve_dir = shelve_dir / "cache"
 
     def get(self, file_path: os.PathLike):
         with DillShelf(self._shelve_dir, protocol=pickle.HIGHEST_PROTOCOL) as db:
