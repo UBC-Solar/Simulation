@@ -1,4 +1,4 @@
-from .hash_util import (
+from .Hashing import (
     hash_dict
 )
 
