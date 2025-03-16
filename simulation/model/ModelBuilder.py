@@ -139,7 +139,7 @@ class ModelBuilder:
         self.race_data = race
 
     def _set_hyperparameters(self):
-        self.vehicle_speed_period = self._hyperparameter_config.vehicle_speed_period
+        self.vehicle_speed_period = self._hyperparameter_config.speed_dt
         self.simulation_period = self._hyperparameter_config.simulation_period
         self.return_type = self._hyperparameter_config.return_type
 
