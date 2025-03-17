@@ -96,7 +96,7 @@ def build_model(environment: EnvironmentConfig,
                           .set_environment_config(environment,
                                                   rebuild_weather_cache=False,
                                                   rebuild_route_cache=False,
-                                                  rebuild_competition_cache=True)
+                                                  rebuild_competition_cache=False)
                           .set_hyperparameters(hyperparameters)
                           .set_initial_conditions(initial_conditions)
                           .set_car_config(car_config))

@@ -7,7 +7,7 @@ from anytree import Node
 
 class ConfigDict(_ConfigDict):
     """
-    A TypedDict for configuring Pydantic behaviour, with the added `subclass_field` optional setting.
+    A `TypedDict` for configuring Pydantic behaviour, with the added `subclass_type` optional setting.
     """
     subclass_type: str
 
@@ -106,6 +106,7 @@ class Config(BaseModel, abc.ABC):
                         pass
 
             # An annotation like `tuple[float]` will cause a TypeError in issubclass, but we don't care anyway
+            # since we're only here to mutate fields that should contain `Config` subclasses
             except TypeError:
                 continue
 
