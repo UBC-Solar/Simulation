@@ -6,13 +6,15 @@ from simulation.config import SolcastConfig, OpenweatherConfig, OpenweatherPerio
 from numpy.typing import NDArray, ArrayLike
 from simulation.race import Coordinate
 from simulation.query import Query
-from dotenv import load_dotenv
-
-
-load_dotenv()
 
 
 class SolcastQuery(Query[SolcastConfig]):
+    """
+    `SolcastQuery` encapsulates the access to the Solcast API required to acquire
+    weather forecasting information required to complete the meteorological description
+    of the environment described by an `EnvironmentConfig`.
+    """
+
     def __init__(self, config: EnvironmentConfig):
         super().__init__(config)
         self._competition_config: CompetitionConfig = self._config.competition_config
@@ -26,6 +28,12 @@ class SolcastQuery(Query[SolcastConfig]):
 
 
 class OpenweatherQuery(Query[OpenweatherConfig]):
+    """
+    `OpenweatherQuery` encapsulates the access to the Openweathermap API required to acquire
+    weather forecasting information required to complete the meteorological description
+    of the environment described by an `EnvironmentConfig`.
+    """
+
     def __init__(self, config: EnvironmentConfig):
         super().__init__(config)
         self._competition_config: CompetitionConfig = self._config.competition_config
@@ -38,14 +46,14 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
         coords = self._competition_config.route_config.coordinates
         forecast_period: OpenweatherPeriod = self._weather_query_config.weather_period
 
-        weather_forecast = self.update_path_weather_forecast_openweather(coords,
-                                                                         forecast_period,
-                                                                         simulation_duration)
+        weather_forecast = self._update_path_weather_forecast_openweather(coords,
+                                                                          forecast_period,
+                                                                          simulation_duration)
 
         return weather_forecast
 
     @staticmethod
-    def update_path_weather_forecast_openweather(coords: ArrayLike, weather_period: OpenweatherPeriod, duration: int):
+    def _update_path_weather_forecast_openweather(coords: ArrayLike, weather_period: OpenweatherPeriod, duration: int):
         """
 
         Passes in a list of coordinates, returns the hourly weather forecast
@@ -73,7 +81,7 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
         weather_forecast = np.zeros(shape)
 
         def get_weather_forecast_for_coord(coord: Coordinate):
-            return OpenweatherQuery.get_coord_weather_forecast_openweather(
+            return OpenweatherQuery._get_coord_weather_forecast_openweather(
                 coord,
                 weather_period,
                 duration
@@ -84,7 +92,7 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
         return weather_forecast
 
     @staticmethod
-    def get_coord_weather_forecast_openweather(coord: Coordinate, weather_period: OpenweatherPeriod, duration: int):
+    def _get_coord_weather_forecast_openweather(coord: Coordinate, weather_period: OpenweatherPeriod, duration: int):
         """
 
         Passes in a single coordinate, returns a weather forecast

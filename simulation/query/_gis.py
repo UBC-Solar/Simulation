@@ -7,16 +7,35 @@ import datetime
 import numpy as np
 from tqdm import tqdm
 from timezonefinder import TimezoneFinder
-from simulation.config import CompetitionConfig
+from simulation.config import CompetitionConfig, TrackCompetitionConfig
 from numpy.typing import NDArray, ArrayLike
 from simulation.query import Query
 
 
-class TrackRouteQuery(Query[CompetitionConfig]):
-    def __init__(self, config: CompetitionConfig):
+class TrackRouteQuery(Query[TrackCompetitionConfig]):
+    """
+    `TrackRouteQuery` encapsulates the acquisition and marshalling of the data required
+    to complete the information required to describe a competition that is described
+    by a `TrackCompetitionConfig`.
+    """
+    def __init__(self, config: TrackCompetitionConfig):
         super().__init__(config)
 
     def make(self) -> tuple[NDArray, NDArray, NDArray, int]:
+        """
+        Invoke this `TrackRouteQuery` to acquire the path time zones, path elevations for the route described
+        by the `CompetitionConfig` used to construct this `TrackRouteQuery`.
+
+        For backwards compatibility reasons, returns the coordinates used as well as the tiling.
+
+        Returns, where N indicates the number of coordinates,
+            1. ndarray[N] of time differences in seconds
+            2. ndarray[N] of path elevations in meters
+            3. ndarray[N, 2] of coordinates as (latitude, longitude)
+            4. tiling, a scalar indicating the number of times the route should be tiled
+
+        :return: path_time_zones, path_elevations, coordinates, tiling, as enumerated above.
+        """
         coordinates: NDArray = np.array(self._config.route_config.coordinates)
         tiling: int = getattr(self._config, "tiling", 1)
 
@@ -30,7 +49,7 @@ class TrackRouteQuery(Query[CompetitionConfig]):
         return path_time_zones, path_elevations, coordinates, tiling
 
 
-class RoadRouteQuery[CompetitionConfig](Query):
+class RoadRouteQuery(Query[CompetitionConfig]):
     def __init__(self, config: CompetitionConfig):
         super().__init__(config)
 
