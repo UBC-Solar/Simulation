@@ -2,8 +2,6 @@ from datetime import datetime
 from typing import Tuple, Mapping, List
 from strenum import StrEnum
 from simulation.config.models import Config, ConfigDict
-from pydantic import BaseModel
-from numpy.typing import NDArray
 
 
 class RouteConfig(Config):
@@ -60,13 +58,3 @@ class RoadCompetitionConfig(CompetitionConfig):
     A model which contains the information required
     """
     pass
-
-
-class Route(BaseModel):
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
-
-    speed_limits: NDArray[float]
-    path_elevations: NDArray[float]
-    path_time_zones: NDArray[float]
-    coords: NDArray[float]
-    tiling: int

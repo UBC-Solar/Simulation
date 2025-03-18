@@ -26,10 +26,9 @@ from .models import (
     CompetitionConfig,
     TrackCompetitionConfig,
     CompetitionType,
-    RouteConfig,
-    Route
+    RouteConfig
 )
 
+ConfigDirectory = pathlib.Path(__file__).parent
 
-config_directory = pathlib.Path(__file__).parent
-speeds_directory = config_directory / "speeds"
+__all__ = [s for s in dir() if not s.startswith('_')]

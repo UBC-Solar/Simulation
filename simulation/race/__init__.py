@@ -7,14 +7,17 @@ from ._race import (
     Race
 )
 
+from ._route import (
+    Route
+)
+
 from ._helpers import (
     reshape_speed_array,
     adjust_timestamps_to_local_times,
     get_array_directional_wind_speed,
     get_granularity_reduced_boolean,
     calculate_completion_index,
-    get_map_data_indices,
-    parse_coordinates_from_kml
+    get_map_data_indices
 )
 
 Coordinate = tuple[float, float]
@@ -27,6 +30,6 @@ __all__ = [
     "get_granularity_reduced_boolean",
     "calculate_completion_index",
     "get_map_data_indices",
-    "parse_coordinates_from_kml",
-    "Coordinate"
+    "Coordinate",
+    "Route"
 ]

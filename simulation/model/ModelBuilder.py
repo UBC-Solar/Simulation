@@ -1,25 +1,25 @@
 import pathlib
 import warnings
 import numpy as np
+from typing import Optional
 from numpy.typing import NDArray
 from dotenv import load_dotenv
-from simulation.race import Race
+from simulation.race import Race, Route
 from haversine import haversine, Unit
+from simulation.model.Model import Model
 from simulation.cache import SimulationCache, Cache, RoutePath, RacePath, WeatherPath
 from simulation.config import CarConfig, WeatherProvider, SimulationReturnType
 from simulation.query import OpenweatherQuery, SolcastQuery, TrackRouteQuery, RoadRouteQuery
 from simulation.config import (SimulationHyperparametersConfig, OpenweatherConfig, SolcastConfig,
-                               EnvironmentConfig, InitialConditions, Route, CompetitionType)
+                               EnvironmentConfig, InitialConditions, CompetitionType)
 
 from physics.models.arrays import BaseArray, BasicArray
 from physics.models.battery import BaseBattery, BasicBattery, BatteryModel
 from physics.models.lvs import BaseLVS, BasicLVS
 from physics.models.motor import BaseMotor, BasicMotor
 from physics.models.regen import BaseRegen, BasicRegen
-from typing import Optional
 from physics.environment.gis import BaseGIS, GIS
 from physics.environment.meteorology import BaseMeteorology, IrradiantMeteorology, CloudedMeteorology
-from simulation.model.Model import Model
 
 
 load_dotenv()
@@ -363,7 +363,7 @@ class ModelBuilder:
 
         return self
 
-    def get(self):
+    def get(self) -> Model:
         """
         Returns a Simulation object if race data matches the model parameters' hash.
         Compares the hash of race data with model parameters. Raises RaceDataNotMatching if they differ.

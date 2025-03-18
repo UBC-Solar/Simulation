@@ -7,8 +7,7 @@ from ._track import (
     CompetitionConfig,
     TrackCompetitionConfig,
     CompetitionType,
-    RouteConfig,
-    Route
+    RouteConfig
 )
 
 from ._conditions import (
@@ -44,3 +43,5 @@ from ._car import (
     VehicleConfig,
     CarConfig
 )
+
+__all__ = [s for s in dir() if not s.startswith('_')]

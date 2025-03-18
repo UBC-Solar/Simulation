@@ -1,8 +1,3 @@
-"""
-The `utils` module contains a few utilities.
-1.
-"""
-
 from .Hashing import (
     hash_dict
 )

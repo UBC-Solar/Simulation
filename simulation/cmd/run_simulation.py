@@ -1,19 +1,20 @@
 import argparse
 import numpy as np
 import tomllib as toml
-from simulation.config import config_directory, speeds_directory, SimulationReturnType
-from simulation.model.Simulation import Simulation
+from simulation.config import SimulationReturnType, ConfigDirectory
+from simulation.model.Model import Model
 from simulation.model.ModelBuilder import ModelBuilder
 from simulation.config import EnvironmentConfig, SimulationHyperparametersConfig, InitialConditions, CarConfig
+from numpy.typing import NDArray
 
 
 def run_simulation(
         competition_name: str,
-        speeds_filename: str,
         plot_results: bool,
         verbose: bool,
         speed_dt: int,
-        car: str
+        car: str,
+        speeds: NDArray[float] = None
 ):
     """
     This is the entry point to Simulation.
@@ -21,15 +22,13 @@ def run_simulation(
     This method parses initial conditions for the simulation and store them in a simulationState object. Then, begin
     optimizing simulation with Bayesian optimization and then random optimization.
 
+    :param speeds:
     :param car: The name of the car to be simulated, should match a config file.
     :param speed_dt:
     :param verbose:
     :param competition_name:
     :param plot_results: plot results of Simulation
-    :param str speeds_filename: name of the cached speeds file to use, otherwise a default array is used
     :return: returns the time taken for simulation to complete before optimization
-    :rtype: Simulation
-
     """
 
     initial_conditions, environment, car_config = get_default_settings(competition_name, car)
@@ -46,15 +45,11 @@ def run_simulation(
     # Initialize a "guess" speed array
     driving_hours = simulation_model.get_driving_time_divisions()
 
-    if speeds_filename is None:
-        input_speed = np.array([45] * driving_hours)
-    else:
-        input_speed = np.load(speeds_directory / (speeds_filename + ".npy"))
-        if len(input_speed) != driving_hours:
-            raise ValueError(f"Cached speeds {speeds_filename} has improper length!")
+    if speeds is None:
+        speeds = np.array([45] * driving_hours)
 
     # Run simulation model with the "guess" speed array
-    simulation_model.run_model(speed=input_speed, plot_results=plot_results,
+    simulation_model.run_model(speed=speeds, plot_results=plot_results,
                                verbose=verbose,
                                route_visualization=False)
 
@@ -66,19 +61,19 @@ def get_default_settings(
         car_name: str = "BrightSide"
 ) -> tuple[InitialConditions, EnvironmentConfig, CarConfig]:
     #  ----- Load initial conditions -----
-    config_path = config_directory / f"initial_conditions_{competition_name}.toml"
+    config_path = ConfigDirectory / f"initial_conditions_{competition_name}.toml"
     with open(config_path, "rb") as f:
         initial_conditions_data = toml.load(f)
         initial_conditions = InitialConditions.build_from(initial_conditions_data)
 
     #  ----- Load model parameters -----
-    config_path = config_directory / f"settings_{competition_name}.toml"
+    config_path = ConfigDirectory / f"settings_{competition_name}.toml"
     with open(config_path, "rb") as f:
         model_parameters_data = toml.load(f)
         environment_config = EnvironmentConfig.build_from(model_parameters_data)
 
     #  ----- Load car -----
-    config_path = config_directory / f"{car_name}.toml"
+    config_path = ConfigDirectory / f"{car_name}.toml"
     with open(config_path, "rb") as f:
         car_config_data = toml.load(f)
         car_config = CarConfig.build_from(car_config_data)
@@ -90,7 +85,7 @@ def build_model(environment: EnvironmentConfig,
                 hyperparameters: SimulationHyperparametersConfig,
                 initial_conditions: InitialConditions,
                 car_config: CarConfig
-                ):
+                ) -> Model:
     # Build simulation model
     simulation_builder = (ModelBuilder()
                           .set_environment_config(environment,
@@ -116,13 +111,10 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", required=False, default=False, action="store_true",
                         help="Set to nake simulation execute as verbose.")
 
-    parser.add_argument('-s', "--speeds", required=False, default=None, type=str,
-                        help="Name of cached speed array (.npy extension is assumed)")
-
     parser.add_argument('-p', "--plot_results", required=False, default=True, type=bool,
                         help="Plot results or not")
 
-    parser.add_argument('-c,' '--car_name', required=False, default="Brightside", type=str,
+    parser.add_argument('--car', required=False, default="Brightside", type=str,
                         help="Name of car model")
 
     args = parser.parse_args()
@@ -131,7 +123,6 @@ if __name__ == "__main__":
         competition_name=args.race_type,
         verbose=args.verbose,
         speed_dt=args.granularity,
-        speeds_filename=args.speeds,
         plot_results=args.plot_results,
-        car="Brightside"
+        car=args.car
     )

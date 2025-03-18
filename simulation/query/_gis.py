@@ -12,13 +12,13 @@ from numpy.typing import NDArray, ArrayLike
 from simulation.query import Query
 
 
-class TrackRouteQuery(Query[TrackCompetitionConfig]):
+class TrackRouteQuery(Query[CompetitionConfig]):
     """
     `TrackRouteQuery` encapsulates the acquisition and marshalling of the data required
     to complete the information required to describe a competition that is described
     by a `TrackCompetitionConfig`.
     """
-    def __init__(self, config: TrackCompetitionConfig):
+    def __init__(self, config: CompetitionConfig):
         super().__init__(config)
 
     def make(self) -> tuple[NDArray, NDArray, NDArray, int]:
