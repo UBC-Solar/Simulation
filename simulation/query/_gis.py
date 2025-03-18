@@ -7,7 +7,7 @@ import datetime
 import numpy as np
 from tqdm import tqdm
 from timezonefinder import TimezoneFinder
-from simulation.config import CompetitionConfig, TrackCompetitionConfig
+from simulation.config import CompetitionConfig
 from numpy.typing import NDArray, ArrayLike
 from simulation.query import Query
 
