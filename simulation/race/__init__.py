@@ -17,19 +17,12 @@ from ._helpers import (
     get_array_directional_wind_speed,
     get_granularity_reduced_boolean,
     calculate_completion_index,
-    get_map_data_indices
+    get_map_data_indices,
+    normalize,
+    denormalize,
+    rescale
 )
 
 Coordinate = tuple[float, float]
 
-__all__ = [
-    "Race",
-    "reshape_speed_array",
-    "adjust_timestamps_to_local_times",
-    "get_array_directional_wind_speed",
-    "get_granularity_reduced_boolean",
-    "calculate_completion_index",
-    "get_map_data_indices",
-    "Coordinate",
-    "Route"
-]
+__all__ = [s for s in dir() if not s.startswith('_')]

@@ -2,7 +2,7 @@ import sys
 import csv
 import numpy as np
 
-from simulation.model.Simulation import Simulation
+from simulation.model.Model import Model
 from simulation.utils.InputBounds import InputBounds
 from simulation.optimization.genetic import GeneticOptimization
 from simulation.data.results import results_directory
@@ -59,7 +59,7 @@ def main(competition_name: str, car_name: str, speed_dt: int):
     run_hyperparameter_search(simulation_model, bounds)
 
 
-def run_hyperparameter_search(simulation_model: Simulation, bounds: InputBounds):
+def run_hyperparameter_search(simulation_model: Model, bounds: InputBounds):
     evals_per_setting: int = 3
     settings_file = results_directory / "settings.csv"
     stop_index = 0
