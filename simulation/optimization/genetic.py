@@ -183,7 +183,8 @@ class GeneticOptimization(BaseOptimization):
     """
 
     def __init__(self, model: Simulation, bounds: InputBounds, force_new_population_flag: bool = False,
-                 settings: OptimizationSettings = None, pbar: tqdm = None, plot_fitness: bool = False):
+                 settings: OptimizationSettings = None, pbar: tqdm = None, plot_fitness: bool = False,
+                 progress_signal=None, update_signal=None):
 
         assert model.return_type is SimulationReturnType.distance_and_time, \
             "Simulation Model for Genetic Optimization must have return type: SimulationReturnType.distance_and_time!"
@@ -193,6 +194,10 @@ class GeneticOptimization(BaseOptimization):
         self.bounds = bounds.get_bounds_list()
         self.settings = settings if settings is not None else OptimizationSettings()
         self.output_hyperparameters = plot_fitness
+
+        # Store PyQt signals for UI updates
+        self.progress_signal = progress_signal
+        self.update_signal = update_signal
 
         # Define the function that will be used to determine the fitness of each chromosome
         fitness_function = self.fitness
@@ -288,6 +293,17 @@ class GeneticOptimization(BaseOptimization):
                 pbar.update(1)
             else:
                 print("New generation!")
+
+            progress = int((x.generations_completed / self.settings.generation_limit) * 100)
+
+            # Emit PyQt signals for UI updates (Only if signals exist)
+            if self.progress_signal is not None:
+                self.progress_signal.emit(progress)
+
+            if self.update_signal is not None:
+                self.update_signal.emit(
+                    f"Generation {x.generations_completed}/{self.settings.generation_limit} - Best Fitness: {x.best_solution()[1]}"
+                )
 
         # We must obtain or create an initial population for GA to work with.
         initial_population = self.get_initial_population(self.sol_per_pop, force_new_population_flag)
