@@ -3,7 +3,6 @@ import json
 import numpy as np
 import zipfile
 import pygad
-import math
 import sys
 import csv
 import os
@@ -13,11 +12,10 @@ from tqdm import tqdm
 
 from simulation.cache.optimization_population import population_directory
 from simulation.optimization.base_optimization import BaseOptimization
-from simulation.common.helpers import denormalize, normalize, rescale
-from simulation.common.noise import Noise
-from simulation.config import config_directory
+from simulation.race import denormalize, normalize, rescale
+from simulation.config import ConfigDirectory, SimulationReturnType
 from simulation.utils import InputBounds
-from simulation.model.Simulation import Simulation, SimulationReturnType
+from simulation.model import Model
 
 
 class OptimizationSettings:
@@ -78,7 +76,7 @@ class OptimizationSettings:
                  mutation_percent: float = None,
                  max_mutation: float = None,
                  stopping_criteria: Stopping_Criteria = None):
-        with open(config_directory / "optimization_settings.json", "r") as settings_file:
+        with open(ConfigDirectory / "optimization_settings.json", "r") as settings_file:
             settings = json.load(settings_file)
 
         self.chromosome_size: int = int(settings["chromosome_size"]) if chromosome_size is None else chromosome_size
@@ -182,7 +180,7 @@ class GeneticOptimization(BaseOptimization):
     To modify GA's default hyperparameters, modify `optimization_settings.json` in `simulation/config/`.
     """
 
-    def __init__(self, model: Simulation, bounds: InputBounds, force_new_population_flag: bool = False,
+    def __init__(self, model: Model, bounds: InputBounds, force_new_population_flag: bool = False,
                  settings: OptimizationSettings = None, pbar: tqdm = None, plot_fitness: bool = False):
 
         assert model.return_type is SimulationReturnType.distance_and_time, \
@@ -196,18 +194,6 @@ class GeneticOptimization(BaseOptimization):
 
         # Define the function that will be used to determine the fitness of each chromosome
         fitness_function = self.fitness
-
-        # https://www.desmos.com/calculator/gvknyspywa
-        def sigmoid(a, c, race_length):
-            return lambda x: 1 / (1 + math.exp(-(a * x + (-(math.log(1 / c - 1) + a * race_length)))))
-
-        # https://www.desmos.com/calculator/uncbg8hnvq
-        def amplifier(race_length):
-            return lambda x: math.pow(math.sqrt(3) * (race_length - x) / (-x), 2) + 1
-
-        # coefficients 0.085 and 0.985 are numbers chosen to generate the function curve desired: see the Desmos graph
-        self.fitness_sigmoid = sigmoid(0.03, 0.985, self.model.get_race_length() / 1000.0)
-        self.fitness_amplifier = amplifier(self.model.simulation_duration)
 
         # Define how many generations that GA will run (sequence may end prematurely depending on
         # if a stopping condition has been defined!)
