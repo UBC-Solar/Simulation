@@ -19,6 +19,7 @@ import numpy as np
 from collections import OrderedDict
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+
 class SimulationCanvas(FigureCanvas):
     """Canvas to display multiple simulation plots dynamically with better formatting."""
 
@@ -221,7 +222,6 @@ class OptimizationThread(QThread):
     progress_signal = pyqtSignal(int)
     model_signal = pyqtSignal(object)  # Emits optimized simulation model
 
-
     def __init__(self, settings):
         super().__init__()
         self.settings = settings
@@ -259,7 +259,6 @@ class OptimizationThread(QThread):
 
             self.progress_signal.emit(100)  # Set progress bar to 100% after completion
 
-
             simulation_model.run_model(results_genetic, plot_results=False)
 
             filename = self.get_random_string(7) + ".npy"
@@ -269,7 +268,6 @@ class OptimizationThread(QThread):
 
         except Exception as e:
             self.update_signal.emit(f"Error: {str(e)}")
-
 
     def get_random_string(self, length: int) -> str:
         characters = string.ascii_letters + string.digits
@@ -281,7 +279,6 @@ class SimulationApp(QWidget):
         super().__init__()
         self.initUI()
         self.optimization_thread = None
-
 
     def initUI(self):
         layout = QVBoxLayout()
@@ -373,6 +370,7 @@ class SimulationApp(QWidget):
     def update_sim_plot(self, results_dict):
         """Update the Matplotlib canvas with new simulation data."""
         self.sim_canvas.plot_simulation_results(results_dict)
+
     def update_speed_plot(self, model):
         """Update the SpeedCanvas with the optimized model."""
         self.speed_canvas.plot_optimized_speeds(model)
