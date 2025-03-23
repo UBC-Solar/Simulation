@@ -3,6 +3,7 @@ Contain calculations and results of Simulation.
 """
 
 import numpy as np
+from numpy.typing import NDArray
 from typing import Union
 from simulation.race import (
     calculate_completion_index,
@@ -14,11 +15,18 @@ from simulation.race import (
 
 class Simulation:
     """
-    Models should be considered to be immutable. Instantiate a new model when you want to run a different simulation.
+    A Simulation performs the logic and calculations, and stores the results, of simulating a `Model`.
     """
 
-    def __init__(self, simulation):
-        self.simulation = simulation
+    # NOTE: `model` cannot be type-hinted as a `Model` as it would require a circular import since `Model` needs
+    # to have `Simulation` imported to be able to create them to simulate!
+    def __init__(self, model):
+        """
+        Instantiate a Simulation.
+
+        :param Model model: A reference to the `Model` that will be simulated.
+        """
+        self.model = model
         self.speed_kmh = None
 
         self.calculations_have_happened = False
@@ -66,10 +74,10 @@ class Simulation:
         self.final_soc = None
         self.map_data_indices = None
 
-    def run_simulation_calculations(self, speed_kmh) -> None:
+    def run_simulation_calculations(self, speed_kmh: NDArray) -> None:
         """
 
-        Simulate the model by sequentially running calculations for the entire simulation duration at once.
+        Simulate the model by sequentially running calculations for the entire model duration at once.
 
         To begin, we use the driving speeds array to obtain the theoretical position of the car at every tick.
         Then, we map the position of the car at every tick to a GIS coordinate and to a Weather coordinate. Next,
@@ -79,13 +87,13 @@ class Simulation:
         From the aforementioned calculations, we can determine the energy needed for the motor, and the energy
         that the solar arrays will collect; from those two, we can determine the delta energy at every tick.
         Then, we use the delta energy to determine how much energy we are drawing or storing from/into the battery
-        which allows us to determine the battery's state of charge for the entire simulation duration.
+        which allows us to determine the battery's state of charge for the entire model duration.
 
         """
         self.speed_kmh = speed_kmh
 
         # ----- Tick array -----
-        self.timestamps = np.arange(0, self.simulation.simulation_duration, self.simulation.simulation_dt)
+        self.timestamps = np.arange(0, self.model.simulation_duration, self.model.simulation_dt)
         self.tick_array = np.diff(self.timestamps)
         self.tick_array = np.insert(self.tick_array, 0, 0)
 
@@ -103,11 +111,11 @@ class Simulation:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        self.closest_gis_indices = self.simulation.gis.calculate_closest_gis_indices(self.distances)
+        self.closest_gis_indices = self.model.gis.calculate_closest_gis_indices(self.distances)
 
-        self.simulation.meteorology.spatially_localize(self.cumulative_distances, simplify_weather=True)
+        self.model.meteorology.spatially_localize(self.cumulative_distances, simplify_weather=True)
 
-        self.path_distances = self.simulation.gis.get_path_distances()
+        self.path_distances = self.model.gis.get_path_distances()
         self.cumulative_distances = np.cumsum(self.path_distances)  # [cumulative_distances] = meters
 
         self.max_route_distance = self.cumulative_distances[-1]
@@ -115,37 +123,37 @@ class Simulation:
         self.route_length = self.max_route_distance / 1000.0  # store the route length in kilometers
 
         # Array of elevations at every route point
-        gis_route_elevations = self.simulation.gis.get_path_elevations()
+        gis_route_elevations = self.model.gis.get_path_elevations()
 
         self.gis_route_elevations_at_each_tick = gis_route_elevations[self.closest_gis_indices]
 
         # Get the azimuth angle of the vehicle at every location
-        self.gis_vehicle_bearings = self.simulation.vehicle_bearings[self.closest_gis_indices]
+        self.gis_vehicle_bearings = self.model.vehicle_bearings[self.closest_gis_indices]
 
         # Get array of path gradients
-        self.gradients = self.simulation.gis.get_gradients(self.closest_gis_indices)
+        self.gradients = self.model.gis.get_gradients(self.closest_gis_indices)
 
         # ----- Timing Calculations -----
 
         # Get time zones at each point on the GIS path
-        self.time_zones = self.simulation.gis.get_time_zones(self.closest_gis_indices)
+        self.time_zones = self.model.gis.get_time_zones(self.closest_gis_indices)
 
         # Local times in UNIX timestamps
         local_times = adjust_timestamps_to_local_times(
             self.timestamps,
-            self.simulation.time_of_initialization,
+            self.model.time_of_initialization,
             self.time_zones
         )
 
         # Get the weather at every location
-        self.simulation.meteorology.temporally_localize(
+        self.model.meteorology.temporally_localize(
             local_times,
-            self.simulation.start_time,
-            self.simulation.simulation_dt
+            self.model.start_time,
+            self.model.simulation_dt
         )
 
-        self.absolute_wind_speeds = self.simulation.meteorology.wind_speed
-        self.wind_directions = self.simulation.meteorology.wind_direction
+        self.absolute_wind_speeds = self.model.meteorology.wind_speed
+        self.wind_directions = self.model.meteorology.wind_direction
 
         # Get the wind speeds at every location
         self.wind_speeds = get_array_directional_wind_speed(
@@ -155,8 +163,8 @@ class Simulation:
         )
 
         # Get an array of solar irradiance at every coordinate and time
-        self.solar_irradiances = self.simulation.meteorology.calculate_solar_irradiances(
-            self.simulation.route_coords[self.closest_gis_indices],
+        self.solar_irradiances = self.model.meteorology.calculate_solar_irradiances(
+            self.model.route_coords[self.closest_gis_indices],
             self.time_zones, local_times,
             self.gis_route_elevations_at_each_tick
         )
@@ -165,33 +173,33 @@ class Simulation:
 
         # ----- Energy Calculations -----
 
-        self.lvs_consumed_energy = self.simulation.lvs.get_consumed_energy(self.simulation.simulation_dt)
+        self.lvs_consumed_energy = self.model.lvs.get_consumed_energy(self.model.simulation_dt)
 
-        self.motor_consumed_energy = self.simulation.motor.calculate_energy_in(
+        self.motor_consumed_energy = self.model.motor.calculate_energy_in(
             self.speed_kmh,
             self.gradients,
             self.wind_speeds,
-            self.simulation.simulation_dt
+            self.model.simulation_dt
         )
 
-        self.array_produced_energy = self.simulation.solar_array.calculate_produced_energy(
+        self.array_produced_energy = self.model.solar_array.calculate_produced_energy(
             self.solar_irradiances,
-            self.simulation.simulation_dt
+            self.model.simulation_dt
         )
 
-        self.regen_produced_energy = self.simulation.regen.calculate_produced_energy(
+        self.regen_produced_energy = self.model.regen.calculate_produced_energy(
             self.speed_kmh,
             self.gis_route_elevations_at_each_tick,
             0.0,
             10000.0
         )
 
-        self.not_charge = self.simulation.race.charging_boolean[self.simulation.start_time:]
-        self.not_race = self.simulation.race.driving_boolean[self.simulation.start_time:]
+        self.not_charge = self.model.race.charging_boolean[self.model.start_time:]
+        self.not_race = self.model.race.driving_boolean[self.model.start_time:]
 
-        if self.simulation.simulation_dt != 1:
-            self.not_charge = self.not_charge[::self.simulation.simulation_dt]
-            self.not_race = self.not_race[::self.simulation.simulation_dt]
+        if self.model.simulation_dt != 1:
+            self.not_charge = self.not_charge[::self.model.simulation_dt]
+            self.not_race = self.not_race[::self.model.simulation_dt]
 
         self.array_produced_energy = self.array_produced_energy * np.logical_and(
             self.array_produced_energy,
@@ -213,23 +221,23 @@ class Simulation:
         # ----- Array initialisation -----
 
         # used to calculate the time the car was in motion
-        self.tick_array = np.full_like(self.timestamps, fill_value=self.simulation.simulation_dt, dtype='f4')
+        self.tick_array = np.full_like(self.timestamps, fill_value=self.model.simulation_dt, dtype='f4')
         self.tick_array[0] = 0
 
         # ----- Array calculations -----
 
         cumulative_delta_energy = np.cumsum(self.delta_energy)
-        battery_variables_array = self.simulation.battery.update_array(cumulative_delta_energy)
+        battery_variables_array = self.model.battery.update_array(cumulative_delta_energy)
 
         # stores the battery SOC at each time step
         self.state_of_charge = battery_variables_array[0]
         self.state_of_charge[np.abs(self.state_of_charge) < 1e-03] = 0
-        self.raw_soc = self.simulation.battery.get_raw_soc(np.cumsum(self.delta_energy))
+        self.raw_soc = self.model.battery.get_raw_soc(np.cumsum(self.delta_energy))
 
         # # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
         # self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
 
-        self.time_in_motion = np.logical_and(self.tick_array, self.speed_kmh) * self.simulation.simulation_dt
+        self.time_in_motion = np.logical_and(self.tick_array, self.speed_kmh) * self.model.simulation_dt
 
         self.final_soc = self.state_of_charge[-1] * 100 + 0.
 
@@ -246,7 +254,7 @@ class Simulation:
         if self.distance_travelled >= self.route_length:
             self.time_taken = self.timestamps[calculate_completion_index(self.route_length, self.distances)]
         else:
-            self.time_taken = self.simulation.simulation_duration
+            self.time_taken = self.model.simulation_duration
 
         self.calculations_have_happened = True
 
@@ -311,7 +319,7 @@ class Simulation:
             "final_soc": self.final_soc,
             "distance_travelled": self.distance_travelled,
             "map_data_indices": self.map_data_indices,
-            "path_coordinates": self.simulation.gis.get_path(),
+            "path_coordinates": self.model.gis.get_path(),
             "raw_soc": self.raw_soc
         }
 

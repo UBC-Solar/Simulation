@@ -20,10 +20,8 @@ from physics.environment.meteorology import BaseMeteorology
 
 class Model:
     """
-
-    Note: The first time that run_model is called will be SIGNIFICANTLY slower than future calls. This is because
-    Simulation components contain many Numba JIT targets, which must be compiled at runtime the first time they are
-    called.
+    A `Model` is a comprehensive model of a solar-powered vehicle's components within a fully qualified environment,
+    ready for simulation given an input of driving speeds for the vehicle to perform.
     """
 
     def __init__(
@@ -45,9 +43,23 @@ class Model:
             start_time: int
     ):
         """
+        Instantiate a `Model`.
 
-        Instantiates a model of the car.
-
+        :param SimulationReturnType return_type: Specify the data that should be directly returned by `run_model`.
+        :param Race race: A `Race` instance that contains all the data about the race to be simulated.
+        :param int speed_dt: The number of seconds that each element of the input speed array should represent.
+        :param int simulation_dt: The time discretization of this model's simulations, in seconds.
+        :param NDArray speed_limits: An array of speed limits in km/h for each coordinate that will be simulated.
+        :param BaseArray array: An instance of `BaseArray` representing the solar array to be simulated.
+        :param BaseBattery battery: An instance of `BaseBattery` representing the batter pack to be simulated.
+        :param BaseMotor motor: An instance of `BaseMotor` representing the motor to be simulated.
+        :param BaseRegen regen: An instance of `BaseRegen` representing the regenerative braking system to be simulated.
+        :param BaseLVS lvs: An instance of `BaseLVS` representing the low-voltage systems to be simulated.
+        :param BaseGIS gis: An instance of `BaseGIS` which characterizes geographical information about the simulation.
+        :param BaseMeteorology meteorology: An instance of `BaseMeteorology` describing the meteorology to be simulated.
+        :param float max_acceleration: Maximum allowed acceleration of the car in km/h.
+        :param float max_deceleration: Maximum allowed deceleration of the car in km/h.
+        :param int start_time: The initial time, in seconds since midnight of the first day, of the simulation.
         """
         self.return_type = return_type
         self.race = race
@@ -74,12 +86,8 @@ class Model:
 
         self.plotting = Plotting()
 
-        # All attributes ABOVE will NOT be modified when the model is simulated. All attributes BELOW this WILL be
-        # mutated over the course of simulation. Ensure that when you modify the behaviour of Simulation that this
-        # fact is maintained, else the stability of the optimization process WILL be threatened, as it assumes
-        # that the attributes above are independent of whether the model has been previously simulated.
+        # NOTE: All attributes ABOVE this comment should be IMMUTABLE and UNMODIFIED during a simulation.
 
-        # A Model is a (mostly) immutable container for simulation calculations and results
         self._simulation = None
 
     def run_model(
@@ -94,28 +102,35 @@ class Model:
         """
 
         Given an array of driving speeds, simulate the model by running calculations sequentially for the entire
-        simulation duration. Returns either time taken, distance travelled, or void. This function is mostly a wrapper
-        around run_simulation_calculations, which is where the magic happens, that deals with processing the driving
+        simulation duration.
+        Returns either time taken, distance travelled, or void.
+
+        This function is mostly a wrapper
+        around `run_simulation_calculations`,
+        which is where the magic happens, that deals with processing the driving
         speeds array as well as plotting and handling the calculation results.
 
-        Note: if the speed remains constant throughout this update, and knowing the starting
-              time, the cumulative distance at every time can be known. From the cumulative
-              distance, the GIS class updates the new location of the vehicle. From the location
+        Note: if the speed remains constant throughout this update, knowing the starting
+              time, the cumulative distance at every time can be known.
+              From the cumulative
+              distance, the GIS class updates the new location of the vehicle.
+              From the location
               of the vehicle at every tick, the gradients at every tick, the weather at every
               tick, the GHI at every tick, is known.
 
         Note 2: currently, the simulation can only be run for times during which weather data is available
 
-        :param np.ndarray speed: array that specifies the solar car's driving speed at each time step
-        :param bool plot_results: set to True to plot the results of the simulation
-        :param bool verbose: Boolean to control logging and debugging behaviour
+        :param np.ndarray speed: Array that specifies the solar car's driving speed at each time step.
+        :param bool plot_results: Set to True to plot the results of the simulation.
+        :param bool verbose: Boolean to control logging and debugging behaviour.
         :param tuple[float] plot_portion: A tuple containing the beginning and end of the portion of the array we'd
         like to plot, as percentages (0 <= plot_portion <= 1).
-        :param kwargs: variable list of arguments that specify the car's driving speed at each time step.
+        :param kwargs: Variable list of arguments that specify the car's driving speed at each time step.
             Overrides the speed parameter.
         :param plot_portion: A tuple containing the beginning and end of the portion of the array we'd
         like to plot as percentages.
-        :param bool is_optimizer: flag to set whether this method is being run by an optimizer. Reduces verbosity
+        :param bool is_optimizer: Flag to set whether this method is being run by an optimizer.
+        Reduces verbosity
             when true.
         """
 
@@ -218,10 +233,8 @@ class Model:
         For example, input ["speed_kmh","delta_energy"] to extract speed_kmh and delta_energy. Use
         "default" to extract the properties that used to be in the SimulationResults object.
 
-        :param values: an iterable of strings that should correspond to a certain property of simulation.
-        :returns: a list of Simulation properties in the order provided.
-        :rtype: list
-
+        :param values: An iterable of strings that should correspond to a certain property of simulation.
+        :returns: A list of Simulation properties in the order provided.
         """
 
         return self._simulation.get_results(values)
@@ -243,7 +256,7 @@ class Model:
         Returns the number of time divisions (based on granularity) that the car is permitted to be driving.
         Dependent on rules in get_race_timing_constraints_boolean() function in common/helpers.
 
-        :return: number of hours as an integer
+        :return: Number of hours as an integer
 
         """
 
