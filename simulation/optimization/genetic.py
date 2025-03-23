@@ -52,7 +52,12 @@ class OptimizationSettings:
             saturate = "saturate"
             reach = "reach"
 
-        def __init__(self, criteria: Criteria_Type = Criteria_Type.saturate, value: int = 10, string: str = None):
+        def __init__(
+            self,
+            criteria: Criteria_Type = Criteria_Type.saturate,
+            value: int = 10,
+            string: str = None,
+        ):
             self.string = string
             self.criteria = criteria
             self.value = value
@@ -65,36 +70,70 @@ class OptimizationSettings:
         saturate: Criteria_Type = Criteria_Type.saturate
         reach: Criteria_Type = Criteria_Type.reach
 
-    def __init__(self, chromosome_size: int = None,
-                 parent_selection_type: Parent_Selection_Type = None,
-                 generation_limit: int = None,
-                 num_parents: int = None,
-                 k_tournament: int = None,
-                 crossover_type: Crossover_Type = None,
-                 elitism: int = None,
-                 mutation_type: Mutation_Type = None,
-                 mutation_percent: float = None,
-                 max_mutation: float = None,
-                 stopping_criteria: Stopping_Criteria = None):
+    def __init__(
+        self,
+        chromosome_size: int = None,
+        parent_selection_type: Parent_Selection_Type = None,
+        generation_limit: int = None,
+        num_parents: int = None,
+        k_tournament: int = None,
+        crossover_type: Crossover_Type = None,
+        elitism: int = None,
+        mutation_type: Mutation_Type = None,
+        mutation_percent: float = None,
+        max_mutation: float = None,
+        stopping_criteria: Stopping_Criteria = None,
+    ):
         with open(ConfigDirectory / "optimization_settings.json", "r") as settings_file:
             settings = json.load(settings_file)
 
-        self.chromosome_size: int = int(settings["chromosome_size"]) if chromosome_size is None else chromosome_size
-        self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = OptimizationSettings.Parent_Selection_Type(
-            settings["parent_selection_type"]) if parent_selection_type is None else parent_selection_type
-        self.generation_limit: int = int(settings["generation_limit"]) if generation_limit is None else generation_limit
-        self.num_parents: int = int(settings["num_parents"]) if num_parents is None else num_parents
-        self.k_tournament: int = int(settings["k_tournament"]) if k_tournament is None else k_tournament
-        self.crossover_type: OptimizationSettings.Crossover_Type = OptimizationSettings.Crossover_Type(
-            settings["crossover_type"]) if crossover_type is None else crossover_type
+        self.chromosome_size: int = (
+            int(settings["chromosome_size"])
+            if chromosome_size is None
+            else chromosome_size
+        )
+        self.parent_selection_type: OptimizationSettings.Parent_Selection_Type = (
+            OptimizationSettings.Parent_Selection_Type(
+                settings["parent_selection_type"]
+            )
+            if parent_selection_type is None
+            else parent_selection_type
+        )
+        self.generation_limit: int = (
+            int(settings["generation_limit"])
+            if generation_limit is None
+            else generation_limit
+        )
+        self.num_parents: int = (
+            int(settings["num_parents"]) if num_parents is None else num_parents
+        )
+        self.k_tournament: int = (
+            int(settings["k_tournament"]) if k_tournament is None else k_tournament
+        )
+        self.crossover_type: OptimizationSettings.Crossover_Type = (
+            OptimizationSettings.Crossover_Type(settings["crossover_type"])
+            if crossover_type is None
+            else crossover_type
+        )
         self.elitism: int = int(settings["elitism"]) if elitism is None else elitism
-        self.mutation_type: OptimizationSettings.Mutation_Type = OptimizationSettings.Mutation_Type(
-            settings["mutation_type"]) if mutation_type is None else mutation_type
-        self.mutation_percent: float = float(
-            settings["mutation_percent"]) if mutation_percent is None else mutation_percent
-        self.max_mutation: float = float(settings["max_mutation"]) if max_mutation is None else max_mutation
-        self.stopping_criteria: OptimizationSettings.Stopping_Criteria = OptimizationSettings.Stopping_Criteria(
-            string=settings["stopping_criteria"]) if stopping_criteria is None else stopping_criteria
+        self.mutation_type: OptimizationSettings.Mutation_Type = (
+            OptimizationSettings.Mutation_Type(settings["mutation_type"])
+            if mutation_type is None
+            else mutation_type
+        )
+        self.mutation_percent: float = (
+            float(settings["mutation_percent"])
+            if mutation_percent is None
+            else mutation_percent
+        )
+        self.max_mutation: float = (
+            float(settings["max_mutation"]) if max_mutation is None else max_mutation
+        )
+        self.stopping_criteria: OptimizationSettings.Stopping_Criteria = (
+            OptimizationSettings.Stopping_Criteria(string=settings["stopping_criteria"])
+            if stopping_criteria is None
+            else stopping_criteria
+        )
 
         self._fitness: float = 0
 
@@ -108,10 +147,20 @@ class OptimizationSettings:
 
         """
 
-        out_list: list[str] = [str(self.chromosome_size), str(self.parent_selection_type), str(self.generation_limit),
-                               str(self.num_parents), str(self.k_tournament), str(self.crossover_type),
-                               str(self.elitism), str(self.mutation_type), str(self.mutation_percent),
-                               str(self.max_mutation), str(self.stopping_criteria), str(self._fitness)]
+        out_list: list[str] = [
+            str(self.chromosome_size),
+            str(self.parent_selection_type),
+            str(self.generation_limit),
+            str(self.num_parents),
+            str(self.k_tournament),
+            str(self.crossover_type),
+            str(self.elitism),
+            str(self.mutation_type),
+            str(self.mutation_percent),
+            str(self.max_mutation),
+            str(self.stopping_criteria),
+            str(self._fitness),
+        ]
         return out_list
 
     def set_fitness(self, fitness: float) -> None:
@@ -180,11 +229,18 @@ class GeneticOptimization(BaseOptimization):
     To modify GA's default hyperparameters, modify `optimization_settings.json` in `simulation/config/`.
     """
 
-    def __init__(self, model: Model, bounds: InputBounds, force_new_population_flag: bool = False,
-                 settings: OptimizationSettings = None, pbar: tqdm = None, plot_fitness: bool = False):
-
-        assert model.return_type is SimulationReturnType.distance_and_time, \
+    def __init__(
+        self,
+        model: Model,
+        bounds: InputBounds,
+        force_new_population_flag: bool = False,
+        settings: OptimizationSettings = None,
+        pbar: tqdm = None,
+        plot_fitness: bool = False,
+    ):
+        assert model.return_type is SimulationReturnType.distance_and_time, (
             "Simulation Model for Genetic Optimization must have return type: SimulationReturnType.distance_and_time!"
+        )
 
         super().__init__(bounds, model.run_model)
         self.model = model
@@ -234,7 +290,7 @@ class GeneticOptimization(BaseOptimization):
         mutation_max_value = self.settings.max_mutation
 
         # Bind the value of each gene to be between 0 and 1 as chromosomes should be normalized.
-        gene_space = {'low': 0.0, 'high': 1.0}
+        gene_space = {"low": 0.0, "high": 1.0}
 
         # Add a time delay between generations (used for debug purposes)
         delay_after_generation = 0.0
@@ -259,8 +315,12 @@ class GeneticOptimization(BaseOptimization):
             for i in range(x.pop_size[1]):  # iterate through each gene/stage
                 stage_mean = np.mean(x.population[:, i])
                 squared_diffs = np.square(x.population[:, i] - stage_mean)
-                mean_squared_diffs = np.mean(squared_diffs)  # mean of squared differences
-                sum_stage_sd += np.sqrt(mean_squared_diffs)  # add standard deviation of this gene
+                mean_squared_diffs = np.mean(
+                    squared_diffs
+                )  # mean of squared differences
+                sum_stage_sd += np.sqrt(
+                    mean_squared_diffs
+                )  # add standard deviation of this gene
 
             # Diversity of this population / generation -> average standard deviation of genes
             diversity = sum_stage_sd / x.pop_size[1]
@@ -276,30 +336,36 @@ class GeneticOptimization(BaseOptimization):
                 print("New generation!")
 
         # We must obtain or create an initial population for GA to work with.
-        initial_population = self.get_initial_population(self.sol_per_pop, force_new_population_flag)
+        initial_population = self.get_initial_population(
+            self.sol_per_pop, force_new_population_flag
+        )
 
         # This informs GA when to end the optimization sequence. If blank, it will continue until the generation
         # iterations finish. Write "saturate_x" for the sequence to end after x generations of no improvement to
         # fitness. Write "reach_x" for the sequence to end after fitness has reached x.
         stop_criteria = self.settings.stopping_criteria
 
-        self.ga_instance = pygad.GA(num_generations=num_generations,
-                                    initial_population=initial_population,
-                                    num_parents_mating=num_parents_mating,
-                                    fitness_func=fitness_function,
-                                    parent_selection_type=str(parent_selection_type),
-                                    K_tournament=K_tournament,
-                                    keep_elitism=keep_elitism,
-                                    crossover_type=str(crossover_type),
-                                    mutation_type=str(mutation_type),
-                                    mutation_percent_genes=mutation_percent_genes,
-                                    gene_space=gene_space,
-                                    on_generation=on_generation_callback,
-                                    delay_after_gen=delay_after_generation,
-                                    random_mutation_max_val=mutation_max_value,
-                                    stop_criteria=str(stop_criteria))
+        self.ga_instance = pygad.GA(
+            num_generations=num_generations,
+            initial_population=initial_population,
+            num_parents_mating=num_parents_mating,
+            fitness_func=fitness_function,
+            parent_selection_type=str(parent_selection_type),
+            K_tournament=K_tournament,
+            keep_elitism=keep_elitism,
+            crossover_type=str(crossover_type),
+            mutation_type=str(mutation_type),
+            mutation_percent_genes=mutation_percent_genes,
+            gene_space=gene_space,
+            on_generation=on_generation_callback,
+            delay_after_gen=delay_after_generation,
+            random_mutation_max_val=mutation_max_value,
+            stop_criteria=str(stop_criteria),
+        )
 
-    def get_initial_population(self, num_arrays_to_generate, force_new_population_flag) -> np.ndarray:
+    def get_initial_population(
+        self, num_arrays_to_generate, force_new_population_flag
+    ) -> np.ndarray:
         """
 
         Acquire an array of valid driving speed arrays as a starting population for GA by either reading them
@@ -323,10 +389,13 @@ class GeneticOptimization(BaseOptimization):
                     # We compare the hash value of the active Simulation model to the one that is cached
                     # because speeds that are valid for one model may not be valid for another (and the
                     # driving speed array length may also differ)
-                    if population_data['hash_key'] == self.model.hash_key:
-                        initial_population = np.array(population_data['population'])
+                    if population_data["hash_key"] == self.model.hash_key:
+                        initial_population = np.array(population_data["population"])
 
-                        if not len(initial_population[0]) == self.model.get_driving_time_divisions():
+                        if (
+                            not len(initial_population[0])
+                            == self.model.get_driving_time_divisions()
+                        ):
                             raise IndexError
 
                         # Check if the number of arrays needed and cached match. If we need more
@@ -335,7 +404,9 @@ class GeneticOptimization(BaseOptimization):
                             return initial_population
                         else:
                             # In the case that there are more cached arrays then we need, slice off the excess.
-                            new_initial_population = population_data['population'][:num_arrays_to_generate]
+                            new_initial_population = population_data["population"][
+                                :num_arrays_to_generate
+                            ]
                             arrays_from_cache = len(new_initial_population)
 
             except (IndexError, zipfile.BadZipFile):
@@ -345,14 +416,18 @@ class GeneticOptimization(BaseOptimization):
         # If we need more arrays, generate the number of new arrays that we need
         if arrays_from_cache < num_arrays_to_generate:
             remaining_arrays_needed = num_arrays_to_generate - arrays_from_cache
-            additional_arrays = self.generate_valid_speed_arrays(remaining_arrays_needed)
+            additional_arrays = self.generate_valid_speed_arrays(
+                remaining_arrays_needed
+            )
             if arrays_from_cache == 0:
                 new_initial_population = additional_arrays
             else:
-                new_initial_population = np.concatenate((new_initial_population, additional_arrays))
+                new_initial_population = np.concatenate(
+                    (new_initial_population, additional_arrays)
+                )
 
         # Cache the arrays we just generated with our active model's hash key
-        with open(population_file, 'wb') as f:
+        with open(population_file, "wb") as f:
             np.savez(f, hash_key=self.model.hash_key, population=new_initial_population)
 
         return new_initial_population
@@ -381,10 +456,17 @@ class GeneticOptimization(BaseOptimization):
         length = self.model.get_driving_time_divisions()
         speed_arrays = []
 
-        with tqdm(total=num_arrays_to_generate, file=sys.stdout, desc="Generating new initial population ", position=0,
-                  leave=True) as pbar:
+        with tqdm(
+            total=num_arrays_to_generate,
+            file=sys.stdout,
+            desc="Generating new initial population ",
+            position=0,
+            leave=True,
+        ) as pbar:
             # Generate a matrix of normalized Gaussian noise of size [length, num_arrays_to_generate]
-            noise = noise_generator.get_gauss_noise_matrix(length, num_arrays_to_generate)
+            noise = noise_generator.get_gauss_noise_matrix(
+                length, num_arrays_to_generate
+            )
 
             x = 0
 
@@ -396,7 +478,9 @@ class GeneticOptimization(BaseOptimization):
                 # Thus, the following logic keeps careful track of the index because if we have even one
                 # unsuccessful array, we'll need to generate more noise.
                 if x >= len(noise) - 1:
-                    noise = noise_generator.get_gauss_noise_matrix(length, num_arrays_to_generate)
+                    noise = noise_generator.get_gauss_noise_matrix(
+                        length, num_arrays_to_generate
+                    )
                     x = 0
 
                 else:
@@ -404,11 +488,15 @@ class GeneticOptimization(BaseOptimization):
 
                 # We must denormalize the driving speeds array before simulating it.
                 input_speed = rescale(guess_speed, max_speed_kmh, min_speed_kmh)
-                self.model.run_model(speed=input_speed, plot_results=False, is_optimizer=True)
+                self.model.run_model(
+                    speed=input_speed, plot_results=False, is_optimizer=True
+                )
 
                 # If the speed results in a successful simulation, add it to the population.
                 if self.model.was_successful():
-                    speed_arrays.append(normalize(input_speed, self.bounds[2], self.bounds[1]))
+                    speed_arrays.append(
+                        normalize(input_speed, self.bounds[2], self.bounds[1])
+                    )
                     pbar.update(1)
 
         return np.array(speed_arrays)
@@ -436,11 +524,14 @@ class GeneticOptimization(BaseOptimization):
 
         # Chromosomes are normalized, so must be denormalized before being fed to Simulation.
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
-        distance_travelled, time_taken = self.func(speed=solution_denormalized, is_optimizer=True)
+        distance_travelled, time_taken = self.func(
+            speed=solution_denormalized, is_optimizer=True
+        )
 
         # If Simulation did not complete successfully (SOC dropped below 0) then return the distance when that occurred.
-        distance_travelled_real = distance_travelled if self.model.was_successful() \
-            else 0.0
+        distance_travelled_real = (
+            distance_travelled if self.model.was_successful() else 0.0
+        )
 
         fitness = (691200 / time_taken) * (distance_travelled_real / 2466)
 
@@ -507,9 +598,19 @@ class GeneticOptimization(BaseOptimization):
             mutation_percent = float(row[8])
             max_mutation = float(row[9])
             stopping_criteria = OptimizationSettings.Stopping_Criteria(string=row[10])
-            new_setting = OptimizationSettings(chromosome_size, parent_selection_type, generations_limit, num_parents,
-                                               k_tournament, crossover_type, elitism, mutation_type, mutation_percent,
-                                               max_mutation, stopping_criteria)
+            new_setting = OptimizationSettings(
+                chromosome_size,
+                parent_selection_type,
+                generations_limit,
+                num_parents,
+                k_tournament,
+                crossover_type,
+                elitism,
+                mutation_type,
+                mutation_percent,
+                max_mutation,
+                stopping_criteria,
+            )
             settings_list.append(new_setting)
 
         return settings_list

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import TypeVar, Any
 
 
-ConfigType = TypeVar('ConfigType', bound=Config)
+ConfigType = TypeVar("ConfigType", bound=Config)
 
 
 class Query[ConfigType](ABC):
@@ -15,6 +15,7 @@ class Query[ConfigType](ABC):
 
     The `make` method can then be used to invoke the `Query` and acquire and marshall the requested data.
     """
+
     def __init__(self, config: ConfigType):
         self._config: ConfigType = config
 

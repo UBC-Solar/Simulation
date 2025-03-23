@@ -3,13 +3,9 @@ The `race` module contains utilities and classes relating to the
 manipulation of time-series data and localized data along a competition.
 """
 
-from ._race import (
-    Race
-)
+from ._race import Race
 
-from ._route import (
-    Route
-)
+from ._route import Route
 
 from ._helpers import (
     reshape_speed_array,
@@ -20,9 +16,9 @@ from ._helpers import (
     get_map_data_indices,
     normalize,
     denormalize,
-    rescale
+    rescale,
 )
 
 Coordinate = tuple[float, float]
 
-__all__ = [s for s in dir() if not s.startswith('_')]
+__all__ = [s for s in dir() if not s.startswith("_")]

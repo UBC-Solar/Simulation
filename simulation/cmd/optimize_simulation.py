@@ -28,16 +28,20 @@ def main(competition_name: str, car_name: str, speed_dt: int):
     """
 
     # Build simulation model
-    initial_conditions, environment, car_config = get_default_settings(competition_name, car_name)
+    initial_conditions, environment, car_config = get_default_settings(
+        competition_name, car_name
+    )
 
     hyperparameters = SimulationHyperparametersConfig.build_from(
         {
             "simulation_period": 10,
             "return_type": SimulationReturnType.distance_and_time,
-            "speed_dt": speed_dt
+            "speed_dt": speed_dt,
         }
     )
-    simulation_model = build_model(environment, hyperparameters, initial_conditions, car_config)
+    simulation_model = build_model(
+        environment, hyperparameters, initial_conditions, car_config
+    )
 
     # Initialize a "guess" speed array
     driving_hours = simulation_model.get_driving_time_divisions()
@@ -53,17 +57,22 @@ def main(competition_name: str, car_name: str, speed_dt: int):
     input_speed = np.array([60] * driving_hours)
 
     # Run simulation model with the "guess" speed array
-    simulation_model.run_model(
-        speed=input_speed,
-        plot_results=False,
-        verbose=False
-    )
+    simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False)
 
     # Perform optimization with Genetic Optimization
     optimization_settings: OptimizationSettings = OptimizationSettings()
-    with tqdm(total=optimization_settings.generation_limit, file=sys.stdout, desc="Optimizing driving speeds",
-              position=0, leave=True, unit="Generation", smoothing=1.0) as pbar:
-        geneticOptimization = GeneticOptimization(simulation_model, bounds, settings=optimization_settings, pbar=pbar)
+    with tqdm(
+        total=optimization_settings.generation_limit,
+        file=sys.stdout,
+        desc="Optimizing driving speeds",
+        position=0,
+        leave=True,
+        unit="Generation",
+        smoothing=1.0,
+    ) as pbar:
+        geneticOptimization = GeneticOptimization(
+            simulation_model, bounds, settings=optimization_settings, pbar=pbar
+        )
         results_genetic = geneticOptimization.maximize()
 
     simulation_model.run_model(results_genetic, plot_results=True)
@@ -75,18 +84,28 @@ def main(competition_name: str, car_name: str, speed_dt: int):
 
 def get_random_string(length: int) -> str:
     characters = string.ascii_letters + string.digits
-    random_string = ''.join(random.choice(characters) for _ in range(length))
+    random_string = "".join(random.choice(characters) for _ in range(length))
 
     return random_string
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--race_type", required=False, default="FSGP", help="Define which race should be simulated. ("
-                                                                            "ASC/FSGP)", type=str)
-    parser.add_argument("--granularity", required=False, default=60, help="Define how granular the speed array should "
-                                                                          "be, where 1 is hourly and 2 is bi-hourly.",
-                        type=int)
+    parser.add_argument(
+        "--race_type",
+        required=False,
+        default="FSGP",
+        help="Define which race should be simulated. (ASC/FSGP)",
+        type=str,
+    )
+    parser.add_argument(
+        "--granularity",
+        required=False,
+        default=60,
+        help="Define how granular the speed array should "
+        "be, where 1 is hourly and 2 is bi-hourly.",
+        type=int,
+    )
 
     args = parser.parse_args()
 

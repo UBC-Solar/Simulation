@@ -7,6 +7,7 @@ class Route(BaseModel):
     `Route` encapsulates all the information required to completed describe a physical route that we want
     to simulate.
     """
+
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     speed_limits: NDArray[float]

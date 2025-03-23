@@ -23,17 +23,10 @@ many_complex_methods, a_lot_of_custom_fields, anything_else
 many_complex_methods, a_lot_of_custom_fields, anything_else
 
 """
-from ._cache import (
-    Cache,
-    RoutePath,
-    WeatherPath,
-    RacePath
-)
 
-from ._fs_cache import (
-    FSCache,
-    SimulationCache
-)
+from ._cache import Cache, RoutePath, WeatherPath, RacePath
+
+from ._fs_cache import FSCache, SimulationCache
 
 
 __all__ = [
@@ -42,5 +35,5 @@ __all__ = [
     "SimulationCache",
     "RoutePath",
     "RacePath",
-    "WeatherPath"
+    "WeatherPath",
 ]

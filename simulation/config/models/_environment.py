@@ -4,5 +4,7 @@ from simulation.config.models import Config, ConfigDict, CompetitionConfig, Weat
 class EnvironmentConfig(Config):
     model_config = ConfigDict(frozen=True)
 
-    competition_config: CompetitionConfig  # The competition that data is being requisitioned for
+    competition_config: (
+        CompetitionConfig  # The competition that data is being requisitioned for
+    )
     weather_query_config: WeatherQuery

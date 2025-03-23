@@ -7,7 +7,7 @@ class BaseOptimization:
         self.bounds = bounds
         self.func = f
         self.result = None
-        self.target = float('-inf')
+        self.target = float("-inf")
         self.bestinput = []
 
     @abstractmethod

@@ -13,6 +13,7 @@ class Cache(ABC):
     """
     An interface to a persistent storage system with simple `get` and `put` methods.
     """
+
     @abstractmethod
     def get(self, file_path: os.PathLike) -> Any:
         """

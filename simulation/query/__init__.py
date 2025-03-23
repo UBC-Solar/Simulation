@@ -11,20 +11,12 @@ Existing implementations of the `Query` interface include,
     - `SolcastQuery`: to query weather forecasts as described by a `EnvironmentConfig` using the Solcast API.
     - `OpenweatherQuery`: to query weather forecasts as described by a `EnvironmentConfig` using the Openweathermap API.
 """
-from ._query import (
-    Query,
-    ConfigType
-)
 
-from ._gis import (
-    RoadRouteQuery,
-    TrackRouteQuery
-)
+from ._query import Query, ConfigType
 
-from ._weather import (
-    SolcastQuery,
-    OpenweatherQuery
-)
+from ._gis import RoadRouteQuery, TrackRouteQuery
+
+from ._weather import SolcastQuery, OpenweatherQuery
 
 __all__ = [
     "Query",
@@ -32,5 +24,5 @@ __all__ = [
     "RoadRouteQuery",
     "TrackRouteQuery",
     "SolcastQuery",
-    "OpenweatherQuery"
+    "OpenweatherQuery",
 ]

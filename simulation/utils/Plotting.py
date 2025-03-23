@@ -40,15 +40,19 @@ class Plotting:
 
         """
 
-        assert 0.0 <= plot_portion[0] < plot_portion[1] <= 1.0, "plotting_portion is out of bounds!"
+        assert 0.0 <= plot_portion[0] < plot_portion[1] <= 1.0, (
+            "plotting_portion is out of bounds!"
+        )
 
         # Graph all graphs that have been queued
         for graph in self.graph_queue:
-            plot_graph(timestamps=timestamps,
-                       arrays_to_plot=graph.arrays_to_plot,
-                       array_labels=graph.plot_titles,
-                       graph_title=graph.page_name,
-                       plot_portion=plot_portion)
+            plot_graph(
+                timestamps=timestamps,
+                arrays_to_plot=graph.arrays_to_plot,
+                array_labels=graph.plot_titles,
+                graph_title=graph.page_name,
+                plot_portion=plot_portion,
+            )
 
         # Remove every graph from the queue after they've been graphed.
         self.graph_queue.clear()
@@ -65,8 +69,14 @@ class Plotting:
         self.graph_queue.append(new_graph)
 
 
-def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
-               plot_portion: tuple[float] = (0.0, 1.0)):
+def plot_graph(
+    timestamps,
+    arrays_to_plot,
+    array_labels,
+    graph_title,
+    save=True,
+    plot_portion: tuple[float] = (0.0, 1.0),
+):
     """
 
     This is a utility function to plot out any set of NumPy arrays you pass into it using the Bokeh library.
@@ -111,31 +121,71 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
 
     hover_tool = HoverTool()
     hover_tool.formatters = {"x": "datetime"}
-    hover_tool.tooltips = [
-        ("time", "$x"),
-        ("data", "$y")
-    ]
+    hover_tool.tooltips = [("time", "$x"), ("data", "$y")]
 
     for index, data_array in enumerate(arrays_to_plot):
         # create figures and put them in list
-        figures.append(figure(title=array_labels[index], x_axis_label="Time (hr)",
-                              y_axis_label=array_labels[index], x_axis_type="datetime"))
+        figures.append(
+            figure(
+                title=array_labels[index],
+                x_axis_label="Time (hr)",
+                y_axis_label=array_labels[index],
+                x_axis_type="datetime",
+            )
+        )
 
         # add line renderers to each figure
         colours = (
-            '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889', '#fa1b9a',
-            '#F05223', '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3', '#892889',
-            '#fa1b9a', '#F05223', '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#20B254', '#00AAAE', '#4998D3',
-            '#892889', '#fa1b9a', '#F05223', '#EC1557', '#F05223', '#F6A91B', '#A5CD39', '#EC1557', '#F05223')
-        figures[index].line(timestamps[::compress_constant] * 1000, data_array, line_color=colours[index],
-                            line_width=2)
+            "#EC1557",
+            "#F05223",
+            "#F6A91B",
+            "#A5CD39",
+            "#20B254",
+            "#00AAAE",
+            "#4998D3",
+            "#892889",
+            "#fa1b9a",
+            "#F05223",
+            "#EC1557",
+            "#F05223",
+            "#F6A91B",
+            "#A5CD39",
+            "#20B254",
+            "#00AAAE",
+            "#4998D3",
+            "#892889",
+            "#fa1b9a",
+            "#F05223",
+            "#EC1557",
+            "#F05223",
+            "#F6A91B",
+            "#A5CD39",
+            "#20B254",
+            "#00AAAE",
+            "#4998D3",
+            "#892889",
+            "#fa1b9a",
+            "#F05223",
+            "#EC1557",
+            "#F05223",
+            "#F6A91B",
+            "#A5CD39",
+            "#EC1557",
+            "#F05223",
+        )
+        figures[index].line(
+            timestamps[::compress_constant] * 1000,
+            data_array,
+            line_color=colours[index],
+            line_width=2,
+        )
 
         figures[index].add_tools(hover_tool)
 
     grid = gridplot(figures, ncols=3, height=400, width=450)
 
     if save:
-        filename = graph_title + '.html'
+        filename = graph_title + ".html"
         filepath = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "html"
         os.makedirs(filepath / "html", exist_ok=True)
         output_file(filename=str(filepath / filename), title=graph_title)
@@ -143,4 +193,3 @@ def plot_graph(timestamps, arrays_to_plot, array_labels, graph_title, save=True,
     show(grid)
 
     return
-

@@ -5,12 +5,9 @@ The `model` module is the core of Simulation, containing the primary simulation 
 2. `Model`: a model of our solar-powered vehicles, complete with physical components and competition environment.
 3. `Simulation`: the result of simulating a `Model` with an input speed array.
 """
+
 from .Simulation import Simulation
 from .Model import Model
 from .ModelBuilder import ModelBuilder
 
-__all__ = [
-    "Simulation",
-    "Model",
-    "ModelBuilder"
-]
+__all__ = ["Simulation", "Model", "ModelBuilder"]

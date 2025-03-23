@@ -5,23 +5,25 @@ from simulation.config.models import Config, ConfigDict
 class VehicleConfig(Config):
     model_config = ConfigDict(frozen=True)
 
-    vehicle_mass: float            # Vehicle mass in kg
-    max_acceleration: float        # Maximum acceleration allowed in m/s^2
-    max_deceleration: float        # Maximum deceleration allowed in m/s^2
+    vehicle_mass: float  # Vehicle mass in kg
+    max_acceleration: float  # Maximum acceleration allowed in m/s^2
+    max_deceleration: float  # Maximum deceleration allowed in m/s^2
 
 
 class ArrayConfig(Config):
     model_config = ConfigDict(frozen=True)
 
-    panel_efficiency: float = Field(ge=0.0, le=1.0)  # Efficiency at turning solar irradiance into electrical power
-    panel_size: float                                # Effective panel area in m^2
+    panel_efficiency: float = Field(
+        ge=0.0, le=1.0
+    )  # Efficiency at turning solar irradiance into electrical power
+    panel_size: float  # Effective panel area in m^2
 
 
 class LVSConfig(Config):
     model_config = ConfigDict(frozen=True)
 
-    lvs_voltage: float    # Voltage of LVS, assumed to be constant
-    lvs_current: float    # Current consumption of LVS, assumed to be constant
+    lvs_voltage: float  # Voltage of LVS, assumed to be constant
+    lvs_current: float  # Current consumption of LVS, assumed to be constant
 
 
 class BatteryConfig(Config):
@@ -42,19 +44,21 @@ class BatteryModelConfig(BatteryConfig):
 
 
 class BasicBatteryConfig(BatteryConfig):
-    max_voltage: float              # Maximum voltage of the DayBreak battery pack (V)
-    min_voltage: float              # Minimum voltage of the DayBreak battery pack (V)
-    max_current_capacity: float     # Nominal capacity of the DayBreak battery pack (Ah)
-    max_energy_capacity: float      # Nominal energy capacity of the DayBreak battery pack (Wh)
+    max_voltage: float  # Maximum voltage of the DayBreak battery pack (V)
+    min_voltage: float  # Minimum voltage of the DayBreak battery pack (V)
+    max_current_capacity: float  # Nominal capacity of the DayBreak battery pack (Ah)
+    max_energy_capacity: (
+        float  # Nominal energy capacity of the DayBreak battery pack (Wh)
+    )
 
 
 class MotorConfig(Config):
     model_config = ConfigDict(frozen=True)
 
-    road_friction: float           # Road friction coefficient, dimensionless
-    tire_radius: float             # Tire radius, in m
-    vehicle_frontal_area: float    # Vehicle frontal area, in m^2
-    drag_coefficient: float        # Drag coefficient, dimensionless
+    road_friction: float  # Road friction coefficient, dimensionless
+    tire_radius: float  # Tire radius, in m
+    vehicle_frontal_area: float  # Vehicle frontal area, in m^2
+    drag_coefficient: float  # Drag coefficient, dimensionless
 
 
 class RegenConfig(Config):

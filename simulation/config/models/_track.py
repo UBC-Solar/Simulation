@@ -7,13 +7,16 @@ from simulation.config.models import Config, ConfigDict
 class RouteConfig(Config):
     model_config = ConfigDict(frozen=True)
 
-    coordinates: List[Tuple[float, float]]              # A list[n] of the n coordinates (latitude, longitude)
+    coordinates: List[
+        Tuple[float, float]
+    ]  # A list[n] of the n coordinates (latitude, longitude)
 
 
 class CompetitionType(StrEnum):
     """
     Enum to discretize the different types of competitions that UBC Solar competes in
     """
+
     TrackCompetition = "TrackCompetition"
     RoadCompetition = "RoadCompetition"
 
@@ -22,12 +25,13 @@ class CompetitionConfig(Config):
     """
     A model which contains the information required to describe a competition
     """
+
     model_config = ConfigDict(frozen=True, subclass_field="competition_type")
 
-    competition_name: str               # The name of the competition
-    competition_type: CompetitionType   # The type of competition
-    route_config: RouteConfig           # The route that the competition will follow
-    date: datetime                      # The beginning date that the competition will take place (day/month/year)
+    competition_name: str  # The name of the competition
+    competition_type: CompetitionType  # The type of competition
+    route_config: RouteConfig  # The route that the competition will follow
+    date: datetime  # The beginning date that the competition will take place (day/month/year)
 
     # A map from some activity ("charging", "driving") and then the day number to a 2-tuple where the first
     # element is the time since midnight in seconds where the activity is allowed, and the last element is
@@ -57,4 +61,5 @@ class RoadCompetitionConfig(CompetitionConfig):
     """
     A model which contains the information required
     """
+
     pass

@@ -2,7 +2,13 @@ import os
 import json
 import requests
 import numpy as np
-from simulation.config import SolcastConfig, OpenweatherConfig, OpenweatherPeriod, EnvironmentConfig, CompetitionConfig
+from simulation.config import (
+    SolcastConfig,
+    OpenweatherConfig,
+    OpenweatherPeriod,
+    EnvironmentConfig,
+    CompetitionConfig,
+)
 from numpy.typing import NDArray, ArrayLike
 from simulation.race import Coordinate
 from simulation.query import Query
@@ -18,13 +24,17 @@ class SolcastQuery(Query[SolcastConfig]):
     def __init__(self, config: EnvironmentConfig):
         super().__init__(config)
         self._competition_config: CompetitionConfig = self._config.competition_config
-        self._weather_query_config: OpenweatherConfig = self._config.weather_query_config
+        self._weather_query_config: OpenweatherConfig = (
+            self._config.weather_query_config
+        )
 
     def make(self):
-        raise NotImplementedError("Querying for Solcast was not re-implemented when querying was refactored. See "
-                                  "https://github.com/UBC-Solar/Simulation/blob"
-                                  "/d33fa563b5feb09585af1db57be60a031964edc8/simulation/utils/Query.py for "
-                                  "inspiration on re-implementation.")
+        raise NotImplementedError(
+            "Querying for Solcast was not re-implemented when querying was refactored. See "
+            "https://github.com/UBC-Solar/Simulation/blob"
+            "/d33fa563b5feb09585af1db57be60a031964edc8/simulation/utils/Query.py for "
+            "inspiration on re-implementation."
+        )
 
 
 class OpenweatherQuery(Query[OpenweatherConfig]):
@@ -37,7 +47,9 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
     def __init__(self, config: EnvironmentConfig):
         super().__init__(config)
         self._competition_config: CompetitionConfig = self._config.competition_config
-        self._weather_query_config: OpenweatherConfig = self._config.weather_query_config
+        self._weather_query_config: OpenweatherConfig = (
+            self._config.weather_query_config
+        )
 
     def make(self) -> NDArray:
         num_days = self._competition_config.duration
@@ -46,14 +58,16 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
         coords = self._competition_config.route_config.coordinates
         forecast_period: OpenweatherPeriod = self._weather_query_config.weather_period
 
-        weather_forecast = self._update_path_weather_forecast_openweather(coords,
-                                                                          forecast_period,
-                                                                          simulation_duration)
+        weather_forecast = self._update_path_weather_forecast_openweather(
+            coords, forecast_period, simulation_duration
+        )
 
         return weather_forecast
 
     @staticmethod
-    def _update_path_weather_forecast_openweather(coords: ArrayLike, weather_period: OpenweatherPeriod, duration: int):
+    def _update_path_weather_forecast_openweather(
+        coords: ArrayLike, weather_period: OpenweatherPeriod, duration: int
+    ):
         """
 
         Passes in a list of coordinates, returns the hourly weather forecast
@@ -82,17 +96,19 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
 
         def get_weather_forecast_for_coord(coord: Coordinate):
             return OpenweatherQuery._get_coord_weather_forecast_openweather(
-                coord,
-                weather_period,
-                duration
+                coord, weather_period, duration
             )
 
-        weather_forecast[:] = [get_weather_forecast_for_coord(coord) for coord in coords]
+        weather_forecast[:] = [
+            get_weather_forecast_for_coord(coord) for coord in coords
+        ]
 
         return weather_forecast
 
     @staticmethod
-    def _get_coord_weather_forecast_openweather(coord: Coordinate, weather_period: OpenweatherPeriod, duration: int):
+    def _get_coord_weather_forecast_openweather(
+        coord: Coordinate, weather_period: OpenweatherPeriod, duration: int
+    ):
         """
 
         Passes in a single coordinate, returns a weather forecast
@@ -130,8 +146,10 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
 
         exclude_string = ",".join(weather_periods).lower()
 
-        url = f"https://api.openweathermap.org/data/3.0/onecall?lat={coord[0]}&lon={coord[1]}" \
-              f"&exclude=minutely,{exclude_string}&appid={os.environ['OPENWEATHER_API_KEY']}"
+        url = (
+            f"https://api.openweathermap.org/data/3.0/onecall?lat={coord[0]}&lon={coord[1]}"
+            f"&exclude=minutely,{exclude_string}&appid={os.environ['OPENWEATHER_API_KEY']}"
+        )
 
         # ----- Calling OpenWeatherAPI ------
 
@@ -149,9 +167,10 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
 
         # If the weather data is too long, then append the daily requests as well.
         if weather_period == "Hourly" and duration > 24:
-
-            url = f"https://api.openweathermap.org/data/3.0/onecall?lat={coord[0]}&lon={coord[1]}" \
-                  f"&exclude=minutely,hourly,current&appid={os.environ['OPENWEATHER_API_KEY']}"
+            url = (
+                f"https://api.openweathermap.org/data/3.0/onecall?lat={coord[0]}&lon={coord[1]}"
+                f"&exclude=minutely,hourly,current&appid={os.environ['OPENWEATHER_API_KEY']}"
+            )
 
             r = requests.get(url)
             response = json.loads(r.text)

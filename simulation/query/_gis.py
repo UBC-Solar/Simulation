@@ -18,6 +18,7 @@ class TrackRouteQuery(Query[CompetitionConfig]):
     to complete the information required to describe a competition that is described
     by a `TrackCompetitionConfig`.
     """
+
     def __init__(self, config: CompetitionConfig):
         super().__init__(config)
 
@@ -54,11 +55,13 @@ class RoadRouteQuery(Query[CompetitionConfig]):
         super().__init__(config)
 
     def make(self):
-        raise NotImplementedError("Support for ASC was deprecated in favour of building a more capable FSGP simulation."
-                                  "Querying for ASC was not re-implemented when querying was refactored. See "
-                                  "https://github.com/UBC-Solar/Simulation/blob"
-                                  "/d33fa563b5feb09585af1db57be60a031964edc8/simulation/utils/Query.py for "
-                                  "inspiration on re-implementation.")
+        raise NotImplementedError(
+            "Support for ASC was deprecated in favour of building a more capable FSGP simulation."
+            "Querying for ASC was not re-implemented when querying was refactored. See "
+            "https://github.com/UBC-Solar/Simulation/blob"
+            "/d33fa563b5feb09585af1db57be60a031964edc8/simulation/utils/Query.py for "
+            "inspiration on re-implementation."
+        )
 
 
 def _calculate_path_elevations(coords):
@@ -74,13 +77,12 @@ def _calculate_path_elevations(coords):
     """
 
     # construct URL
-    url_head = 'https://maps.googleapis.com/maps/api/elevation/json?locations='
+    url_head = "https://maps.googleapis.com/maps/api/elevation/json?locations="
 
     location_strings = []
     locations = ""
 
     for coord in coords:
-
         locations = locations + f"{coord[0]},{coord[1]}|"
 
         if len(locations) > 8000:
@@ -96,7 +98,9 @@ def _calculate_path_elevations(coords):
     elevations = np.zeros(len(coords))
 
     i = 0
-    with tqdm(total=len(location_strings), file=sys.stdout, desc="Acquiring Elevation Data") as pbar:
+    with tqdm(
+        total=len(location_strings), file=sys.stdout, desc="Acquiring Elevation Data"
+    ) as pbar:
         for location_string in location_strings:
             url = url_head + location_string + url_tail
 
@@ -104,24 +108,25 @@ def _calculate_path_elevations(coords):
             response = json.loads(r.text)
             pbar.update(1)
 
-            if response['status'] == "OK":
-                for result in response['results']:
-                    elevations[i] = result['elevation']
+            if response["status"] == "OK":
+                for result in response["results"]:
+                    elevations[i] = result["elevation"]
                     i = i + 1
 
-            elif response['status'] == "INVALID_REQUEST":
+            elif response["status"] == "INVALID_REQUEST":
                 sys.stderr.write("Error: Request was invalid\n")
 
-            elif response['status'] == "OVER_DAILY_LIMIT":
+            elif response["status"] == "OVER_DAILY_LIMIT":
                 sys.stderr.write(
                     "Error: Possible causes - API key is missing or invalid, billing has not been enabled,"
                     " a self-imposed usage cap has been exceeded, or the provided payment method is no longer "
-                    " valid. \n")
+                    " valid. \n"
+                )
 
-            elif response['status'] == "OVER_QUERY_LIMIT":
+            elif response["status"] == "OVER_QUERY_LIMIT":
                 sys.stderr.write("Error: Requester has exceeded quota\n")
 
-            elif response['status'] == "REQUEST_DENIED":
+            elif response["status"] == "REQUEST_DENIED":
                 sys.stderr.write("Error: API could not complete the request\n")
 
     return elevations
@@ -142,7 +147,9 @@ def _calculate_time_zones(coords: ArrayLike, date: datetime.datetime) -> NDArray
 
     tf = TimezoneFinder()
 
-    with tqdm(total=len(coords), file=sys.stdout, desc="Calculating Time Zones") as pbar:
+    with tqdm(
+        total=len(coords), file=sys.stdout, desc="Calculating Time Zones"
+    ) as pbar:
         for index, coord in enumerate(coords):
             pbar.update(1)
             tz_string = tf.timezone_at(lat=coord[0], lng=coord[1])

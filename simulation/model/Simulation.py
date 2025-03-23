@@ -9,7 +9,7 @@ from simulation.race import (
     calculate_completion_index,
     get_map_data_indices,
     get_array_directional_wind_speed,
-    adjust_timestamps_to_local_times
+    adjust_timestamps_to_local_times,
 )
 
 
@@ -93,7 +93,9 @@ class Simulation:
         self.speed_kmh = speed_kmh
 
         # ----- Tick array -----
-        self.timestamps = np.arange(0, self.model.simulation_duration, self.model.simulation_dt)
+        self.timestamps = np.arange(
+            0, self.model.simulation_duration, self.model.simulation_dt
+        )
         self.tick_array = np.diff(self.timestamps)
         self.tick_array = np.insert(self.tick_array, 0, 0)
 
@@ -111,24 +113,36 @@ class Simulation:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        self.closest_gis_indices = self.model.gis.calculate_closest_gis_indices(self.distances)
+        self.closest_gis_indices = self.model.gis.calculate_closest_gis_indices(
+            self.distances
+        )
 
-        self.model.meteorology.spatially_localize(self.cumulative_distances, simplify_weather=True)
+        self.model.meteorology.spatially_localize(
+            self.cumulative_distances, simplify_weather=True
+        )
 
         self.path_distances = self.model.gis.get_path_distances()
-        self.cumulative_distances = np.cumsum(self.path_distances)  # [cumulative_distances] = meters
+        self.cumulative_distances = np.cumsum(
+            self.path_distances
+        )  # [cumulative_distances] = meters
 
         self.max_route_distance = self.cumulative_distances[-1]
 
-        self.route_length = self.max_route_distance / 1000.0  # store the route length in kilometers
+        self.route_length = (
+            self.max_route_distance / 1000.0
+        )  # store the route length in kilometers
 
         # Array of elevations at every route point
         gis_route_elevations = self.model.gis.get_path_elevations()
 
-        self.gis_route_elevations_at_each_tick = gis_route_elevations[self.closest_gis_indices]
+        self.gis_route_elevations_at_each_tick = gis_route_elevations[
+            self.closest_gis_indices
+        ]
 
         # Get the azimuth angle of the vehicle at every location
-        self.gis_vehicle_bearings = self.model.vehicle_bearings[self.closest_gis_indices]
+        self.gis_vehicle_bearings = self.model.vehicle_bearings[
+            self.closest_gis_indices
+        ]
 
         # Get array of path gradients
         self.gradients = self.model.gis.get_gradients(self.closest_gis_indices)
@@ -140,16 +154,12 @@ class Simulation:
 
         # Local times in UNIX timestamps
         local_times = adjust_timestamps_to_local_times(
-            self.timestamps,
-            self.model.time_of_initialization,
-            self.time_zones
+            self.timestamps, self.model.time_of_initialization, self.time_zones
         )
 
         # Get the weather at every location
         self.model.meteorology.temporally_localize(
-            local_times,
-            self.model.start_time,
-            self.model.simulation_dt
+            local_times, self.model.start_time, self.model.simulation_dt
         )
 
         self.absolute_wind_speeds = self.model.meteorology.wind_speed
@@ -157,60 +167,51 @@ class Simulation:
 
         # Get the wind speeds at every location
         self.wind_speeds = get_array_directional_wind_speed(
-            self.gis_vehicle_bearings,
-            self.absolute_wind_speeds,
-            self.wind_directions
+            self.gis_vehicle_bearings, self.absolute_wind_speeds, self.wind_directions
         )
 
         # Get an array of solar irradiance at every coordinate and time
         self.solar_irradiances = self.model.meteorology.calculate_solar_irradiances(
             self.model.route_coords[self.closest_gis_indices],
-            self.time_zones, local_times,
-            self.gis_route_elevations_at_each_tick
+            self.time_zones,
+            local_times,
+            self.gis_route_elevations_at_each_tick,
         )
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
         # ----- Energy Calculations -----
 
-        self.lvs_consumed_energy = self.model.lvs.get_consumed_energy(self.model.simulation_dt)
+        self.lvs_consumed_energy = self.model.lvs.get_consumed_energy(
+            self.model.simulation_dt
+        )
 
         self.motor_consumed_energy = self.model.motor.calculate_energy_in(
-            self.speed_kmh,
-            self.gradients,
-            self.wind_speeds,
-            self.model.simulation_dt
+            self.speed_kmh, self.gradients, self.wind_speeds, self.model.simulation_dt
         )
 
         self.array_produced_energy = self.model.solar_array.calculate_produced_energy(
-            self.solar_irradiances,
-            self.model.simulation_dt
+            self.solar_irradiances, self.model.simulation_dt
         )
 
         self.regen_produced_energy = self.model.regen.calculate_produced_energy(
-            self.speed_kmh,
-            self.gis_route_elevations_at_each_tick,
-            0.0,
-            10000.0
+            self.speed_kmh, self.gis_route_elevations_at_each_tick, 0.0, 10000.0
         )
 
-        self.not_charge = self.model.race.charging_boolean[self.model.start_time:]
-        self.not_race = self.model.race.driving_boolean[self.model.start_time:]
+        self.not_charge = self.model.race.charging_boolean[self.model.start_time :]
+        self.not_race = self.model.race.driving_boolean[self.model.start_time :]
 
         if self.model.simulation_dt != 1:
-            self.not_charge = self.not_charge[::self.model.simulation_dt]
-            self.not_race = self.not_race[::self.model.simulation_dt]
+            self.not_charge = self.not_charge[:: self.model.simulation_dt]
+            self.not_race = self.not_race[:: self.model.simulation_dt]
 
         self.array_produced_energy = self.array_produced_energy * np.logical_and(
-            self.array_produced_energy,
-            self.not_charge
+            self.array_produced_energy, self.not_charge
         )
 
         # Apply not charge mask to only consume energy when we are racing else 0
         self.consumed_energy = np.where(
-            self.not_race,
-            self.motor_consumed_energy + self.lvs_consumed_energy,
-            0
+            self.not_race, self.motor_consumed_energy + self.lvs_consumed_energy, 0
         )
 
         self.produced_energy = self.array_produced_energy + self.regen_produced_energy
@@ -221,13 +222,17 @@ class Simulation:
         # ----- Array initialisation -----
 
         # used to calculate the time the car was in motion
-        self.tick_array = np.full_like(self.timestamps, fill_value=self.model.simulation_dt, dtype='f4')
+        self.tick_array = np.full_like(
+            self.timestamps, fill_value=self.model.simulation_dt, dtype="f4"
+        )
         self.tick_array[0] = 0
 
         # ----- Array calculations -----
 
         cumulative_delta_energy = np.cumsum(self.delta_energy)
-        battery_variables_array = self.model.battery.update_array(cumulative_delta_energy)
+        battery_variables_array = self.model.battery.update_array(
+            cumulative_delta_energy
+        )
 
         # stores the battery SOC at each time step
         self.state_of_charge = battery_variables_array[0]
@@ -237,9 +242,11 @@ class Simulation:
         # # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
         # self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
 
-        self.time_in_motion = np.logical_and(self.tick_array, self.speed_kmh) * self.model.simulation_dt
+        self.time_in_motion = (
+            np.logical_and(self.tick_array, self.speed_kmh) * self.model.simulation_dt
+        )
 
-        self.final_soc = self.state_of_charge[-1] * 100 + 0.
+        self.final_soc = self.state_of_charge[-1] * 100 + 0.0
 
         self.distance = self.speed_kmh * (self.time_in_motion / 3600)
         self.distances = np.cumsum(self.distance)
@@ -252,13 +259,17 @@ class Simulation:
         self.distance_travelled = self.distances[-1]
 
         if self.distance_travelled >= self.route_length:
-            self.time_taken = self.timestamps[calculate_completion_index(self.route_length, self.distances)]
+            self.time_taken = self.timestamps[
+                calculate_completion_index(self.route_length, self.distances)
+            ]
         else:
             self.time_taken = self.model.simulation_duration
 
         self.calculations_have_happened = True
 
-    def get_results(self, requested_properties: Union[list, str]) -> Union[list, np.ndarray, float]:
+    def get_results(
+        self, requested_properties: Union[list, str]
+    ) -> Union[list, np.ndarray, float]:
         """
 
         Extract data from a Simulation model.
@@ -320,27 +331,48 @@ class Simulation:
             "distance_travelled": self.distance_travelled,
             "map_data_indices": self.map_data_indices,
             "path_coordinates": self.model.gis.get_path(),
-            "raw_soc": self.raw_soc
+            "raw_soc": self.raw_soc,
         }
 
         if "default" in requested_properties or requested_properties == "default":
             # If just "default" was provided, replace values with a list containing the default values
             if isinstance(requested_properties, str):
-                requested_properties = ["speed_kmh", "distances", "state_of_charge", "delta_energy",
-                                        "solar_irradiances",
-                                        "wind_speeds", "gis_route_elevations_at_each_tick", "cloud_covers",
-                                        "distance_travelled", "time_taken", "final_soc"]
+                requested_properties = [
+                    "speed_kmh",
+                    "distances",
+                    "state_of_charge",
+                    "delta_energy",
+                    "solar_irradiances",
+                    "wind_speeds",
+                    "gis_route_elevations_at_each_tick",
+                    "cloud_covers",
+                    "distance_travelled",
+                    "time_taken",
+                    "final_soc",
+                ]
             else:
                 # If default was instead an element in a list of requested properties, insert the default properties
                 # where "default" is in the request
                 default_index = requested_properties.index("default")
                 requested_properties.pop(default_index)
-                default_values = ["speed_kmh", "distances", "state_of_charge", "delta_energy", "solar_irradiances",
-                                  "wind_speeds", "gis_route_elevations_at_each_tick", "cloud_covers",
-                                  "distance_travelled", "time_taken", "final_soc"]
+                default_values = [
+                    "speed_kmh",
+                    "distances",
+                    "state_of_charge",
+                    "delta_energy",
+                    "solar_irradiances",
+                    "wind_speeds",
+                    "gis_route_elevations_at_each_tick",
+                    "cloud_covers",
+                    "distance_travelled",
+                    "time_taken",
+                    "final_soc",
+                ]
                 for index, default_value in enumerate(default_values):
                     if default_value not in requested_properties:
-                        requested_properties.insert(index + default_index, default_value)
+                        requested_properties.insert(
+                            index + default_index, default_value
+                        )
 
         # If just a single value was requested, return it without wrapping it in a list
         if isinstance(requested_properties, str) and requested_properties != "default":

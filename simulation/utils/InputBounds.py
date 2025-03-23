@@ -1,4 +1,4 @@
-class InputBounds():
+class InputBounds:
     def __init__(self):
         self.bounds = []
         self.bounds_list = []

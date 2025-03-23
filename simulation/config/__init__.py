@@ -26,9 +26,9 @@ from .models import (
     CompetitionConfig,
     TrackCompetitionConfig,
     CompetitionType,
-    RouteConfig
+    RouteConfig,
 )
 
 ConfigDirectory = pathlib.Path(__file__).parent
 
-__all__ = [s for s in dir() if not s.startswith('_')]
+__all__ = [s for s in dir() if not s.startswith("_")]

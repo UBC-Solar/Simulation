@@ -9,6 +9,7 @@ class ConfigDict(_ConfigDict):
     """
     A `TypedDict` for configuring Pydantic behaviour, with the added `subclass_type` optional setting.
     """
+
     subclass_type: str
 
 
@@ -18,6 +19,7 @@ class Config(BaseModel, abc.ABC):
 
 
     """
+
     @classmethod
     def subclasses(cls) -> List[Type["Config"]]:
         """
@@ -56,10 +58,14 @@ class Config(BaseModel, abc.ABC):
         :return: a configuration object of type `cls` OR a subclass of `cls`.
         """
         # Find if we have a setting that specifies how to identify subclasses
-        if (subclass_field := getattr(cls, "model_config", {}).get("subclass_field")) is not None:
+        if (
+            subclass_field := getattr(cls, "model_config", {}).get("subclass_field")
+        ) is not None:
             try:
                 subclass_type = config_dict[subclass_field]
-                subclass_type_name = subclass_type + "Config"  # We need to manually add `Config` to the end
+                subclass_type_name = (
+                    subclass_type + "Config"
+                )  # We need to manually add `Config` to the end
 
                 subclasses: List[Type[Config]] = cls.subclasses()
 
@@ -74,8 +80,10 @@ class Config(BaseModel, abc.ABC):
                         return subclass.model_validate(config_dict)
 
                 else:
-                    raise NameError(f"Could not find a Config subclass of "
-                                    f"{cls.__name__} with name {subclass_type_name}!")
+                    raise NameError(
+                        f"Could not find a Config subclass of "
+                        f"{cls.__name__} with name {subclass_type_name}!"
+                    )
 
             except NotImplementedError:
                 pass  # Fall through to the case where `map` doesn't exist

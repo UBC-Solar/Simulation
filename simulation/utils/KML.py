@@ -16,7 +16,7 @@ def _parse_coordinates_from_kml(coords_str: str) -> list[list[float]]:
     """
 
     def parse_coord(pair):
-        coord = pair.split(',')
+        coord = pair.split(",")
         coord.pop()
         coord = [float(value) for value in coord]
         return coord
@@ -47,6 +47,7 @@ class KMLParser:
     """
     `KMLParser` is a wrapper around KML utilities to process a KML-formatted XML file into a list of coordinates.
     """
+
     def __init__(self, route_file):
         self.route_file = route_file
 

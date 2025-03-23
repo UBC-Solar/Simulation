@@ -34,8 +34,7 @@ def _reshape_and_repeat(input_array, reshape_length):
     else:
         quotient_remainder_tuple = divmod(reshape_length, input_array.size)
         temp = np.repeat(input_array, quotient_remainder_tuple[0])
-        result = np.append(temp, np.repeat(
-            temp[-1], quotient_remainder_tuple[1]))
+        result = np.append(temp, np.repeat(temp[-1], quotient_remainder_tuple[1]))
 
         return result
 
@@ -63,7 +62,6 @@ def _apply_deceleration(input_speed_array, tick, max_deceleration: float):
 
     # start at the second to last element since the last element can be any speed
     for i in range(len(input_speed_array) - 2, 0, -1):
-
         # if the car wants to decelerate more than it can, maximize deceleration
         if input_speed_array[i] - input_speed_array[i + 1] > max_deceleration_per_tick:
             input_speed_array[i] = input_speed_array[i + 1] + max_deceleration_per_tick
@@ -94,19 +92,22 @@ def _apply_acceleration(input_speed_array, tick, max_acceleration: float):
         return np.array([])
 
     for i in range(0, len(input_speed_array)):
-
         # prevent the car from starting the race at an unattainable speed
         if i == 0 and input_speed_array[i] > max_acceleration_per_tick:
             input_speed_array[i] = max_acceleration_per_tick
 
         # if the car wants to accelerate more than it can, maximize acceleration
-        elif input_speed_array[i] - input_speed_array[i - 1] > max_acceleration_per_tick:
+        elif (
+            input_speed_array[i] - input_speed_array[i - 1] > max_acceleration_per_tick
+        ):
             input_speed_array[i] = input_speed_array[i - 1] + max_acceleration_per_tick
 
     return input_speed_array
 
 
-def get_granularity_reduced_boolean(boolean: np.ndarray, granularity: int | float) -> np.ndarray:
+def get_granularity_reduced_boolean(
+    boolean: np.ndarray, granularity: int | float
+) -> np.ndarray:
     """
     Reduce a boolean where each element represented one second by agglomerating blocks of
     elements into a single element where the result will be False if there are any False
@@ -118,7 +119,9 @@ def get_granularity_reduced_boolean(boolean: np.ndarray, granularity: int | floa
     :param granularity:
     :return:
     """
-    inverse_granularity = int(3600 / granularity)  # Number of seconds. Granularity of 1 should mean 1 per hour
+    inverse_granularity = int(
+        3600 / granularity
+    )  # Number of seconds. Granularity of 1 should mean 1 per hour
     duration = len(boolean)
     reduced_duration = math.ceil(duration / inverse_granularity)
     reduced_boolean = np.empty(reduced_duration, dtype=bool)
@@ -138,13 +141,13 @@ def get_granularity_reduced_boolean(boolean: np.ndarray, granularity: int | floa
 
 
 def reshape_speed_array(
-        race: Race,
-        speed,
-        granularity,
-        start_time: int,
-        tick=1,
-        max_acceleration: float = 6,
-        max_deceleration: float = 6
+    race: Race,
+    speed,
+    granularity,
+    start_time: int,
+    tick=1,
+    max_acceleration: float = 6,
+    max_deceleration: float = 6,
 ):
     """
 
@@ -169,18 +172,16 @@ def reshape_speed_array(
     """
     speed_boolean_array = race.driving_boolean.astype(int)[start_time:]
 
-    speed_mapped = _map_array_to_targets(speed, get_granularity_reduced_boolean(speed_boolean_array, granularity))
+    speed_mapped = _map_array_to_targets(
+        speed, get_granularity_reduced_boolean(speed_boolean_array, granularity)
+    )
 
     reshaped_tick_count = math.ceil((race.race_duration - start_time) / float(tick))
     speed_mapped_per_tick = _reshape_and_repeat(speed_mapped, reshaped_tick_count)
     speed_smoothed_kmh = _apply_deceleration(
-        _apply_acceleration(
-            speed_mapped_per_tick,
-            tick,
-            max_acceleration
-        ),
+        _apply_acceleration(speed_mapped_per_tick, tick, max_acceleration),
         tick,
-        max_deceleration
+        max_deceleration,
     )
 
     return speed_smoothed_kmh
@@ -200,7 +201,9 @@ def adjust_timestamps_to_local_times(timestamps, starting_drive_time, time_zones
 
     """
 
-    return np.array(timestamps + starting_drive_time - (time_zones[0] - time_zones), dtype=np.uint64)
+    return np.array(
+        timestamps + starting_drive_time - (time_zones[0] - time_zones), dtype=np.uint64
+    )
 
 
 @jit(nopython=True)
@@ -273,7 +276,9 @@ def _map_array_to_targets(input_array, target_array):
     """
 
     if target_array.sum() != len(input_array):
-        raise AssertionError("Number of targets and length of input_array do not match.")
+        raise AssertionError(
+            "Number of targets and length of input_array do not match."
+        )
 
     output_array = np.zeros(len(target_array), dtype=float)
     i = 0
@@ -307,14 +312,20 @@ def get_map_data_indices(closest_gis_indices):
 
 
 @jit(nopython=True)
-def normalize(input_array: np.ndarray, max_value: float = None, min_value: float = None) -> np.ndarray:
+def normalize(
+    input_array: np.ndarray, max_value: float = None, min_value: float = None
+) -> np.ndarray:
     max_value_in_array = np.max(input_array) if max_value is None else max_value
     min_value_in_array = np.min(input_array) if min_value is None else min_value
-    return (input_array - min_value_in_array) / (max_value_in_array - min_value_in_array)
+    return (input_array - min_value_in_array) / (
+        max_value_in_array - min_value_in_array
+    )
 
 
 @jit(nopython=True)
-def denormalize(input_array: np.ndarray, max_value: float, min_value: float = 0) -> np.ndarray:
+def denormalize(
+    input_array: np.ndarray, max_value: float, min_value: float = 0
+) -> np.ndarray:
     return input_array * (max_value - min_value) + min_value
 
 

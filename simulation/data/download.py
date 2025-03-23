@@ -11,6 +11,7 @@ class Downloader(Connect):
     Responsible for downloading data from Google Drive upon request
 
     """
+
     def __init__(self, service):
         super().__init__(service)
 
@@ -18,13 +19,17 @@ class Downloader(Connect):
         """
         Download the latest evolution number on Google Drive
         """
-        self.download_file("Evolution Number", self.evolution_number_id, self.last_evolution_path)
+        self.download_file(
+            "Evolution Number", self.evolution_number_id, self.last_evolution_path
+        )
 
     def download_evolution_browser(self) -> None:
         """
         Download the latest evolution browser on Google Drive
         """
-        self.download_file("Evolution Browser", self.evolution_browser_id, self.evolution_browser_path)
+        self.download_file(
+            "Evolution Browser", self.evolution_browser_id, self.evolution_browser_path
+        )
 
     def download_file(self, file_name: str, file_id: str, save_path: Path) -> None:
         """
@@ -38,7 +43,7 @@ class Downloader(Connect):
 
         # Download the file
         request = self.service.files().get_media(fileId=file_id)
-        fh = io.FileIO(save_path, 'wb')
+        fh = io.FileIO(save_path, "wb")
         download = MediaIoBaseDownload(fh, request)
 
         done = False

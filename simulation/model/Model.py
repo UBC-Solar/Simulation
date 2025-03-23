@@ -25,22 +25,22 @@ class Model:
     """
 
     def __init__(
-            self,
-            return_type: SimulationReturnType,
-            race: Race,
-            speed_dt: int,
-            simulation_dt: int,
-            speed_limits: NDArray,
-            array: BaseArray,
-            battery: BaseBattery,
-            motor: BaseMotor,
-            regen: BaseRegen,
-            lvs: BaseLVS,
-            gis: BaseGIS,
-            meteorology: BaseMeteorology,
-            max_acceleration: float,
-            max_deceleration: float,
-            start_time: int
+        self,
+        return_type: SimulationReturnType,
+        race: Race,
+        speed_dt: int,
+        simulation_dt: int,
+        speed_limits: NDArray,
+        array: BaseArray,
+        battery: BaseBattery,
+        motor: BaseMotor,
+        regen: BaseRegen,
+        lvs: BaseLVS,
+        gis: BaseGIS,
+        meteorology: BaseMeteorology,
+        max_acceleration: float,
+        max_deceleration: float,
+        start_time: int,
     ):
         """
         Instantiate a `Model`.
@@ -91,13 +91,13 @@ class Model:
         self._simulation = None
 
     def run_model(
-            self,
-            speed=None,
-            plot_results=False,
-            verbose=False,
-            plot_portion=(0.0, 1.0),
-            is_optimizer: bool = False,
-            **kwargs
+        self,
+        speed=None,
+        plot_results=False,
+        verbose=False,
+        plot_portion=(0.0, 1.0),
+        is_optimizer: bool = False,
+        **kwargs,
     ):
         """
 
@@ -137,10 +137,12 @@ class Model:
         if speed is None:
             speed = np.array([30] * self.get_driving_time_divisions())
 
-        assert len(speed) == self.get_driving_time_divisions(), ("Input driving speeds array must have length equal to "
-                                                                 "get_driving_time_divisions()! Current length is "
-                                                                 f"{len(speed)} and length of "
-                                                                 f"{self.get_driving_time_divisions()} is needed!")
+        assert len(speed) == self.get_driving_time_divisions(), (
+            "Input driving speeds array must have length equal to "
+            "get_driving_time_divisions()! Current length is "
+            f"{len(speed)} and length of "
+            f"{self.get_driving_time_divisions()} is needed!"
+        )
 
         # ----- Reshape speed array -----
         speed_kmh = reshape_speed_array(
@@ -150,53 +152,103 @@ class Model:
             self.start_time,
             self.simulation_dt,
             self.max_acceleration,
-            self.max_deceleration
+            self.max_deceleration,
         )
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
-        #speed_kmh = core.constrain_speeds(self.speed_limits.astype(float), speed_kmh, self.simulation_dt)
+        # speed_kmh = core.constrain_speeds(self.speed_limits.astype(float), speed_kmh, self.simulation_dt)
 
         # ------ Run calculations and get result and modified speed array -------
         self._simulation = Simulation(self)
         self._simulation.run_simulation_calculations(speed_kmh)
 
-        results = self.get_results(["time_taken", "route_length", "distance_travelled", "speed_kmh", "final_soc"])
+        results = self.get_results(
+            [
+                "time_taken",
+                "route_length",
+                "distance_travelled",
+                "speed_kmh",
+                "final_soc",
+            ]
+        )
 
         if not kwargs and not is_optimizer:
-            print(f"Simulation successful!\n"
-                  f"Time taken: {results[0]}\n"
-                  f"Route length: {results[1]:.2f}km\n"
-                  f"Maximum distance traversable: {results[2]:.2f}km\n"
-                  f"Average speed: {np.average(results[3]):.2f}km/h\n"
-                  f"Final battery SOC: {results[4]:.2f}%\n")
+            print(
+                f"Simulation successful!\n"
+                f"Time taken: {results[0]}\n"
+                f"Route length: {results[1]:.2f}km\n"
+                f"Maximum distance traversable: {results[2]:.2f}km\n"
+                f"Average speed: {np.average(results[3]):.2f}km/h\n"
+                f"Final battery SOC: {results[4]:.2f}%\n"
+            )
 
         # ----- Plotting -----
 
         if plot_results:
-            results_arrays = self.get_results(["speed_kmh", "distances", "state_of_charge", "delta_energy",
-                                               "solar_irradiances", "wind_speeds",
-                                               "gis_route_elevations_at_each_tick",
-                                               "raw_soc"]) + [raw_speed]
-            results_labels = ["Speed (km/h)", "Distance (km)", "SOC (%)", "Delta energy (J)",
-                              "Solar irradiance (W/m^2)", "Wind speeds (km/h)", "Elevation (m)",
-                              "Raw SOC (%)", "Raw Speed (km/h)"]
+            results_arrays = self.get_results(
+                [
+                    "speed_kmh",
+                    "distances",
+                    "state_of_charge",
+                    "delta_energy",
+                    "solar_irradiances",
+                    "wind_speeds",
+                    "gis_route_elevations_at_each_tick",
+                    "raw_soc",
+                ]
+            ) + [raw_speed]
+            results_labels = [
+                "Speed (km/h)",
+                "Distance (km)",
+                "SOC (%)",
+                "Delta energy (J)",
+                "Solar irradiance (W/m^2)",
+                "Wind speeds (km/h)",
+                "Elevation (m)",
+                "Raw SOC (%)",
+                "Raw Speed (km/h)",
+            ]
 
-            self.plotting.add_graph_page_to_queue(GraphPage(results_arrays, results_labels, page_name="Results"))
+            self.plotting.add_graph_page_to_queue(
+                GraphPage(results_arrays, results_labels, page_name="Results")
+            )
 
             if verbose:
                 # Plot energy arrays
-                energy_arrays = self.get_results(["motor_consumed_energy", "array_produced_energy", "delta_energy"])
-                energy_labels = ["Motor Consumed Energy (J)", "Array Produced Energy (J)", "Delta Energy (J)"]
-                energy_graph = GraphPage(energy_arrays, energy_labels, page_name="Energy Calculations")
+                energy_arrays = self.get_results(
+                    ["motor_consumed_energy", "array_produced_energy", "delta_energy"]
+                )
+                energy_labels = [
+                    "Motor Consumed Energy (J)",
+                    "Array Produced Energy (J)",
+                    "Delta Energy (J)",
+                ]
+                energy_graph = GraphPage(
+                    energy_arrays, energy_labels, page_name="Energy Calculations"
+                )
                 self.plotting.add_graph_page_to_queue(energy_graph)
 
                 # Plot indices and environment arrays
-                env_arrays = self.get_results(["closest_gis_indices", "closest_weather_indices",
-                                               "gradients", "time_zones", "gis_vehicle_bearings"])
-                env_labels = ["gis ind", "weather ind",
-                              "gradients (m)", "time zones", "vehicle bearings"]
-                indices_and_environment_graph = GraphPage(env_arrays, env_labels, page_name="Indices and Environment")
+                env_arrays = self.get_results(
+                    [
+                        "closest_gis_indices",
+                        "closest_weather_indices",
+                        "gradients",
+                        "time_zones",
+                        "gis_vehicle_bearings",
+                    ]
+                )
+                env_labels = [
+                    "gis ind",
+                    "weather ind",
+                    "gradients (m)",
+                    "time zones",
+                    "vehicle bearings",
+                ]
+                indices_and_environment_graph = GraphPage(
+                    env_arrays, env_labels, page_name="Indices and Environment"
+                )
                 self.plotting.add_graph_page_to_queue(indices_and_environment_graph)
 
                 # Plot speed boolean and SOC arrays
@@ -208,17 +260,26 @@ class Model:
                     logical_arrays.append(speed_kmh)
 
                 boolean_arrays = arrays_to_plot + logical_arrays
-                boolean_labels = ["Speed (km/h)", "SOC", "Speed & SOC", "Speed & not_charge"]
-                boolean_graph = GraphPage(boolean_arrays, boolean_labels, page_name="Speed Boolean Operations")
+                boolean_labels = [
+                    "Speed (km/h)",
+                    "SOC",
+                    "Speed & SOC",
+                    "Speed & not_charge",
+                ]
+                boolean_graph = GraphPage(
+                    boolean_arrays, boolean_labels, page_name="Speed Boolean Operations"
+                )
                 self.plotting.add_graph_page_to_queue(boolean_graph)
 
-            self.plotting.plot_graph_pages(self.get_results("timestamps"), plot_portion=plot_portion)
+            self.plotting.plot_graph_pages(
+                self.get_results("timestamps"), plot_portion=plot_portion
+            )
 
         get_return_type = {
             SimulationReturnType.time_taken: -1 * results[0],
             SimulationReturnType.distance_travelled: results[2],
             SimulationReturnType.distance_and_time: (results[2], results[0]),
-            SimulationReturnType.void: None
+            SimulationReturnType.void: None,
         }
 
         return get_return_type[self.return_type]
@@ -226,7 +287,9 @@ class Model:
     def calculations_have_happened(self):
         return self._simulation.calculations_have_happened
 
-    def get_results(self, values: Union[np.ndarray, list, tuple, set, str]) -> Union[list, np.ndarray, float]:
+    def get_results(
+        self, values: Union[np.ndarray, list, tuple, set, str]
+    ) -> Union[list, np.ndarray, float]:
         """
 
         Use this function to extract data from a Simulation model.
@@ -260,5 +323,10 @@ class Model:
 
         """
 
-        return get_granularity_reduced_boolean(self.race.driving_boolean[self.start_time:],
-                                               self.speed_dt).sum().astype(int)
+        return (
+            get_granularity_reduced_boolean(
+                self.race.driving_boolean[self.start_time :], self.speed_dt
+            )
+            .sum()
+            .astype(int)
+        )

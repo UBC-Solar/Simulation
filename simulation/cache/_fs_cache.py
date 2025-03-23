@@ -13,6 +13,7 @@ class DillShelf(shelve.DbfilenameShelf):
     A drop-in replacement for the default `Shelf` from the `shelve` module which uses `dill` for serialization
     and deserialization rather than `pickle`.
     """
+
     # NOTE: ALL of this code is copied from the CPython 3.13 implementation of `Shelf` class in `shelve/shelf.py`, with
     # references to `pickle` replaced with `dill`. That is, don't blame ME for your IDE complaining.
     def __init__(self, *args, **kwargs):
@@ -46,6 +47,7 @@ class FSCache(Cache):
 
     FSCache is not thread-safe.
     """
+
     def __init__(self, shelve_dir: pathlib.Path):
         self._shelve_dir = shelve_dir / "cache"
 

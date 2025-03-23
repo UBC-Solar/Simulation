@@ -26,10 +26,12 @@ class Controller:
     def __init__(self, results_directory: str):
         # Get the data directory and config
         self.data_directory = data_directory
-        with open(self.data_directory / "network.toml", 'rb') as config_file:
+        with open(self.data_directory / "network.toml", "rb") as config_file:
             config = tomllib.load(config_file)
-            self.scopes = config['settings']['SCOPES']
-            self.auth_file = os.path.join(data_directory, config['settings']['AUTH_FILE'])
+            self.scopes = config["settings"]["SCOPES"]
+            self.auth_file = os.path.join(
+                data_directory, config["settings"]["AUTH_FILE"]
+            )
 
         # Create clients with Google Drive
         service = Controller.get_service(self.authenticate())
@@ -44,9 +46,14 @@ class Controller:
         :return: a Credentials object that can be used to create a Google Drive API client
         """
         if os.path.exists(self.auth_file):
-            return Credentials.from_authorized_user_file(str(self.auth_file), self.scopes)
+            return Credentials.from_authorized_user_file(
+                str(self.auth_file), self.scopes
+            )
         else:
-            raise FileNotFoundError("Cannot find Google Drive API token! Auth file not found: ", self.auth_file)
+            raise FileNotFoundError(
+                "Cannot find Google Drive API token! Auth file not found: ",
+                self.auth_file,
+            )
 
     @staticmethod
     def get_service(credentials: Credentials) -> Client:
@@ -86,7 +93,11 @@ class Controller:
         evolution_number = self.localize_evolutions(evolution_number)
         local_results = self.assembler.collect_local_results()
 
-        local_results.to_csv(os.path.join(self.data_directory, "evolution_browser.csv"), mode='a', header=False)
+        local_results.to_csv(
+            os.path.join(self.data_directory, "evolution_browser.csv"),
+            mode="a",
+            header=False,
+        )
         Assembler.set_evolution_counter(evolution_number)
 
         self.push()
@@ -100,7 +111,10 @@ class Controller:
         :return:
         """
         # We need an ordered dictionary to maintain order when matching evolutions to a random key
-        evolutions = OrderedDict((id_generator(), evolution_path) for evolution_path in self.assembler.evolutions)
+        evolutions = OrderedDict(
+            (id_generator(), evolution_path)
+            for evolution_path in self.assembler.evolutions
+        )
 
         # Temporarily rename evolution folders to their random key (so that they don't override each other)
         # Otherwise, if the next evolution number was 6, and we had `5`, `6` locally, `5` would get overriden into `6`.
@@ -111,7 +125,9 @@ class Controller:
 
         # Rename evolution folders to their proper, localized names, from the temporary names.
         for evolution_id, evolution_path in evolutions.items():
-            new_path = os.path.join(self.assembler.results_directory, str(evolution_number))
+            new_path = os.path.join(
+                self.assembler.results_directory, str(evolution_number)
+            )
             shutil.move(Path(evolution_path).resolve(), Path(new_path).resolve())
             evolution_number += 1
 
@@ -126,7 +142,7 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     :param chars: valid characters
     :return: a random sequence of characters of length ``size`` and containing characters from ``chars``.
     """
-    return ''.join(random.choice(chars) for _ in range(size))
+    return "".join(random.choice(chars) for _ in range(size))
 
 
 def reset(controller) -> None:
@@ -148,9 +164,18 @@ def bootstrap(controller: Controller):
     :param controller: controller to perform this action
     """
 
-    controller.uploader.upload_file("last_evolution.txt", Path("last_evolution.txt").resolve(), controller.uploader.evolution_number_id)
-    controller.uploader.upload_file("evolution_browser.csv", Path("evolution_browser.csv").resolve(), controller.uploader.evolution_browser_id)
+    controller.uploader.upload_file(
+        "last_evolution.txt",
+        Path("last_evolution.txt").resolve(),
+        controller.uploader.evolution_number_id,
+    )
+    controller.uploader.upload_file(
+        "evolution_browser.csv",
+        Path("evolution_browser.csv").resolve(),
+        controller.uploader.evolution_browser_id,
+    )
     print("WARNING! SAVE THE ABOVE ID'S INTO NETWORK.TOML!")
+
 
 if __name__ == "__main__":
     path = ""

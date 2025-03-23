@@ -1,16 +1,7 @@
-from .Hashing import (
-    hash_dict
-)
+from .Hashing import hash_dict
 
-from .InputBounds import (
-    InputBounds
-)
+from .InputBounds import InputBounds
 
-from .Plotting import (
-    Plotting,
-    GraphPage
-)
+from .Plotting import Plotting, GraphPage
 
-from .KML import (
-    KMLParser
-)
+from .KML import KMLParser
