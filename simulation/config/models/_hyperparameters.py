@@ -4,9 +4,7 @@ from simulation.config.models import Config, ConfigDict
 
 class SimulationReturnType(StrEnum):
     """
-
     This enum exists to discretize different data types run_model should return.
-
     """
 
     time_taken = "time_taken"
@@ -16,6 +14,9 @@ class SimulationReturnType(StrEnum):
 
 
 class SimulationHyperparametersConfig(Config):
+    """
+    Configuration object specifying the hyperparameters used by a simulation.
+    """
     model_config = ConfigDict(frozen=True)
 
     speed_dt: (

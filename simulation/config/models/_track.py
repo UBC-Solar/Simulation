@@ -5,6 +5,9 @@ from simulation.config.models import Config, ConfigDict
 
 
 class RouteConfig(Config):
+    """
+    Configuration object specifying a route
+    """
     model_config = ConfigDict(frozen=True)
 
     coordinates: List[
@@ -16,14 +19,13 @@ class CompetitionType(StrEnum):
     """
     Enum to discretize the different types of competitions that UBC Solar competes in
     """
-
     TrackCompetition = "TrackCompetition"
     RoadCompetition = "RoadCompetition"
 
 
 class CompetitionConfig(Config):
     """
-    A model which contains the information required to describe a competition
+    Configuration object which contains the information required to describe a competition
     """
 
     model_config = ConfigDict(frozen=True, subclass_field="competition_type")
@@ -51,6 +53,10 @@ class CompetitionConfig(Config):
 
 
 class TrackCompetitionConfig(CompetitionConfig):
+    """
+    Configuration object which contains the information required to describe a competition on a track
+    """
+
     tiling: int  # The number of times to tile the route to build the route
 
     def route_hash(self):
@@ -59,7 +65,7 @@ class TrackCompetitionConfig(CompetitionConfig):
 
 class RoadCompetitionConfig(CompetitionConfig):
     """
-    A model which contains the information required
+    Configuration object which contains the information required to describe a competition on public roads
     """
 
     pass
