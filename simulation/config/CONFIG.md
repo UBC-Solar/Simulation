@@ -93,5 +93,8 @@ Now, we can use the `build_from` factory method available from `Config` to build
 }
 
 >>> type(InitialConditions.build_from(timed_initial_conditions_dict))
-"<class 'TimedInitialConditionsConfig'>"
+"<class 'TimedInitialConditionsConfig'>
 ```
+
+The way that `build_from` searches for the subclass to build is it looks at the field marked as the `subclass_type` and then it looks at the subclasses of the class you're trying to build, and it looks for a subclass with a name that matches the value of `subclass_type` with the `"Config"` suffix. 
+That is, to build `TimedInitialConditionsConfig`, `subclass_type` should be set to `"TimedInitialConditions"`. This adds the requirement that for subclasses to be properly built, they must the `"Config"` suffix.
