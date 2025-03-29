@@ -15,14 +15,23 @@ def gis():
 
     origin_coord = np.array([39.0918, -94.4172])
 
-    waypoints = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
-                          [41.8392, -103.7115], [42.8663, -106.3372], [42.8408, -108.7452],
-                          [42.3224, -111.2973], [42.5840, -114.4703]])
+    waypoints = np.array(
+        [
+            [39.0379, -95.6764],
+            [40.8838, -98.3734],
+            [41.8392, -103.7115],
+            [42.8663, -106.3372],
+            [42.8408, -108.7452],
+            [42.3224, -111.2973],
+            [42.5840, -114.4703],
+        ]
+    )
 
     dest_coord = np.array([43.6142, -116.2080])
 
-    location_system = GIS(origin_coord, dest_coord,
-                          waypoints, "ASC", hash_key=231165811)
+    location_system = GIS(
+        origin_coord, dest_coord, waypoints, "ASC", hash_key=231165811
+    )
 
     return location_system
 
@@ -45,12 +54,13 @@ def test_get_time_zones(gis):
     test_coord = np.tile([39.0918, -94.4172], 625 * 2)
 
     # Expected time zone checked on https://timezonedb.com/
-    expected_time_zone = np.full(len(test_coord), -18000.)
+    expected_time_zone = np.full(len(test_coord), -18000.0)
 
     test_coord_cumulative_distances = np.cumsum(test_coord)
 
     test_coord_closest_gis_indices = gis.calculate_closest_gis_indices(
-        cumulative_distances=test_coord_cumulative_distances)
+        cumulative_distances=test_coord_cumulative_distances
+    )
     result = gis.get_time_zones(test_coord_closest_gis_indices)
 
     assert len(test_coord) == len(expected_time_zone)
@@ -62,14 +72,18 @@ def test_adjust_timestamps_to_local_times(gis):
     test_timestamps = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     test_starting_drive_time = 10.0
     test_time_zones = np.append(np.repeat(-18000, 4), np.repeat(-21600, 6))
-    expected_local_times = np.array(np.append(np.arange(10, 14), np.arange(-3600 + 14, -3600 + 20)), dtype=np.uint64)
+    expected_local_times = np.array(
+        np.append(np.arange(10, 14), np.arange(-3600 + 14, -3600 + 20)), dtype=np.uint64
+    )
 
-    result = helpers.adjust_timestamps_to_local_times(test_timestamps, test_starting_drive_time, test_time_zones)
+    result = helpers.adjust_timestamps_to_local_times(
+        test_timestamps, test_starting_drive_time, test_time_zones
+    )
     assert np.all(result == expected_local_times)
 
 
 def test_calculate_path_distances():
-    test_coord = np.array([[43., -116], [43., -116.]])
+    test_coord = np.array([[43.0, -116], [43.0, -116.0]])
     expected_path_distance = np.array([0.0])
 
     result = helpers.calculate_path_distances(test_coord)
@@ -78,7 +92,7 @@ def test_calculate_path_distances():
 
 @pytest.mark.skip(reason="Expected values for this test are broken.")
 def test_calculate_path_distances1():
-    test_coord = np.array([[43., -116], [43.002, -116.003]])
+    test_coord = np.array([[43.0, -116], [43.002, -116.003]])
 
     offset = np.roll(test_coord, (1, 1))
     diff = (test_coord - offset)[1:] * np.pi / 180
@@ -96,9 +110,17 @@ def test_calculate_path_distances1():
 
 @pytest.mark.skip(reason="Expected values for this test are broken.")
 def test_calculate_path_distances2():
-    test_coord = np.array([[39.0379, -95.6764], [40.8838, -98.3734],
-                           [41.8392, -103.7115], [42.8663, -106.3372], [42.8408, -108.7452],
-                           [42.3224, -111.2973], [42.5840, -114.4703]])
+    test_coord = np.array(
+        [
+            [39.0379, -95.6764],
+            [40.8838, -98.3734],
+            [41.8392, -103.7115],
+            [42.8663, -106.3372],
+            [42.8408, -108.7452],
+            [42.3224, -111.2973],
+            [42.5840, -114.4703],
+        ]
+    )
 
     offset = np.roll(test_coord, (1, 1))
     diff = (test_coord - offset)[1:] * np.pi / 180
@@ -116,7 +138,7 @@ def test_calculate_path_distances2():
 
 @pytest.mark.skip(reason="Expected values for this test are broken.")
 def test_calculate_path_gradients1():
-    test_elevations = np.arange(10.)
+    test_elevations = np.arange(10.0)
 
     test_distances = np.repeat(20, 9)
     gis.path_distances = test_distances
@@ -129,14 +151,34 @@ def test_calculate_path_gradients1():
 
 @pytest.mark.skip(reason="Expected values for this test are broken.")
 def test_calculate_path_gradients2(gis):
-    test_elevations = np.append(np.arange(10.), np.arange(10, 0, -1))
+    test_elevations = np.append(np.arange(10.0), np.arange(10, 0, -1))
 
     test_distances = np.append(np.repeat(20, 5), np.repeat(10, 14))
     gis.path_distances = test_distances
 
-    expected_gradients = np.array([0.05, 0.05, 0.05, 0.05, 0.05,
-                                   0.1, 0.1, 0.1, 0.1, 0.1,
-                                   -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, ])
+    expected_gradients = np.array(
+        [
+            0.05,
+            0.05,
+            0.05,
+            0.05,
+            0.05,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            -0.1,
+            -0.1,
+            -0.1,
+            -0.1,
+            -0.1,
+            -0.1,
+            -0.1,
+            -0.1,
+            -0.1,
+        ]
+    )
     result = helpers.calculate_path_gradients(test_elevations, test_distances)
     assert np.all(result == expected_gradients)
 

@@ -13,8 +13,16 @@ def get_last_version() -> str:
 
     """
 
-    json_string = (subprocess.run(["gh", "release", "view", "--json", "tagName"], check=True, stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE).stdout.decode("utf8").strip())
+    json_string = (
+        subprocess.run(
+            ["gh", "release", "view", "--json", "tagName"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        .stdout.decode("utf8")
+        .strip()
+    )
 
     return json.loads(json_string)["tagName"]
 
@@ -54,7 +62,9 @@ def create_new_patch_release():
     except subprocess.CalledProcessError:
         pass
 
-    subprocess.run(["gh", "release", "create", "--generate-notes", new_version_number], check=True)
+    subprocess.run(
+        ["gh", "release", "create", "--generate-notes", new_version_number], check=True
+    )
 
 
 if __name__ == "__main__":

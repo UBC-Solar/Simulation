@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from simulation.model.environment.solar_calculations import SolarCalculations
 
+
 @pytest.fixture
 def solar():
     solar_calculations = SolarCalculations()

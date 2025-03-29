@@ -8,10 +8,13 @@ class RandomOptimization(BaseOptimization):
         BaseOptimization.__init__(self, bounds, f)
 
     def maximize(self, iterations=10):
-        best = float('-inf')
+        best = float("-inf")
         bound_dict = self.bounds.get_bound_dict()
         for _ in range(iterations):
-            inputs = {item[0]: random.uniform(item[1][0], item[1][1]) for item in bound_dict.items()}
+            inputs = {
+                item[0]: random.uniform(item[1][0], item[1][1])
+                for item in bound_dict.items()
+            }
             result = self.func(**inputs)
             if result > best:
                 best = result

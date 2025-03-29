@@ -1,9 +1,20 @@
 import sys
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QPushButton,
-    QLabel, QComboBox, QLineEdit, QFormLayout, QVBoxLayout,
-    QTabWidget, QToolTip, QMessageBox, QAction, QFileDialog
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QPushButton,
+    QLabel,
+    QComboBox,
+    QLineEdit,
+    QFormLayout,
+    QVBoxLayout,
+    QTabWidget,
+    QToolTip,
+    QMessageBox,
+    QAction,
+    QFileDialog,
 )
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt
@@ -17,17 +28,17 @@ import matplotlib
 # Dictionary to store help messages for each plot
 HELP_MESSAGES = {
     "VehicleVelocity": "This plot shows velocity over time.\n\n"
-                       "- X-axis: Time (s)\n"
-                       "- Y-axis: Velocity (m/s)\n"
-                       "- Data is sourced from the car's telemetry system.\n",
+    "- X-axis: Time (s)\n"
+    "- Y-axis: Velocity (m/s)\n"
+    "- Data is sourced from the car's telemetry system.\n",
 }
 
 # Interface aesthetic parameters
 WINDOW_TITLE = "Diagnostic Interface"
-X_COORD = 100 # Sets the x-coord where the interface will be created
-Y_COORD = 100 # Sets the y-coord where the interface will be created
-WIDTH = 800 # Sizing of window
-HEIGHT = 600 # Size of window
+X_COORD = 100  # Sets the x-coord where the interface will be created
+Y_COORD = 100  # Sets the y-coord where the interface will be created
+WIDTH = 800  # Sizing of window
+HEIGHT = 600  # Size of window
 
 
 class CustomNavigationToolbar(NavigationToolbar):
@@ -38,7 +49,6 @@ class CustomNavigationToolbar(NavigationToolbar):
 
         # Load a save icon (matching Matplotlib's style)
         save_icon = QIcon(matplotlib.get_data_path() + "/images/filesave.png")
-
 
         # Add a "Save Data" button to the toolbar for saving data as a csv
         self.save_data_action = self.addAction(save_icon, "Save Data")
@@ -53,7 +63,7 @@ class CustomNavigationToolbar(NavigationToolbar):
             "Forward": "Move forward in the view history.",
             "Pan": "Click and drag to move the plot.",
             "Zoom": "Select a region to zoom in.",
-            "Save": "Save the current plot as an image file."
+            "Save": "Save the current plot as an image file.",
         }
 
         # Loop through toolbar buttons and set tooltips
@@ -74,7 +84,9 @@ class PlotCanvas(FigureCanvas):
         self.current_origin = ""
         self.current_source = ""
 
-    def query_data(self, origin: str, source: str, event: str, data_name: str) -> TimeSeries:
+    def query_data(
+        self, origin: str, source: str, event: str, data_name: str
+    ) -> TimeSeries:
         """
         This method queries data from SunBeam as a file, and later unwraps it.
 
@@ -89,14 +101,16 @@ class PlotCanvas(FigureCanvas):
         file = client.get_file(origin, event, source, data_name)
         result = file.unwrap()
 
-        if hasattr(result, 'values'):
+        if hasattr(result, "values"):
             return result.values
-        elif hasattr(result, 'data'):
+        elif hasattr(result, "data"):
             return result.data
         else:
             raise ValueError("Unable to extract data from the queried file.")
 
-    def query_and_plot(self, origin: str, source: str, event: str, data_name: str) -> bool:
+    def query_and_plot(
+        self, origin: str, source: str, event: str, data_name: str
+    ) -> bool:
         """
         This method calls on query_data and then plots the data returned.
 
@@ -108,11 +122,15 @@ class PlotCanvas(FigureCanvas):
         :returns bool: depending on whether it was possible to query and plot the data
         """
         try:
-            data = self.query_data(origin, source, event, data_name) # Get the data from Sunbeam
+            data = self.query_data(
+                origin, source, event, data_name
+            )  # Get the data from Sunbeam
 
             # Checking data is a TimeSeries
             if not isinstance(data, TimeSeries):
-                raise TypeError("Expected TimeSeries, but got a different type of data.")
+                raise TypeError(
+                    "Expected TimeSeries, but got a different type of data."
+                )
 
             self.current_data = data  # Store data for saving
             self.current_data_name = data_name
@@ -146,14 +164,23 @@ class PlotCanvas(FigureCanvas):
 
         options = QFileDialog.Options()
         file_name, _ = QFileDialog.getSaveFileName(
-            None, "Save Data", f"{self.current_data_name}_{self.current_event}_{self.current_origin}_{self.current_source}.csv",
-            "CSV Files (*.csv);;All Files (*)", options=options
+            None,
+            "Save Data",
+            f"{self.current_data_name}_{self.current_event}_{self.current_origin}_{self.current_source}.csv",
+            "CSV Files (*.csv);;All Files (*)",
+            options=options,
         )
 
         if file_name:
-            df = pd.DataFrame({'Time (s)': range(len(self.current_data)), f"{self.current_data_name}": self.current_data})
+            df = pd.DataFrame(
+                {
+                    "Time (s)": range(len(self.current_data)),
+                    f"{self.current_data_name}": self.current_data,
+                }
+            )
             df.to_csv(file_name, index=False)
             print(f"Data saved to {file_name}")
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -179,7 +206,9 @@ class MainWindow(QMainWindow):
 
         # Load and add the team logo
         logo_label = QLabel()
-        logo_label.setPixmap(QPixmap("Solar_Logo.png").scaled(800, 600, Qt.KeepAspectRatio))
+        logo_label.setPixmap(
+            QPixmap("Solar_Logo.png").scaled(800, 600, Qt.KeepAspectRatio)
+        )
         logo_label.setAlignment(Qt.AlignCenter)  # Center the image
         layout.addWidget(logo_label)
 
@@ -209,7 +238,12 @@ class MainWindow(QMainWindow):
         self.data_input.addItems(self.data_types)
 
         # Style of the drowpdown menus
-        for combo in [self.origin_input, self.source_input, self.event_input, self.data_input]:
+        for combo in [
+            self.origin_input,
+            self.source_input,
+            self.event_input,
+            self.data_input,
+        ]:
             combo.setStyleSheet("background-color: white")
 
         # Add to form layout
@@ -253,25 +287,39 @@ class MainWindow(QMainWindow):
             selected_data = self.data_input.currentText()
 
             # Get valid events based on origin
-            available_events = set(client.distinct("event", []))  # Start with all events
+            available_events = set(
+                client.distinct("event", [])
+            )  # Start with all events
             if selected_origin:
-                available_events &= set(client.distinct("event", {"origin": selected_origin})) # Filter by origin
+                available_events &= set(
+                    client.distinct("event", {"origin": selected_origin})
+                )  # Filter by origin
 
             # Get valid sources based on origin and event
             available_sources = set(client.distinct("source", []))  # Start with all
             if selected_origin:
-                available_sources &= set(client.distinct("source", {"origin": selected_origin})) # Filter by origin
+                available_sources &= set(
+                    client.distinct("source", {"origin": selected_origin})
+                )  # Filter by origin
             if selected_event:
-                available_sources &= set(client.distinct("source", {"event": selected_event})) # Filter by event
+                available_sources &= set(
+                    client.distinct("source", {"event": selected_event})
+                )  # Filter by event
 
             # Get valid data types based on origin, source, and event
-            available_data = set(client.distinct("name", [])) # Start with all data
+            available_data = set(client.distinct("name", []))  # Start with all data
             if selected_origin:
-                available_data &= set(client.distinct("name", {"origin": selected_origin})) # Filter by origin
+                available_data &= set(
+                    client.distinct("name", {"origin": selected_origin})
+                )  # Filter by origin
             if selected_event:
-                available_data &= set(client.distinct("name", {"event": selected_event})) # Filter by event
+                available_data &= set(
+                    client.distinct("name", {"event": selected_event})
+                )  # Filter by event
             if selected_source:
-                available_data &= set(client.distinct("name", {"source": selected_source})) # Filter by source
+                available_data &= set(
+                    client.distinct("name", {"source": selected_source})
+                )  # Filter by source
 
             # Convert back to lists
             available_sources = list(available_sources)
@@ -279,35 +327,41 @@ class MainWindow(QMainWindow):
             available_data = list(available_data)
 
             # Update dropdowns safely
-            self.source_input.blockSignals(True) # Shuts down ability to take input
+            self.source_input.blockSignals(True)  # Shuts down ability to take input
             self.source_input.clear()
             self.source_input.addItems(available_sources)
             # Set the selected source to the first available or keep it if it exists
             if selected_source in available_sources:
                 self.source_input.setCurrentText(selected_source)
             elif available_sources:
-                self.source_input.setCurrentText(available_sources[0])  # Select first available option
-            self.source_input.blockSignals(False) # Can take inputs again
+                self.source_input.setCurrentText(
+                    available_sources[0]
+                )  # Select first available option
+            self.source_input.blockSignals(False)  # Can take inputs again
 
-            self.event_input.blockSignals(True) # Can't take inputs
+            self.event_input.blockSignals(True)  # Can't take inputs
             self.event_input.clear()
             self.event_input.addItems(available_events)
             # Set the selected event to the first available or keep it if it exists
             if selected_event in available_events:
                 self.event_input.setCurrentText(selected_event)
             elif available_events:
-                self.event_input.setCurrentText(available_events[0])  # Select first available option
-            self.event_input.blockSignals(False) # Can take inputs again
+                self.event_input.setCurrentText(
+                    available_events[0]
+                )  # Select first available option
+            self.event_input.blockSignals(False)  # Can take inputs again
 
-            self.data_input.blockSignals(True) # Can't take inputs
+            self.data_input.blockSignals(True)  # Can't take inputs
             self.data_input.clear()
             self.data_input.addItems(available_data)
             # Set the selected data to the first available or keep it if it exists
             if selected_data in available_data:
                 self.data_input.setCurrentText(selected_data)
             elif available_data:
-                self.data_input.setCurrentText(available_data[0])  # Select first available option
-            self.data_input.blockSignals(False) # Can take inputs again
+                self.data_input.setCurrentText(
+                    available_data[0]
+                )  # Select first available option
+            self.data_input.blockSignals(False)  # Can take inputs again
 
         except Exception as e:
             print(f"Error updating filters: {e}")
@@ -328,7 +382,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         canvas = PlotCanvas()
 
-        toolbar = CustomNavigationToolbar(canvas, self) # Adding toolbar
+        toolbar = CustomNavigationToolbar(canvas, self)  # Adding toolbar
 
         # Adding widgets to the tab
         layout.addWidget(toolbar)
@@ -358,15 +412,23 @@ class MainWindow(QMainWindow):
 
         :param QWidget widget: an element of the GUI you can interact with. In this case, it is the plot.
         """
-        index: int = self.tabs.indexOf(widget) # Checks the index of the tab we want to close; if the tab is not in self.tabs, returns -1
-        if index != -1: # Checks that the tab we want to close is in self.tabs. If it isn't (index == -1), do nothing
-            self.tabs.removeTab(index) # If the tab is in self.tabs (index!= -1), we remove it
+        index: int = self.tabs.indexOf(
+            widget
+        )  # Checks the index of the tab we want to close; if the tab is not in self.tabs, returns -1
+        if (
+            index != -1
+        ):  # Checks that the tab we want to close is in self.tabs. If it isn't (index == -1), do nothing
+            self.tabs.removeTab(
+                index
+            )  # If the tab is in self.tabs (index!= -1), we remove it
 
     def show_help_message(self, data_name, event):
         """
         After you have clicked on the help button, this function displays a help message with more information on the plot
         """
-        message = HELP_MESSAGES.get(data_name, "No specific help available for this plot.")
+        message = HELP_MESSAGES.get(
+            data_name, "No specific help available for this plot."
+        )
 
         QMessageBox.information(self, f"Help: {data_name}", message)
 
