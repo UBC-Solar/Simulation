@@ -126,15 +126,15 @@ class Assembler:
         :return:
         """
         with open(os.path.join(evolution_directory, "evolution_log.txt"), "x") as file:
-            file.write(f" --- CONTEXT --- \n")
+            file.write(" --- CONTEXT --- \n")
             file.write(f"TIMESTAMP:          {evolution.timestamp}\n")
             file.write(f"USER:               {evolution.username}\n")
             file.write(f"COMMIT:             {evolution.repo_commit}\n")
             file.write(f"SIMULATION ID:      {evolution.simulation_hash}\n")
             file.write(f"DIRTY REPO:         {evolution.is_dirty}\n")
-            file.write(f"NOTES:               \n")
-            file.write(f"\n")
-            file.write(f" --- CONFIG --- \n")
+            file.write("NOTES:               \n")
+            file.write("\n")
+            file.write(" --- CONFIG --- \n")
             file.write(f"RACE:               {evolution.race_type}\n")
             file.write(f"GRANULARITY:        {evolution.granularity}\n")
             file.write(f"LVS POWER (W):      {evolution.lvs_power_loss}\n")
@@ -145,8 +145,8 @@ class Assembler:
             file.write(f"ORIGIN:             {evolution.origin_coord}\n")
             file.write(f"DESTINATION:        {evolution.dest_coord}\n")
             file.write(f"CURRENT:            {evolution.current_coord}\n")
-            file.write(f"\n")
-            file.write(f" --- OPTIMIZER --- \n")
+            file.write("\n")
+            file.write(" --- OPTIMIZER --- \n")
             file.write(f"POPULATION SIZE:    {evolution.chromosome_size}\n")
             file.write(f"PARENT SELECTION:   {evolution.parent_selection_type}\n")
             file.write(f"GENERATIONS:        {evolution.generation_limit}\n")
@@ -157,8 +157,8 @@ class Assembler:
             file.write(f"MUTATION:           {evolution.mutation_type}\n")
             file.write(f"MAX MUTATION (%):   {evolution.mutation_percent}\n")
             file.write(f"STOPPING CRITERIA:  {evolution.stopping_criteria}\n")
-            file.write(f"\n")
-            file.write(f" --- RESULTS --- \n")
+            file.write("\n")
+            file.write(" --- RESULTS --- \n")
             file.write(
                 f"FITNESS:            {' '.join(map(str, evolution.best_fitness))}\n"
             )

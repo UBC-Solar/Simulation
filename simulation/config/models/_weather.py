@@ -16,6 +16,10 @@ class OpenweatherPeriod(StrEnum):
 
 
 class WeatherQuery(Config):
+    """
+    Configuration required to specify how weather forecasts should be queried
+    """
+
     model_config = ConfigDict(frozen=True, subclass_field="weather_provider")
 
     weather_provider: (

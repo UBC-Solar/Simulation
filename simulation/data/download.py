@@ -1,5 +1,4 @@
 import io
-import pathlib
 
 from simulation.data.connect import Connect
 from googleapiclient.http import MediaIoBaseDownload

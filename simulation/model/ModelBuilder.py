@@ -43,11 +43,20 @@ load_dotenv()
 class ModelBuilder:
     """
 
-    This builder class is used to easily set the parameters and conditions of Simulation.
+    This class assembles a `Model` from the requisite configuration.
 
+    This class follows the fluid builder pattern, such that its methods return itself allowing for operations like,
+    >>> ModelBuilder().set_environment_config(environment_config).set_initial_conditions(initial_conditions).compile()
+
+    Once all configuration has been set, `ModelBuilder` can be compiled, and then a `Model` acquired from it with `get`.
     """
 
     def __init__(self, cache: Cache = None):
+        """
+        Initialize a `Model` builder.
+
+        :param cache: An interface to a `Cache` object from which to store and load any externally supplied data.
+        """
         self._compiled = False
         self._cache: Cache = cache if cache is not None else SimulationCache
 
@@ -93,11 +102,20 @@ class ModelBuilder:
         self._rebuild_competition_cache: bool = False
 
     def set_initial_conditions(self, initial_conditions: InitialConditions):
+        """
+        Set the initial conditions of the `Model` to be built.
+
+        :param InitialConditions initial_conditions: An `InitialConditions` configuration object
+        """
         self._initial_conditions = initial_conditions
 
         return self
 
     def set_hyperparameters(self, hyperparameters: SimulationHyperparametersConfig):
+        """
+        Set the hyperparameters of the `Model` to be built.
+        :param SimulationHyperparametersConfig hyperparameters: A `SimulationHyperparametersConfig` config object.
+        """
         self._hyperparameter_config = hyperparameters
 
         return self
@@ -109,6 +127,22 @@ class ModelBuilder:
         rebuild_competition_cache: bool = False,
         rebuild_route_cache: bool = False,
     ):
+        """
+        Set the environment configuration of the `Model` to be built.
+
+        As the environment involves data acquired from external data sources, relevant environment data will be cached
+        for performance and to save on API requests.
+        Data will be cached and keyed to the config used to generate it, so that if the same config is used again
+        the data can be acquired from the cache.
+        You can rebuild the appropriate aspect of the environment rather than using cached data by setting the
+        appropriate `rebuild_` flag here. Rebuilding data will save the new data to the cache, overwriting the existing
+        data.
+
+        :param EnvironmentConfig environment_config: An `EnvironmentConfig` configuration object
+        :param rebuild_weather_cache: Set to `True` to rebuild the weather data cache, even if it exists.
+        :param rebuild_competition_cache: Set to `True` to rebuild the race data cache, even if it exists.
+        :param rebuild_route_cache: Set to `True` to rebuild the route data cache, even if it exists.
+        """
         self._environment_config = environment_config
         self._rebuild_weather_cache = rebuild_weather_cache
         self._rebuild_competition_cache = rebuild_competition_cache
@@ -117,6 +151,11 @@ class ModelBuilder:
         return self
 
     def set_car_config(self, car_config: CarConfig):
+        """
+        Set the configuration for the car that is to be simulated by `Model`.
+
+        :param car_config: A `CarConfig` configuration object.
+        """
         self._car_config = car_config
 
         return self
@@ -157,9 +196,6 @@ class ModelBuilder:
         self.vehicle_speed_period = self._hyperparameter_config.speed_dt
         self.simulation_period = self._hyperparameter_config.simulation_period
         self.return_type = self._hyperparameter_config.return_type
-
-    def _set_car(self):
-        pass
 
     @staticmethod
     def _calculate_path_distances(coords):
@@ -257,7 +293,7 @@ class ModelBuilder:
 
             self._cache.put(route, route_data_path)
 
-            print(f"Queried route data")
+            print("Queried route data")
 
         self.route_data = route
         self.origin_coord = route.coords[0]
@@ -297,13 +333,23 @@ class ModelBuilder:
             weather_data = query.make()
             self._cache.put(weather_data, weather_data_path)
 
-            print(f"Queried weather data")
+            print("Queried weather data")
 
         self.weather_forecasts = weather_data
         self.race_duration = len(competition_config.time_ranges.keys())
         self.weather_provider = weather_query_config.weather_provider
 
     def compile(self):
+        """
+        Compile the configuration provided to this `ModelBuilder`, building or accessing the necessary caches and
+        assembling the components required to create `Model`.
+
+        Must be called before `get` can be invoked to instantiate a `Model.`
+
+        All `set_` methods must have been already invoked on this `ModelBuilder`, or a `RuntimeError` will be raised.
+
+        :raises RuntimeError: if any configuration is missing
+        """
         if self._environment_config is None:
             raise RuntimeError(
                 "You are trying to compile before setting environment configuration! Please"
@@ -387,14 +433,12 @@ class ModelBuilder:
 
     def get(self) -> Model:
         """
-        Returns a Simulation object if race data matches the model parameters' hash.
-        Compares the hash of race data with model parameters. Raises RaceDataNotMatching if they differ.
+        Acquire a `Model` from this `ModelBuilder` using its compiled configuration.
 
-        Returns:
-            Simulation: A new Simulation object.
+        Must have already invoked `compile` on this `ModelBuilder`, or a `RuntimeError` will be raised.
 
-        Raises:
-            RaceDataNotMatching: If hashes do not match.
+        :returns: A `Model` built from this `ModelBuilder`'s configuration.
+        :raises RuntimeError: If this `ModelBuilder` was not yet compiled.
         """
         if not self._compiled:
             raise RuntimeError(

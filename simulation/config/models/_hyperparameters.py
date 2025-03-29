@@ -16,6 +16,10 @@ class SimulationReturnType(StrEnum):
 
 
 class SimulationHyperparametersConfig(Config):
+    """
+    Configuration object specifying the hyperparameters used by a simulation.
+    """
+
     model_config = ConfigDict(frozen=True)
 
     speed_dt: (
