@@ -1,0 +1,1 @@
+git+https://github.com/UBC-Solar/physics.git@motor_modifications#egg=ubc_solar_physics
