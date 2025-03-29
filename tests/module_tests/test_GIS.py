@@ -1,5 +1,4 @@
 import numpy as np
-import os
 import pytest
 from dotenv import load_dotenv
 from simulation.common import helpers

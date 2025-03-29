@@ -1,5 +1,4 @@
 import dotenv
-import os
 import pytest
 from simulation.common.helpers import *
 from simulation.model.environment.weather_forecasts import OpenWeatherForecast

@@ -7,13 +7,10 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QLabel,
     QComboBox,
-    QLineEdit,
     QFormLayout,
     QVBoxLayout,
     QTabWidget,
-    QToolTip,
     QMessageBox,
-    QAction,
     QFileDialog,
 )
 from PyQt5.QtGui import QPixmap, QIcon

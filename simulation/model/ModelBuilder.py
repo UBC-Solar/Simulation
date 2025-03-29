@@ -293,7 +293,7 @@ class ModelBuilder:
 
             self._cache.put(route, route_data_path)
 
-            print(f"Queried route data")
+            print("Queried route data")
 
         self.route_data = route
         self.origin_coord = route.coords[0]
@@ -333,7 +333,7 @@ class ModelBuilder:
             weather_data = query.make()
             self._cache.put(weather_data, weather_data_path)
 
-            print(f"Queried weather data")
+            print("Queried weather data")
 
         self.weather_forecasts = weather_data
         self.race_duration = len(competition_config.time_ranges.keys())
