@@ -21,4 +21,16 @@ from ._helpers import (
 
 Coordinate = tuple[float, float]
 
-__all__ = [s for s in dir() if not s.startswith("_")]
+__all__ = [
+    "Race",
+    "Route",
+    "reshape_speed_array",
+    "adjust_timestamps_to_local_times",
+    "get_array_directional_wind_speed",
+    "get_granularity_reduced_boolean",
+    "calculate_completion_index",
+    "get_map_data_indices",
+    "normalize",
+    "denormalize",
+    "rescale"
+]

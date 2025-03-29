@@ -450,7 +450,7 @@ class GeneticOptimization(BaseOptimization):
         min_speed_kmh: float = 30
 
         # We will use Perlin noise to generate our guess arrays
-        noise_generator = Noise()
+        noise_generator = Noise()                               # noqa: F821
 
         # Determine the length that our driving speed arrays must be
         length = self.model.get_driving_time_divisions()

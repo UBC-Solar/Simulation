@@ -34,4 +34,30 @@ from ._car import (
     CarConfig,
 )
 
-__all__ = [s for s in dir() if not s.startswith("_")]
+__all__ = [
+    "Config",
+    "ConfigDict",
+    "CompetitionConfig",
+    "TrackCompetitionConfig",
+    "CompetitionType",
+    "RouteConfig",
+    "EnvironmentConfig",
+    "SimulationHyperparametersConfig",
+    "SimulationReturnType",
+    "ArrayConfig",
+    "LVSConfig",
+    "BatteryConfig",
+    "BasicBatteryConfig",
+    "BatteryModelConfig",
+    "MotorConfig",
+    "RegenConfig",
+    "VehicleConfig",
+    "CarConfig",
+    "SolcastWeatherPeriod",
+    "OpenweatherPeriod",
+    "OpenweatherConfig",
+    "SolcastConfig",
+    "WeatherProvider",
+    "WeatherQuery",
+    "InitialConditions"
+]
