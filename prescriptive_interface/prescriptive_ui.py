@@ -1,9 +1,11 @@
 import random
 import string
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QProgressBar, QTabWidget, \
+from typing import List, Tuple, Dict, Optional
+
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QProgressBar, QTabWidget, \
     QLabel, QSizePolicy
-from PyQt6.QtCore import QThread, pyqtSignal, QSize
+from PyQt5.QtCore import QThread, pyqtSignal, QSize
 
 from simulation.cmd import run_simulation
 from simulation.cmd.run_simulation import SimulationSettings, build_model
@@ -33,7 +35,7 @@ class SimulationCanvas(FigureCanvas):
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.toolbar.setStyleSheet("background: none; border: none;")
         self.toolbar.setIconSize(QSize(18, 18))
-        self.toolbar.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)  # Prevent expanding into plots
+        self.toolbar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)  # Prevent expanding into plots
         # Layout setup
         layout = QVBoxLayout()
         layout.addWidget(self.toolbar)
@@ -69,107 +71,97 @@ class SimulationCanvas(FigureCanvas):
 
         self.fig.canvas.draw_idle()
 
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+import folium
+import matplotlib.colors as mcolors
+import matplotlib.cm as cm
+import os
+import tempfile
+from PyQt5.QtCore import QUrl
 
-class SpeedCanvas(FigureCanvas):
-    """Canvas to display optimized speeds dynamically with color bar and lap navigation buttons."""
-
+class FoliumMapWidget(QWebEngineView):
     def __init__(self, parent=None):
-        self.fig, self.ax = plt.subplots(figsize=(8, 6))
-        self.cax = self.fig.add_axes([0.92, 0.1, 0.03, 0.8])  # Color bar axis
-        super().__init__(self.fig)
-        self.setParent(parent)
-
-        self.lap_num = 0  # Track the current lap
-        self.model = None  # Store the model for lap switching
-        self.norm = plt.Normalize(0, 80)  # Normalize for color mapping
-        self.cmap = plt.get_cmap('jet')  # Use Jet colormap for better contrast
+        super().__init__(parent)
+        self.lap_num = 0
+        self.model = None
+        self.temp_dir = tempfile.gettempdir()
 
     def plot_optimized_speeds(self, model):
-        """Plot the optimized speeds for the given model and store it for navigation."""
-        self.model = model  # Store the model so we can switch laps
-        self.update_plot()
+        self.model = model
+        self.update_map()
 
-    def update_plot(self):
-        """Update the plot for the selected lap."""
-        if self.model is None:
+    def update_lap(self, direction):
+        if direction == "next":
+            self.lap_num += 1
+        elif direction == "prev":
+            self.lap_num = max(0, self.lap_num - 1)
+        self.update_map()
+
+    def update_map(self):
+        if not self.model:
             return
 
         num_coordinates = int(self.model.gis.num_unique_coords)
         gis_indices, speed_kmh = self.model.get_results(["closest_gis_indices", "speed_kmh"])
         coords = self.model.gis.get_path()
 
-        self.ax.clear()
-        self.ax.set_title(f"Optimized Speeds - Lap {self.lap_num}")
-
-        gis_index_mean_speeds, relevant_coords = self.calculate_coords(
-            self.lap_num, coords, num_coordinates, gis_indices, speed_kmh
-        )
-
-        # Plot speed heatmap
-        lines = []
-        for j, (start, stop) in enumerate(zip(relevant_coords[:-1], relevant_coords[1:])):
-            y, x = zip(start, stop)
-            line, = self.ax.plot(x, y, color=self.cmap(self.norm(gis_index_mean_speeds[j])), linewidth=4.0)
-            lines.append(line)
-
-        # Attach hover cursor to display speed at each point
-        cursor = mplcursors.cursor(lines, hover=True)
-
-        @cursor.connect("add")
-        def on_add(sel):
-            index = lines.index(sel.artist)
-            sel.annotation.set(text=f"Speed: {gis_index_mean_speeds[index]:.1f} km/h", fontsize=10,
-                               bbox=dict(facecolor='white', alpha=0.8))
-
-        # Update color bar dynamically
-        self.cax.clear()
-        sm = cm.ScalarMappable(cmap=self.cmap, norm=self.norm)
-        sm.set_array([])
-        self.fig.colorbar(sm, cax=self.cax, label="Speed (km/h)")
-
-        self.draw()
-
-    def update_lap(self, direction):
-        """Change lap number based on button press."""
-        if direction == "next":
-            self.lap_num += 1
-        elif direction == "prev":
-            self.lap_num = max(0, self.lap_num - 1)  # Prevent negative laps
-        self.update_plot()
-
-    def calculate_coords(self, lap_num, coords, num_coordinates, gis_indices, speed_kmh):
-        """Calculate the mean speed at each coordinate for a given lap."""
-        beginning_coordinate = num_coordinates * lap_num
-        end_coordinate = num_coordinates * (lap_num + 1)
+        beginning_coordinate = num_coordinates * self.lap_num
+        end_coordinate = num_coordinates * (self.lap_num + 1)
         coords_of_interest = coords[beginning_coordinate:end_coordinate + 1]
 
-        gis_index_mean_speeds = OrderedDict()
+        # Aggregate average speeds for segments
+        mean_speeds = []
+        for i in range(len(coords_of_interest) - 1):
+            k = i + beginning_coordinate
+            indices = np.where(gis_indices == k)[0]
+            if len(indices) > 0:
+                speed = np.mean(speed_kmh[indices])
+                mean_speeds.append(speed)
+                last_known_speed = speed
+            else:
+                # Interpolate using the last known speed and look ahead for the next known one
+                j = i + 1
+                while j < len(coords_of_interest) - 1:
+                    future_k = j + beginning_coordinate
+                    future_indices = np.where(gis_indices == future_k)[0]
+                    if len(future_indices) > 0:
+                        future_speed = np.mean(speed_kmh[future_indices])
+                        interp_speed = np.linspace(last_known_speed, future_speed, j - i + 1)[1:]
+                        mean_speeds.extend(interp_speed)
+                        break
+                    j += 1
+                else:
+                    mean_speeds.append(last_known_speed if last_known_speed is not None else 0)
 
-        for i in range(len(coords_of_interest)):
-            lap_offset = num_coordinates * lap_num
-            k = i + lap_offset
-            j = k
-            while True:
-                indices = np.where(gis_indices == k)[0]
-                try:
-                    begin, end = indices[0], indices[-1] + 1
-                except IndexError:
-                    gis_index_mean_speeds[k - lap_offset] = -1
-                    k += 1
-                    continue
+        max_speed = max(mean_speeds) if mean_speeds else 1
+        norm = mcolors.Normalize(vmin=0, vmax=max_speed)
+        cmap = cm.get_cmap('YlOrRd')
 
-                for index in range(j, k + 1):
-                    gis_index_mean_speeds[index - lap_offset] = np.mean(speed_kmh[begin:end])
-                break
+        # Create map
+        fmap = folium.Map(location=coords_of_interest[0], zoom_start=14)
+        for i in range(len(coords_of_interest) - 1):
+            speed = mean_speeds[i]
+            color = mcolors.to_hex(cmap(norm(speed)))
 
-        return gis_index_mean_speeds, coords_of_interest
+            folium.PolyLine(
+                locations=[coords_of_interest[i], coords_of_interest[i + 1]],
+                color=color,
+                weight=5,
+                tooltip=f"{speed:.1f} km/h",
+                popup=f"Segment speed: {speed:.1f} km/h"
+            ).add_to(fmap)
+
+        # Save and display
+        filepath = os.path.join(self.temp_dir, "optimized_route_map.html")
+        fmap.save(filepath)
+        self.load(QUrl.fromLocalFile(filepath))
 
 
 class SimulationThread(QThread):
     update_signal = pyqtSignal(str)
     plot_data_signal = pyqtSignal(dict)  # Send multiple plots as a dictionary
 
-    def __init__(self, settings, speeds_filename):
+    def __init__(self, settings: SimulationSettings, speeds_filename: Optional[str]):
         super().__init__()
         self.settings = settings
         self.speeds_filename = speeds_filename
@@ -222,7 +214,7 @@ class OptimizationThread(QThread):
     model_signal = pyqtSignal(object)  # Emits optimized simulation model
 
 
-    def __init__(self, settings):
+    def __init__(self, settings: SimulationSettings):
         super().__init__()
         self.settings = settings
 
@@ -248,11 +240,12 @@ class OptimizationThread(QThread):
 
             # Perform optimization with Genetic Optimization
             optimization_settings: OptimizationSettings = OptimizationSettings()
-            # optimization_settings.generation_limit = 2  # For testing purposes
+            optimization_settings.generation_limit = 2  # For testing purposes
 
             genetic_optimization = GeneticOptimization(
                 simulation_model, bounds, settings=optimization_settings, pbar=None,
-                progress_signal=self.progress_signal, update_signal=self.update_signal  # Attach signals
+                progress_signal=self.progress_signal, update_signal=self.update_signal
+                # Attach signals so progress bar gets updated
             )
 
             results_genetic = genetic_optimization.maximize()
@@ -279,11 +272,31 @@ class OptimizationThread(QThread):
 class SimulationApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.initUI()
-        self.optimization_thread = None
+
+        self.tabs: Optional[QTabWidget] = None
+        self.simulation_tab: Optional[QWidget] = None
+        self.optimization_tab: Optional[QWidget] = None
+
+        self.start_button: Optional[QPushButton] = None
+        self.sim_output_text: Optional[QTextEdit] = None
+        self.sim_canvas: Optional[SimulationCanvas] = None
+
+        self.optimize_button: Optional[QPushButton] = None
+        self.output_text: Optional[QTextEdit] = None
+        self.progress_bar: Optional[QProgressBar] = None
+        self.speed_canvas: Optional[FoliumMapWidget] = None
+        self.prev_lap_button: Optional[QPushButton] = None
+        self.next_lap_button: Optional[QPushButton] = None
+
+        self.simulation_thread: Optional[SimulationThread] = None
+        self.optimization_thread: Optional[OptimizationThread] = None
+        self.simulation_settings = SimulationSettings(race_type="FSGP", verbose=True, granularity=1)
 
 
-    def initUI(self):
+        self.init_ui()
+
+
+    def init_ui(self):
         layout = QVBoxLayout()
         self.tabs = QTabWidget()
 
@@ -300,7 +313,7 @@ class SimulationApp(QWidget):
         self.setLayout(layout)
 
         self.setWindowTitle("Simulation MVP")
-        self.resize(1600, 1200)  # Adjusted for better layout
+        self.resize(1200, 600)  # Adjusted for better layout
 
     def init_simulation_tab(self):
         layout = QVBoxLayout()
@@ -337,7 +350,9 @@ class SimulationApp(QWidget):
         layout.addWidget(self.progress_bar)
 
         # Add SpeedCanvas (optimized speeds plot)
-        self.speed_canvas = SpeedCanvas(self)
+        self.speed_canvas = FoliumMapWidget(self)
+        self.speed_canvas.setMinimumHeight(500)
+        self.speed_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         layout.addWidget(self.speed_canvas)
 
         # Add Lap Navigation Buttons
@@ -359,9 +374,8 @@ class SimulationApp(QWidget):
         self.start_button.setEnabled(False)
         self.sim_output_text.clear()
 
-        settings = SimulationSettings(race_type="FSGP", verbose=True, granularity=1)
         speeds_filename = None
-
+        settings = self.simulation_settings
         self.simulation_thread = SimulationThread(settings, speeds_filename)
         self.simulation_thread.update_signal.connect(self.sim_output_text.append)
         self.simulation_thread.plot_data_signal.connect(self.update_sim_plot)  # Connect to update live plot
@@ -381,7 +395,7 @@ class SimulationApp(QWidget):
         self.optimize_button.setEnabled(False)
         self.output_text.clear()
 
-        settings = SimulationSettings(race_type="FSGP", verbose=True, granularity=1)
+        settings = self.simulation_settings
         self.optimization_thread = OptimizationThread(settings)
         self.optimization_thread.update_signal.connect(self.update_output)
         self.optimization_thread.progress_signal.connect(lambda value: self.progress_bar.setValue(value))
@@ -392,9 +406,8 @@ class SimulationApp(QWidget):
     def update_output(self, message):
         self.output_text.append(message)
 
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = SimulationApp()
     window.show()
-    sys.exit(app.exec())
+    sys.exit(app.exec_())
