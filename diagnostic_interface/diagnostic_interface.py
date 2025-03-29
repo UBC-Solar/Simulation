@@ -16,6 +16,8 @@ from data_tools import SunbeamClient, TimeSeries
 import pandas as pd
 import matplotlib
 
+
+"""Check that references to tabs are deleted after tab is closed because I don't want to occupy too much memory."""
 # Dictionary to store help messages for each plot
 HELP_MESSAGES = {
     "VehicleVelocity": "This plot shows velocity over time.\n\n"
@@ -41,7 +43,6 @@ class CustomNavigationToolbar(NavigationToolbar):
         # Load a save icon (matching Matplotlib's style)
         save_icon = QIcon(matplotlib.get_data_path() + "/images/filesave.png")
 
-
         # Add a "Save Data" button to the toolbar for saving data as a csv
         self.save_data_action = self.addAction(save_icon, "Save Data")
         self.save_data_action.setToolTip("Save the plotted data as a CSV file.")
@@ -63,7 +64,6 @@ class CustomNavigationToolbar(NavigationToolbar):
             text = action.text()
             if text in tooltips:
                 action.setToolTip(tooltips[text])
-
 
 class PlotCanvas(FigureCanvas):
     def __init__(self, parent=None):
@@ -169,18 +169,17 @@ class MainWindow(QMainWindow):
         # Create a timer to refresh plots
         self.refresh_timer = QTimer(self)
         self.refresh_timer.timeout.connect(self.refresh_all_tabs)
-        self.refresh_timer.start(5000) # 5 seconds refresh time
+        self.refresh_timer.start(120000) # 2 minutes refresh time
 
     def refresh_all_tabs(self):
         """
-        Refreshes all open plot tabs by requerying data.
+        Refreshes all open plot tabs by requerying data and replotting it.
         """
         for i in range(self.tabs.count()):
             widget = self.tabs.widget(i)  # This is a QWidget (plot_widget)
             plot_canvas = widget.findChild(PlotCanvas)  # Find PlotCanvas inside
 
             if plot_canvas:  # Ensure there's a plot inside
-                print("We're actually updating")
                 plot_canvas.query_and_plot(plot_canvas.current_origin, plot_canvas.current_source,
                                            plot_canvas.current_event, plot_canvas.current_data_name)
 
@@ -390,7 +389,6 @@ class MainWindow(QMainWindow):
         message = HELP_MESSAGES.get(data_name, "No specific help available for this plot.")
 
         QMessageBox.information(self, f"Help: {data_name}", message)
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
