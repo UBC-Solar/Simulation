@@ -19,6 +19,7 @@ class CompetitionType(StrEnum):
     """
     Enum to discretize the different types of competitions that UBC Solar competes in
     """
+
     TrackCompetition = "TrackCompetition"
     RoadCompetition = "RoadCompetition"
 

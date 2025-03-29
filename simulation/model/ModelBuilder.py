@@ -50,6 +50,7 @@ class ModelBuilder:
 
     Once all configuration has been set, `ModelBuilder` can be compiled, and then a `Model` acquired from it with `get`.
     """
+
     def __init__(self, cache: Cache = None):
         """
         Initialize a `Model` builder.
