@@ -8,6 +8,7 @@ class RouteConfig(Config):
     """
     Configuration object specifying a route
     """
+
     model_config = ConfigDict(frozen=True)
 
     coordinates: List[

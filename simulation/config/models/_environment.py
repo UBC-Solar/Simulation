@@ -8,6 +8,7 @@ class EnvironmentConfig(Config):
     We can't actually "specify" the weather we want like we can a route, so we specify how the weather forecasts
     should be queried.
     """
+
     model_config = ConfigDict(frozen=True)
 
     competition_config: (

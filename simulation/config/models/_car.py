@@ -8,6 +8,7 @@ class VehicleConfig(Config):
     specific to a component.
 
     """
+
     model_config = ConfigDict(frozen=True)
 
     vehicle_mass: float  # Vehicle mass in kg
@@ -19,6 +20,7 @@ class ArrayConfig(Config):
     """
     Configuration object describing the solar arrays of a vehicle.
     """
+
     model_config = ConfigDict(frozen=True)
 
     panel_efficiency: float = Field(
@@ -31,6 +33,7 @@ class LVSConfig(Config):
     """
     Configuration object describing the low-voltage systems of a vehicle.
     """
+
     model_config = ConfigDict(frozen=True)
 
     lvs_voltage: float  # Voltage of LVS, assumed to be constant
@@ -43,6 +46,7 @@ class BatteryConfig(Config):
 
     Must be built into subclass as specified by `battery_type`.
     """
+
     model_config = ConfigDict(frozen=True, subclass_field="battery_type")
 
     battery_type: str
@@ -53,6 +57,7 @@ class BatteryModelConfig(BatteryConfig):
     Configuration object describing the battery pack of a vehicle using the first-order Thevenin equivalent
     battery model.
     """
+
     R_0_data: list[float]
     R_P: float
     C_P: float
@@ -67,6 +72,7 @@ class BasicBatteryConfig(BatteryConfig):
     """
     Configuration object describing the battery pack of a vehicle using a datasheet-based battery model.
     """
+
     max_voltage: float  # Maximum voltage of the DayBreak battery pack (V)
     min_voltage: float  # Minimum voltage of the DayBreak battery pack (V)
     max_current_capacity: float  # Nominal capacity of the DayBreak battery pack (Ah)
@@ -79,6 +85,7 @@ class MotorConfig(Config):
     """
     Configuration object describing the motor of a vehicle.
     """
+
     model_config = ConfigDict(frozen=True)
 
     road_friction: float  # Road friction coefficient, dimensionless
@@ -91,6 +98,7 @@ class RegenConfig(Config):
     """
     Configuration object describing the regenerative braking systems of a vehicle.
     """
+
     model_config = ConfigDict(frozen=True)
 
 
@@ -98,6 +106,7 @@ class CarConfig(Config):
     """
     Configuration object completely specifying the aspects of a solar-powered vehicle.
     """
+
     model_config = ConfigDict(frozen=True)
 
     vehicle_config: VehicleConfig

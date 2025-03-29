@@ -6,6 +6,7 @@ class InitialConditions(Config):
     """
     Configuration object describing the initial conditions for a simulation.
     """
+
     model_config = ConfigDict(frozen=True)
 
     current_coord: tuple[float, float]  # Initial Position of the car
