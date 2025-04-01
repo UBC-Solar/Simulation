@@ -111,6 +111,8 @@ class FoliumMapWidget(QWebEngineView):
 
         # Aggregate average speeds for segments
         mean_speeds = []
+        last_known_speed = 0
+
         for i in range(len(coords_of_interest) - 1):
             k = i + beginning_coordinate
             indices = np.where(gis_indices == k)[0]
@@ -268,18 +270,39 @@ class OptimizationThread(QThread):
         characters = string.ascii_letters + string.digits
         return ''.join(random.choice(characters) for _ in range(length))
 
-
-class SimulationApp(QWidget):
-    def __init__(self):
+class SimulationTab(QWidget):
+    def __init__(self, run_callback):
         super().__init__()
-
-        self.tabs: Optional[QTabWidget] = None
-        self.simulation_tab: Optional[QWidget] = None
-        self.optimization_tab: Optional[QWidget] = None
-
+        self.run_callback = run_callback
         self.start_button: Optional[QPushButton] = None
         self.sim_output_text: Optional[QTextEdit] = None
         self.sim_canvas: Optional[SimulationCanvas] = None
+
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+        self.start_button = QPushButton("Run Simulation")
+        self.start_button.clicked.connect(self.run_callback)
+        layout.addWidget(self.start_button)
+
+        self.sim_output_text = QTextEdit()
+        self.sim_output_text.setReadOnly(True)
+        self.sim_output_text.setFixedHeight(100)
+        layout.addWidget(self.sim_output_text)
+
+        self.sim_canvas = SimulationCanvas()
+        layout.addWidget(self.sim_canvas)
+
+        self.setLayout(layout)
+
+
+class OptimizationTab(QWidget):
+    def __init__(self, optimize_callback, lap_callback):
+        super().__init__()
+        self.optimize_callback = optimize_callback
+        self.lap_callback = lap_callback
 
         self.optimize_button: Optional[QPushButton] = None
         self.output_text: Optional[QTextEdit] = None
@@ -288,57 +311,13 @@ class SimulationApp(QWidget):
         self.prev_lap_button: Optional[QPushButton] = None
         self.next_lap_button: Optional[QPushButton] = None
 
-        self.simulation_thread: Optional[SimulationThread] = None
-        self.optimization_thread: Optional[OptimizationThread] = None
-        self.simulation_settings = SimulationSettings(race_type="FSGP", verbose=True, granularity=1)
-
-
         self.init_ui()
-
 
     def init_ui(self):
         layout = QVBoxLayout()
-        self.tabs = QTabWidget()
-
-        self.simulation_tab = QWidget()
-        self.optimization_tab = QWidget()
-
-        self.tabs.addTab(self.simulation_tab, "Run Simulation")
-        self.tabs.addTab(self.optimization_tab, "Optimize Simulation")
-
-        self.init_simulation_tab()
-        self.init_optimization_tab()
-
-        layout.addWidget(self.tabs)
-        self.setLayout(layout)
-
-        self.setWindowTitle("Simulation MVP")
-        self.resize(1200, 600)  # Adjusted for better layout
-
-    def init_simulation_tab(self):
-        layout = QVBoxLayout()
-
-        self.start_button = QPushButton("Run Simulation")
-        self.start_button.clicked.connect(self.run_simulation)
-        layout.addWidget(self.start_button)
-
-        self.sim_output_text = QTextEdit()
-        self.sim_output_text.setReadOnly(True)
-        self.sim_output_text.setFixedHeight(100)  # Set a fixed height
-
-        layout.addWidget(self.sim_output_text)
-
-        # Add the Matplotlib canvas inside the simulation tab
-        self.sim_canvas = SimulationCanvas()
-        layout.addWidget(self.sim_canvas)
-
-        self.simulation_tab.setLayout(layout)
-
-    def init_optimization_tab(self):
-        layout = QVBoxLayout()
 
         self.optimize_button = QPushButton("Optimize Simulation")
-        self.optimize_button.clicked.connect(self.optimize_simulation)
+        self.optimize_button.clicked.connect(self.optimize_callback)
         layout.addWidget(self.optimize_button)
 
         self.output_text = QTextEdit()
@@ -349,58 +328,91 @@ class SimulationApp(QWidget):
         self.progress_bar.setValue(0)
         layout.addWidget(self.progress_bar)
 
-        # Add SpeedCanvas (optimized speeds plot)
         self.speed_canvas = FoliumMapWidget(self)
         self.speed_canvas.setMinimumHeight(500)
         self.speed_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         layout.addWidget(self.speed_canvas)
 
-        # Add Lap Navigation Buttons
         self.prev_lap_button = QPushButton("Previous Lap")
-        self.prev_lap_button.clicked.connect(lambda: self.speed_canvas.update_lap("prev"))
+        self.prev_lap_button.clicked.connect(lambda: self.lap_callback("prev"))
 
         self.next_lap_button = QPushButton("Next Lap")
-        self.next_lap_button.clicked.connect(lambda: self.speed_canvas.update_lap("next"))
+        self.next_lap_button.clicked.connect(lambda: self.lap_callback("next"))
 
         nav_layout = QVBoxLayout()
         nav_layout.addWidget(self.prev_lap_button)
         nav_layout.addWidget(self.next_lap_button)
+        layout.addLayout(nav_layout)
 
-        layout.addLayout(nav_layout)  # Add navigation buttons below plot
+        self.setLayout(layout)
 
-        self.optimization_tab.setLayout(layout)
+class SimulationApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.tabs: Optional[QTabWidget] = None
+
+        self.simulation_tab: Optional[SimulationTab] = None
+        self.optimization_tab: Optional[OptimizationTab] = None
+        self.simulation_settings = SimulationSettings(race_type="FSGP", verbose=True, granularity=1)
+
+        self.simulation_thread: Optional[SimulationThread] = None
+        self.optimization_thread: Optional[OptimizationThread] = None
+
+        self.init_ui()
+
+    def update_lap(self, direction):
+        self.optimization_tab.speed_canvas.update_lap(direction)
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+        self.tabs = QTabWidget()
+
+        self.simulation_tab = SimulationTab(run_callback=self.run_simulation)
+        self.optimization_tab = OptimizationTab(
+            optimize_callback=self.optimize_simulation,
+            lap_callback=self.update_lap
+        )
+
+        self.tabs.addTab(self.simulation_tab, "Run Simulation")
+        self.tabs.addTab(self.optimization_tab, "Optimize Simulation")
+
+        layout.addWidget(self.tabs)
+        self.setLayout(layout)
+        self.setWindowTitle("Simulation MVP")
+        self.resize(1200, 600)
 
     def run_simulation(self):
-        self.start_button.setEnabled(False)
-        self.sim_output_text.clear()
+        self.simulation_tab.start_button.setEnabled(False)
+        self.simulation_tab.sim_output_text.clear()
 
-        speeds_filename = None
-        settings = self.simulation_settings
-        self.simulation_thread = SimulationThread(settings, speeds_filename)
-        self.simulation_thread.update_signal.connect(self.sim_output_text.append)
-        self.simulation_thread.plot_data_signal.connect(self.update_sim_plot)  # Connect to update live plot
-        self.simulation_thread.finished.connect(lambda: self.start_button.setEnabled(True))
+        self.simulation_thread = SimulationThread(self.simulation_settings, None)
+        self.simulation_thread.update_signal.connect(self.simulation_tab.sim_output_text.append)
+        self.simulation_thread.plot_data_signal.connect(self.simulation_tab.sim_canvas.plot_simulation_results)
+        self.simulation_thread.finished.connect(lambda: self.simulation_tab.start_button.setEnabled(True))
+
         if self.optimization_thread is not None:
-            self.optimization_thread.model_signal.connect(self.update_speed_plot)  # Connect speed update
+            self.optimization_thread.model_signal.connect(self.optimization_tab.speed_canvas.plot_optimized_speeds)
+
         self.simulation_thread.start()
 
     def update_sim_plot(self, results_dict):
         """Update the Matplotlib canvas with new simulation data."""
-        self.sim_canvas.plot_simulation_results(results_dict)
+        self.simulation_tab.sim_canvas.plot_simulation_results(results_dict)
     def update_speed_plot(self, model):
         """Update the SpeedCanvas with the optimized model."""
-        self.speed_canvas.plot_optimized_speeds(model)
+        self.optimization_tab.speed_canvas.plot_optimized_speeds(model)
 
     def optimize_simulation(self):
-        self.optimize_button.setEnabled(False)
-        self.output_text.clear()
+        self.optimization_tab.optimize_button.setEnabled(False)
+        self.optimization_tab.output_text.clear()
 
-        settings = self.simulation_settings
-        self.optimization_thread = OptimizationThread(settings)
-        self.optimization_thread.update_signal.connect(self.update_output)
-        self.optimization_thread.progress_signal.connect(lambda value: self.progress_bar.setValue(value))
-        self.optimization_thread.model_signal.connect(self.update_speed_plot)
-        self.optimization_thread.finished.connect(lambda: self.optimize_button.setEnabled(True))
+        self.optimization_thread = OptimizationThread(self.simulation_settings)
+        self.optimization_thread.update_signal.connect(self.optimization_tab.output_text.append)
+        self.optimization_thread.progress_signal.connect(
+            lambda value: self.optimization_tab.progress_bar.setValue(value))
+        self.optimization_thread.model_signal.connect(self.optimization_tab.speed_canvas.plot_optimized_speeds)
+        self.optimization_thread.finished.connect(lambda: self.optimization_tab.optimize_button.setEnabled(True))
+
         self.optimization_thread.start()
 
     def update_output(self, message):
