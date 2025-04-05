@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QPushButton, QLabel,
     QComboBox, QFormLayout, QVBoxLayout, QTabWidget)
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
 from timer_widget import TimedWidget
 
