@@ -6,7 +6,7 @@ from geopy.distance import distance
 
 from geometry import calculate_meter_distance
 from plotting import plot_mesh
-from MicroModelBuilder import MicroModelBuilder
+from micro_model_builder import MicroModelBuilder
 
 from simulation.config import ConfigDirectory
 from simulation.config import (
