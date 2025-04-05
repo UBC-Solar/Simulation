@@ -10,10 +10,11 @@ from timer_widget import TimedWidget
 
 # Interface aesthetic parameters
 WINDOW_TITLE = "Diagnostic Interface"
-X_COORD = 100 # Sets the x-coord where the interface will be created
-Y_COORD = 100 # Sets the y-coord where the interface will be created
-WIDTH = 800 # Sizing of window
-HEIGHT = 600 # Size of window
+X_COORD = 100  # Sets the x-coord where the interface will be created
+Y_COORD = 100  # Sets the y-coord where the interface will be created
+WIDTH = 800  # Sizing of window
+HEIGHT = 600  # Size of window
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -25,7 +26,7 @@ class MainWindow(QMainWindow):
         self.create_home_tab()
 
         # Timer to refresh plots
-        self.timer = TimedWidget(120000, self.refresh_all_tabs) # Timer refreshes after 120 seconds
+        self.timer = TimedWidget(120000, self.refresh_all_tabs)  # Timer refreshes after 120 seconds
 
     def refresh_all_tabs(self):
         """Refreshes all open plot tabs by requerying data and replotting it."""
@@ -125,23 +126,23 @@ class MainWindow(QMainWindow):
             # Get valid events based on origin
             available_events = set(client.distinct("event", []))  # Start with all events
             if selected_origin:
-                available_events &= set(client.distinct("event", {"origin": selected_origin})) # Filter by origin
+                available_events &= set(client.distinct("event", {"origin": selected_origin}))  # Filter by origin
 
             # Get valid sources based on origin and event
             available_sources = set(client.distinct("source", []))  # Start with all
             if selected_origin:
-                available_sources &= set(client.distinct("source", {"origin": selected_origin})) # Filter by origin
+                available_sources &= set(client.distinct("source", {"origin": selected_origin}))  # Filter by origin
             if selected_event:
-                available_sources &= set(client.distinct("source", {"event": selected_event})) # Filter by event
+                available_sources &= set(client.distinct("source", {"event": selected_event}))  # Filter by event
 
             # Get valid data types based on origin, source, and event
-            available_data = set(client.distinct("name", [])) # Start with all data
+            available_data = set(client.distinct("name", []))  # Start with all data
             if selected_origin:
-                available_data &= set(client.distinct("name", {"origin": selected_origin})) # Filter by origin
+                available_data &= set(client.distinct("name", {"origin": selected_origin}))  # Filter by origin
             if selected_event:
-                available_data &= set(client.distinct("name", {"event": selected_event})) # Filter by event
+                available_data &= set(client.distinct("name", {"event": selected_event}))  # Filter by event
             if selected_source:
-                available_data &= set(client.distinct("name", {"source": selected_source})) # Filter by source
+                available_data &= set(client.distinct("name", {"source": selected_source}))  # Filter by source
 
             # Convert back to lists
             available_sources = list(available_sources)
@@ -149,7 +150,7 @@ class MainWindow(QMainWindow):
             available_data = list(available_data)
 
             # Update dropdowns safely
-            self.source_input.blockSignals(True) # Shuts down ability to take input
+            self.source_input.blockSignals(True)  # Shuts down ability to take input
             self.source_input.clear()
             self.source_input.addItems(available_sources)
             # Set the selected source to the first available or keep it if it exists
@@ -157,9 +158,9 @@ class MainWindow(QMainWindow):
                 self.source_input.setCurrentText(selected_source)
             elif available_sources:
                 self.source_input.setCurrentText(available_sources[0])  # Select first available option
-            self.source_input.blockSignals(False) # Can take inputs again
+            self.source_input.blockSignals(False)  # Can take inputs again
 
-            self.event_input.blockSignals(True) # Can't take inputs
+            self.event_input.blockSignals(True)  # Can't take inputs
             self.event_input.clear()
             self.event_input.addItems(available_events)
             # Set the selected event to the first available or keep it if it exists
@@ -167,9 +168,9 @@ class MainWindow(QMainWindow):
                 self.event_input.setCurrentText(selected_event)
             elif available_events:
                 self.event_input.setCurrentText(available_events[0])  # Select first available option
-            self.event_input.blockSignals(False) # Can take inputs again
+            self.event_input.blockSignals(False)  # Can take inputs again
 
-            self.data_input.blockSignals(True) # Can't take inputs
+            self.data_input.blockSignals(True)  # Can't take inputs
             self.data_input.clear()
             self.data_input.addItems(available_data)
             # Set the selected data to the first available or keep it if it exists
@@ -177,7 +178,7 @@ class MainWindow(QMainWindow):
                 self.data_input.setCurrentText(selected_data)
             elif available_data:
                 self.data_input.setCurrentText(available_data[0])  # Select first available option
-            self.data_input.blockSignals(False) # Can take inputs again
+            self.data_input.blockSignals(False)  # Can take inputs again
 
         except Exception as e:
             print(f"Error updating filters: {e}")
@@ -205,6 +206,7 @@ class MainWindow(QMainWindow):
 
         :param QWidget widget: an element of the GUI you can interact with. In this case, it is the plot.
         """
-        index: int = self.tabs.indexOf(widget) # Checks the index of the tab we want to close; if the tab is not in self.tabs, returns -1
-        if index != -1: # Checks that the tab we want to close is in self.tabs. If it isn't (index == -1), do nothing
-            self.tabs.removeTab(index) # If the tab is in self.tabs (index!= -1), we remove it
+        index: int = self.tabs.indexOf(
+            widget)  # Checks the index of the tab we want to close; if the tab is not in self.tabs, returns -1
+        if index != -1:  # Checks that the tab we want to close is in self.tabs. If it isn't (index == -1), do nothing
+            self.tabs.removeTab(index)  # If the tab is in self.tabs (index!= -1), we remove it

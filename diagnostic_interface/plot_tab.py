@@ -11,6 +11,7 @@ HELP_MESSAGES = {
                        "- Data is sourced from the car's telemetry system.\n",
 }
 
+
 class PlotTab(QWidget):
     close_requested = pyqtSignal(QWidget)  # Signal to notify MainWindow to close this tab.
 
@@ -18,9 +19,9 @@ class PlotTab(QWidget):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.plot_canvas = PlotCanvas(self)
-        self.toolbar = CustomNavigationToolbar(canvas = self.plot_canvas)  # Creating toolbar
-        self.layout.addWidget(self.toolbar) # Adding toolbar
-        self.layout.addWidget(self.plot_canvas) # Adding space for plots
+        self.toolbar = CustomNavigationToolbar(canvas=self.plot_canvas)  # Creating toolbar
+        self.layout.addWidget(self.toolbar)  # Adding toolbar
+        self.layout.addWidget(self.plot_canvas)  # Adding space for plots
         self.setLayout(self.layout)
 
         # Help Button that displays more information on the graph
