@@ -16,10 +16,6 @@ from simulation.config import (
     CarConfig,
 )
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-route_data = np.load(os.path.join(BASE_DIR, "route_data_FSGP.npz"))
-
-
 
 def load_configs(competition_name = "FSGP", car_name: str = "BrightSide"):
     config_path = ConfigDirectory / f"initial_conditions_{competition_name}.toml"
@@ -39,14 +35,6 @@ def load_configs(competition_name = "FSGP", car_name: str = "BrightSide"):
         car_config_data = toml.load(f)
         car_config = CarConfig.build_from(car_config_data)
 
-    # hyperparameters = SimulationHyperparametersConfig.build_from(
-    #     {
-    #         "simulation_period": 10,
-    #         "return_type": SimulationReturnType.distance_and_time,
-    #         "speed_dt": 1,
-    #     }
-    # )
-
     return initial_conditions, environment_config, car_config
 
 
@@ -59,7 +47,7 @@ def latlon_to_meters(lat, lon):
 
 def generate_lateral_mesh(trajectory, lateral_distance_meters, lateral_num_points):
     trajectory = np.array(trajectory)
-    mesh = []
+    lateral_mesh = []
 
     for i in range(len(trajectory)):
         lat, lon = trajectory[i]
@@ -102,9 +90,9 @@ def generate_lateral_mesh(trajectory, lateral_distance_meters, lateral_num_point
             lateral_points.insert(0, (left_lat, left_lon))
             lateral_points.append((right_lat, right_lon))
 
-        mesh.append(lateral_points)
+        lateral_mesh.append(lateral_points)
 
-    return mesh
+    return lateral_mesh
 
 
 def get_random_trajectory(mesh):
@@ -168,7 +156,7 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
 
 if __name__ == '__main__':
     trajectory_FSGP = get_FSGP_trajectory()
-    mesh = generate_lateral_mesh(trajectory_FSGP, 1, 3)
+    mesh = generate_lateral_mesh(trajectory_FSGP, 2, 5)
     random_trajectory = get_random_trajectory(mesh)
 
     distances = get_distances(random_trajectory)
