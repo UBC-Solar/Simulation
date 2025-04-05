@@ -2059,20 +2059,6 @@ files = [
 diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
-name = "pyqt5-stubs"
-version = "5.15.6.0"
-description = "PEP561 stub files for the PyQt5 framework"
-optional = false
-python-versions = ">= 3.5"
-files = [
-    {file = "PyQt5-stubs-5.15.6.0.tar.gz", hash = "sha256:91270ac23ebf38a1dc04cd97aa852cd08af82dc839100e5395af1447e3e99707"},
-    {file = "PyQt5_stubs-5.15.6.0-py3-none-any.whl", hash = "sha256:7fb8177c72489a8911f021b7bd7c33f12c87f6dba92dcef3fdcdb5d9400f0f3f"},
-]
-
-[package.extras]
-dev = ["mypy (==0.930)", "pytest", "pytest-xvfb"]
-
-[[package]]
 name = "pytest"
 version = "7.4.4"
 description = "pytest: simple powerful testing with Python"
@@ -2948,4 +2934,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "7e854d96a53fd8a72a5516f661eea62361654cc3d9f8d8243ba9a8fd86eef681"
+content-hash = "cdb4e1645b44e29d9b31a4de15552e2e6644b274b6c293837aa253fd9bb901c8"
