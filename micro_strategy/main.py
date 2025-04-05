@@ -1,11 +1,22 @@
 import random
 import numpy as np
 import os
-
+import tomllib as toml
 from geopy.distance import distance
+
 from data import get_FSGP_trajectory
 from geometry import calculate_meter_distance
 from plotting import plot_mesh
+from MicroModelBuilder import MicroModelBuilder
+
+from simulation.config import SimulationReturnType, ConfigDirectory
+from simulation.config import (
+    InitialConditions,
+    EnvironmentConfig,
+    CarConfig,
+    SimulationHyperparametersConfig,
+)
+from simulation.cache import RoutePath
 
 from physics.models.motor import AdvancedMotor
 from physics.environment import GIS
@@ -14,11 +25,42 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 route_data = np.load(os.path.join(BASE_DIR, "route_data_FSGP.npz"))
 
 
+
+def load_configs(competition_name = "FSGP", car_name: str = "BrightSide"):
+    config_path = ConfigDirectory / f"initial_conditions_{competition_name}.toml"
+    with open(config_path, "rb") as f:
+        initial_conditions_data = toml.load(f)
+        initial_conditions = InitialConditions.build_from(initial_conditions_data)
+
+    #  ----- Load model parameters -----
+    config_path = ConfigDirectory / f"settings_{competition_name}.toml"
+    with open(config_path, "rb") as f:
+        model_parameters_data = toml.load(f)
+        environment_config = EnvironmentConfig.build_from(model_parameters_data)
+
+    #  ----- Load car -----
+    config_path = ConfigDirectory / f"{car_name}.toml"
+    with open(config_path, "rb") as f:
+        car_config_data = toml.load(f)
+        car_config = CarConfig.build_from(car_config_data)
+
+    hyperparameters = SimulationHyperparametersConfig.build_from(
+        {
+            "simulation_period": 10,
+            "return_type": SimulationReturnType.distance_and_time,
+            "speed_dt": 1,
+        }
+    )
+
+    return initial_conditions, environment_config, car_config, hyperparameters
+
+
 def latlon_to_meters(lat, lon):
     """Approximates local meters per degree at given latitude."""
     lat_m = distance((lat, lon), (lat + 0.0001, lon)).meters / 0.0001
     lon_m = distance((lat, lon), (lat, lon + 0.0001)).meters / 0.0001
     return lat_m, lon_m
+
 
 def generate_lateral_mesh(trajectory, lateral_distance_meters, lateral_num_points):
     trajectory = np.array(trajectory)
@@ -77,6 +119,7 @@ def get_random_trajectory(mesh):
         random_trajectory.append(mesh[i][random_index])
     return random_trajectory
 
+
 def get_distances(trajectory):
     distance_array_m = []
     for i in range(1, len(trajectory)):
@@ -88,6 +131,7 @@ def get_distances(trajectory):
 
     distance_array_m.insert(0, 0) # first point has no distance
     return distance_array_m
+
 
 def run_motor_model(speed_kmh, distances_m, trajectory):
     num_elements = len(trajectory)
@@ -103,30 +147,36 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
     for index, d in enumerate(distances):
         tick_arr[index] = d / speed_ms_arr[index]
 
-    # Generating gradient array
-    origin_coord, current_coord = [
-        38.9281815,
-        -95.677021
-    ]
+    initial_conditions, environment_config, car_config, hyperparameters = load_configs()
 
-    gis = GIS(
-        route_data,
-        origin_coord,
-        current_coord
+    micro_builder = (
+        MicroModelBuilder()
+        .set_environment_config(
+            environment_config,
+            rebuild_weather_cache=False,
+            rebuild_route_cache=False,
+            rebuild_competition_cache=False,
+        )
+        .set_hyperparameters(hyperparameters)
+        .set_initial_conditions(initial_conditions)
+        .set_car_config(car_config)
     )
+    micro_builder.compile()
+    advanced_motor, gis = micro_builder.get_advanced_motor()
 
     closest_gis_indices = np.arange(num_elements)
     gradients_arr = gis.get_gradients(closest_gis_indices)
 
+
     # parameters taken from config
-    advanced_motor = AdvancedMotor(
-        vehicle_mass=350,
-        road_friction=0.012,
-        tire_radius=0.2032,
-        vehicle_frontal_area=1.1853,
-        drag_coefficient=0.11609)
-    energy_consumed, cornering_work, gradients_arr, road_friction_array, drag_forces, g_forces = advanced_motor.calculate_energy_in(speed_kmh_arr, gradients_arr, wind_speed_arr, tick_arr, trajectory)
-    return  energy_consumed, cornering_work, road_friction_array, drag_forces, g_forces, tick_arr, speed_kmh_arr, gradients_arr
+    # advanced_motor = AdvancedMotor(
+    #     vehicle_mass=car_config.vehicle_config.vehicle_mass,
+    #     road_friction=car_config.motor_config.road_friction,
+    #     tire_radius=car_config.motor_config.tire_radius,
+    #     vehicle_frontal_area=car_config.motor_config.vehicle_frontal_area,
+    #     drag_coefficient=car_config.motor_config.drag_coefficient)
+    energies, energy_cornering, gradients_arr, road_friction_forces, drag_forces, g_forces = advanced_motor.calculate_energy_in(speed_kmh_arr, gradients_arr, wind_speed_arr, tick_arr, trajectory)
+    return  energies, energy_cornering, road_friction_forces, drag_forces, g_forces, tick_arr, speed_kmh_arr, gradients_arr
 
 
 if __name__ == '__main__':
