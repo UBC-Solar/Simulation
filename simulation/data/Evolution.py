@@ -15,7 +15,14 @@ class Evolution:
     Responsible for storing all the data related to the context, results, and optimization settings of an evolution.
 
     """
-    def __init__(self, optimizer: GeneticOptimization, simulation_model: Simulation, fitness: tuple, results: pd.DataFrame):
+
+    def __init__(
+        self,
+        optimizer: GeneticOptimization,
+        simulation_model: Simulation,
+        fitness: tuple,
+        results: pd.DataFrame,
+    ):
         repo = git.Repo.init(pathlib.Path(os.getcwd()).parent)
         self.optimizer = optimizer
 
@@ -62,4 +69,3 @@ class Evolution:
 
         # TODO:
         # self.fitness_over_generations = optimizer.fitness_over_generations
-
