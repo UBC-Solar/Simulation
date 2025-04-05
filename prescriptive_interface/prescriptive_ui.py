@@ -1,24 +1,25 @@
 import random
 import string
 import sys
-from typing import List, Tuple, Dict, Optional
-
+from typing import Optional
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QProgressBar, QTabWidget, \
-    QLabel, QSizePolicy
+    QSizePolicy
 from PyQt5.QtCore import QThread, pyqtSignal, QSize
-
 from simulation.cmd import run_simulation
 from simulation.cmd.run_simulation import SimulationSettings, build_model
 from simulation.config import speeds_directory
 from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
 from simulation.utils import InputBounds
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-import mplcursors
 import numpy as np
-from collections import OrderedDict
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+import folium
+import matplotlib.colors as mcolors
+import matplotlib.cm as cm
+import os
+import tempfile
+from PyQt5.QtCore import QUrl
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 class SimulationCanvas(FigureCanvas):
@@ -44,7 +45,18 @@ class SimulationCanvas(FigureCanvas):
         self.setLayout(layout)
 
     def plot_simulation_results(self, results_dict):
-        """Updates the plots with multiple simulation data series, ensuring good formatting."""
+        """
+       Plot simulation results across a 3x3 grid of subplots.
+
+       This method takes a dictionary of simulation result data where each key maps to a (timestamps, values) tuple.
+       Each subplot displays a single result over time with appropriate axis labels, titles, and legends.
+
+       :param results_dict: A dictionary mapping result labels to (timestamps, data) tuples.
+                            Example: {"speed_kmh": ([...timestamps...], [...values...]), ...}
+       :type results_dict: dict
+       :returns: None
+       :rtype: None
+       """
         self.fig.clear()  # Clear previous plots
         axes = self.fig.subplots(3, 3)  # Regenerate subplots with better spacing
         y_labels = {
@@ -71,13 +83,6 @@ class SimulationCanvas(FigureCanvas):
 
         self.fig.canvas.draw_idle()
 
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-import folium
-import matplotlib.colors as mcolors
-import matplotlib.cm as cm
-import os
-import tempfile
-from PyQt5.QtCore import QUrl
 
 class FoliumMapWidget(QWebEngineView):
     def __init__(self, parent=None):
@@ -87,10 +92,26 @@ class FoliumMapWidget(QWebEngineView):
         self.temp_dir = tempfile.gettempdir()
 
     def plot_optimized_speeds(self, model):
+        """
+        Store the optimized model and render it on the Folium map widget.
+
+        :param model: The optimized simulation model containing GIS and speed data.
+        :type model: SimulationModel
+        :returns: None
+        :rtype: None
+        """
         self.model = model
         self.update_map()
 
     def update_lap(self, direction):
+        """
+        Change the currently displayed lap and refresh the map visualization.
+
+        :param direction: The direction to move in lap navigation ("next" or "prev").
+        :type direction: str
+        :returns: None
+        :rtype: None
+        """
         if direction == "next":
             self.lap_num += 1
         elif direction == "prev":
@@ -272,6 +293,17 @@ class OptimizationThread(QThread):
 
 class SimulationTab(QWidget):
     def __init__(self, run_callback):
+        """
+        Initialize the SimulationTab widget.
+
+        Sets up internal references and prepares the UI layout for running simulations.
+        A callback function is required to handle the simulation logic when the run button is pressed.
+
+        :param run_callback: Function to be called when the simulation run button is clicked.
+        :type run_callback: Callable
+        :returns: None
+        :rtype: None
+        """
         super().__init__()
         self.run_callback = run_callback
         self.start_button: Optional[QPushButton] = None
@@ -300,6 +332,19 @@ class SimulationTab(QWidget):
 
 class OptimizationTab(QWidget):
     def __init__(self, optimize_callback, lap_callback):
+        """
+        Initialize the OptimizationTab widget.
+
+        Sets up internal UI components for running the simulation optimization and navigating lap segments.
+        Requires two callback functions to be passed in for optimization logic and lap navigation.
+
+        :param optimize_callback: Function to be called when the optimization button is clicked.
+        :type optimize_callback: Callable
+        :param lap_callback: Function to be called when lap navigation buttons are clicked.
+        :type lap_callback: Callable
+        :returns: None
+        :rtype: None
+        """
         super().__init__()
         self.optimize_callback = optimize_callback
         self.lap_callback = lap_callback
@@ -361,6 +406,17 @@ class SimulationApp(QWidget):
         self.init_ui()
 
     def update_lap(self, direction):
+        """
+        Trigger an update of the lap display on the speed map widget.
+
+        This method delegates the lap navigation command to the FoliumMapWidget,
+        which updates the map view based on the given direction.
+
+        :param direction: Either "next" or "prev", indicating the lap to display.
+        :type direction: str
+        :returns: None
+        :rtype: None
+        """
         self.optimization_tab.speed_canvas.update_lap(direction)
 
     def init_ui(self):
@@ -396,10 +452,26 @@ class SimulationApp(QWidget):
         self.simulation_thread.start()
 
     def update_sim_plot(self, results_dict):
-        """Update the Matplotlib canvas with new simulation data."""
+        """
+        This method passes a dictionary of time series results to the SimulationCanvas,
+        which renders them as a grid of plots.
+
+        :param results_dict: Dictionary mapping metric labels to (timestamps, values) tuples.
+        :type results_dict: dict
+        :returns: None
+        :rtype: None
+        """
         self.simulation_tab.sim_canvas.plot_simulation_results(results_dict)
     def update_speed_plot(self, model):
-        """Update the SpeedCanvas with the optimized model."""
+        """
+        This method visualizes the optimized lap speeds on a folium map by passing
+        the model to the FoliumMapWidget.
+
+        :param model: The optimized simulation model containing GIS and speed data.
+        :type model: object
+        :returns: None
+        :rtype: None
+        """
         self.optimization_tab.speed_canvas.plot_optimized_speeds(model)
 
     def optimize_simulation(self):
