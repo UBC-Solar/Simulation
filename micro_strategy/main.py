@@ -44,15 +44,15 @@ def load_configs(competition_name = "FSGP", car_name: str = "BrightSide"):
         car_config_data = toml.load(f)
         car_config = CarConfig.build_from(car_config_data)
 
-    hyperparameters = SimulationHyperparametersConfig.build_from(
-        {
-            "simulation_period": 10,
-            "return_type": SimulationReturnType.distance_and_time,
-            "speed_dt": 1,
-        }
-    )
+    # hyperparameters = SimulationHyperparametersConfig.build_from(
+    #     {
+    #         "simulation_period": 10,
+    #         "return_type": SimulationReturnType.distance_and_time,
+    #         "speed_dt": 1,
+    #     }
+    # )
 
-    return initial_conditions, environment_config, car_config, hyperparameters
+    return initial_conditions, environment_config, car_config
 
 
 def latlon_to_meters(lat, lon):
@@ -147,7 +147,7 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
     for index, d in enumerate(distances):
         tick_arr[index] = d / speed_ms_arr[index]
 
-    initial_conditions, environment_config, car_config, hyperparameters = load_configs()
+    initial_conditions, environment_config, car_config = load_configs()
 
     micro_builder = (
         MicroModelBuilder()
@@ -157,24 +157,15 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
             rebuild_route_cache=False,
             rebuild_competition_cache=False,
         )
-        .set_hyperparameters(hyperparameters)
         .set_initial_conditions(initial_conditions)
         .set_car_config(car_config)
     )
     micro_builder.compile()
-    advanced_motor, gis = micro_builder.get_advanced_motor()
+    advanced_motor, gis = micro_builder.get()
 
     closest_gis_indices = np.arange(num_elements)
     gradients_arr = gis.get_gradients(closest_gis_indices)
 
-
-    # parameters taken from config
-    # advanced_motor = AdvancedMotor(
-    #     vehicle_mass=car_config.vehicle_config.vehicle_mass,
-    #     road_friction=car_config.motor_config.road_friction,
-    #     tire_radius=car_config.motor_config.tire_radius,
-    #     vehicle_frontal_area=car_config.motor_config.vehicle_frontal_area,
-    #     drag_coefficient=car_config.motor_config.drag_coefficient)
     energies, energy_cornering, gradients_arr, road_friction_forces, drag_forces, g_forces = advanced_motor.calculate_energy_in(speed_kmh_arr, gradients_arr, wind_speed_arr, tick_arr, trajectory)
     return  energies, energy_cornering, road_friction_forces, drag_forces, g_forces, tick_arr, speed_kmh_arr, gradients_arr
 

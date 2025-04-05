@@ -83,11 +83,6 @@ class MicroModelBuilder:
         self.initial_battery_charge: Optional[float] = None
         self.start_time: Optional[int] = None
 
-        # Hyperparameters
-        self.simulation_period: Optional[int] = None
-        self.return_type: Optional[SimulationReturnType] = None
-        self.vehicle_speed_period: Optional[int] = None
-
         # Flags
         self._rebuild_route_cache: bool = False
         self._rebuild_weather_cache: bool = False
@@ -95,11 +90,6 @@ class MicroModelBuilder:
 
     def set_initial_conditions(self, initial_conditions: InitialConditions):
         self._initial_conditions = initial_conditions
-
-        return self
-
-    def set_hyperparameters(self, hyperparameters: SimulationHyperparametersConfig):
-        self._hyperparameter_config = hyperparameters
 
         return self
 
@@ -152,11 +142,6 @@ class MicroModelBuilder:
             print(f"Compiling {race.race_type} race")
 
         self.race_data = race
-
-    def _set_hyperparameters(self):
-        self.vehicle_speed_period = self._hyperparameter_config.speed_dt
-        self.simulation_period = self._hyperparameter_config.simulation_period
-        self.return_type = self._hyperparameter_config.return_type
 
     def _set_car(self):
         pass
@@ -282,12 +267,6 @@ class MicroModelBuilder:
             )
         self._set_initial_conditions()
 
-        if self._hyperparameter_config is None:
-            raise RuntimeError(
-                "You are trying to compile before setting hyperparameters! Please"
-                "use `set_hyperparameters` first!"
-            )
-        self._set_hyperparameters()
 
         if self._car_config is None:
             raise RuntimeError(
@@ -352,7 +331,7 @@ class MicroModelBuilder:
 
         return self
 
-    def get(self) -> Model:
+    def get(self):
         """
         Returns a Simulation object if race data matches the model parameters' hash.
         Compares the hash of race data with model parameters. Raises RaceDataNotMatching if they differ.
@@ -368,23 +347,4 @@ class MicroModelBuilder:
                 "Model has not been compiled! Please use `compile` before trying to get an instance."
             )
 
-        return Model(
-            return_type=self.return_type,
-            race=self.race_data,
-            speed_dt=self.vehicle_speed_period,
-            simulation_dt=self.simulation_period,
-            speed_limits=self.route_data.speed_limits,
-            array=self.array,
-            battery=self.battery,
-            motor=self.motor,
-            lvs=self.lvs,
-            regen=self.regen,
-            gis=self.gis,
-            meteorology=self.meteorology,
-            max_acceleration=self.max_acceleration,
-            max_deceleration=self.max_deceleration,
-            start_time=self.start_time,
-        )
-
-    def get_advanced_motor(self):
         return self.advanced_motor, self.gis
