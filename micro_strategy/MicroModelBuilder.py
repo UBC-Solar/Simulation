@@ -6,19 +6,14 @@ from numpy.typing import NDArray
 from dotenv import load_dotenv
 from simulation.race import Race, Route
 from haversine import haversine, Unit
-from simulation.model.Model import Model
-from simulation.cache import SimulationCache, Cache, RoutePath, RacePath, WeatherPath
-from simulation.config import CarConfig, WeatherProvider, SimulationReturnType
+from simulation.cache import SimulationCache, Cache, RoutePath, RacePath
+from simulation.config import CarConfig, WeatherProvider
 from simulation.query import (
-    OpenweatherQuery,
-    SolcastQuery,
     TrackRouteQuery,
     RoadRouteQuery,
 )
 from simulation.config import (
     SimulationHyperparametersConfig,
-    OpenweatherConfig,
-    SolcastConfig,
     EnvironmentConfig,
     InitialConditions,
     CompetitionType,
