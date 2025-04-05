@@ -1,9 +1,9 @@
 import random
 import numpy as np
-import os
 import tomllib as toml
 from geopy.distance import distance
 
+from data import get_FSGP_trajectory
 from geometry import calculate_meter_distance
 from plotting import plot_mesh
 from micro_model_builder import MicroModelBuilder
