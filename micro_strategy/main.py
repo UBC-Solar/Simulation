@@ -9,17 +9,12 @@ from geometry import calculate_meter_distance
 from plotting import plot_mesh
 from MicroModelBuilder import MicroModelBuilder
 
-from simulation.config import SimulationReturnType, ConfigDirectory
+from simulation.config import ConfigDirectory
 from simulation.config import (
     InitialConditions,
     EnvironmentConfig,
     CarConfig,
-    SimulationHyperparametersConfig,
 )
-from simulation.cache import RoutePath
-
-from physics.models.motor import AdvancedMotor
-from physics.environment import GIS
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 route_data = np.load(os.path.join(BASE_DIR, "route_data_FSGP.npz"))
@@ -139,9 +134,10 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
         print("All arrays must have the same length.")
         return
 
-    # no wind
-    wind_speed_arr = np.zeros(num_elements)
     tick_arr = np.zeros(num_elements)
+    wind_speed_arr = np.zeros(num_elements)     # no wind
+
+    # initialize speed array and calculate tick based on speed and distance
     speed_kmh_arr = np.full(num_elements, speed_kmh)
     speed_ms_arr = speed_kmh_arr / 3.6
     for index, d in enumerate(distances):
