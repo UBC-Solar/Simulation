@@ -69,3 +69,4 @@ pandas = "^2.2.2"
 bokeh = "^3.5.1"
 ubc-solar-physics = {git = "https://github.com/UBC-Solar/physics.git", branch = "changed_dill"}
 ubc-solar-data-tools = "^1.5.0"
+pyqt5-stubs = "^5.15.6.0"

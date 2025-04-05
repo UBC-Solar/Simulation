@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QMessageBox, QFileDialog
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from data_tools import SunbeamClient, TimeSeries
 
+
 class PlotCanvas(FigureCanvas):
     def __init__(self, parent=None):
         self.fig, self.ax = plt.subplots()
@@ -69,11 +70,13 @@ class PlotCanvas(FigureCanvas):
 
         options = QFileDialog.Options()
         file_name, _ = QFileDialog.getSaveFileName(
-            None, "Save Data", f"{self.current_data_name}_{self.current_event}_{self.current_origin}_{self.current_source}.csv",
+            None, "Save Data",
+            f"{self.current_data_name}_{self.current_event}_{self.current_origin}_{self.current_source}.csv",
             "CSV Files (*.csv);;All Files (*)", options=options
         )
 
         if file_name:
-            df = pd.DataFrame({'Time (s)': range(len(self.current_data)), f"{self.current_data_name}": self.current_data})
+            df = pd.DataFrame(
+                {'Time (s)': range(len(self.current_data)), f"{self.current_data_name}": self.current_data})
             df.to_csv(file_name, index=False)
             print(f"Data saved to {file_name}")

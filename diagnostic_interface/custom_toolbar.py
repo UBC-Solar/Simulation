@@ -2,6 +2,7 @@ from PyQt5.QtGui import QIcon
 import matplotlib
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
+
 class CustomNavigationToolbar(NavigationToolbar):
     """Custom toolbar with tooltips for each button."""
 
