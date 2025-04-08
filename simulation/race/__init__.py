@@ -32,5 +32,5 @@ __all__ = [
     "get_map_data_indices",
     "normalize",
     "denormalize",
-    "rescale"
+    "rescale",
 ]

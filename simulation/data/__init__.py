@@ -7,10 +7,4 @@ import pathlib
 
 data_directory = pathlib.Path(__file__).parent.resolve()
 
-__all__ = [
-    "Connect",
-    "Evolution",
-    "Downloader",
-    "Assembler",
-    "Uploader"
-]
+__all__ = ["Connect", "Evolution", "Downloader", "Assembler", "Uploader"]

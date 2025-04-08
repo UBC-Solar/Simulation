@@ -59,5 +59,5 @@ __all__ = [
     "SolcastConfig",
     "WeatherProvider",
     "WeatherQuery",
-    "InitialConditions"
+    "InitialConditions",
 ]

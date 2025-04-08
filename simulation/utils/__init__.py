@@ -6,10 +6,4 @@ from .Plotting import Plotting, GraphPage
 
 from .KML import KMLParser
 
-__all__ = [
-    "KMLParser",
-    "Plotting",
-    "GraphPage",
-    "InputBounds",
-    "hash_dict"
-]
+__all__ = ["KMLParser", "Plotting", "GraphPage", "InputBounds", "hash_dict"]
