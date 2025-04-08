@@ -7,6 +7,9 @@ class CustomNavigationToolbar(NavigationToolbar):
     """Custom toolbar with tooltips for each button."""
 
     def __init__(self, canvas, parent=None):
+        """
+        :param PlotCanvas canvas: the canvas on which we will include our toolbar.
+        """
         super().__init__(canvas, parent)
 
         # Load a save icon (matching Matplotlib's style)
@@ -25,7 +28,7 @@ class CustomNavigationToolbar(NavigationToolbar):
             "Forward": "Move forward in the view history.",
             "Pan": "Click and drag to move the plot.",
             "Zoom": "Select a region to zoom in.",
-            "Save": "Save the current plot as an image file."
+            "Save": "Save the current plot as an image file.",
         }
 
         # Loop through toolbar buttons and set tooltips

@@ -6,6 +6,8 @@ from data_tools import SunbeamClient, TimeSeries
 
 
 class PlotCanvas(FigureCanvas):
+    """A PlotCanvas is the space on which we insert our toolbar
+    and our plots."""
     def __init__(self, parent=None):
         self.fig, self.ax = plt.subplots()
         super().__init__(self.fig)
@@ -38,7 +40,9 @@ class PlotCanvas(FigureCanvas):
             self.ax.set_title(f"{data_name} - {event}")
             self.draw()
         except Exception as e:
-            QMessageBox.critical(None, "Plotting Error", f"Error fetching or plotting data:\n{str(e)}")
+            QMessageBox.critical(
+                None, "Plotting Error", f"Error fetching or plotting data:\n{str(e)}"
+            )
 
     def query_data(self, origin, source, event, data_name):
         """
@@ -54,11 +58,16 @@ class PlotCanvas(FigureCanvas):
         client = SunbeamClient()
         file = client.get_file(origin, event, source, data_name)
         result = file.unwrap()
-        return result.values if hasattr(result, 'values') else result.data
+        return result.values if hasattr(result, "values") else result.data
 
     def refresh_plot(self):
         """Updates current plot by rerunning query_and_plot."""
-        self.query_and_plot(self.current_origin, self.current_source, self.current_event, self.current_data_name)
+        self.query_and_plot(
+            self.current_origin,
+            self.current_source,
+            self.current_event,
+            self.current_data_name,
+        )
 
     def save_data_to_csv(self):
         """
@@ -70,13 +79,19 @@ class PlotCanvas(FigureCanvas):
 
         options = QFileDialog.Options()
         file_name, _ = QFileDialog.getSaveFileName(
-            None, "Save Data",
+            None,
+            "Save Data",
             f"{self.current_data_name}_{self.current_event}_{self.current_origin}_{self.current_source}.csv",
-            "CSV Files (*.csv);;All Files (*)", options=options
+            "CSV Files (*.csv);;All Files (*)",
+            options=options,
         )
 
         if file_name:
             df = pd.DataFrame(
-                {'Time (s)': range(len(self.current_data)), f"{self.current_data_name}": self.current_data})
+                {
+                    "Time (s)": range(len(self.current_data)),
+                    f"{self.current_data_name}": self.current_data,
+                }
+            )
             df.to_csv(file_name, index=False)
             print(f"Data saved to {file_name}")

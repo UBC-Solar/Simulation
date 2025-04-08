@@ -1,12 +1,18 @@
-from plot_tab import PlotTab
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, QPushButton, QLabel,
-    QComboBox, QFormLayout, QVBoxLayout, QTabWidget)
+    QMainWindow,
+    QWidget,
+    QPushButton,
+    QLabel,
+    QComboBox,
+    QFormLayout,
+    QVBoxLayout,
+    QTabWidget,
+)
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
-from timer_widget import TimedWidget
+from diagnostic_interface import TimedWidget, SettingsDialog, PlotTab
 
 # Interface aesthetic parameters
 WINDOW_TITLE = "Diagnostic Interface"
@@ -26,7 +32,9 @@ class MainWindow(QMainWindow):
         self.create_home_tab()
 
         # Timer to refresh plots
-        self.timer = TimedWidget(120000, self.refresh_all_tabs)  # Timer refreshes after 120 seconds
+        self.timer = TimedWidget(
+            120000, self.refresh_all_tabs
+        )  # Timer refreshes after 120 seconds
 
     def refresh_all_tabs(self):
         """Refreshes all open plot tabs by requerying data and replotting it."""
@@ -43,14 +51,16 @@ class MainWindow(QMainWindow):
         """
         home_widget = QWidget()
         layout = QVBoxLayout()
-        client = SunbeamClient()
+        self.client = SunbeamClient()
 
         # Aesthetic changes
         home_widget.setStyleSheet("background-color: #4bb4de;")
 
         # Load and add the team logo
         logo_label = QLabel()
-        logo_label.setPixmap(QPixmap("Solar_Logo.png").scaled(800, 600, Qt.KeepAspectRatio))
+        logo_label.setPixmap(
+            QPixmap("Solar_Logo.png").scaled(800, 600, Qt.KeepAspectRatio)
+        )
         logo_label.setAlignment(Qt.AlignCenter)  # Center the image
         layout.addWidget(logo_label)
 
@@ -67,20 +77,25 @@ class MainWindow(QMainWindow):
         self.data_input = QComboBox()
 
         # Load initial data
-        self.origins = client.distinct("origin", [])
+        self.origins = self.client.distinct("origin", [])
         self.origin_input.addItems(self.origins)
 
-        self.events = client.distinct("event", [])
+        self.events = self.client.distinct("event", [])
         self.event_input.addItems(self.events)
 
-        self.sources = client.distinct("source", [])
+        self.sources = self.client.distinct("source", [])
         self.source_input.addItems(self.sources)
 
-        self.data_types = client.distinct("name", [])
+        self.data_types = self.client.distinct("name", [])
         self.data_input.addItems(self.data_types)
 
         # Style of the drowpdown menus
-        for combo in [self.origin_input, self.source_input, self.event_input, self.data_input]:
+        for combo in [
+            self.origin_input,
+            self.source_input,
+            self.event_input,
+            self.data_input,
+        ]:
             combo.setStyleSheet("background-color: white")
 
         # Add to form layout
@@ -96,6 +111,12 @@ class MainWindow(QMainWindow):
         submit_button.clicked.connect(self.create_plot_tab)
         submit_button.setStyleSheet("background-color: white")
         layout.addWidget(submit_button)
+
+        #Settings button
+        settings_button = QPushButton("Settings")
+        settings_button.clicked.connect(self.edit_settings)
+        settings_button.setStyleSheet("background-color: white")
+        layout.addWidget(settings_button)
 
         home_widget.setLayout(layout)
         self.tabs.addTab(home_widget, "Home")
@@ -115,7 +136,7 @@ class MainWindow(QMainWindow):
         :raises Exception: if there is an error while updating the dropdown options.
         """
         try:
-            client = SunbeamClient()
+            self.client = SunbeamClient()
 
             # Initial text
             selected_origin = self.origin_input.currentText()
@@ -124,25 +145,39 @@ class MainWindow(QMainWindow):
             selected_data = self.data_input.currentText()
 
             # Get valid events based on origin
-            available_events = set(client.distinct("event", []))  # Start with all events
+            available_events = set(
+                self.client.distinct("event", [])
+            )  # Start with all events
             if selected_origin:
-                available_events &= set(client.distinct("event", {"origin": selected_origin}))  # Filter by origin
+                available_events &= set(
+                    self.client.distinct("event", {"origin": selected_origin})
+                )  # Filter by origin
 
             # Get valid sources based on origin and event
-            available_sources = set(client.distinct("source", []))  # Start with all
+            available_sources = set(self.client.distinct("source", []))  # Start with all
             if selected_origin:
-                available_sources &= set(client.distinct("source", {"origin": selected_origin}))  # Filter by origin
+                available_sources &= set(
+                    self.client.distinct("source", {"origin": selected_origin})
+                )  # Filter by origin
             if selected_event:
-                available_sources &= set(client.distinct("source", {"event": selected_event}))  # Filter by event
+                available_sources &= set(
+                    self.client.distinct("source", {"event": selected_event})
+                )  # Filter by event
 
             # Get valid data types based on origin, source, and event
-            available_data = set(client.distinct("name", []))  # Start with all data
+            available_data = set(self.client.distinct("name", []))  # Start with all data
             if selected_origin:
-                available_data &= set(client.distinct("name", {"origin": selected_origin}))  # Filter by origin
+                available_data &= set(
+                    self.client.distinct("name", {"origin": selected_origin})
+                )  # Filter by origin
             if selected_event:
-                available_data &= set(client.distinct("name", {"event": selected_event}))  # Filter by event
+                available_data &= set(
+                    self.client.distinct("name", {"event": selected_event})
+                )  # Filter by event
             if selected_source:
-                available_data &= set(client.distinct("name", {"source": selected_source}))  # Filter by source
+                available_data &= set(
+                    self.client.distinct("name", {"source": selected_source})
+                )  # Filter by source
 
             # Convert back to lists
             available_sources = list(available_sources)
@@ -157,7 +192,9 @@ class MainWindow(QMainWindow):
             if selected_source in available_sources:
                 self.source_input.setCurrentText(selected_source)
             elif available_sources:
-                self.source_input.setCurrentText(available_sources[0])  # Select first available option
+                self.source_input.setCurrentText(
+                    available_sources[0]
+                )  # Select first available option
             self.source_input.blockSignals(False)  # Can take inputs again
 
             self.event_input.blockSignals(True)  # Can't take inputs
@@ -167,7 +204,9 @@ class MainWindow(QMainWindow):
             if selected_event in available_events:
                 self.event_input.setCurrentText(selected_event)
             elif available_events:
-                self.event_input.setCurrentText(available_events[0])  # Select first available option
+                self.event_input.setCurrentText(
+                    available_events[0]
+                )  # Select first available option
             self.event_input.blockSignals(False)  # Can take inputs again
 
             self.data_input.blockSignals(True)  # Can't take inputs
@@ -177,7 +216,9 @@ class MainWindow(QMainWindow):
             if selected_data in available_data:
                 self.data_input.setCurrentText(selected_data)
             elif available_data:
-                self.data_input.setCurrentText(available_data[0])  # Select first available option
+                self.data_input.setCurrentText(
+                    available_data[0]
+                )  # Select first available option
             self.data_input.blockSignals(False)  # Can take inputs again
 
         except Exception as e:
@@ -207,6 +248,36 @@ class MainWindow(QMainWindow):
         :param QWidget widget: an element of the GUI you can interact with. In this case, it is the plot.
         """
         index: int = self.tabs.indexOf(
-            widget)  # Checks the index of the tab we want to close; if the tab is not in self.tabs, returns -1
-        if index != -1:  # Checks that the tab we want to close is in self.tabs. If it isn't (index == -1), do nothing
-            self.tabs.removeTab(index)  # If the tab is in self.tabs (index!= -1), we remove it
+            widget
+        )  # Checks the index of the tab we want to close; if the tab is not in self.tabs, returns -1
+        if (
+            index != -1
+        ):  # Checks that the tab we want to close is in self.tabs. If it isn't (index == -1), do nothing
+            self.tabs.removeTab(
+                index
+            )  # If the tab is in self.tabs (index!= -1), we remove it
+
+
+    def edit_settings(self):
+        """Opens a dialog to change the settings of the interface. We can change
+        the interval between the data is refreshed, as well as the url from the client
+        where we query from."""
+        current_interval = self.timer.interval
+        current_client_address = self.client.__class__.__name__
+
+        dialog = SettingsDialog(current_interval, current_client_address, self)
+        if dialog.exec_():  # if user pressed OK
+            new_interval, new_client_name = dialog.get_settings()
+            self.timer.interval = new_interval * 1000  # convert back to ms
+
+            # Change client
+            if new_client_name != current_client_address:
+                if new_client_name == "SunbeamClient":
+                    self.client = SunbeamClient()
+                elif new_client_name == "OtherClient":
+                    print("Other client selected.")
+                    #from data_tools import OtherClient
+                    #self.client = OtherClient()
+
+            # Reload filters with new client
+            self.update_filters()
