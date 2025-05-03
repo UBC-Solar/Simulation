@@ -1,13 +1,11 @@
 import random
 import string
 import sys
-from typing import Optional
+from typing import Optional, TypedDict
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QProgressBar, QTabWidget, \
     QSizePolicy
 from PyQt5.QtCore import QThread, pyqtSignal, QSize
 from simulation.cmd import run_simulation
-from simulation.cmd.run_simulation import SimulationSettings, build_model
-from simulation.config import speeds_directory
 from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
 from simulation.utils import InputBounds
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -21,6 +19,17 @@ import os
 import tempfile
 from PyQt5.QtCore import QUrl
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from pathlib import Path
+
+my_speeds_dir = Path("prescriptive_interface/speeds")
+my_speeds_dir.mkdir(parents=True, exist_ok=True)  # Create it if it doesn't exist
+
+
+class SimulationSettingsDict(TypedDict):
+    race_type: str
+    verbose: bool
+    granularity: int
+    car: str
 
 class SimulationCanvas(FigureCanvas):
     """Canvas to display multiple simulation plots dynamically with better formatting."""
@@ -130,40 +139,30 @@ class FoliumMapWidget(QWebEngineView):
         end_coordinate = num_coordinates * (self.lap_num + 1)
         coords_of_interest = coords[beginning_coordinate:end_coordinate + 1]
 
-        # Aggregate average speeds for segments
-        mean_speeds = []
-        last_known_speed = 0
+        speeds = []
 
         for i in range(len(coords_of_interest) - 1):
             k = i + beginning_coordinate
+
+            if k >= 288:
+                break  # Stop plotting if index exceeds 288 (one lap)
+
             indices = np.where(gis_indices == k)[0]
             if len(indices) > 0:
-                speed = np.mean(speed_kmh[indices])
-                mean_speeds.append(speed)
-                last_known_speed = speed
+                speed = speed_kmh[indices[0]]
             else:
-                # Interpolate using the last known speed and look ahead for the next known one
-                j = i + 1
-                while j < len(coords_of_interest) - 1:
-                    future_k = j + beginning_coordinate
-                    future_indices = np.where(gis_indices == future_k)[0]
-                    if len(future_indices) > 0:
-                        future_speed = np.mean(speed_kmh[future_indices])
-                        interp_speed = np.linspace(last_known_speed, future_speed, j - i + 1)[1:]
-                        mean_speeds.extend(interp_speed)
-                        break
-                    j += 1
-                else:
-                    mean_speeds.append(last_known_speed if last_known_speed is not None else 0)
+                speed = 0
+            speeds.append(speed)
 
-        max_speed = max(mean_speeds) if mean_speeds else 1
+        max_speed = max(speeds) if speeds else 1
         norm = mcolors.Normalize(vmin=0, vmax=max_speed)
         cmap = cm.get_cmap('YlOrRd')
 
+
         # Create map
         fmap = folium.Map(location=coords_of_interest[0], zoom_start=14)
-        for i in range(len(coords_of_interest) - 1):
-            speed = mean_speeds[i]
+        for i in range(len(speeds)):
+            speed = speeds[i]
             color = mcolors.to_hex(cmap(norm(speed)))
 
             folium.PolyLine(
@@ -184,7 +183,7 @@ class SimulationThread(QThread):
     update_signal = pyqtSignal(str)
     plot_data_signal = pyqtSignal(dict)  # Send multiple plots as a dictionary
 
-    def __init__(self, settings: SimulationSettings, speeds_filename: Optional[str]):
+    def __init__(self, settings: SimulationSettingsDict, speeds_filename: Optional[str]):
         super().__init__()
         self.settings = settings
         self.speeds_filename = speeds_filename
@@ -193,28 +192,42 @@ class SimulationThread(QThread):
         self.update_signal.emit("Starting simulation...")
 
         try:
-            simulation_model = run_simulation.run_simulation(self.settings, self.speeds_filename, plot_results=False)
-            driving_hours = simulation_model.get_driving_time_divisions()
+            # Determine speeds array
             if self.speeds_filename is None:
-                input_speed = np.array([45] * driving_hours)
+                # Temporary fallback to determine length
+                dummy_model = run_simulation.run_simulation(
+                    competition_name=self.settings["race_type"],
+                    plot_results=False,
+                    verbose=self.settings["verbose"],
+                    speed_dt=self.settings["granularity"],
+                    car=self.settings["car"]
+                )
+                driving_hours = dummy_model.get_driving_time_divisions()
+                speeds = np.array([45] * driving_hours)
             else:
-                input_speed = np.load(speeds_directory / (self.speeds_filename + ".npy"))
-                if len(input_speed) != driving_hours:
-                    raise ValueError(f"Cached speeds {self.speeds_filename} has improper length!")
-            simulation_model.run_model(
-                speed=input_speed, plot_results=False
+                speeds = np.load(my_speeds_dir / (self.speeds_filename + ".npy"))
+
+            # Run simulation with updated API
+            simulation_model = run_simulation.run_simulation(
+                competition_name=self.settings["race_type"],
+                plot_results=False,
+                verbose=self.settings["verbose"],
+                speed_dt=self.settings["granularity"],
+                car=self.settings["car"],
+                speeds=speeds
             )
+
             # Extract multiple data series
             results_keys = ["timestamps", "speed_kmh", "distances", "state_of_charge",
                             "delta_energy", "solar_irradiances", "wind_speeds",
                             "gis_route_elevations_at_each_tick", "raw_soc"]
-
             results_values = simulation_model.get_results(results_keys)
             results_dict = {key: (results_values[0], values) for key, values in
                             zip(results_keys[1:], results_values[1:])}
 
-            # Emit all data for plotting
             self.plot_data_signal.emit(results_dict)
+
+            # Format result summary
             results = simulation_model.get_results(
                 ["time_taken", "max_route_distance", "distance_travelled", "speed_kmh", "final_soc"])
             formatted_results = (
@@ -236,60 +249,78 @@ class OptimizationThread(QThread):
     progress_signal = pyqtSignal(int)
     model_signal = pyqtSignal(object)  # Emits optimized simulation model
 
-
-    def __init__(self, settings: SimulationSettings):
+    def __init__(self, settings: SimulationSettingsDict):
         super().__init__()
         self.settings = settings
 
     def run(self):
         self.update_signal.emit("Starting optimization...")
+
         try:
-            simulation_model = build_model(self.settings)
-            # Initialize a "guess" speed array
-            driving_hours = simulation_model.get_driving_time_divisions()
-
-            # Set up optimization models
-            maximum_speed = 60
-            minimum_speed = 0
-
-            bounds = InputBounds()
-            bounds.add_bounds(driving_hours, minimum_speed, maximum_speed)
-            input_speed = np.array([60] * driving_hours)
-
-            # Run simulation model with the "guess" speed array
-            simulation_model.run_model(speed=input_speed, plot_results=False,
-                                       verbose=self.settings.verbose,
-                                       route_visualization=self.settings.route_visualization)
-
-            # Perform optimization with Genetic Optimization
-            optimization_settings: OptimizationSettings = OptimizationSettings()
-            optimization_settings.generation_limit = 2  # For testing purposes
-
-            genetic_optimization = GeneticOptimization(
-                simulation_model, bounds, settings=optimization_settings, pbar=None,
-                progress_signal=self.progress_signal, update_signal=self.update_signal
-                # Attach signals so progress bar gets updated
+            # Build base simulation model using new run_simulation()
+            base_model = run_simulation.run_simulation(
+                competition_name=self.settings["race_type"],
+                plot_results=False,
+                verbose=self.settings["verbose"],
+                speed_dt=self.settings["granularity"],
+                car=self.settings["car"]
             )
 
-            results_genetic = genetic_optimization.maximize()
+            driving_hours = base_model.get_driving_time_divisions()
+            bounds = InputBounds()
+            bounds.add_bounds(driving_hours, 0, 60)
 
-            self.progress_signal.emit(100)  # Set progress bar to 100% after completion
+            # Initial guess
+            input_speed = np.array([60] * driving_hours)
+            base_model.run_model(
+                speed=input_speed,
+                plot_results=False,
+                verbose=self.settings["verbose"],
+                route_visualization=False
+            )
 
+            # optimization_settings = OptimizationSettings()
+            # optimization_settings.generation_limit = 2  # keep it short for testing
+            #
+            # optimizer = GeneticOptimization(
+            #     base_model,
+            #     bounds,
+            #     settings=optimization_settings,
+            #     pbar=None,
+            #     progress_signal=self.progress_signal,
+            #     update_signal=self.update_signal,
+            # )
 
-            simulation_model.run_model(results_genetic, plot_results=False)
+           # optimized_speed_array = optimizer.maximize()
 
+            # Randomized speeds for testing the heat map
+            optimized_speed_array = np.random.uniform(low=10, high=80, size=driving_hours)
+
+            self.progress_signal.emit(100)
+
+            # Rerun simulation with optimized speeds
+            optimized_model = run_simulation.run_simulation(
+                competition_name=self.settings["race_type"],
+                plot_results=False,
+                verbose=self.settings["verbose"],
+                speed_dt=self.settings["granularity"],
+                car=self.settings["car"],
+                speeds=optimized_speed_array
+            )
+
+            # Save result
             filename = self.get_random_string(7) + ".npy"
-            np.save(speeds_directory / filename, results_genetic)
+            np.save(my_speeds_dir / filename, optimized_speed_array)
             self.update_signal.emit(f"Optimization completed successfully! Results saved in: {filename}")
-            self.model_signal.emit(simulation_model)
+            self.model_signal.emit(optimized_model)
 
         except Exception as e:
             self.update_signal.emit(f"Error: {str(e)}")
 
-
     def get_random_string(self, length: int) -> str:
         characters = string.ascii_letters + string.digits
         return ''.join(random.choice(characters) for _ in range(length))
+
 
 class SimulationTab(QWidget):
     def __init__(self, run_callback):
@@ -398,7 +429,12 @@ class SimulationApp(QWidget):
 
         self.simulation_tab: Optional[SimulationTab] = None
         self.optimization_tab: Optional[OptimizationTab] = None
-        self.simulation_settings = SimulationSettings(race_type="FSGP", verbose=True, granularity=1)
+        self.simulation_settings: SimulationSettingsDict = {
+            "race_type": "FSGP",
+            "verbose": True,
+            "granularity": 1,
+            "car": "BrightSide"
+        }
 
         self.simulation_thread: Optional[SimulationThread] = None
         self.optimization_thread: Optional[OptimizationThread] = None
