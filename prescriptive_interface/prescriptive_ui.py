@@ -6,7 +6,6 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTe
     QSizePolicy
 from PyQt5.QtCore import QThread, pyqtSignal, QSize
 from simulation.cmd import run_simulation
-from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
 from simulation.utils import InputBounds
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
@@ -30,6 +29,7 @@ class SimulationSettingsDict(TypedDict):
     verbose: bool
     granularity: int
     car: str
+
 
 class SimulationCanvas(FigureCanvas):
     """Canvas to display multiple simulation plots dynamically with better formatting."""
@@ -157,7 +157,6 @@ class FoliumMapWidget(QWebEngineView):
         max_speed = max(speeds) if speeds else 1
         norm = mcolors.Normalize(vmin=0, vmax=max_speed)
         cmap = cm.get_cmap('YlOrRd')
-
 
         # Create map
         fmap = folium.Map(location=coords_of_interest[0], zoom_start=14)
@@ -291,7 +290,7 @@ class OptimizationThread(QThread):
             #     update_signal=self.update_signal,
             # )
 
-           # optimized_speed_array = optimizer.maximize()
+            # optimized_speed_array = optimizer.maximize()
 
             # Randomized speeds for testing the heat map
             optimized_speed_array = np.random.uniform(low=10, high=80, size=driving_hours)
@@ -422,6 +421,7 @@ class OptimizationTab(QWidget):
 
         self.setLayout(layout)
 
+
 class SimulationApp(QWidget):
     def __init__(self):
         super().__init__()
@@ -498,6 +498,7 @@ class SimulationApp(QWidget):
         :rtype: None
         """
         self.simulation_tab.sim_canvas.plot_simulation_results(results_dict)
+
     def update_speed_plot(self, model):
         """
         This method visualizes the optimized lap speeds on a folium map by passing
@@ -525,6 +526,7 @@ class SimulationApp(QWidget):
 
     def update_output(self, message):
         self.output_text.append(message)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
