@@ -8,9 +8,10 @@ from qt_material import apply_stylesheet
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    #!!!
-    app.setStyleSheet(qdarktheme.load_stylesheet("light"))
-    #apply_stylesheet(app, theme = "dark_teal.xml")
+    #!!! TRYING DIFFERENT PYQT THEMES
+    #app.setStyleSheet(qdarktheme.load_stylesheet("light"))
+    apply_stylesheet(app, theme = "dark_teal.xml")
+
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
