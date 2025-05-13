@@ -2,15 +2,13 @@ import sys
 from PyQt5.QtWidgets import QApplication
 from main_window import MainWindow
 import qdarktheme
-from qt_material import apply_stylesheet
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    #!!! TRYING DIFFERENT PYQT THEMES
-    #app.setStyleSheet(qdarktheme.load_stylesheet("light"))
-    apply_stylesheet(app, theme = "dark_teal.xml")
+    # PyQt Theme
+    app.setStyleSheet(qdarktheme.load_stylesheet("light"))
 
     window = MainWindow()
     window.show()
