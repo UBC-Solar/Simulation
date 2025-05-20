@@ -2911,6 +2911,17 @@ files = [
 ]
 
 [[package]]
+name = "tomli-w"
+version = "1.2.0"
+description = "A lil' TOML writer"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "tomli_w-1.2.0-py3-none-any.whl", hash = "sha256:188306098d013b691fcadc011abd66727d3c414c571bb01b1a174ba8c983cf90"},
+    {file = "tomli_w-1.2.0.tar.gz", hash = "sha256:2dd14fac5a47c27be9cd4c976af5a12d87fb1f0b4512f81d69cce3b35ae25021"},
+]
+
+[[package]]
 name = "tornado"
 version = "6.4.2"
 description = "Tornado is a Python web framework and asynchronous networking library, originally developed at FriendFeed."
@@ -3121,4 +3132,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "1b9e715ce97b1de5e63291ce4039de9c8ec797090aa0e9716a86dc7148dad061"
+content-hash = "72c9fc4069921e302b05f118d1154bd1ae437d2d7aa0ad1ccd414fa519782d4c"

@@ -1,3 +1,5 @@
+import pathlib
+
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -13,6 +15,8 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
 from diagnostic_interface import TimedWidget, SettingsDialog, PlotTab
+from config import settings
+
 
 # Interface aesthetic parameters
 WINDOW_TITLE = "Diagnostic Interface"
@@ -28,38 +32,17 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(WINDOW_TITLE)
         self.setGeometry(X_COORD, Y_COORD, WIDTH, HEIGHT)
         self.tabs = QTabWidget()
+
         self.setCentralWidget(self.tabs)
-        self.create_home_tab()
-
-        # Timer to refresh plots
-        self.timer = TimedWidget(
-            120000, self.refresh_all_tabs
-        )  # Timer refreshes after 120 seconds
-
-    def refresh_all_tabs(self):
-        """Refreshes all open plot tabs by requerying data and replotting it."""
-        for i in range(self.tabs.count()):
-            widget = self.tabs.widget(i)
-            if isinstance(widget, PlotTab):
-                widget.refresh_plot()
-
-    def create_home_tab(self) -> None:
-        """
-        Creates home tab for the diagnostic interface. The home tab
-        contains dropdown menus so that we can choose what data we
-        want to query and plot.
-        """
         home_widget = QWidget()
         layout = QVBoxLayout()
-        self.client = SunbeamClient()
 
-        # Aesthetic changes
-        home_widget.setStyleSheet("background-color: #4bb4de;")
+        self.client = SunbeamClient(settings.sunbeam_api_url)
 
         # Load and add the team logo
         logo_label = QLabel()
         logo_label.setPixmap(
-            QPixmap("Solar_Logo.png").scaled(800, 600, Qt.KeepAspectRatio)
+            QPixmap(str(pathlib.Path(__file__).parent / "Solar_Logo.png")).scaled(800, 600, Qt.KeepAspectRatio)
         )
         logo_label.setAlignment(Qt.AlignCenter)  # Center the image
         layout.addWidget(logo_label)
@@ -76,27 +59,18 @@ class MainWindow(QMainWindow):
         self.source_input = QComboBox()
         self.data_input = QComboBox()
 
-        # Load initial data
-        self.origins = self.client.distinct("origin", [])
-        self.origin_input.addItems(self.origins)
+        self.origin_input.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.event_input.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.source_input.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.data_input.setSizeAdjustPolicy(QComboBox.AdjustToContents)
 
-        self.events = self.client.distinct("event", [])
-        self.event_input.addItems(self.events)
+        self.origin_input.view().setFixedWidth(200)
+        self.event_input.view().setFixedWidth(200)
+        self.source_input.view().setFixedWidth(200)
+        self.data_input.view().setFixedWidth(200)
 
-        self.sources = self.client.distinct("source", [])
-        self.source_input.addItems(self.sources)
-
-        self.data_types = self.client.distinct("name", [])
-        self.data_input.addItems(self.data_types)
-
-        # Style of the drowpdown menus
-        for combo in [
-            self.origin_input,
-            self.source_input,
-            self.event_input,
-            self.data_input,
-        ]:
-            combo.setStyleSheet("background-color: white")
+        # Load initial data from the API
+        self.update_filters()
 
         # Add to form layout
         form_layout.addRow("Origin:", self.origin_input)
@@ -109,13 +83,11 @@ class MainWindow(QMainWindow):
         # Button to load the plot
         submit_button = QPushButton("Load Data")
         submit_button.clicked.connect(self.create_plot_tab)
-        submit_button.setStyleSheet("background-color: white")
         layout.addWidget(submit_button)
 
         #Settings button
         settings_button = QPushButton("Settings")
         settings_button.clicked.connect(self.edit_settings)
-        settings_button.setStyleSheet("background-color: white")
         layout.addWidget(settings_button)
 
         home_widget.setLayout(layout)
@@ -126,103 +98,109 @@ class MainWindow(QMainWindow):
         self.event_input.currentTextChanged.connect(self.update_filters)
         self.source_input.currentTextChanged.connect(self.update_filters)
 
-    def update_filters(self) -> None:
-        """
-        Updates all dropdown options based on selected values. This way, you should only
-        be able to form query combinations that are available. For example, if you choose
-        'realtime' as your origin, in the events dropdown you should only see 'FSGP_2024_Day_1'
-        because that is the only event associated with the 'realtime' pipeline.
+        # Timer to refresh plots
+        self.timer = TimedWidget(settings.plot_timer_interval, self.refresh_all_tabs)
 
-        :raises Exception: if there is an error while updating the dropdown options.
+    def refresh_all_tabs(self):
+        """Refreshes all open plot tabs by requerying data and replotting it."""
+        for i in range(self.tabs.count()):
+            widget = self.tabs.widget(i)
+            if isinstance(widget, PlotTab):
+                widget.refresh_plot()
+
+    def update_filters(self):
+        """
+        Updates the dropdown options based on the selected values.
+        If the API request fails, no data is loaded.
         """
         try:
-            self.client = SunbeamClient()
+            # Fetch selected values from the dropdowns
 
-            # Initial text
             selected_origin = self.origin_input.currentText()
             selected_source = self.source_input.currentText()
             selected_event = self.event_input.currentText()
             selected_data = self.data_input.currentText()
 
-            # Get valid events based on origin
-            available_events = set(
-                self.client.distinct("event", [])
-            )  # Start with all events
-            if selected_origin:
-                available_events &= set(
-                    self.client.distinct("event", {"origin": selected_origin})
-                )  # Filter by origin
+            # Filter available events, sources, and data types based on selections
+            available_origins, available_sources, available_events, available_data = self.filter_data()
 
-            # Get valid sources based on origin and event
-            available_sources = set(self.client.distinct("source", []))  # Start with all
-            if selected_origin:
-                available_sources &= set(
-                    self.client.distinct("source", {"origin": selected_origin})
-                )  # Filter by origin
-            if selected_event:
-                available_sources &= set(
-                    self.client.distinct("source", {"event": selected_event})
-                )  # Filter by event
-
-            # Get valid data types based on origin, source, and event
-            available_data = set(self.client.distinct("name", []))  # Start with all data
-            if selected_origin:
-                available_data &= set(
-                    self.client.distinct("name", {"origin": selected_origin})
-                )  # Filter by origin
-            if selected_event:
-                available_data &= set(
-                    self.client.distinct("name", {"event": selected_event})
-                )  # Filter by event
-            if selected_source:
-                available_data &= set(
-                    self.client.distinct("name", {"source": selected_source})
-                )  # Filter by source
-
-            # Convert back to lists
-            available_sources = list(available_sources)
-            available_events = list(available_events)
-            available_data = list(available_data)
-
-            # Update dropdowns safely
-            self.source_input.blockSignals(True)  # Shuts down ability to take input
-            self.source_input.clear()
-            self.source_input.addItems(available_sources)
-            # Set the selected source to the first available or keep it if it exists
-            if selected_source in available_sources:
-                self.source_input.setCurrentText(selected_source)
-            elif available_sources:
-                self.source_input.setCurrentText(
-                    available_sources[0]
-                )  # Select first available option
-            self.source_input.blockSignals(False)  # Can take inputs again
-
-            self.event_input.blockSignals(True)  # Can't take inputs
-            self.event_input.clear()
-            self.event_input.addItems(available_events)
-            # Set the selected event to the first available or keep it if it exists
-            if selected_event in available_events:
-                self.event_input.setCurrentText(selected_event)
-            elif available_events:
-                self.event_input.setCurrentText(
-                    available_events[0]
-                )  # Select first available option
-            self.event_input.blockSignals(False)  # Can take inputs again
-
-            self.data_input.blockSignals(True)  # Can't take inputs
-            self.data_input.clear()
-            self.data_input.addItems(available_data)
-            # Set the selected data to the first available or keep it if it exists
-            if selected_data in available_data:
-                self.data_input.setCurrentText(selected_data)
-            elif available_data:
-                self.data_input.setCurrentText(
-                    available_data[0]
-                )  # Select first available option
-            self.data_input.blockSignals(False)  # Can take inputs again
+            # Update dropdowns
+            self.update_dropdown(self.origin_input, available_origins, selected_origin)
+            self.update_dropdown(self.event_input, available_events, selected_event)
+            self.update_dropdown(self.source_input, available_sources, selected_source)
+            self.update_dropdown(self.data_input, available_data, selected_data)
 
         except Exception as e:
             print(f"Error updating filters: {e}")
+            self.clear_dropdowns()
+
+    def filter_data(self) -> tuple[list, list, list, list]:
+        """
+        Filter the available options for a given field based on selected filters.
+        """
+        selected_origin = self.origin_input.currentText()
+        selected_source = self.source_input.currentText()
+        selected_event = self.event_input.currentText()
+
+        available_origins = set(self.client.distinct("origin", {}))
+
+        # Get valid events based on origin
+        available_events = set(self.client.distinct("event", {}))
+        if selected_origin:
+            available_events &= set(self.client.distinct("event", {"origin": selected_origin}))
+
+        # Get valid sources based on origin and event
+        available_sources = set(self.client.distinct("source", {}))
+        if selected_origin:
+            # Filter by origin
+            available_sources &= set(self.client.distinct("source", {"origin": selected_origin}))
+        if selected_event:
+            available_sources &= set(
+                self.client.distinct("source", {"event": selected_event})
+            )  # Filter by event
+
+        # Get valid data types based on origin, source, and event
+        available_data = set(self.client.distinct("name", {}))  # Start with all data
+        if selected_origin:
+            available_data &= set(
+                self.client.distinct("name", {"origin": selected_origin})
+            )  # Filter by origin
+        if selected_event:
+            available_data &= set(
+                self.client.distinct("name", {"event": selected_event})
+            )  # Filter by event
+        if selected_source:
+            available_data &= set(
+                self.client.distinct("name", {"source": selected_source})
+            )  # Filter by source
+
+        # Convert back to lists
+        available_origins = list(available_origins)
+        available_sources = list(available_sources)
+        available_events = list(available_events)
+        available_data = list(available_data)
+
+        return available_origins, available_sources, available_events, available_data
+
+    def update_dropdown(self, dropdown: QComboBox, available_data: list, selected_value: str):
+        """ Update the dropdown options and select the appropriate value """
+        dropdown.blockSignals(True)
+        dropdown.clear()
+        dropdown.addItems(available_data)
+
+        # Select the previously selected value if available
+        if selected_value in available_data:
+            dropdown.setCurrentText(selected_value)
+        elif available_data:
+            dropdown.setCurrentText(available_data[0])  # Select the first available option
+        dropdown.blockSignals(False)
+
+    def clear_dropdowns(self):
+        """ Clear all dropdowns in case of API failure """
+        self.origin_input.clear()
+        self.event_input.clear()
+        self.source_input.clear()
+        self.data_input.clear()
 
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.
@@ -237,7 +215,7 @@ class MainWindow(QMainWindow):
 
         # Creating PlotTab object and adding it to the list of tabs.
         plot_tab = PlotTab(origin, source, event, data_name)
-        self.tabs.addTab(plot_tab, f"{data_name} - {event} - {origin} - {source}")
+        self.tabs.addTab(plot_tab, f"{data_name}")
 
         plot_tab.close_requested.connect(self.close_tab)
 
@@ -247,37 +225,28 @@ class MainWindow(QMainWindow):
 
         :param QWidget widget: an element of the GUI you can interact with. In this case, it is the plot.
         """
-        index: int = self.tabs.indexOf(
-            widget
-        )  # Checks the index of the tab we want to close; if the tab is not in self.tabs, returns -1
-        if (
-            index != -1
-        ):  # Checks that the tab we want to close is in self.tabs. If it isn't (index == -1), do nothing
-            self.tabs.removeTab(
-                index
-            )  # If the tab is in self.tabs (index!= -1), we remove it
-
+        # Checks the index of the tab we want to close; if the tab is not in self.tabs, returns -1
+        index: int = self.tabs.indexOf(widget)
+        if index != -1:  # Checks that the tab we want to close is in self.tabs. If it isn't (index == -1), do nothing
+            self.tabs.removeTab(index)  # If the tab is in self.tabs (index!= -1), we remove it
 
     def edit_settings(self):
         """Opens a dialog to change the settings of the interface. We can change
         the interval between the data is refreshed, as well as the url from the client
         where we query from."""
-        current_interval = self.timer.interval
-        current_client_address = self.client.__class__.__name__
+        current_interval = settings.plot_timer_interval
+        current_client_address = settings.sunbeam_api_url
 
         dialog = SettingsDialog(current_interval, current_client_address, self)
         if dialog.exec_():  # if user pressed OK
-            new_interval, new_client_name = dialog.get_settings()
-            self.timer.interval = new_interval * 1000  # convert back to ms
+            new_plot_interval, new_client_address = dialog.get_settings()
+            self.timer.set_interval(new_plot_interval)
+
+            settings.plot_timer_interval = new_plot_interval
 
             # Change client
-            if new_client_name != current_client_address:
-                if new_client_name == "SunbeamClient":
-                    self.client = SunbeamClient()
-                elif new_client_name == "OtherClient":
-                    print("Other client selected.")
-                    #from data_tools import OtherClient
-                    #self.client = OtherClient()
-
-            # Reload filters with new client
-            self.update_filters()
+            if new_client_address != current_client_address:
+                settings.sunbeam_api_url = new_client_address
+                self.client = SunbeamClient(new_client_address)
+                self.update_filters()
+                self.refresh_all_tabs()

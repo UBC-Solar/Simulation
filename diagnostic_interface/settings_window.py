@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QSpinBox, QComboBox, QFormLayout
+from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QSpinBox, QLineEdit, QFormLayout
+
 
 class SettingsDialog(QDialog):
     def __init__(self, current_interval, current_client_address, parent=None):
@@ -14,15 +15,13 @@ class SettingsDialog(QDialog):
 
         # Refresh interval selector
         self.interval_spinbox = QSpinBox()
-        self.interval_spinbox.setRange(10, 3600)  # in seconds
-        self.interval_spinbox.setValue(current_interval // 1000)  # convert ms to s
+        self.interval_spinbox.setValue(current_interval)  # convert ms to s
         layout.addRow("Refresh Interval (s):", self.interval_spinbox)
 
         # Client selector
-        self.client_combo = QComboBox()
-        self.client_combo.addItems(["SunbeamClient", "OtherClient"])  # Add more if needed
-        self.client_combo.setCurrentText(current_client_address)
-        layout.addRow("Data Client:", self.client_combo)
+        self.client_input = QLineEdit()
+        self.client_input.setText(current_client_address)
+        layout.addRow("Sunbeam API URL:", self.client_input)
 
         # OK/Cancel buttons
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -33,4 +32,5 @@ class SettingsDialog(QDialog):
         self.setLayout(layout)
 
     def get_settings(self):
-        return self.interval_spinbox.value(), self.client_combo.currentText()
+        print(self.interval_spinbox.value())
+        return self.interval_spinbox.value(), self.client_input.text()
