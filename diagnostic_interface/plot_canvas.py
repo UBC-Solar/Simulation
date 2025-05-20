@@ -7,8 +7,8 @@ from data_tools import SunbeamClient, TimeSeries
 from config import settings
 
 # Use a light-theme friendly style
-# plt.style.use("seaborn-v0_8-dark")
-plt.style.use("fivethirtyeight")
+plt.style.use("seaborn-v0_8-darkgrid")
+# plt.style.use("fivethirtyeight")
 
 
 class PlotCanvas(FigureCanvas):
