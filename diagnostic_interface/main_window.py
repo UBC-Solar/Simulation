@@ -108,17 +108,18 @@ class MainWindow(QMainWindow):
         where we query from."""
         current_interval = settings.plot_timer_interval
         current_client_address = settings.sunbeam_api_url
+        current_sunbeam_path = settings.sunbeam_path
 
-        dialog = SettingsDialog(current_interval, current_client_address, self)
+        dialog = SettingsDialog(current_interval, current_client_address, current_sunbeam_path, self)
         if dialog.exec_():  # if user pressed OK
-            new_plot_interval, new_client_address = dialog.get_settings()
+            new_plot_interval, new_client_address, sunbeam_path = dialog.get_settings()
 
             settings.plot_timer_interval = new_plot_interval
             settings.sunbeam_api_url = new_client_address
+            settings.sunbeam_path = sunbeam_path
 
             # Refresh settings
             self.client = SunbeamClient(settings.sunbeam_api_url)
-
             self.data_select_form.update_filters()
 
     def on_tab_changed(self, index: int):

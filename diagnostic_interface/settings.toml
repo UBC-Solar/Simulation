@@ -1,2 +1,3 @@
 plot_timer_interval = 1
 sunbeam_api_url = "localhost:8080"
+sunbeam_path = "/Users/joshuariefman/Solar/sunbeam"

@@ -1,19 +1,13 @@
-import subprocess
 import threading
 import json
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QLabel, QMessageBox, QPlainTextEdit, QTextEdit
+    QWidget, QVBoxLayout, QPushButton, QLabel, QMessageBox
 )
 from PyQt5.QtCore import QTimer, Qt
 import datetime
 import sys
 from diagnostic_interface import settings
 from data_tools.query import SunbeamClient
-from ansi2html import Ansi2HTMLConverter
-import os
-import pty
-
-
 import os
 import pty
 import subprocess
@@ -28,6 +22,7 @@ class AnsiLogViewer(QTextEdit):
     def __init__(self):
         super().__init__()
         self.setReadOnly(True)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setAcceptRichText(True)
         self.setStyleSheet("QTextEdit { font-family: monospace; }")
         self.converter = Ansi2HTMLConverter(dark_bg=False, inline=True)
@@ -83,13 +78,6 @@ class AnsiLogViewer(QTextEdit):
         scrollbar = self.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
-
-class TerminalLogBox(QPlainTextEdit):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setReadOnly(True)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
     def wheelEvent(self, event):
         # Disable mouse wheel scrolling
         pass
@@ -104,11 +92,9 @@ class TerminalLogBox(QPlainTextEdit):
 class DockerStackTab(QWidget):
     def __init__(self, ):
         super().__init__()
-        self.project_dir = "/Users/joshuariefman/Solar/sunbeam"
         self.stack_running = False
         self._init_ui()
         self._init_timer()
-        QTimer.singleShot(0, self.update_status)
 
     def _init_ui(self):
         self.status_label = QLabel("Status: Checking...")
@@ -134,8 +120,6 @@ class DockerStackTab(QWidget):
         self.timer.timeout.connect(self.update_status)
         self.timer.setInterval(1000)  # poll every 1.00 seconds
 
-        QTimer.singleShot(0, self.update_status)
-
     def toggle_stack(self):
         if self.stack_running:
             self.stop_stack()
@@ -146,9 +130,10 @@ class DockerStackTab(QWidget):
         def run():
             subprocess.run(
                 ["docker", "compose", "up", "-d"],
-                cwd=self.project_dir,
+                cwd=settings.sunbeam_path,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                check=True,
             )
             QTimer.singleShot(0, self.update_status)
 
@@ -158,7 +143,7 @@ class DockerStackTab(QWidget):
         def run():
             subprocess.run(
                 ["docker", "compose", "down"],
-                cwd=self.project_dir,
+                cwd=settings.sunbeam_path,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
@@ -170,11 +155,12 @@ class DockerStackTab(QWidget):
         try:
             result = subprocess.run(
                 ["docker", "compose", "ps", "--format", "json"],
-                cwd=self.project_dir,
+                cwd=settings.sunbeam_path,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 text=True,
                 timeout=0.5,
+                check=True,
             )
 
             output = result.stdout.strip()
@@ -183,10 +169,13 @@ class DockerStackTab(QWidget):
             else:
                 services = [json.loads(line) for line in output.splitlines() if line.strip()]
 
-        except subprocess.TimeoutExpired as e:
-            QMessageBox.critical(None, "Startup Error", f"Could not connect to Docker runtime. "
-                                                        f"Is Docker running? Additional Details: \n{str(e)}")
-            sys.exit(1)
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
+            self.timer.stop()
+            QMessageBox.critical(None, "Docker Error", f"Did not get a response from the Sunbeam Docker service stack.\n"
+                                                       f"Is Docker running and is Sunbeam Path set? \n"
+                                                       f"Additional Details: \n{str(e)}")
+
+            services = None
 
         if not services:
             self.stack_running = False
@@ -208,7 +197,7 @@ class DockerStackTab(QWidget):
             self.stack_running = True
 
         self.toggle_button.setText("Stop Stack")
-        self.log_output.fetch_ansi_logs(self.project_dir)
+        self.log_output.fetch_ansi_logs(settings.sunbeam_path)
 
     def set_tab_active(self, active: bool):
         if active:
@@ -216,39 +205,3 @@ class DockerStackTab(QWidget):
             self.timer.start()
         else:
             self.timer.stop()
-
-    def fetch_logs(self):
-        def update_logs():
-            try:
-                since_str = self._last_log_time.isoformat() + "Z"
-                result = subprocess.run(
-                    ["docker", "compose", "logs", "--since", since_str, "--ansi", "always"],
-                    cwd=self.project_dir,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL,
-                    text=True,
-                    timeout=5,
-                    env={**os.environ, "FORCE_COLOR": "1"}  # <--- 👈 this is key
-                )
-                print(repr(result.stdout))
-                print(result.stdout)
-                self.log_output.append_ansi_text(result.stdout)
-
-                # Update timestamp regardless of whether new logs came in
-                self._last_log_time = datetime.datetime.utcnow()
-
-            except Exception as e:
-                self.log_output.append_ansi_text(f"Error retrieving logs:\n{e}")
-
-        QTimer.singleShot(0, update_logs)
-
-    def _trim_log_output(self):
-        text = self.log_output.toPlainText()
-        lines = text.splitlines()
-        if len(lines) > self._max_lines:
-            trimmed = "\n".join(lines[-self._max_lines:])
-            self.log_output.setPlainText(trimmed)
-
-    def _scroll_to_bottom(self):
-        scroll = self.log_output.verticalScrollBar()
-        scroll.setValue(scroll.maximum())
