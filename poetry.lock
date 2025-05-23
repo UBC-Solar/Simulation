@@ -12,6 +12,21 @@ files = [
 ]
 
 [[package]]
+name = "ansi2html"
+version = "1.9.2"
+description = "Convert text with ANSI color codes to HTML or to LaTeX"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "ansi2html-1.9.2-py3-none-any.whl", hash = "sha256:dccb75aa95fb018e5d299be2b45f802952377abfdce0504c17a6ee6ef0a420c5"},
+    {file = "ansi2html-1.9.2.tar.gz", hash = "sha256:3453bf87535d37b827b05245faaa756dbab4ec3d69925e352b6319c3c955c0a5"},
+]
+
+[package.extras]
+docs = ["mkdocs", "mkdocs-material", "mkdocs-material-extensions", "mkdocstrings", "mkdocstrings-python", "pymdown-extensions"]
+test = ["pytest", "pytest-cov"]
+
+[[package]]
 name = "anytree"
 version = "2.12.1"
 description = "Powerful and Lightweight Python Tree Data Structure with various plugins"
@@ -2281,6 +2296,22 @@ files = [
 ]
 
 [[package]]
+name = "pywinpty"
+version = "2.0.15"
+description = "Pseudo terminal support for Windows from Python."
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "pywinpty-2.0.15-cp310-cp310-win_amd64.whl", hash = "sha256:8e7f5de756a615a38b96cd86fa3cd65f901ce54ce147a3179c45907fa11b4c4e"},
+    {file = "pywinpty-2.0.15-cp311-cp311-win_amd64.whl", hash = "sha256:9a6bcec2df2707aaa9d08b86071970ee32c5026e10bcc3cc5f6f391d85baf7ca"},
+    {file = "pywinpty-2.0.15-cp312-cp312-win_amd64.whl", hash = "sha256:83a8f20b430bbc5d8957249f875341a60219a4e971580f2ba694fbfb54a45ebc"},
+    {file = "pywinpty-2.0.15-cp313-cp313-win_amd64.whl", hash = "sha256:ab5920877dd632c124b4ed17bc6dd6ef3b9f86cd492b963ffdb1a67b85b0f408"},
+    {file = "pywinpty-2.0.15-cp313-cp313t-win_amd64.whl", hash = "sha256:a4560ad8c01e537708d2790dbe7da7d986791de805d89dd0d3697ca59e9e4901"},
+    {file = "pywinpty-2.0.15-cp39-cp39-win_amd64.whl", hash = "sha256:d261cd88fcd358cfb48a7ca0700db3e1c088c9c10403c9ebc0d8a8b57aa6a117"},
+    {file = "pywinpty-2.0.15.tar.gz", hash = "sha256:312cf39153a8736c617d45ce8b6ad6cd2107de121df91c455b10ce6bba7a39b2"},
+]
+
+[[package]]
 name = "pyyaml"
 version = "6.0.2"
 description = "YAML parser and emitter for Python"
@@ -2341,6 +2372,20 @@ files = [
     {file = "PyYAML-6.0.2-cp39-cp39-win_amd64.whl", hash = "sha256:39693e1f8320ae4f43943590b49779ffb98acb81f788220ea932a6b6c51004d8"},
     {file = "pyyaml-6.0.2.tar.gz", hash = "sha256:d584d9ec91ad65861cc08d42e834324ef890a082e591037abe114850ff7bbc3e"},
 ]
+
+[[package]]
+name = "qt-py"
+version = "1.4.6"
+description = "Python 2 & 3 compatibility wrapper around all Qt bindings - PySide, PySide2, PyQt4 and PyQt5."
+optional = false
+python-versions = "*"
+files = [
+    {file = "qt_py-1.4.6-py2.py3-none-any.whl", hash = "sha256:1e0f8da9af74f2b3448904fab313f6f79cad56b82895f1a2c541243f00cc244e"},
+    {file = "qt_py-1.4.6.tar.gz", hash = "sha256:d26f808a093754f0b44858745965bab138525cffc77c1296a3293171b2e2469f"},
+]
+
+[package.dependencies]
+types-PySide2 = "*"
 
 [[package]]
 name = "reactivex"
@@ -2817,6 +2862,21 @@ doc = ["reno", "sphinx"]
 test = ["pytest", "tornado (>=4.5)", "typeguard"]
 
 [[package]]
+name = "termqt"
+version = "1.0.0"
+description = "A terminal emulator widget implemented in Python/Qt."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "termqt-1.0.0-py3-none-any.whl", hash = "sha256:bc5c0f6c5086b4ecc84477635b3bb6a41b551cfa31e8b24cf8b7a9bf5a1ff18e"},
+    {file = "termqt-1.0.0.tar.gz", hash = "sha256:c181065649a79e54335d6e65eca7d6755eb9a44f9f61a4700d59ff2ca1fa3410"},
+]
+
+[package.dependencies]
+pywinpty = {version = ">=2.0.1", markers = "platform_system == \"Windows\""}
+"Qt.py" = ">=1.3.0"
+
+[[package]]
 name = "threadpoolctl"
 version = "3.5.0"
 description = "threadpoolctl"
@@ -2960,6 +3020,17 @@ dev = ["pytest (>=6)", "pytest-cov", "pytest-timeout", "pytest-xdist"]
 notebook = ["ipywidgets (>=6)"]
 slack = ["slack-sdk"]
 telegram = ["requests"]
+
+[[package]]
+name = "types-pyside2"
+version = "5.15.2.1.7"
+description = "The most accurate stubs for PySide2"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types_pyside2-5.15.2.1.7-py2.py3-none-any.whl", hash = "sha256:a7bec4cb4657179415ca7ec7c70a45f9f9938664e22f385c85fd7cd724b07d4d"},
+    {file = "types_pyside2-5.15.2.1.7.tar.gz", hash = "sha256:1d65072deb97481ad481b3414f94d02fd5da07f5e709c2d439ced14f79b2537c"},
+]
 
 [[package]]
 name = "typing-extensions"
@@ -3132,4 +3203,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "72c9fc4069921e302b05f118d1154bd1ae437d2d7aa0ad1ccd414fa519782d4c"
+content-hash = "c9b84fdb7f3258bd05aee741e1ad57be4f8254b4491702a22c039bff99fa79e6"

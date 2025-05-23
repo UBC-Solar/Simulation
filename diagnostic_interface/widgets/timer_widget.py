@@ -26,7 +26,7 @@ class TimedWidget:
         """Update the timer interval and restart the timer."""
         self.interval = interval * 1000
         self.timer.stop()  # Stop the current timer
-        self.timer.start(interval)  # Restart the timer with the new interval
+        self.timer.start(self.interval)  # Restart the timer with the new interval
 
     def stop(self):
         """Stop the timer."""

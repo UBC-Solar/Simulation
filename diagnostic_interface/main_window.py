@@ -14,8 +14,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
-from diagnostic_interface import TimedWidget, SettingsDialog, PlotTab, DataSelect
-from config import settings
+from diagnostic_interface.widgets import TimedWidget, DataSelect
+from diagnostic_interface.tabs import DockerStackTab, PlotTab, UpdatableTab
+from diagnostic_interface.dialog import SettingsDialog
+from diagnostic_interface import settings
 
 
 # Interface aesthetic parameters
@@ -32,6 +34,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(WINDOW_TITLE)
         self.setGeometry(X_COORD, Y_COORD, WIDTH, HEIGHT)
         self.tabs = QTabWidget()
+        self.tabs.currentChanged.connect(self.on_tab_changed)
 
         self.setCentralWidget(self.tabs)
         home_widget = QWidget()
@@ -68,15 +71,8 @@ class MainWindow(QMainWindow):
         home_widget.setLayout(layout)
         self.tabs.addTab(home_widget, "Home")
 
-        # Timer to refresh plots
-        self.timer = TimedWidget(settings.plot_timer_interval, self.refresh_all_tabs)
-
-    def refresh_all_tabs(self):
-        """Refreshes all open plot tabs by requerying data and replotting it."""
-        for i in range(self.tabs.count()):
-            widget = self.tabs.widget(i)
-            if isinstance(widget, PlotTab):
-                widget.refresh_plot()
+        self.docker_gui = DockerStackTab()
+        self.tabs.addTab(self.docker_gui, "Sunbeam")
 
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.
@@ -116,13 +112,17 @@ class MainWindow(QMainWindow):
         dialog = SettingsDialog(current_interval, current_client_address, self)
         if dialog.exec_():  # if user pressed OK
             new_plot_interval, new_client_address = dialog.get_settings()
-            self.timer.set_interval(new_plot_interval)
 
             settings.plot_timer_interval = new_plot_interval
+            settings.sunbeam_api_url = new_client_address
 
-            # Change client
-            if new_client_address != current_client_address:
-                settings.sunbeam_api_url = new_client_address
-                self.client = SunbeamClient(new_client_address)
-                self.update_filters()
-                self.refresh_all_tabs()
+            # Refresh settings
+            self.client = SunbeamClient(settings.sunbeam_api_url)
+
+            self.data_select_form.update_filters()
+
+    def on_tab_changed(self, index: int):
+        for i in range(self.tabs.count()):
+            widget = self.tabs.widget(i)
+            if isinstance(widget, UpdatableTab):
+                widget.set_tab_active(i == index)

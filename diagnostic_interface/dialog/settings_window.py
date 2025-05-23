@@ -32,5 +32,4 @@ class SettingsDialog(QDialog):
         self.setLayout(layout)
 
     def get_settings(self):
-        print(self.interval_spinbox.value())
         return self.interval_spinbox.value(), self.client_input.text()

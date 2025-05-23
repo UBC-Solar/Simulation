@@ -4,7 +4,7 @@ import matplotlib.dates as mdates
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from data_tools import SunbeamClient, TimeSeries
-from config import settings
+from diagnostic_interface import settings
 
 # Use a light-theme friendly style
 plt.style.use("seaborn-v0_8-darkgrid")
@@ -23,6 +23,8 @@ class PlotCanvas(FigureCanvas):
         self.current_origin = ""
         self.current_source = ""
 
+        self.line = None
+
     def query_and_plot(self, origin, source, event, data_name):
         try:
             data = self.query_data(origin, source, event, data_name)
@@ -35,19 +37,27 @@ class PlotCanvas(FigureCanvas):
             self.current_origin = origin
             self.current_source = source
 
-            self.ax.clear()
-            self.ax.plot(data.datetime_x_axis, data, linewidth=1)
-            self.ax.set_title(f"{data_name} - {event}", fontsize=12)
-            self.ax.set_xlabel("Time", fontsize=10)
-            self.ax.set_ylabel(data_name, fontsize=10)
+            if self.line is None:
+                self.line, = self.ax.plot(data.datetime_x_axis, data, linewidth=1)
+                self.ax.set_title(f"{data_name} - {event}", fontsize=12)
+                self.ax.set_xlabel("Time", fontsize=10)
+                self.ax.set_ylabel(data_name, fontsize=10)
 
-            # Improve datetime formatting
-            self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-            self.ax.xaxis.set_major_locator(mdates.HourLocator())
-            self.fig.autofmt_xdate()
+                # Improve datetime formatting
+                self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                self.ax.xaxis.set_major_locator(mdates.HourLocator())
+                self.fig.autofmt_xdate()
 
+            else:
+                # Only update data
+                self.line.set_xdata(data.datetime_x_axis)
+                self.line.set_ydata(data)
+
+            self.ax.relim()
+            self.ax.autoscale_view(scalex=True, scaley=True)
             self.fig.tight_layout()
             self.draw()
+
             return True
 
         except Exception as e:

@@ -2,8 +2,11 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QMessageBox,
     QGroupBox, QHBoxLayout
 )
-from PyQt5.QtCore import pyqtSignal
-from diagnostic_interface import CustomNavigationToolbar, PlotCanvas
+from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer
+
+from diagnostic_interface import settings
+from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas
+
 
 HELP_MESSAGES = {
     "VehicleVelocity": "This plot shows velocity over time.\n\n"
@@ -11,6 +14,25 @@ HELP_MESSAGES = {
                        "- Y-axis: Velocity (m/s)\n"
                        "- Data is sourced from the car's telemetry system.\n",
 }
+
+
+class PlotRefreshWorkerSignals(QObject):
+    finished = pyqtSignal(bool)  # success or failure
+
+
+class PlotRefreshWorker(QRunnable):
+    def __init__(self, plot_canvas, origin, source, event, data_name):
+        super().__init__()
+        self.plot_canvas = plot_canvas
+        self.origin = origin
+        self.source = source
+        self.event = event
+        self.data_name = data_name
+        self.signals = PlotRefreshWorkerSignals()
+
+    def run(self):
+        success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
+        self.signals.finished.emit(success)
 
 
 class PlotTab(QWidget):
@@ -23,6 +45,8 @@ class PlotTab(QWidget):
         self.source = source
         self.event = event
         self.data_name = data_name
+
+        self._thread_pool = QThreadPool()
 
         # Layout setup
         self.layout = QVBoxLayout(self)
@@ -58,11 +82,34 @@ class PlotTab(QWidget):
             }
         """)
 
+        self.refresh_timer = QTimer()
+        self.refresh_timer.timeout.connect(self.refresh_plot)
+
         if not self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name):
             self.request_close()
 
+    def set_tab_active(self, active: bool) -> None:
+        if active:
+            self.refresh_timer.setInterval(settings.plot_timer_interval * 1000)
+            self.refresh_timer.start()
+            QTimer.singleShot(0, self.refresh_plot)
+
+        else:
+            self.refresh_timer.stop()
+
     def refresh_plot(self):
-        if not self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name):
+        worker = PlotRefreshWorker(
+            self.plot_canvas,
+            self.origin,
+            self.source,
+            self.event,
+            self.data_name
+        )
+        worker.signals.finished.connect(self._on_plot_refresh_finished)
+        self._thread_pool.start(worker)
+
+    def _on_plot_refresh_finished(self, success: bool):
+        if not success:
             self.request_close()
 
     def request_close(self):

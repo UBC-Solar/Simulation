@@ -1,7 +1,8 @@
 
-from PyQt5.QtWidgets import QComboBox, QFormLayout
+from PyQt5.QtWidgets import QComboBox, QFormLayout, QMessageBox
 from data_tools import SunbeamClient
-from config import settings
+from diagnostic_interface import settings
+from requests import exceptions as requests_exceptions
 
 
 class DataSelect(QFormLayout):
@@ -90,45 +91,50 @@ class DataSelect(QFormLayout):
 
         client = SunbeamClient(settings.sunbeam_api_url)
 
-        available_origins = set(client.distinct("origin", {}))
+        try:
+            available_origins = set(client.distinct("origin", {}))
 
-        # Get valid events based on origin
-        available_events = set(client.distinct("event", {}))
-        if selected_origin:
-            available_events &= set(client.distinct("event", {"origin": selected_origin}))
+            # Get valid events based on origin
+            available_events = set(client.distinct("event", {}))
+            if selected_origin:
+                available_events &= set(client.distinct("event", {"origin": selected_origin}))
 
-        # Get valid sources based on origin and event
-        available_sources = set(client.distinct("source", {}))
-        if selected_origin:
-            # Filter by origin
-            available_sources &= set(client.distinct("source", {"origin": selected_origin}))
-        if selected_event:
-            available_sources &= set(
-                client.distinct("source", {"event": selected_event})
-            )  # Filter by event
+            # Get valid sources based on origin and event
+            available_sources = set(client.distinct("source", {}))
+            if selected_origin:
+                # Filter by origin
+                available_sources &= set(client.distinct("source", {"origin": selected_origin}))
+            if selected_event:
+                available_sources &= set(
+                    client.distinct("source", {"event": selected_event})
+                )  # Filter by event
 
-        # Get valid data types based on origin, source, and event
-        available_data = set(client.distinct("name", {}))  # Start with all data
-        if selected_origin:
-            available_data &= set(
-                client.distinct("name", {"origin": selected_origin})
-            )  # Filter by origin
-        if selected_event:
-            available_data &= set(
-                client.distinct("name", {"event": selected_event})
-            )  # Filter by event
-        if selected_source:
-            available_data &= set(
-                client.distinct("name", {"source": selected_source})
-            )  # Filter by source
+            # Get valid data types based on origin, source, and event
+            available_data = set(client.distinct("name", {}))  # Start with all data
+            if selected_origin:
+                available_data &= set(
+                    client.distinct("name", {"origin": selected_origin})
+                )  # Filter by origin
+            if selected_event:
+                available_data &= set(
+                    client.distinct("name", {"event": selected_event})
+                )  # Filter by event
+            if selected_source:
+                available_data &= set(
+                    client.distinct("name", {"source": selected_source})
+                )  # Filter by source
 
-        # Convert back to lists
-        available_origins = list(available_origins)
-        available_sources = list(available_sources)
-        available_events = list(available_events)
-        available_data = list(available_data)
+            # Convert back to lists
+            available_origins = list(available_origins)
+            available_sources = list(available_sources)
+            available_events = list(available_events)
+            available_data = list(available_data)
 
-        return available_origins, available_sources, available_events, available_data
+            return available_origins, available_sources, available_events, available_data
+
+        except requests_exceptions.Timeout as e:
+            QMessageBox.critical(None, "Plotting Error", f"Error fetching Sunbeam files:\n{str(e)}")
+            return [], [], [], []
 
     @staticmethod
     def update_dropdown(dropdown: QComboBox, available_data: list, selected_value: str):
