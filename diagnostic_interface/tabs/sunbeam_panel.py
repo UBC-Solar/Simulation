@@ -3,7 +3,7 @@ import json
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QLabel, QMessageBox
 )
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import QTimer, Qt, QRunnable, QObject, pyqtSignal, QThreadPool
 import datetime
 from diagnostic_interface import settings
 from data_tools.query import SunbeamClient
@@ -89,10 +89,48 @@ class AnsiLogViewer(QTextEdit):
         super().keyPressEvent(event)
 
 
+class UpdateStatusWorkerSignals(QObject):
+    services = pyqtSignal(list)  # success or failure
+
+
+class UpdateStatusWorker(QRunnable):
+    def __init__(self, docker_stack):
+        super().__init__()
+        self.docker_stack = docker_stack
+        self.signals = UpdateStatusWorkerSignals()
+
+    def run(self):
+        try:
+            result = subprocess.run(
+                ["docker", "compose", "ps", "--format", "json"],
+                cwd=settings.sunbeam_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                timeout=2,
+                check=True,
+            )
+
+            output = result.stdout.strip()
+            if output.startswith("["):
+                services = json.loads(output)
+            else:
+                services = [json.loads(line) for line in output.splitlines() if line.strip()]
+
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
+            QTimer.singleShot(0, self.docker_stack.stop_timer)
+            QTimer.singleShot(0, self.docker_stack.raise_docker_error)
+            services = []
+
+        self.signals.services.emit(services)
+
+
 class DockerStackTab(QWidget):
     def __init__(self, ):
         super().__init__()
         self.stack_running = False
+        self._thread_pool = QThreadPool()
+
         self._init_ui()
         self._init_timer()
 
@@ -117,8 +155,12 @@ class DockerStackTab(QWidget):
 
     def _init_timer(self):
         self.timer = QTimer()
-        self.timer.timeout.connect(self.update_status)
+        self.timer.timeout.connect(self.do_update_status)
         self.timer.setInterval(STATUS_POLLING_INTERVAL_MS)
+
+    def raise_docker_error(self):
+        QMessageBox.critical(None, "Docker Error", f"Did not get a response from the Sunbeam Docker service stack.\n"
+                                                   f"Is Docker running and is Sunbeam Path set? \n")
 
     def toggle_stack(self):
         if self.stack_running:
@@ -135,7 +177,7 @@ class DockerStackTab(QWidget):
                 stderr=subprocess.DEVNULL,
                 check=True,
             )
-            QTimer.singleShot(0, self.update_status)
+            QTimer.singleShot(0, self.do_update_status)
 
         threading.Thread(target=run, daemon=True).start()
 
@@ -147,36 +189,16 @@ class DockerStackTab(QWidget):
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            QTimer.singleShot(0, self.update_status)
+            QTimer.singleShot(0, self.do_update_status)
 
         threading.Thread(target=run, daemon=True).start()
 
-    def update_status(self):
-        try:
-            result = subprocess.run(
-                ["docker", "compose", "ps", "--format", "json"],
-                cwd=settings.sunbeam_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                timeout=0.5,
-                check=True,
-            )
+    def do_update_status(self):
+        worker = UpdateStatusWorker(self)
+        worker.signals.services.connect(self.update_status)
+        self._thread_pool.start(worker)
 
-            output = result.stdout.strip()
-            if output.startswith("["):
-                services = json.loads(output)
-            else:
-                services = [json.loads(line) for line in output.splitlines() if line.strip()]
-
-        except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
-            self.timer.stop()
-            QMessageBox.critical(None, "Docker Error", f"Did not get a response from the Sunbeam Docker service stack.\n"
-                                                       f"Is Docker running and is Sunbeam Path set? \n"
-                                                       f"Additional Details: \n{str(e)}")
-
-            services = None
-
+    def update_status(self, services: list):
         if not services:
             self.stack_running = False
             self.status_label.setText("❌ Status: 0%")
@@ -199,9 +221,12 @@ class DockerStackTab(QWidget):
         self.toggle_button.setText("Stop Stack")
         self.log_output.fetch_ansi_logs(settings.sunbeam_path)
 
+    def stop_timer(self):
+        self.timer.stop()
+
     def set_tab_active(self, active: bool):
         if active:
-            QTimer.singleShot(0, self.update_status)
+            QTimer.singleShot(0, self.do_update_status)
             self.timer.start()
         else:
             self.timer.stop()
