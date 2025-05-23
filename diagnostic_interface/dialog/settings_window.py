@@ -1,11 +1,9 @@
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QSpinBox, QLineEdit, QFormLayout, QFileDialog, QToolButton, \
-    QHBoxLayout, QWidget, QMessageBox, QSizePolicy, QLabel, QFrame
-from PyQt5.QtCore import QTimer
-import os
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout
+from PyQt5.QtWidgets import (QDialog, QDialogButtonBox, QSpinBox, QLineEdit, QFormLayout, QFileDialog,
+                             QToolButton, QHBoxLayout, QMessageBox, QFrame, QWidget, QLabel, QVBoxLayout
+                             )
 from PyQt5.QtGui import QFontMetrics
 from PyQt5.QtCore import Qt
-import sys
+import os
 
 
 class SettingsDialog(QDialog):
@@ -53,10 +51,10 @@ class SettingsDialog(QDialog):
 
         self.browse_button = QToolButton()
         font = self.browse_button.font()
-        font.setPointSize(14)  # or 18, 24, etc.
+        font.setPointSize(14)
         self.browse_button.setFont(font)
         self.browse_button.setText("📁")
-        self.browse_button.setFixedWidth(32)  # optional to keep size tidy
+        self.browse_button.setFixedWidth(32)
         self.browse_button.clicked.connect(self.select_folder)
 
         hbox = QHBoxLayout()

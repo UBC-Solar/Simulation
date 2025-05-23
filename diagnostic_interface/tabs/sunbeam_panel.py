@@ -5,7 +5,6 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QTimer, Qt
 import datetime
-import sys
 from diagnostic_interface import settings
 from data_tools.query import SunbeamClient
 import os
@@ -16,6 +15,7 @@ from ansi2html import Ansi2HTMLConverter
 
 
 RESET = "\x1b[0m"
+STATUS_POLLING_INTERVAL_MS = 1000
 
 
 class AnsiLogViewer(QTextEdit):
@@ -118,7 +118,7 @@ class DockerStackTab(QWidget):
     def _init_timer(self):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_status)
-        self.timer.setInterval(1000)  # poll every 1.00 seconds
+        self.timer.setInterval(STATUS_POLLING_INTERVAL_MS)
 
     def toggle_stack(self):
         if self.stack_running:
