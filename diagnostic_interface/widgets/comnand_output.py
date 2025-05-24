@@ -1,14 +1,15 @@
 import re
 from PyQt5.QtCore import Qt, pyqtSignal, QProcess, QByteArray
-from PyQt5.QtWidgets import QTextEdit, QWidget, QVBoxLayout, QPushButton
+from PyQt5.QtWidgets import QTextEdit, QWidget, QVBoxLayout, QPushButton, QMessageBox
 from ansi2html import Ansi2HTMLConverter
+import os
+import shlex
 
 RESET = "\x1b[0m"
 
 
 class CommandOutputWidget(QTextEdit):
     """A QTextEdit that runs a command in a QProcess and renders ANSI output (incl. spinners)."""
-    # emitted whenever new raw text arrives
     _chunk_ready = pyqtSignal(str)
 
     def __init__(self, parent=None):
@@ -17,30 +18,49 @@ class CommandOutputWidget(QTextEdit):
         self.setAcceptRichText(True)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        # ANSI → HTML converter
         self._converter = Ansi2HTMLConverter(dark_bg=False, inline=True)
-
-        # Qt process for running the command
         self._proc = QProcess(self)
         self._proc.setProcessChannelMode(QProcess.MergedChannels)
         self._proc.readyReadStandardOutput.connect(self._on_ready_read)
-
-        # connect to our own slot to update UI in main thread
         self._chunk_ready.connect(self._append_chunk)
 
-    def start_command(self, program: str, args: list[str]=(), cwd: str=None, env: dict=None):
-        """Launches the given program+args."""
-        self.clear()
-        if cwd:
-            self._proc.setWorkingDirectory(cwd)
-        if env:
-            qt_env = self._proc.processEnvironment()
-            for k, v in env.items():
-                qt_env.insert(k, v)
-            self._proc.setProcessEnvironment(qt_env)
+    def start_in_venv(
+            self,
+            project_root: str,
+            script_path: str,
+            args: list[str] = None,
+            venv_subdir: str = "environment",
+    ):
+        """
+        Activate the venv and run a Python script.
 
-        # ensure apps that detect a TTY will emit color
-        self._proc.start(program, args)
+        :param project_root: Path to your project root
+        :param script_path: Path (relative to project_root) of the .py you want to run
+        :param args: List of args to pass to the script
+        :param venv_subdir: Name of the venv folder under project_root (default "venv")
+        """
+        args = args or []
+
+        # full paths
+        activate = os.path.join(project_root, venv_subdir, "bin", "activate")
+        script = os.path.join(project_root, script_path)
+
+        # safely shell-quote everything
+        quoted_activate = shlex.quote(activate)
+        quoted_script = shlex.quote(script)
+        quoted_args = " ".join(shlex.quote(a) for a in args)
+
+        # build the bash -lc command
+        cmd = (
+                f"source {quoted_activate} && "
+                f"exec python {quoted_script}"
+                + (f" {quoted_args}" if quoted_args else "")
+        )
+
+        # set working dir so relative imports, file writes, etc. use project_root
+        self._proc.setWorkingDirectory(project_root)
+        # kick off bash -lc "source ... && exec python ..."
+        self._proc.start("bash", ["-lc", cmd])
 
     def stop(self):
         """Terminate the process."""
@@ -76,6 +96,26 @@ class CommandOutputWidget(QTextEdit):
                 self.insertHtml(html)
 
         self._scroll_to_bottom()
+
+        lines = text.splitlines()
+        if lines:
+            last = lines[-1]
+            if re.search(r"\(y/N\)\s*>\s*$", last):
+                # strip the trailing prompt marker for nicer display
+                prompt = re.sub(r"\s*\(y/N\)\s*>\s*$", "(y/N)", last)
+                self._ask_and_respond(prompt)
+
+    def _ask_and_respond(self, prompt_text: str):
+        """Show a QMessageBox for the prompt, then write back to the process."""
+        answer = QMessageBox.question(
+            self,
+            "Confirmation Required",
+            prompt_text,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes
+        )
+        resp = ("y\n" if answer == QMessageBox.Yes else "n\n").encode("utf-8")
+        self._proc.write(resp)
 
     def _remove_last_line(self):
         """Delete the last block (line) in the QTextEdit."""
