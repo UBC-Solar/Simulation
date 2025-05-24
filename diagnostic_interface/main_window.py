@@ -6,16 +6,14 @@ from PyQt5.QtWidgets import (
     QWidget,
     QPushButton,
     QLabel,
-    QComboBox,
-    QFormLayout,
     QVBoxLayout,
     QTabWidget,
 )
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
-from diagnostic_interface.widgets import TimedWidget, DataSelect
-from diagnostic_interface.tabs import DockerStackTab, PlotTab, UpdatableTab
+from diagnostic_interface.widgets import DataSelect
+from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab
 from diagnostic_interface.dialog import SettingsDialog
 from diagnostic_interface import settings
 
@@ -71,8 +69,14 @@ class MainWindow(QMainWindow):
         home_widget.setLayout(layout)
         self.tabs.addTab(home_widget, "Home")
 
-        self.docker_gui = DockerStackTab()
-        self.tabs.addTab(self.docker_gui, "Sunbeam")
+        self.sunbeam_gui = SunbeamTab()
+        self.tabs.addTab(self.sunbeam_gui, "Sunbeam")
+
+        self.sunlink_gui = SunlinkTab()
+        self.tabs.addTab(self.sunlink_gui, "Sunlink")
+
+        self.telemetry_tab = TelemetryTab()
+        self.tabs.addTab(self.telemetry_tab, "Telemetry")
 
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.
@@ -109,14 +113,23 @@ class MainWindow(QMainWindow):
         current_interval = settings.plot_timer_interval
         current_client_address = settings.sunbeam_api_url
         current_sunbeam_path = settings.sunbeam_path
+        current_sunlink_path = settings.sunlink_path
 
-        dialog = SettingsDialog(current_interval, current_client_address, current_sunbeam_path, self)
+        dialog = SettingsDialog(
+            current_interval,
+            current_client_address,
+            current_sunbeam_path,
+            current_sunlink_path,
+            self
+        )
+
         if dialog.exec_():  # if user pressed OK
-            new_plot_interval, new_client_address, sunbeam_path = dialog.get_settings()
+            new_plot_interval, new_client_address, sunbeam_path, sunlink_path = dialog.get_settings()
 
             settings.plot_timer_interval = new_plot_interval
             settings.sunbeam_api_url = new_client_address
             settings.sunbeam_path = sunbeam_path
+            settings.sunlink_path = sunlink_path
 
             # Refresh settings
             self.client = SunbeamClient(settings.sunbeam_api_url)
