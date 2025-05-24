@@ -2,12 +2,33 @@ from pydantic import BaseModel
 from pathlib import Path
 import tomli
 import tomli_w
+from typing import Protocol, cast
 
 
 class Settings(BaseModel):
     plot_timer_interval: int
     sunbeam_api_url: str
     sunbeam_path: str
+    sunlink_path: str
+
+
+class SettingsProtocol(Protocol):
+    @property
+    def plot_timer_interval(self) -> int: ...
+    @property
+    def sunbeam_api_url(self) -> str: ...
+    @property
+    def sunbeam_path(self) -> str: ...
+    @property
+    def sunlink_path(self) -> str: ...
+    @plot_timer_interval.setter
+    def plot_timer_interval(self, new_interval: int) -> None: ...
+    @sunbeam_api_url.setter
+    def sunbeam_api_url(self, new_url: str) -> None: ...
+    @sunbeam_path.setter
+    def sunbeam_path(self, new_path: str) -> None: ...
+    @sunlink_path.setter
+    def sunlink_path(self, new_path: str) -> None: ...
 
 
 class PersistentSettings:
@@ -37,4 +58,4 @@ class PersistentSettings:
         self.save()
 
 
-settings = PersistentSettings()
+settings = cast(SettingsProtocol, PersistentSettings())
