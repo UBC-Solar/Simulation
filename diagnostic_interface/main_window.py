@@ -13,8 +13,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
 from diagnostic_interface.widgets import DataSelect
-# from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab
-from diagnostic_interface.tabs import PlotTab, UpdatableTab
+from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab
 from diagnostic_interface.dialog import SettingsDialog
 from diagnostic_interface import settings
 
@@ -70,14 +69,14 @@ class MainWindow(QMainWindow):
         home_widget.setLayout(layout)
         self.tabs.addTab(home_widget, "Home")
 
-        # self.sunbeam_gui = SunbeamTab()
-        # self.tabs.addTab(self.sunbeam_gui, "Sunbeam")
-        #
-        # self.sunlink_gui = SunlinkTab()
-        # self.tabs.addTab(self.sunlink_gui, "Sunlink")
-        #
-        # self.telemetry_tab = TelemetryTab()
-        # self.tabs.addTab(self.telemetry_tab, "Telemetry")
+        self.sunbeam_gui = SunbeamTab()
+        self.tabs.addTab(self.sunbeam_gui, "Sunbeam")
+
+        self.sunlink_gui = SunlinkTab()
+        self.tabs.addTab(self.sunlink_gui, "Sunlink")
+
+        self.telemetry_tab = TelemetryTab()
+        self.tabs.addTab(self.telemetry_tab, "Telemetry")
 
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.

@@ -1,15 +1,15 @@
-# from .docker_panel import DockerStackTab
+from .docker_panel import DockerStackTab
 from .plot_tab import PlotTab
 from ._updatable import UpdatableTab
-# from .sunbeam_panel import SunbeamTab
-# from .sunlink_panel import SunlinkTab
-# from .telemetry_panel import TelemetryTab
+from .sunbeam_panel import SunbeamTab
+from .sunlink_panel import SunlinkTab
+from .telemetry_panel import TelemetryTab
 
 __all__ = [
-    # "DockerStackTab",
+    "DockerStackTab",
     "PlotTab",
     "UpdatableTab",
-    # "SunbeamTab",
-    # "SunlinkTab",
-    # "TelemetryTab"
+    "SunbeamTab",
+    "SunlinkTab",
+    "TelemetryTab"
 ]
