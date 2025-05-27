@@ -172,6 +172,32 @@ def reshape_speed_array(
     """
     speed_boolean_array = race.driving_boolean.astype(int)[start_time:]
 
+    """
+    driving_allowed = race.driving_boolean[start_time:]
+    avg_lap_speeds_ms = np.array(speed) * (1000/3600)
+    
+    # Idle time for 0m/s entries (can be parameterized)
+    idle_time = 1800  # 30 min default; adjust if needed
+    
+    speed_ms = calculate_driving_speeds(
+        average_lap_speeds=average_lap_speeds_mps,
+        simulation_dt=tick,
+        driving_allowed=driving_allowed,
+        idle_time=idle_time
+    )
+    
+    speed_kmh = np.array(speed_ms) * (3600/1000)
+    
+    speed_smoothed_kmh = _apply_deceleration(
+        _apply_acceleration(speed_kmph, tick, max_acceleration),
+        tick,
+        max_deceleration,
+    )
+    
+    return speed_smoothed_kmh
+     """
+
+
     speed_mapped = _map_array_to_targets(
         speed, get_granularity_reduced_boolean(speed_boolean_array, granularity)
     )

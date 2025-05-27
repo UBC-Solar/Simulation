@@ -133,9 +133,8 @@ class Model:
         Reduces verbosity
             when true.
         """
-
         if speed is None:
-            speed = np.array([30] * self.get_driving_time_divisions())
+            speed = np.array([30] * self.get_driving_time_divisions()) # array with length based on times we are allowed to be driving based on granularity too !!!
 
         assert len(speed) == self.get_driving_time_divisions(), (
             "Input driving speeds array must have length equal to "
@@ -145,6 +144,9 @@ class Model:
         )
 
         # ----- Reshape speed array -----
+        # !!! My changes here
+        # calculate_driving_speeds: takes in array of speeds per lap, track length, dt, idle time and an array with
+        # booleans that say whether we are allowed to drive for each dt. This creates an array of speeds for each dt
         speed_kmh = reshape_speed_array(
             self.race,
             speed,
