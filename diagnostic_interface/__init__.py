@@ -2,7 +2,8 @@ from .config import settings
 from widgets import TimedWidget, DataSelect
 from dialog import SettingsDialog
 from canvas import PlotCanvas, CustomNavigationToolbar
-from tabs import DockerStackTab, PlotTab
+from tabs import PlotTab
+# from tabs import DockerStackTab, PlotTab
 
 __all__ = [
     "TimedWidget",
@@ -11,6 +12,6 @@ __all__ = [
     "PlotCanvas",
     "PlotTab",
     "DataSelect",
-    "DockerStackTab",
+    # "DockerStackTab",
     "settings"
 ]
