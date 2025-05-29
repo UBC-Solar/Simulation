@@ -11,5 +11,6 @@ if __name__ == "__main__":
     app.setStyleSheet(qdarktheme.load_stylesheet("light"))
 
     window = MainWindow()
+    window.showMaximized()
     window.show()
     sys.exit(app.exec_())

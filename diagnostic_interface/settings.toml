@@ -1,4 +1,4 @@
-plot_timer_interval = 1
-sunbeam_api_url = "localhost:8080"
+plot_timer_interval = 20
+sunbeam_api_url = "api.sunbeam.ubcsolar.com"
 sunbeam_path = "/Users/joshuariefman/Solar/sunbeam"
 sunlink_path = "/Users/joshuariefman/Solar/sunlink"

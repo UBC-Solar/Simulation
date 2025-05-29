@@ -1,9 +1,8 @@
-from PyQt5.QtCore import Qt
-import datetime
-import os
-import pty
-import subprocess
+from collections.abc import Callable
+
+from PyQt5.QtCore import QProcess, QProcessEnvironment, Qt
 from PyQt5.QtWidgets import QTextEdit
+import datetime
 from ansi2html import Ansi2HTMLConverter
 
 
@@ -11,49 +10,59 @@ RESET = "\x1b[0m"
 
 
 class DockerLogWidget(QTextEdit):
-    def __init__(self):
+    def __init__(self, start_stack_command: Callable[[], list[str]]):
         super().__init__()
         self.setReadOnly(True)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setAcceptRichText(True)
-        self.converter = Ansi2HTMLConverter(dark_bg=False, inline=True)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        self._last_log_time = datetime.datetime.now(datetime.UTC)
+        self.converter = Ansi2HTMLConverter(dark_bg=False, inline=True)
+        self._last_log_time = datetime.datetime.utcnow()
+        self._start_stack_command = start_stack_command
+
+        # --- set up the QProcess once ---
+        self._proc = QProcess(self)
+        self._proc.setProcessChannelMode(QProcess.MergedChannels)
+        self._proc.readyReadStandardOutput.connect(self._on_ready_read)
+
+    def get_docker_logs_cmd(self, replace_str: str) -> list[str]:
+        start_cmd: list[str] = self._start_stack_command()
+
+        cmd = " ".join(start_cmd)
+        docker_cmd = cmd.replace("up -d", replace_str)
+
+        return docker_cmd.split()
 
     def fetch_ansi_logs(self, project_dir: str):
-        master_fd, slave_fd = pty.openpty()
+        # 1) compute the “since” timestamp
         since_str = self._last_log_time.isoformat() + "Z"
-
-        proc = subprocess.Popen(
-            ["docker", "compose", "logs", "--since", since_str],
-            cwd=project_dir,
-            stdout=slave_fd,
-            stderr=subprocess.DEVNULL,
-            env={**os.environ, "FORCE_COLOR": "1"},
-        )
         self._last_log_time = datetime.datetime.utcnow()
 
-        os.close(slave_fd)
+        # 2) set up environment so Docker still emits color
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("FORCE_COLOR", "1")
+        self._proc.setProcessEnvironment(env)
 
-        output = b""
-        while True:
-            try:
-                chunk = os.read(master_fd, 1024)
-                if not chunk:
-                    break
-                output += chunk
-            except OSError:
-                break
+        # Get command
+        cmd = self.get_docker_logs_cmd(f"logs --since {since_str}")
 
-        os.close(master_fd)
-        ansi_text = output.decode(errors="replace")
+        # 3) set working dir and launch
+        self._proc.setWorkingDirectory(project_dir)
+        self._proc.start(
+            cmd[0], cmd[1:]
+        )
 
-        lines = ansi_text.splitlines()
-        for line in lines:
-            if '\r' in line:
-                line = line.split('\r')[-1]
+    def _on_ready_read(self):
+        # read whatever’s arrived so far
+        raw = self._proc.readAllStandardOutput()
+        text = bytes(raw).decode(errors="replace")
+
+        for part in text.splitlines():
+            # handle “\r” style overwrites
+            if "\r" in part:
+                part = part.rsplit("\r", 1)[-1]
                 self._remove_last_line()
-            html = self.converter.convert(RESET + line + RESET, full=False)
+            html = self.converter.convert(RESET + part + RESET, full=False)
             self.insertHtml(html + "<br>")
 
         self._scroll_to_bottom()
@@ -66,14 +75,12 @@ class DockerLogWidget(QTextEdit):
         cursor.deletePreviousChar()
 
     def _scroll_to_bottom(self):
-        scrollbar = self.verticalScrollBar()
-        scrollbar.setValue(scrollbar.maximum())
+        sb = self.verticalScrollBar()
+        sb.setValue(sb.maximum())
 
-    def wheelEvent(self, event):
-        pass
-
+    # disable wheel/key scrolling:
+    def wheelEvent(self, event):    pass
     def keyPressEvent(self, event):
-        # Disable arrow key scrolling
         if event.key() in (Qt.Key_Up, Qt.Key_Down, Qt.Key_PageUp, Qt.Key_PageDown):
             return
         super().keyPressEvent(event)

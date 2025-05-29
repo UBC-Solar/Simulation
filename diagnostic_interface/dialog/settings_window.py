@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QDialog, QDialogButtonBox, QSpinBox, QLineEdit, QFormLayout, QFileDialog,
-                             QToolButton, QHBoxLayout, QMessageBox, QFrame, QWidget, QLabel, QVBoxLayout
+                             QToolButton, QHBoxLayout, QMessageBox, QFrame, QWidget, QLabel, QVBoxLayout, QCheckBox
                              )
 from PyQt5.QtGui import QFontMetrics
 from PyQt5.QtCore import Qt

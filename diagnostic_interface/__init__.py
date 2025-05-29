@@ -1,4 +1,4 @@
-from .config import settings
+from .config import settings, command_settings
 from widgets import TimedWidget, DataSelect
 from dialog import SettingsDialog
 from canvas import PlotCanvas, CustomNavigationToolbar
@@ -12,5 +12,6 @@ __all__ = [
     "PlotTab",
     "DataSelect",
     "DockerStackTab",
-    "settings"
+    "settings",
+    "command_settings"
 ]

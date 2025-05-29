@@ -15,6 +15,8 @@ HELP_MESSAGES = {
                        "- Data is sourced from the car's telemetry system.\n",
 }
 
+EVENT = "FSGP_2024_Day_1"
+
 
 class PlotRefreshWorkerSignals(QObject):
     finished = pyqtSignal(bool)  # success or failure
