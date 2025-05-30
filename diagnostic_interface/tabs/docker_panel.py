@@ -168,7 +168,7 @@ class DockerStackTab(QWidget):
         self.evaluate_readiness(num_running_containers)
 
         self.toggle_button.setText("Stop Stack")
-        self.log_output.fetch_ansi_logs(self.project_directory)
+        self.log_output.fetch_logs(self.project_directory)
 
     @abstractmethod
     def evaluate_readiness(self, num_running_containers: int):

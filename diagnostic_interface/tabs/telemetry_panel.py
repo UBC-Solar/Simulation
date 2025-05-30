@@ -19,7 +19,7 @@ class TelemetryTab(QWidget):
         self.toggle_button = QPushButton("Start Telemetry")
         self.toggle_button.clicked.connect(self.toggle_stack)
 
-        self.log_output = CommandOutputWidget(self.start_stack_command)
+        self.log_output = CommandOutputWidget()
 
         layout = QVBoxLayout()
         layout.addWidget(self.status_label)
