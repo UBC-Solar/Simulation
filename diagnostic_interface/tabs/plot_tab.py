@@ -16,7 +16,7 @@ HELP_MESSAGES = {
                        "- Data is sourced from the car's telemetry system.\n",
 }
 
-#event = FSGP_Day_1
+
 class PlotRefreshWorkerSignals(QObject):
     finished = pyqtSignal(bool)  # success or failure
 
@@ -39,8 +39,7 @@ class PlotRefreshWorker(QRunnable):
 class PlotTab(QWidget):
     close_requested = pyqtSignal(QWidget)
 
-   def __init__(self, origin: str, source: str, event: str, data_name: str, parent=None):
-
+    def __init__(self, origin: str, source: str, event: str, data_name: str, parent=None):
         super().__init__(parent)
 
         self.origin = origin
@@ -124,20 +123,14 @@ class PlotTab(QWidget):
 
 
 
+
+
 class WeatherTab(QWidget):
     close_requested = pyqtSignal(QWidget)
 
     def __init__(self, parent = None):
-    #def __init__(self, origin = "production", source = "power", event = "FSGP_2024_Day_1", data_name1 = "PackPower", data_name2 = "MotorPower", parent = None):
+
         super().__init__(parent)
-        #
-        # self.origin = origin
-        # self.source = source
-        # self.event = event
-        # self.data_name1 = data_name1
-        # self.data_name2 = data_name2
-
-
         self._thread_pool = QThreadPool()
 
         # Layout setup
