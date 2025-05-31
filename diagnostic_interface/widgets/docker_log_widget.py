@@ -2,12 +2,12 @@ from collections.abc import Callable
 from PyQt5.QtCore import QProcess, QProcessEnvironment, Qt
 from PyQt5.QtWidgets import QTextEdit
 import datetime
-import shlex
+import os
 
 
 class DockerLogWidget(QTextEdit):
     """A QTextEdit that fetches Docker logs incrementally and truncates old entries."""
-    def __init__(self, start_stack_command: Callable[[], list[str]], max_lines: int = 1000):
+    def __init__(self, start_stack_command: Callable[[], str], max_lines: int = 1000):
         super().__init__()
         self.setReadOnly(True)
         self.setAcceptRichText(False)
@@ -21,10 +21,9 @@ class DockerLogWidget(QTextEdit):
         self._proc.setProcessChannelMode(QProcess.MergedChannels)
         self._proc.readyReadStandardOutput.connect(self._on_ready_read)
 
-    def get_docker_logs_cmd(self, replace_str: str) -> list[str]:
-        start_cmd = self._start_stack_command()
-        full_cmd = " ".join(start_cmd).replace("up -d", replace_str)
-        return shlex.split(full_cmd)
+    def get_docker_logs_cmd(self, replace_str: str) -> str:
+        base_cmd_str = self._start_stack_command()
+        return base_cmd_str.replace("up -d", replace_str)
 
     def fetch_logs(self, project_dir: str):
         # compute "since" timestamp
@@ -36,16 +35,28 @@ class DockerLogWidget(QTextEdit):
         env.insert("FORCE_COLOR", "0")
         self._proc.setProcessEnvironment(env)
 
-        cmd = self.get_docker_logs_cmd(f"logs --since {since}")
-        if not cmd:
+        docker_cmd_str = self.get_docker_logs_cmd(f"logs --since {since}")
+        if not docker_cmd_str.strip():
             return
 
+        # 4) Depending on platform, run via an appropriate shell
+        #    - On Unix/macOS: use 'bash -lc "<docker_cmd_str>"'
+        #    - On Windows: use 'cmd /C "<docker_cmd_str>"'
+        if os.name == "nt":
+            # Windows
+            shell_prog = "cmd"
+            shell_args = ["/C", docker_cmd_str]
+        else:
+            # Unix-like; assumes bash is available
+            shell_prog = "bash"
+            shell_args = ["-lc", docker_cmd_str]
+
         self._proc.setWorkingDirectory(project_dir)
-        self._proc.start(cmd[0], cmd[1:])
+        self._proc.start(shell_prog, shell_args)
 
     def _on_ready_read(self):
         raw = self._proc.readAllStandardOutput()
-        text = bytes(raw).decode('utf-8', errors='replace')
+        text = bytes(raw).decode("utf-8", errors="replace")
         lines = text.splitlines()
 
         cursor = self.textCursor()

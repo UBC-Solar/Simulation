@@ -129,6 +129,7 @@ class DockerStackTab(QWidget):
                 cwd=self.project_directory,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                shell=True
             )
             QTimer.singleShot(0, self.do_update_status)
 

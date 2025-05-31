@@ -27,11 +27,11 @@ class SunlinkTab(DockerStackTab):
 
     @staticmethod
     def start_stack_command():
-        return command_settings.sunlink_up_cmd.split()
+        return command_settings.sunlink_up_cmd
 
     @staticmethod
     def stop_stack_command():
-        return command_settings.sunlink_down_cmd.split()
+        return command_settings.sunlink_down_cmd
 
     @property
     def project_directory(self):
