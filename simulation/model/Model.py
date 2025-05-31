@@ -138,7 +138,7 @@ class Model:
         """
         # We want to check that the speed array has at least as many elements as the number of laps we want to simulate
         assert len(speed) >= self.num_laps, (
-            "Input driving speeds array must have length greater than or"
+            "Input driving speeds array must have length greater than or "
             "equal to self.num_laps! Current length is "
             f"{len(speed)} and length of {self.num_laps} is needed!"
         )

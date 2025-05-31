@@ -17,7 +17,7 @@ tiling = 200
 2 = [32400, 61200]
 
 [weather_query_config]
-weather_provider = "Solcast"
+weather_provider = "Openweather"
 
 [weather_query_config.Openweather]
 weather_period = "Daily"
