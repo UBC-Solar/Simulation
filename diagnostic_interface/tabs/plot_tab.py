@@ -36,7 +36,6 @@ class PlotRefreshWorker(QRunnable):
         success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
         self.signals.finished.emit(success)
 
-
 class PlotTab(QWidget):
     close_requested = pyqtSignal(QWidget)
 
@@ -124,10 +123,6 @@ class PlotTab(QWidget):
 
 
 
-
-
-
-
 class PlotTab2(QWidget):
     close_requested = pyqtSignal(QWidget)
 
@@ -210,27 +205,33 @@ class PlotTab2(QWidget):
             self.refresh_timer.stop()
 
     def refresh_plot(self):
-        worker1 = PlotRefreshWorker(
-            self.plot_canvas1,
-            self.origin,
-            self.source,
-            self.event,
-            self.data_name1
-            #"MotorPower"
+        # worker1 = PlotRefreshWorker(
+        #     self.plot_canvas1,
+        #     self.origin,
+        #     self.source,
+        #     self.event,
+        #     self.data_name1
+        #     #"MotorPower"
+        #
+        # )
 
-        )
+        worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "power", "FSGP_2024_Day_1", "MotorPower")
 
         worker1.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker1)
+        #
+        # worker2 = PlotRefreshWorker(
+        #     self.plot_canvas2,
+        #     self.origin,
+        #     self.source,
+        #     self.event,
+        #     self.data_name2
+        #     #"PackPower"
+        # )
 
-        worker2 = PlotRefreshWorker(
-            self.plot_canvas2,
-            self.origin,
-            self.source,
-            self.event,
-            self.data_name2
-            #"PackPower"
-        )
+
+        worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "power", "FSGP_2024_Day_1", "MotorPower")
+
         worker2.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker2)
 
