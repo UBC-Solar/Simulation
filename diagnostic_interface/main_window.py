@@ -14,7 +14,7 @@ from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
 from diagnostic_interface.widgets import DataSelect
 # from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab
-from diagnostic_interface.tabs import PlotTab2, PlotTab, UpdatableTab
+from diagnostic_interface.tabs import WeatherTab, PlotTab, UpdatableTab
 
 
 from diagnostic_interface.dialog import SettingsDialog
@@ -26,7 +26,7 @@ WINDOW_TITLE = "Diagnostic Interface"
 X_COORD = 100  # Sets the x-coord where the interface will be created
 Y_COORD = 100  # Sets the y-coord where the interface will be created
 WIDTH = 800  # Sizing of window
-HEIGHT = 600  # Size of window
+HEIGHT = 1200  # Size of window
 
 
 class MainWindow(QMainWindow):
@@ -85,14 +85,16 @@ class MainWindow(QMainWindow):
         # self.telemetry_tab = TelemetryTab()
         # self.tabs.addTab(self.telemetry_tab, "Telemetry")
 
+        plot_tab2 = WeatherTab()
+        self.tabs.addTab(plot_tab2, f"weather_tab")
+
 
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.
         This method contains a connection to the request_close method of the PlotTab class to receive
         the signal to close a tab."""
 
-        plot_tab2 = PlotTab2()
-        self.tabs.addTab(plot_tab2, f"packpower_and_motorpower")
+
 
         # Getting the values that we will query.
         origin: str = self.data_select_form.selected_origin

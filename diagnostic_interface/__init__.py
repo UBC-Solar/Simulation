@@ -2,7 +2,7 @@ from .config import settings
 from widgets import TimedWidget, DataSelect
 from dialog import SettingsDialog
 from canvas import PlotCanvas, CustomNavigationToolbar
-from tabs import PlotTab2
+from tabs import PlotTab, WeatherTab
 # from tabs import DockerStackTab, PlotTab
 
 __all__ = [
@@ -10,7 +10,8 @@ __all__ = [
     "SettingsDialog",
     "CustomNavigationToolbar",
     "PlotCanvas",
-    "PlotTab2",
+    "PlotTab",
+    "WeatherTab",
     "DataSelect",
     # "DockerStackTab",
     "settings"
