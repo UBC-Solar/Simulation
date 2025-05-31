@@ -135,7 +135,7 @@ class WeatherTab(QWidget):
 
         # Layout setup
         self.layout = QVBoxLayout(self)
-        self.layout.setSpacing(10)
+        self.layout.setSpacing(5)
         self.layout.setContentsMargins(30, 30, 30, 30)
 
         #plots
@@ -151,7 +151,7 @@ class WeatherTab(QWidget):
         # Buttons
         help_button = QPushButton("Help")
         help_button.setObjectName("helpButton")
-        help_button.clicked.connect(lambda: self.show_help_message(self.data_name1, self.event))
+        help_button.clicked.connect(lambda: self.show_help_message(self.data_name, self.event))
 
         close_button = QPushButton("Close Tab")
         close_button.setObjectName("closeButton")
@@ -232,9 +232,9 @@ class WeatherTab(QWidget):
     def request_close(self):
         self.close_requested.emit(self)
 
-    def show_help_message(self, data_name1):
-        message1 = HELP_MESSAGES.get(data_name1, "No specific help available for this plot.")
-        QMessageBox.information(self, f"Help: {data_name1}", message1)
+    def show_help_message(self, data_name):
+        message1 = HELP_MESSAGES.get(data_name, "No specific help available for this plot.")
+        QMessageBox.information(self, f"Help: {data_name}", message1)
 
 
 
