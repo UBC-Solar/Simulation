@@ -67,7 +67,7 @@ class DockerLogWidget(QTextEdit):
         # 4) Decide which shell wrapper to use
         if os.name == "nt":
             # On Windows: wrap in cmd /C "<...>"
-            shell_cmd = f'cmd /C "{docker_cmd_str}"'
+            shell_cmd = f"{docker_cmd_str}"
         else:
             # On Unix/macOS: wrap in bash -lc "<...>"
             # We do NOT shlex.quote(docker_cmd_str) here, because we want the entire
