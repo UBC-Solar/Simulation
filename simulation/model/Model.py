@@ -41,6 +41,7 @@ class Model:
         max_acceleration: float,
         max_deceleration: float,
         start_time: int,
+        num_laps: int
     ):
         """
         Instantiate a `Model`.
@@ -60,6 +61,7 @@ class Model:
         :param float max_acceleration: Maximum allowed acceleration of the car in km/h.
         :param float max_deceleration: Maximum allowed deceleration of the car in km/h.
         :param int start_time: The initial time, in seconds since midnight of the first day, of the simulation.
+        :param int num_laps: The number of laps that we are simulating/optimizing
         """
         self.return_type = return_type
         self.race = race
@@ -76,6 +78,7 @@ class Model:
         self.max_acceleration = max_acceleration
         self.max_deceleration = max_deceleration
         self.start_time = start_time
+        self.num_laps = num_laps
 
         self.time_of_initialization = self.meteorology.last_updated_time  # Real Time
 
@@ -120,7 +123,7 @@ class Model:
 
         Note 2: currently, the simulation can only be run for times during which weather data is available
 
-        :param np.ndarray speed: Array that specifies the solar car's driving speed at each time step.
+        :param np.ndarray speed: Array that specifies the solar car's avg driving speed per lap.
         :param bool plot_results: Set to True to plot the results of the simulation.
         :param bool verbose: Boolean to control logging and debugging behaviour.
         :param tuple[float] plot_portion: A tuple containing the beginning and end of the portion of the array we'd
@@ -133,20 +136,14 @@ class Model:
         Reduces verbosity
             when true.
         """
-        if speed is None:
-            speed = np.array([30] * self.get_driving_time_divisions()) # array with length based on times we are allowed to be driving based on granularity too !!!
-
-        assert len(speed) == self.get_driving_time_divisions(), (
-            "Input driving speeds array must have length equal to "
-            "get_driving_time_divisions()! Current length is "
-            f"{len(speed)} and length of "
-            f"{self.get_driving_time_divisions()} is needed!"
+        # We want to check that the speed array has at least as many elements as the number of laps we want to simulate
+        assert len(speed) >= self.num_laps, (
+            "Input driving speeds array must have length greater than or"
+            "equal to self.num_laps! Current length is "
+            f"{len(speed)} and length of {self.num_laps} is needed!"
         )
 
         # ----- Reshape speed array -----
-        # !!! My changes here
-        # calculate_driving_speeds: takes in array of speeds per lap, track length, dt, idle time and an array with
-        # booleans that say whether we are allowed to drive for each dt. This creates an array of speeds for each dt
         speed_kmh = reshape_speed_array(
             self.race,
             speed,
@@ -186,7 +183,6 @@ class Model:
             )
 
         # ----- Plotting -----
-
         if plot_results:
             results_arrays = self.get_results(
                 [

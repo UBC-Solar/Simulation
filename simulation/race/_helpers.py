@@ -180,6 +180,7 @@ def reshape_speed_array(
     # Idle time for 0m/s entries
     idle_time = (5*60)/tick # ticks of idle time; for now this is set to be equivalent to 5 minutes
 
+    # Get a speed array where each entry is the speed at each time step
     speed_ms = calculate_driving_speeds(
         lap_speeds_ms,
         tick,
@@ -187,7 +188,7 @@ def reshape_speed_array(
         idle_time
     )
     
-    speed_kmh = np.array(speed_ms) * (3600/1000)
+    speed_kmh = np.array(speed_ms) * (3600/1000) # Transform back to km/hr
 
     reshaped_tick_count = math.ceil((race.race_duration - start_time) / float(tick))
     speed_mapped_per_tick = _reshape_and_repeat(speed_kmh, reshaped_tick_count)

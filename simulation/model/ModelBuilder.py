@@ -95,6 +95,7 @@ class ModelBuilder:
         self.simulation_period: Optional[int] = None
         self.return_type: Optional[SimulationReturnType] = None
         self.vehicle_speed_period: Optional[int] = None
+        self.num_laps: Optional[int] = None
 
         # Flags
         self._rebuild_route_cache: bool = False
@@ -406,12 +407,12 @@ class ModelBuilder:
 
         self.regen = BasicRegen(self._car_config.vehicle_config.vehicle_mass)
 
-        tiling = self.route_data.tiling
+        self.num_laps = self.route_data.tiling
         route_data = {
-            "path": np.tile(self.route_data.coords, (tiling, 1)),
+            "path": np.tile(self.route_data.coords, (self.num_laps, 1)),
             "num_unique_coords": len(self.route_data.coords),
-            "time_zones": np.tile(self.route_data.path_time_zones, tiling),
-            "elevations": np.tile(self.route_data.path_elevations, tiling),
+            "time_zones": np.tile(self.route_data.path_time_zones, self.num_laps),
+            "elevations": np.tile(self.route_data.path_elevations, self.num_laps),
         }
 
         self.gis = GIS(route_data, self.origin_coord, self.current_coord)
