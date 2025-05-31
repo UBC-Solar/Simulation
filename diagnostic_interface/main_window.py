@@ -14,7 +14,9 @@ from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
 from diagnostic_interface.widgets import DataSelect
 # from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab
-from diagnostic_interface.tabs import PlotTab, UpdatableTab
+from diagnostic_interface.tabs import PlotTab2, UpdatableTab
+
+
 from diagnostic_interface.dialog import SettingsDialog
 from diagnostic_interface import settings
 
@@ -91,7 +93,7 @@ class MainWindow(QMainWindow):
         data_name: str = self.data_select_form.selected_data
 
         # Creating PlotTab object and adding it to the list of tabs.
-        plot_tab = PlotTab(origin, source, event, data_name)
+        plot_tab = PlotTab2()
         self.tabs.addTab(plot_tab, f"{data_name}")
 
         plot_tab.close_requested.connect(self.close_tab)
