@@ -13,8 +13,7 @@ plt.style.use("seaborn-v0_8-darkgrid")
 
 class PlotCanvas(FigureCanvas):
     def __init__(self, parent=None):
-
-        self.fig(), self.ax = plt.subplots()
+        self.fig, self.ax = plt.subplots()
         super().__init__(self.fig)
         self.setParent(parent)
 

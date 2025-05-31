@@ -135,7 +135,7 @@ class WeatherTab(QWidget):
 
         # Layout setup
         self.layout = QVBoxLayout(self)
-        self.layout.setSpacing(5)
+        self.layout.setSpacing(10)
         self.layout.setContentsMargins(30, 30, 30, 30)
 
         #plots
