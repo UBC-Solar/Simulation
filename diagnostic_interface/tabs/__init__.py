@@ -1,8 +1,8 @@
 # from .docker_panel import DockerStackTab
-from diagnostic_interface import PlotTab
+#from diagnostic_interface import PlotTab
 
 from .plot_tab import PlotTab2
-#from .plot_tab import PlotTab
+from .plot_tab import PlotTab
 from ._updatable import UpdatableTab
 # from .sunbeam_panel import SunbeamTab
 # from .sunlink_panel import SunlinkTab
