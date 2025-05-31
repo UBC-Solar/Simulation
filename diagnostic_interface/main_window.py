@@ -30,6 +30,7 @@ HEIGHT = 600  # Size of window
 
 
 class MainWindow(QMainWindow):
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle(WINDOW_TITLE)
@@ -85,12 +86,11 @@ class MainWindow(QMainWindow):
         # self.tabs.addTab(self.telemetry_tab, "Telemetry")
 
 
-
-
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.
         This method contains a connection to the request_close method of the PlotTab class to receive
         the signal to close a tab."""
+
 
         # Getting the values that we will query.
         origin: str = self.data_select_form.selected_origin
@@ -98,15 +98,19 @@ class MainWindow(QMainWindow):
         event: str = self.data_select_form.selected_event
         data_name: str = self.data_select_form.selected_data
 
-        # Creating PlotTab object and adding it to the list of tabs.
-        plot_tab = PlotTab(origin, source, event, data_name)
 
+
+        # Creating PlotTab object and adding it to the list of tabs.
+
+
+        plot_tab = PlotTab(origin, source, event, data_name)
         self.tabs.addTab(plot_tab, f"{data_name}")
+
+        plot_tab2 = PlotTab2()
+        self.tabs.addTab(plot_tab2, f"packpower_and_motorpower")
 
         plot_tab.close_requested.connect(self.close_tab)
 
-        # plot_tab2 = PlotTab2()
-        # self.tabs.addTab(plot_tab2, f"packpower_and_motorpower")
 
 
 
