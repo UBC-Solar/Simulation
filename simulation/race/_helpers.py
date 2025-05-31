@@ -2,6 +2,7 @@ import math
 import numpy as np
 from numba import jit
 from simulation.race import Race
+from physics.environment.gis.gis import calculate_driving_speeds
 
 
 def _reshape_and_repeat(input_array, reshape_length):
@@ -159,7 +160,7 @@ def reshape_speed_array(
         - tick length (time interval between speed array values in seconds)
 
     :param Race race: Race object containing the timing configuration
-    :param np.ndarray speed: A NumPy array representing the speed at each timestamp in km/h
+    :param np.ndarray speed: A NumPy array representing the average speed at each lap in km/h
     :param float granularity: how granular the time divisions for Simulation's speed array should be,
                               where 1 is hourly and 0.5 is twice per hour.
     :param int start_time: time since start of the race that simulation is beginning
@@ -170,40 +171,26 @@ def reshape_speed_array(
     :rtype: np.ndarray
 
     """
-    speed_boolean_array = race.driving_boolean.astype(int)[start_time:]
+    # Boolean array that tells us whether we are allowed to drive at each tick
+    driving_allowed = race.driving_boolean.astype(int)[start_time:]
 
-    """
-    driving_allowed = race.driving_boolean[start_time:]
-    avg_lap_speeds_ms = np.array(speed) * (1000/3600)
+    # Assuming we receive speeds per lap in km/hr (param speed would be speed for a lap in kmh)
+    lap_speeds_ms = np.array(speed) * (1000/3600)
     
-    # Idle time for 0m/s entries (can be parameterized)
-    idle_time = 1800  # 30 min default; adjust if needed
-    
+    # Idle time for 0m/s entries
+    idle_time = (5*60)/tick # ticks of idle time; for now this is set to be equivalent to 5 minutes
+
     speed_ms = calculate_driving_speeds(
-        average_lap_speeds=average_lap_speeds_mps,
-        simulation_dt=tick,
-        driving_allowed=driving_allowed,
-        idle_time=idle_time
+        lap_speeds_ms,
+        tick,
+        driving_allowed,
+        idle_time
     )
     
     speed_kmh = np.array(speed_ms) * (3600/1000)
-    
-    speed_smoothed_kmh = _apply_deceleration(
-        _apply_acceleration(speed_kmph, tick, max_acceleration),
-        tick,
-        max_deceleration,
-    )
-    
-    return speed_smoothed_kmh
-     """
-
-
-    speed_mapped = _map_array_to_targets(
-        speed, get_granularity_reduced_boolean(speed_boolean_array, granularity)
-    )
 
     reshaped_tick_count = math.ceil((race.race_duration - start_time) / float(tick))
-    speed_mapped_per_tick = _reshape_and_repeat(speed_mapped, reshaped_tick_count)
+    speed_mapped_per_tick = _reshape_and_repeat(speed_kmh, reshaped_tick_count)
     speed_smoothed_kmh = _apply_deceleration(
         _apply_acceleration(speed_mapped_per_tick, tick, max_acceleration),
         tick,
