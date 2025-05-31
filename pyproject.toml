@@ -67,7 +67,7 @@ dependencies = [
     "ansi2html>=1.9.2",
     "termqt>=1.0.0",
     "pyte>=0.8.2",
-    "pyqtdarktheme>=2.1.0",
+#    "pyqtdarktheme>=2.1.0",
 ]
 
 [project.urls]
