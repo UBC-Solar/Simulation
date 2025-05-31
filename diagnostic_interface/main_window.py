@@ -13,7 +13,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
 from diagnostic_interface.widgets import DataSelect
-from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab
+from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab, PowerTab
 from diagnostic_interface.dialog import SettingsDialog
 from diagnostic_interface import settings
 
@@ -78,6 +78,11 @@ class MainWindow(QMainWindow):
         self.telemetry_tab = TelemetryTab()
         self.tabs.addTab(self.telemetry_tab, "Telemetry")
 
+        power_button = QPushButton("Load Power Tab")
+        power_button.clicked.connect(self.create_power_tab)
+        layout.addWidget(power_button)
+
+
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.
         This method contains a connection to the request_close method of the PlotTab class to receive
@@ -94,6 +99,12 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(plot_tab, f"{data_name}")
 
         plot_tab.close_requested.connect(self.close_tab)
+
+    def create_power_tab(self):
+        power_tab = PowerTab(self)
+        self.tabs.addTab(power_tab, f"Power - {self.data_select_form.selected_event}")
+        self.tabs.setCurrentWidget(power_tab)
+
 
     def close_tab(self, widget) -> None:
         """
