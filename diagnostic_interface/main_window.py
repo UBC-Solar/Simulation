@@ -91,6 +91,8 @@ class MainWindow(QMainWindow):
         This method contains a connection to the request_close method of the PlotTab class to receive
         the signal to close a tab."""
 
+        plot_tab2 = PlotTab2()
+        self.tabs.addTab(plot_tab2, f"packpower_and_motorpower")
 
         # Getting the values that we will query.
         origin: str = self.data_select_form.selected_origin
@@ -106,8 +108,6 @@ class MainWindow(QMainWindow):
         plot_tab = PlotTab(origin, source, event, data_name)
         self.tabs.addTab(plot_tab, f"{data_name}")
 
-        plot_tab2 = PlotTab2()
-        self.tabs.addTab(plot_tab2, f"packpower_and_motorpower")
 
         plot_tab.close_requested.connect(self.close_tab)
 
