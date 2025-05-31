@@ -5,6 +5,7 @@ from diagnostic_interface.dialog import TextEditDialog
 from data_tools.query import SunbeamClient
 from abc import abstractmethod
 from diagnostic_interface.config import command_settings
+import shlex
 
 
 class SunbeamTab(DockerStackTab):
@@ -29,11 +30,11 @@ class SunbeamTab(DockerStackTab):
 
     @staticmethod
     def start_stack_command():
-        return command_settings.sunbeam_up_cmd.split()
+        return shlex.split(command_settings.sunbeam_up_cmd)
 
     @staticmethod
     def stop_stack_command():
-        return command_settings.sunbeam_down_cmd.split()
+        return shlex.split(command_settings.sunbeam_down_cmd)
 
     @property
     def project_directory(self):
