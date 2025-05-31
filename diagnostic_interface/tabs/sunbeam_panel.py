@@ -30,7 +30,7 @@ class SunbeamTab(DockerStackTab):
 
     @staticmethod
     def start_stack_command():
-        return shlex.split(command_settings.sunbeam_up_cmd)
+        return command_settings.sunbeam_up_cmd
 
     @staticmethod
     def stop_stack_command():

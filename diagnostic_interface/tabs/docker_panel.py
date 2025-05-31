@@ -34,6 +34,7 @@ class UpdateStatusWorker(QRunnable):
                 text=True,
                 timeout=2,
                 check=True,
+                shell=True,
             )
 
             output = result.stdout.strip()
@@ -111,12 +112,13 @@ class DockerStackTab(QWidget):
             subprocess.run(
                 cmd,
                 cwd=self.project_directory,
+                shell=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 check=True,
             )
             QTimer.singleShot(0, self.do_update_status)
-
+        print(self.start_stack_command())
         threading.Thread(target=run, daemon=True).start()
 
     def stop_stack(self):
@@ -132,25 +134,15 @@ class DockerStackTab(QWidget):
 
         threading.Thread(target=run, daemon=True).start()
 
-    def get_docker_status_cmd(self):
-        start_cmd: list[str] = self.start_stack_command()
+    def get_docker_cmd(self):
+        cmd: str = self.start_stack_command()
 
-        cmd = " ".join(start_cmd)
         docker_cmd = cmd.replace("up -d", "ps --format json")
 
-        return docker_cmd.split()
-
-    def get_docker_logs_cmd(self):
-        start_cmd: list[str] = self.start_stack_command()
-
-        cmd = " ".join(start_cmd)
-        docker_cmd = cmd.replace("up -d", "ps --format json")
-
-        return docker_cmd.split()
+        return docker_cmd
 
     def do_update_status(self):
-        # print(self.get_docker_status_cmd())
-        worker = UpdateStatusWorker(self, self.get_docker_status_cmd())
+        worker = UpdateStatusWorker(self, self.get_docker_cmd())
         worker.signals.services.connect(self.update_status)
         self._thread_pool.start(worker)
 

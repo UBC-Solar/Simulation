@@ -1,4 +1,6 @@
 import sys
+import os
+sys.path.insert(0, os.getcwd())
 from PyQt5.QtWidgets import QApplication
 from main_window import MainWindow
 import qdarktheme
