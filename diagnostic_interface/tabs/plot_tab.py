@@ -6,7 +6,7 @@ from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer
 #from poetry.console.commands import self
 
 from diagnostic_interface import settings
-from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas
+from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas, PlotCanvas2
 
 
 HELP_MESSAGES = {
@@ -205,29 +205,11 @@ class PlotTab2(QWidget):
             self.refresh_timer.stop()
 
     def refresh_plot(self):
-        # worker1 = PlotRefreshWorker(
-        #     self.plot_canvas1,
-        #     self.origin,
-        #     self.source,
-        #     self.event,
-        #     self.data_name1
-        #     #"MotorPower"
-        #
-        # )
 
         worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "power", "FSGP_2024_Day_1", "MotorPower")
 
         worker1.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker1)
-        #
-        # worker2 = PlotRefreshWorker(
-        #     self.plot_canvas2,
-        #     self.origin,
-        #     self.source,
-        #     self.event,
-        #     self.data_name2
-        #     #"PackPower"
-        # )
 
 
         worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "power", "FSGP_2024_Day_1", "MotorPower")
