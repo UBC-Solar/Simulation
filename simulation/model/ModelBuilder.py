@@ -25,7 +25,7 @@ from simulation.config import (
 )
 
 from physics.models.arrays import BaseArray, BasicArray
-from physics.models.battery import BaseBattery, BasicBattery, BatteryModel
+from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel
 from physics.models.lvs import BaseLVS, BasicLVS
 from physics.models.motor import BaseMotor, BasicMotor
 from physics.models.regen import BaseRegen, BasicRegen
@@ -305,7 +305,7 @@ class ModelBuilder:
     def _set_weather_data(self):
         environment_config = self._environment_config
 
-        environment_hash = ModelBuilder._truncate_hash(hash(environment_config))
+        environment_hash = ModelBuilder._truncate_hash(hash(environment_config) + hash(environment_config.weather_query_config))
         weather_data_path = WeatherPath / environment_hash
 
         weather_query_config = environment_config.weather_query_config
@@ -395,7 +395,7 @@ class ModelBuilder:
                 self.battery = BasicBattery(self.initial_battery_charge, **arguments)
 
             case "BatteryModel":
-                self.battery = BatteryModel(
+                self.battery = EquivalentCircuitBatteryModel(
                     self._car_config.battery_config, self.initial_battery_charge
                 )
 

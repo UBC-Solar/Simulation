@@ -1,7 +1,7 @@
 [competition_config]
 competition_type = "TrackCompetition"
 competition_name = "FSGP"
-date = "2025-03-02T17:37:54.931361"
+date = "2025-06-01T05:00:00.0Z"
 
 [competition_config.TrackCompetition]
 tiling = 200
@@ -23,7 +23,7 @@ weather_provider = "Solcast"
 weather_period = "Daily"
 
 [weather_query_config.Solcast]
-weather_period = "15min"
+weather_period = "PT5M"
 
 [competition_config.route_config]
  coordinates = [
