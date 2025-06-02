@@ -14,7 +14,7 @@ from simulation.config import (
 from numpy.typing import NDArray, ArrayLike
 from simulation.race import Coordinate
 from simulation.query import Query
-from data_tools.query import SolcastClient, SolcastPeriod, SolcastOutput
+from data_tools.query import SolcastClient, SolcastOutput
 import pandas as pd
 from datetime import timedelta
 from zoneinfo import ZoneInfo          # std-lib ≥3.9

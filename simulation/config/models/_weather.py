@@ -1,5 +1,4 @@
 from strenum import StrEnum
-from enum import Enum
 from simulation.config.models import Config, ConfigDict
 from data_tools.query import SolcastPeriod
 
