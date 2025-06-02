@@ -1,4 +1,5 @@
 from haversine import haversine, Unit
+import numpy as np
 
 def calculate_meter_distance(coord1, coord2):
     """
@@ -30,3 +31,15 @@ def calculate_meter_distance(coord1, coord2):
         x_distance = -x_distance
 
     return x_distance, y_distance
+
+def get_distances(trajectory):
+    distance_array_m = []
+    for i in range(1, len(trajectory)):
+        point = trajectory[i]
+        previous_point = trajectory[i - 1]
+        distance_x, distance_y = calculate_meter_distance(point, previous_point)
+        distance_norm = np.sqrt(distance_x ** 2 + distance_y ** 2)
+        distance_array_m.append(distance_norm)
+
+    distance_array_m.insert(0, 0) # first point has no distance
+    return distance_array_m
