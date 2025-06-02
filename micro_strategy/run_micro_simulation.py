@@ -170,7 +170,19 @@ if __name__ == '__main__':
         distances_m=distances_m,
         trajectory=random_trajectory)
 
-    folium_map = plot_mesh(random_trajectory, mesh, distances_m, speeds_kmh, energy_consumed, ticks, cornering_work, gradients, road_friction_array, drag_forces, g_forces)
+    folium_map = plot_mesh(
+        random_trajectory,
+        mesh,
+        distances_m,
+        speeds_kmh,
+        energy_consumed,
+        ticks,
+        cornering_work,
+        gradients,
+        road_friction_array,
+        drag_forces,
+        g_forces
+    )
     folium_map.save("random_trajectory.html")
 
     start_time = time.time()
