@@ -35,10 +35,18 @@ class MicroSimulationOptimizer(GeneticOptimization):
         )
 
         self.ga_instance.gene_space = {"low": 0, "high": num_lateral_indices - 1, "step": 1}  # Discrete path indices
+
+        # long run
         self.ga_instance.num_generations = 2000
         self.ga_instance.population_size = 250
         self.ga_instance.mutation_probability = 0.2
         self.ga_instance.stop_criteria = []  # disables early stopping
+
+        # short run
+        # self.ga_instance.num_generations = 500
+        # self.ga_instance.population_size = 200
+        # self.ga_instance.mutation_probability = 0.2
+        # self.ga_instance.stop_criteria = []  # disables early stopping
 
 
     def generate_valid_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
