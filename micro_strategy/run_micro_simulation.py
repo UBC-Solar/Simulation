@@ -19,8 +19,6 @@ from simulation.config import (
 from simulation.optimization.genetic import OptimizationSettings
 
 
-
-
 def load_configs(competition_name = "FSGP", car_name: str = "BrightSide"):
     config_path = ConfigDirectory / f"initial_conditions_{competition_name}.toml"
     with open(config_path, "rb") as f:
@@ -175,6 +173,8 @@ if __name__ == '__main__':
     folium_map = plot_mesh(random_trajectory, mesh, distances_m, speeds_kmh, energy_consumed, ticks, cornering_work, gradients, road_friction_array, drag_forces, g_forces)
     folium_map.save("random_trajectory.html")
 
+    start_time = time.time()
+
     optimized_trajectory = optimize_trajectory(
         mesh=mesh,
         gradients=gradients,
@@ -204,25 +204,20 @@ if __name__ == '__main__':
 
     print("____Optimization Results____\n")
 
-    # Total energy consumption (Joules)
     print(f"Total Energy - Random Route:     {np.sum(energy_consumed):.2f} J")
     print(f"Total Energy - Optimized Route:  {np.sum(energy_consumed_op):.2f} J")
 
-    # Total cornering work (Joules)
     print(f"Cornering Loss - Random Route:   {np.sum(cornering_work):.2f} J")
     print(f"Cornering Loss - Optimized Route:{np.sum(cornering_work_op):.2f} J")
 
-    # Total drag work (Joules)
     print(f"Drag Work - Random Route:        {np.sum(drag_forces * distances_m):.2f} J")
     print(f"Drag Work - Optimized Route:     {np.sum(drag_forces_op * distances_m_op):.2f} J")
 
-    # Average g-forces (optional, for stability comparison)
     print(f"Avg G-Force - Random Route:      {np.mean(g_forces):.3f} g")
     print(f"Avg G-Force - Optimized Route:   {np.mean(g_forces_op):.3f} g")
 
-    # Optimization duration (you’ll need to wrap optimize_trajectory in timing)
     end_time = time.time()
-    elapsed = end_time - start_time  # Add start_time = time.time() before optimize_trajectory call
+    elapsed = end_time - start_time
     minutes = int(elapsed // 60)
     seconds = int(elapsed % 60)
     print(f"Optimization Duration:           {minutes} min {seconds} sec")
