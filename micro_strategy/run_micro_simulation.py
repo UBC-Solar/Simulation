@@ -2,11 +2,13 @@ import random
 import numpy as np
 import tomllib as toml
 from geopy.distance import distance
+import time
 
 from data import get_FSGP_trajectory
-from geometry import calculate_meter_distance
+from geometry import get_distances
 from plotting import plot_mesh
 from micro_model_builder import MicroModelBuilder
+from genetic_optimizer import MicroSimulationOptimizer
 
 from simulation.config import ConfigDirectory
 from simulation.config import (
@@ -14,6 +16,9 @@ from simulation.config import (
     EnvironmentConfig,
     CarConfig,
 )
+from simulation.optimization.genetic import OptimizationSettings
+
+
 
 
 def load_configs(competition_name = "FSGP", car_name: str = "BrightSide"):
@@ -102,24 +107,26 @@ def get_random_trajectory(mesh):
     return random_trajectory
 
 
-def get_distances(trajectory):
-    distance_array_m = []
-    for i in range(1, len(trajectory)):
-        point = trajectory[i]
-        previous_point = trajectory[i - 1]
-        distance_x, distance_y = calculate_meter_distance(point, previous_point)
-        distance_norm = np.sqrt(distance_x ** 2 + distance_y ** 2)
-        distance_array_m.append(distance_norm)
+def optimize_trajectory(mesh, gradients, trajectory_length, num_lateral_indices, speed_kmh, motor_model):
+    # Perform optimization with Genetic Optimization
+    optimization_settings: OptimizationSettings = OptimizationSettings()
 
-    distance_array_m.insert(0, 0) # first point has no distance
-    return distance_array_m
+    genetic_optimization = MicroSimulationOptimizer(
+        mesh=mesh,
+        gradients=gradients,
+        trajectory_length=trajectory_length,
+        num_lateral_indices=num_lateral_indices,
+        speed_kmh=speed_kmh,
+        model=motor_model,
+        settings=optimization_settings,)
+    results_genetic = genetic_optimization.maximize()
+    return results_genetic
 
 
 def run_motor_model(speed_kmh, distances_m, trajectory):
     num_elements = len(trajectory)
     if len(distances_m) != num_elements:
-        print("All arrays must have the same length.")
-        return
+        raise RuntimeError("All arrays must have the same length.")
 
     tick_arr = np.zeros(num_elements)
     wind_speed_arr = np.zeros(num_elements)     # no wind
@@ -127,7 +134,7 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
     # initialize speed array and calculate tick based on speed and distance
     speed_kmh_arr = np.full(num_elements, speed_kmh)
     speed_ms_arr = speed_kmh_arr / 3.6
-    for index, d in enumerate(distances):
+    for index, d in enumerate(distances_m):
         tick_arr[index] = d / speed_ms_arr[index]
 
     initial_conditions, environment_config, car_config = load_configs()
@@ -150,18 +157,76 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
     gradients_arr = gis.get_gradients(closest_gis_indices)
 
     energies, energy_cornering, gradients_arr, road_friction_forces, drag_forces, g_forces = advanced_motor.calculate_energy_in(speed_kmh_arr, gradients_arr, wind_speed_arr, tick_arr, trajectory)
-    return  energies, energy_cornering, road_friction_forces, drag_forces, g_forces, tick_arr, speed_kmh_arr, gradients_arr
+    return  energies, energy_cornering, road_friction_forces, drag_forces, g_forces, tick_arr, speed_kmh_arr, gradients_arr, advanced_motor
 
 
 if __name__ == '__main__':
     trajectory_FSGP = get_FSGP_trajectory()
-    mesh = generate_lateral_mesh(trajectory_FSGP, 2, 5)
+    mesh = generate_lateral_mesh(trajectory_FSGP, 2, 4)
     random_trajectory = get_random_trajectory(mesh)
 
     distances = get_distances(random_trajectory)
     distances_m = np.array(distances)
-    energy_consumed, cornering_work, road_friction_array, drag_forces, g_forces, ticks, speeds_kmh, gradients, = run_motor_model(50, distances_m, random_trajectory)
+    energy_consumed, cornering_work, road_friction_array, drag_forces, g_forces, ticks, speeds_kmh, gradients, advanced_motor = run_motor_model(
+        speed_kmh=50,
+        distances_m=distances_m,
+        trajectory=random_trajectory)
 
     folium_map = plot_mesh(random_trajectory, mesh, distances_m, speeds_kmh, energy_consumed, ticks, cornering_work, gradients, road_friction_array, drag_forces, g_forces)
-    folium_map.save("lateral_mesh_map.html")
+    folium_map.save("random_trajectory.html")
+
+    optimized_trajectory = optimize_trajectory(
+        mesh=mesh,
+        gradients=gradients,
+        trajectory_length=len(trajectory_FSGP),
+        num_lateral_indices=9,
+        speed_kmh=50,
+        motor_model=advanced_motor)
+
+    distances_op = get_distances(random_trajectory)
+    distances_m_op = np.array(distances)
+
+    energy_consumed_op, cornering_work_op, road_friction_array_op, drag_forces_op, g_forces_op, ticks_op, speeds_kmh_op, gradients_op, advanced_motor = run_motor_model(50, distances_m, optimized_trajectory)
+
+    folium_map_optimized = plot_mesh(
+        optimized_trajectory,
+        mesh,
+        distances_m_op,
+        speeds_kmh_op,
+        energy_consumed_op,
+        ticks_op,
+        cornering_work_op,
+        gradients_op,
+        road_friction_array_op,
+        drag_forces_op,
+        g_forces_op)
+    folium_map_optimized.save("optimized_trajectory.html")
+
+    print("____Optimization Results____\n")
+
+    # Total energy consumption (Joules)
+    print(f"Total Energy - Random Route:     {np.sum(energy_consumed):.2f} J")
+    print(f"Total Energy - Optimized Route:  {np.sum(energy_consumed_op):.2f} J")
+
+    # Total cornering work (Joules)
+    print(f"Cornering Loss - Random Route:   {np.sum(cornering_work):.2f} J")
+    print(f"Cornering Loss - Optimized Route:{np.sum(cornering_work_op):.2f} J")
+
+    # Total drag work (Joules)
+    print(f"Drag Work - Random Route:        {np.sum(drag_forces * distances_m):.2f} J")
+    print(f"Drag Work - Optimized Route:     {np.sum(drag_forces_op * distances_m_op):.2f} J")
+
+    # Average g-forces (optional, for stability comparison)
+    print(f"Avg G-Force - Random Route:      {np.mean(g_forces):.3f} g")
+    print(f"Avg G-Force - Optimized Route:   {np.mean(g_forces_op):.3f} g")
+
+    # Optimization duration (you’ll need to wrap optimize_trajectory in timing)
+    end_time = time.time()
+    elapsed = end_time - start_time  # Add start_time = time.time() before optimize_trajectory call
+    minutes = int(elapsed // 60)
+    seconds = int(elapsed % 60)
+    print(f"Optimization Duration:           {minutes} min {seconds} sec")
+
+    print("______________________________\n")
+
 
