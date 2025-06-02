@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QMessageBox,
-    QGroupBox, QHBoxLayout
+    QGroupBox, QHBoxLayout, QLabel
 )
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer
 #from poetry.console.commands import self
@@ -123,7 +123,130 @@ class PlotTab(QWidget):
 
 
 
+#
+#
+# class WeatherTab(QWidget):
+#     close_requested = pyqtSignal(QWidget)
+#
+#     def __init__(self, parent = None):
+#
+#         super().__init__(parent)
+#         self._thread_pool = QThreadPool()
+#
+#         # Layout setup
+#         #self.layout = QVBoxLayout(self)
+#         self.layout = QHBoxLayout(self)
+#         self.layout.setSpacing(10)
+#         self.layout.setContentsMargins(30, 30, 30, 30)
+#
+#         #plots
+#        # self.plot_canvas1 = PlotCanvas(self)
+#         self.plot_canvas2 = PlotCanvas2(self)
+#         self.plot_canvas3 = PlotCanvas2(self)
+#
+#         #toolbars
+#         #self.toolbar1 = CustomNavigationToolbar(canvas=self.plot_canvas1)
+#         self.toolbar2 = CustomNavigationToolbar(canvas=self.plot_canvas2)
+#         self.toolbar3 = CustomNavigationToolbar(canvas=self.plot_canvas3)
+#
+#         # Buttons
+#         help_button = QPushButton("Help")
+#         help_button.setObjectName("helpButton")
+#         help_button.clicked.connect(lambda: self.show_help_message(self.data_name, self.event))
+#
+#         close_button = QPushButton("Close Tab")
+#         close_button.setObjectName("closeButton")
+#         close_button.clicked.connect(self.request_close)
+#
+#         button_group = QGroupBox("Actions")
+#         button_layout = QHBoxLayout()
+#         button_layout.addWidget(help_button)
+#         button_layout.addWidget(close_button)
+#         button_group.setLayout(button_layout)
+#
+#         #self.layout.addWidget(self.toolbar1)
+#         #self.layout.addWidget(self.plot_canvas1)
+#
+#         self.layout.addWidget(self.toolbar2)
+#         self.layout.addWidget(self.plot_canvas2)
+#
+#         self.layout.addWidget(self.toolbar3)
+#         self.layout.addWidget(self.plot_canvas3)
+#
+#         self.layout.addWidget(button_group)
+#
+#         self.setStyleSheet("""
+#             QPushButton#helpButton, QPushButton#closeButton {
+#                 padding: 6px 12px;
+#                 border-radius: 8px;
+#             }
+#         """)
+#
+#         self.refresh_timer = QTimer()
+#         self.refresh_timer.timeout.connect(self.refresh_plot)
+#
+# #stuff added:
+#
+#
+#
+#         #plot1 = self.plot_canvas1.query_and_plot("production", "weather", "realtime", "DHI")
+#
+#         plot2 = self.plot_canvas2.query_and_plot("production", "power","FSGP_2024_Day_1", "MotorPower")
+#
+#         plot3 = self.plot_canvas3.query_and_plot("production", "power","FSGP_2024_Day_1", "PackPower")
+#
+#         if not (plot2 and plot3):
+#             self.request_close()
+#
+#     def set_tab_active(self, active: bool) -> None:
+#         if active:
+#             self.refresh_timer.setInterval(settings.plot_timer_interval * 1000)
+#             self.refresh_timer.start()
+#             QTimer.singleShot(0, self.refresh_plot)
+#
+#         else:
+#             self.refresh_timer.stop()
+#
+#     def refresh_plot(self):
+#
+#
+#         # worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "weather", "realtime", "DHI")
+#         #
+#         # worker1.signals.finished.connect(self._on_plot_refresh_finished)
+#         # self._thread_pool.start(worker1)
+#
+#
+#         worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "power", "FSGP_2024_Day_1", "MotorPower")
+#
+#         worker2.signals.finished.connect(self._on_plot_refresh_finished)
+#         self._thread_pool.start(worker2)
+#
+#         worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "power", "FSGP_2024_Day_1", "PackPower")
+#
+#         worker3.signals.finished.connect(self._on_plot_refresh_finished)
+#         self._thread_pool.start(worker3)
+#
+#     def _on_plot_refresh_finished(self, success: bool):
+#         if not success:
+#             self.request_close()
+#
+#     def request_close(self):
+#         self.close_requested.emit(self)
+#
+#     def show_help_message(self, data_name):
+#         message1 = HELP_MESSAGES.get(data_name, "No specific help available for this plot.")
+#         QMessageBox.information(self, f"Help: {data_name}", message1)
+#
+#
+#
 
+
+
+#
+#
+
+
+###
 
 class WeatherTab(QWidget):
     close_requested = pyqtSignal(QWidget)
@@ -134,19 +257,52 @@ class WeatherTab(QWidget):
         self._thread_pool = QThreadPool()
 
         # Layout setup
+        #self.layout = QVBoxLayout(self)
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(10)
         self.layout.setContentsMargins(30, 30, 30, 30)
 
+
         #plots
+       # self.plot_canvas1 = PlotCanvas(self)
+
+        plot1_layout = QVBoxLayout()
+
         self.plot_canvas1 = PlotCanvas(self)
+        self.toolbar1 = CustomNavigationToolbar(canvas=self.plot_canvas1)
+        plot1_layout.addWidget(self.toolbar1)
+        plot1_layout.addWidget(self.plot_canvas1)
+
+
+        plot2_layout = QVBoxLayout()
+
         self.plot_canvas2 = PlotCanvas(self)
+        self.toolbar2 = CustomNavigationToolbar(canvas=self.plot_canvas2)
+        plot2_layout.addWidget(self.plot_canvas2)
+        plot2_layout.addWidget(self.toolbar2)
+
+        plot3_layout = QVBoxLayout()
+
         self.plot_canvas3 = PlotCanvas(self)
+        self.toolbar3 = CustomNavigationToolbar(canvas=self.plot_canvas3)
+        plot3_layout.addWidget(self.plot_canvas3)
+        plot3_layout.addWidget(self.toolbar3)
+
+
+        self.label = QLabel("addtext")
+
+        bottom_plots_layout = QHBoxLayout()
+
+        bottom_plots_layout.addWidget(self.label)
+        bottom_plots_layout.addLayout(plot2_layout)
+        bottom_plots_layout.addLayout(plot3_layout)
+
+        self.layout.addLayout(plot1_layout)
+        self.layout.addLayout(bottom_plots_layout)
 
         #toolbars
-        self.toolbar1 = CustomNavigationToolbar(canvas=self.plot_canvas1)
-        self.toolbar2 = CustomNavigationToolbar(canvas=self.plot_canvas2)
-        self.toolbar3 = CustomNavigationToolbar(canvas=self.plot_canvas3)
+        #self.toolbar1 = CustomNavigationToolbar(canvas=self.plot_canvas1)
+
 
         # Buttons
         help_button = QPushButton("Help")
@@ -163,14 +319,14 @@ class WeatherTab(QWidget):
         button_layout.addWidget(close_button)
         button_group.setLayout(button_layout)
 
-        self.layout.addWidget(self.toolbar1)
-        self.layout.addWidget(self.plot_canvas1)
+        #self.layout.addWidget(self.toolbar1)
+        #self.layout.addWidget(self.plot_canvas1)
 
-        self.layout.addWidget(self.toolbar2)
-        self.layout.addWidget(self.plot_canvas2)
-
-        self.layout.addWidget(self.toolbar3)
-        self.layout.addWidget(self.plot_canvas3)
+        # self.layout.addWidget(self.toolbar2)
+        # self.layout.addWidget(self.plot_canvas2)
+        #
+        # self.layout.addWidget(self.toolbar3)
+        # self.layout.addWidget(self.plot_canvas3)
 
         self.layout.addWidget(button_group)
 
@@ -188,11 +344,11 @@ class WeatherTab(QWidget):
 
 
 
-        plot1 = self.plot_canvas1.query_and_plot("production", "weather", "realtime", "DHI")
+        plot1 = self.plot_canvas1.query_and_plot("production", "power", "FSGP_2024_Day_1", "MotorPower")
 
-        plot2 = self.plot_canvas2.query_and_plot("production", "weather","realtime", "PrecipitationRate")
+        plot2 = self.plot_canvas2.query_and_plot("production", "power","FSGP_2024_Day_1", "MotorPower")
 
-        plot3 = self.plot_canvas3.query_and_plot("production", "weather","realtime", "WindSpeed10m")
+        plot3 = self.plot_canvas3.query_and_plot("production", "power","FSGP_2024_Day_1", "PackPower")
 
         if not (plot1 and plot2 and plot3):
             self.request_close()
@@ -209,18 +365,18 @@ class WeatherTab(QWidget):
     def refresh_plot(self):
 
 
-        worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "weather", "realtime", "DHI")
+        worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "power", "FSGP_2024_Day_1", "MotorPower")
 
         worker1.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker1)
 
 
-        worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "weather", "realtime", "PrecipitationRate")
+        worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "power", "FSGP_2024_Day_1", "MotorPower")
 
         worker2.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker2)
 
-        worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "WindSpeed10m")
+        worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "power", "FSGP_2024_Day_1", "PackPower")
 
         worker3.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker3)
@@ -235,9 +391,6 @@ class WeatherTab(QWidget):
     def show_help_message(self, data_name):
         message1 = HELP_MESSAGES.get(data_name, "No specific help available for this plot.")
         QMessageBox.information(self, f"Help: {data_name}", message1)
-
-
-
 
 
 
