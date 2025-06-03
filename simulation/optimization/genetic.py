@@ -174,7 +174,7 @@ class OptimizationSettings:
 
         self._fitness = fitness
 
-
+    # !!! Check if I need to change this part
 class GeneticOptimization(BaseOptimization):
     """
     Genetic Optimization (also known as Genetic Algorithm, or GA) follows the following primary steps:
