@@ -111,7 +111,8 @@ class PlotCanvas2(FigureCanvas):
         self.current_origin = ""
         self.current_source = ""
 
-        self.line = None
+        self.line1 = None
+        self.line2 = None
 
 
 
@@ -134,31 +135,42 @@ class PlotCanvas2(FigureCanvas):
             self.current_origin = origin
             self.current_source = source
 
-            if self.line is None:
-                ax1 = self.ax.plot(data.datetime_x_axis, data, linewidth=1)
-                ax2 = self.ax.twinx()
-                ax2.plot(data2.datetime_x_axis, data2, linewidth=1)
-                self.line = ax1
+            if self.line1 is None and self.line2 is None:
+
+
+                self.line1, = self.ax.plot(data.datetime_x_axis, data, linewidth=1, color = 'red')
+                #ax1 = self.ax.plot(data.datetime_x_axis, data, linewidth=1)
+                self.ax2 = self.ax.twinx()
+                self.line2, = self.ax2.plot(data2.datetime_x_axis, data2, linewidth=1)
+                #self.line = ax1
 
                 self.ax.set_title(f"{data_name} - {event}", fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
                 self.ax.set_ylabel(data_name, fontsize=10)
+                self.ax2.set_ylabel("PackPower", fontsize=10)
 
                 # Improve datetime formatting
                 self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
                 self.ax.xaxis.set_major_locator(mdates.HourLocator())
                 self.fig.autofmt_xdate()
 
+                self.ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+                self.ax2.xaxis.set_major_locator(mdates.HourLocator())
+                #self.fig.autofmt_xdate()
+
             else:
                 # Only update data
-                self.line.set_xdata(data.datetime_x_axis)
-                #self.line.set_xdata(data2.datetime_x_axis)
-                self.line.set_ydata(data)
-                #self.line.set_ydata(data2)
+                self.line1.set_xdata(data.datetime_x_axis)
+                self.line2.set_xdata(data2.datetime_x_axis)
+                self.line1.set_ydata(data)
+                self.line2.set_ydata(data2)
 
 
             self.ax.relim()
             self.ax.autoscale_view(scalex=True, scaley=True)
+
+            self.ax2.relim()
+            self.ax2.autoscale_view(scalex=True, scaley=True)
             self.fig.tight_layout()
             self.draw()
 
