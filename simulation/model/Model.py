@@ -149,6 +149,7 @@ class Model:
             speed,
             self.speed_dt,
             self.start_time,
+            self.gis,
             self.simulation_dt,
             self.max_acceleration,
             self.max_deceleration,

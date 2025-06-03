@@ -59,14 +59,14 @@ dependencies = [
     "ubc-solar-data-tools>=1.5.0",
     "anytree>=2.12.1",
     "folium>=0.19.5",
-    "pyqt5-stubs>=5.15.6.0",
-    "pyqtwebengine>=5.15.7",
+    "pyqt5-stubs",
+    #"pyqtwebengine",
     "tomli>=2.2.1",
     "tomli-w>=1.2.0",
     "ansi2html>=1.9.2",
     "termqt>=1.0.0",
     "pyte>=0.8.2",
-    "pyqtdarktheme>=2.1.0",
+    "pyqtdarktheme",
 ]
 
 [project.urls]

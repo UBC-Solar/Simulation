@@ -1,9 +1,7 @@
-import os
 import math
 import numpy as np
 from numba import jit
 from simulation.race import Race
-from physics.environment.gis.gis import GIS
 
 
 def _reshape_and_repeat(input_array, reshape_length):
@@ -147,9 +145,10 @@ def reshape_speed_array(
     speed,
     granularity,
     start_time: int,
+    gis_object,
     tick=1,
     max_acceleration: float = 6,
-    max_deceleration: float = 6,
+    max_deceleration: float = 6
 ):
     """
 
@@ -165,6 +164,7 @@ def reshape_speed_array(
     :param float granularity: how granular the time divisions for Simulation's speed array should be,
                               where 1 is hourly and 0.5 is twice per hour.
     :param int start_time: time since start of the race that simulation is beginning
+    :param GIS gis_object: GIS object that has access to the calculate_driving_speeds method
     :param int tick: The time interval in seconds between each speed in the speed array
     :param float max_acceleration: the maximum allowed acceleration in m/s^2
     :param float max_deceleration: the maximum allowed deceleration in m/s^2
@@ -173,7 +173,7 @@ def reshape_speed_array(
 
     """
     # Boolean array that tells us whether we are allowed to drive at each tick
-    driving_allowed = race.driving_boolean.astype(int)[start_time:]
+    driving_allowed = race.driving_boolean.astype(int)[start_time::tick]
 
     # Assuming we receive speeds per lap in km/hr (param speed would be speed for a lap in kmh)
     lap_speeds_ms = np.array(speed) * (1000/3600)
@@ -181,17 +181,8 @@ def reshape_speed_array(
     # Idle time for 0m/s entries
     idle_time = int((5*60)/tick) # ticks of idle time; for now this is set to be equivalent to 5 minutes
 
-    # Find the path of route_data_FSGP.npz
-    script_dir = os.path.dirname(__file__)
-    file_path = os.path.join(script_dir, "..", "cache", "route", "route_data_FSGP.npz")
-    route_data = np.load(file_path)
-
-    # GIS object creation
-    origin_coords = [37.00107373, -86.36854755] # !!! might need to change; based on location analysis
-    gis = GIS(route_data, origin_coords)
-
     # Get a speed array where each entry is the speed at each time step
-    speed_ms = gis.calculate_driving_speeds(
+    speed_ms = gis_object.calculate_driving_speeds(
         lap_speeds_ms,
         tick,
         driving_allowed,
@@ -200,10 +191,8 @@ def reshape_speed_array(
     
     speed_kmh = np.array(speed_ms) * (3600/1000) # Transform back to km/hr
 
-    reshaped_tick_count = math.ceil((race.race_duration - start_time) / float(tick))
-    speed_mapped_per_tick = _reshape_and_repeat(speed_kmh, reshaped_tick_count)
     speed_smoothed_kmh = _apply_deceleration(
-        _apply_acceleration(speed_mapped_per_tick, tick, max_acceleration),
+        _apply_acceleration(speed_kmh, tick, max_acceleration),
         tick,
         max_deceleration,
     )
