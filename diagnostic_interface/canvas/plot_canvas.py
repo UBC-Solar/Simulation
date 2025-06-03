@@ -138,7 +138,7 @@ class PlotCanvas2(FigureCanvas):
                 ax1 = self.ax.plot(data.datetime_x_axis, data, linewidth=1)
                 ax2 = self.ax.twinx()
                 ax2.plot(data2.datetime_x_axis, data2, linewidth=1)
-                self.line = ax1 and ax2
+                self.line = ax1
 
                 self.ax.set_title(f"{data_name} - {event}", fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
@@ -152,9 +152,9 @@ class PlotCanvas2(FigureCanvas):
             else:
                 # Only update data
                 self.line.set_xdata(data.datetime_x_axis)
-                self.line.set_xdata(data2.datetime_x_axis)
+                #self.line.set_xdata(data2.datetime_x_axis)
                 self.line.set_ydata(data)
-                self.line.set_ydata(data2)
+                #self.line.set_ydata(data2)
 
 
             self.ax.relim()
