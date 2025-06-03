@@ -6,7 +6,7 @@ from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer
 #from poetry.console.commands import self
 
 from diagnostic_interface import settings
-from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas
+from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas, PlotCanvas2
 
 
 HELP_MESSAGES = {
@@ -276,17 +276,25 @@ class WeatherTab(QWidget):
 
         plot2_layout = QVBoxLayout()
 
-        self.plot_canvas2 = PlotCanvas(self)
-        self.toolbar2 = CustomNavigationToolbar(canvas=self.plot_canvas2)
+        # self.plot_canvas2 = PlotCanvas(self)
+        # self.toolbar2 = CustomNavigationToolbar(canvas=self.plot_canvas2)
+        # plot2_layout.addWidget(self.plot_canvas2)
+        # plot2_layout.addWidget(self.toolbar2)
+
+
+        self.plot_canvas2 = PlotCanvas2()
         plot2_layout.addWidget(self.plot_canvas2)
-        plot2_layout.addWidget(self.toolbar2)
+
+
+
 
         plot3_layout = QVBoxLayout()
 
         self.plot_canvas3 = PlotCanvas(self)
         self.toolbar3 = CustomNavigationToolbar(canvas=self.plot_canvas3)
-        plot3_layout.addWidget(self.plot_canvas3)
         plot3_layout.addWidget(self.toolbar3)
+
+        plot3_layout.addWidget(self.plot_canvas3)
 
 
         self.label = QLabel("addtext")
@@ -346,7 +354,10 @@ class WeatherTab(QWidget):
 
         plot1 = self.plot_canvas1.query_and_plot("production", "power", "FSGP_2024_Day_1", "MotorPower")
 
-        plot2 = self.plot_canvas2.query_and_plot("production", "power","FSGP_2024_Day_1", "MotorPower")
+        #plot2 = self.plot_canvas2.query_and_plot("production", "power","FSGP_2024_Day_1", "MotorPower")
+
+        plot2 = self.plot_canvas2
+
 
         plot3 = self.plot_canvas3.query_and_plot("production", "power","FSGP_2024_Day_1", "PackPower")
 
