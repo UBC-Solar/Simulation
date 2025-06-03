@@ -174,7 +174,6 @@ class OptimizationSettings:
 
         self._fitness = fitness
 
-    # !!! Check if I need to change this part
 class GeneticOptimization(BaseOptimization):
     """
     Genetic Optimization (also known as Genetic Algorithm, or GA) follows the following primary steps:
@@ -452,8 +451,8 @@ class GeneticOptimization(BaseOptimization):
         # We will use Perlin noise to generate our guess arrays
         noise_generator = Noise()  # noqa: F821
 
-        # Determine the length that our driving speed arrays must be
-        length = self.model.get_driving_time_divisions()
+        # Determine the length that our driving speed arrays must be !!!
+        length = self.model.num_laps
         speed_arrays = []
 
         with tqdm(

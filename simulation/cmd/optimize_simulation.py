@@ -12,7 +12,7 @@ from simulation.cmd.run_simulation import build_model, get_default_settings
 from simulation.config import SimulationHyperparametersConfig, SimulationReturnType
 from tqdm import tqdm
 
-
+# Probably need to change this too!
 def main(competition_name: str, car_name: str, speed_dt: int):
     """
 
@@ -43,18 +43,17 @@ def main(competition_name: str, car_name: str, speed_dt: int):
         environment, hyperparameters, initial_conditions, car_config
     )
 
-    # Initialize a "guess" speed array
-    driving_hours = simulation_model.get_driving_time_divisions()
+    # Initialize a "guess" speed array !!!
+    driving_laps = simulation_model.num_laps
 
     # Set up optimization models
     maximum_speed = 60
     minimum_speed = 0
 
     bounds = InputBounds()
-    bounds.add_bounds(driving_hours, minimum_speed, maximum_speed)
+    bounds.add_bounds(driving_laps, minimum_speed, maximum_speed)
 
-    driving_hours = simulation_model.get_driving_time_divisions()
-    input_speed = np.array([60] * driving_hours)
+    input_speed = np.array([60] * driving_laps)
 
     # Run simulation model with the "guess" speed array
     simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False)
