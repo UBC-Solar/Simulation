@@ -283,7 +283,9 @@ class WeatherTab(QWidget):
 
 
         self.plot_canvas2 = PlotCanvas2()
+        self.toolbar2 = CustomNavigationToolbar(canvas=self.plot_canvas2)
         plot2_layout.addWidget(self.plot_canvas2)
+        plot2_layout.addWidget(self.toolbar2)
 
 
 
@@ -308,33 +310,22 @@ class WeatherTab(QWidget):
         self.layout.addLayout(plot1_layout)
         self.layout.addLayout(bottom_plots_layout)
 
-        #toolbars
-        #self.toolbar1 = CustomNavigationToolbar(canvas=self.plot_canvas1)
-
 
         # Buttons
         help_button = QPushButton("Help")
         help_button.setObjectName("helpButton")
         help_button.clicked.connect(lambda: self.show_help_message(self.data_name, self.event))
 
-        close_button = QPushButton("Close Tab")
-        close_button.setObjectName("closeButton")
-        close_button.clicked.connect(self.request_close)
+        # close_button = QPushButton("Close Tab")
+        # close_button.setObjectName("closeButton")
+        # close_button.clicked.connect(self.request_close)
 
         button_group = QGroupBox("Actions")
         button_layout = QHBoxLayout()
         button_layout.addWidget(help_button)
-        button_layout.addWidget(close_button)
+        #button_layout.addWidget(close_button)
         button_group.setLayout(button_layout)
 
-        #self.layout.addWidget(self.toolbar1)
-        #self.layout.addWidget(self.plot_canvas1)
-
-        # self.layout.addWidget(self.toolbar2)
-        # self.layout.addWidget(self.plot_canvas2)
-        #
-        # self.layout.addWidget(self.toolbar3)
-        # self.layout.addWidget(self.plot_canvas3)
 
         self.layout.addWidget(button_group)
 

@@ -139,12 +139,13 @@ class PlotCanvas2(FigureCanvas):
 
 
                 self.line1, = self.ax.plot(data.datetime_x_axis, data, linewidth=1, color = 'red')
-                #ax1 = self.ax.plot(data.datetime_x_axis, data, linewidth=1)
+                #add the comma so that its not just a normal 2d plot
                 self.ax2 = self.ax.twinx()
                 self.line2, = self.ax2.plot(data2.datetime_x_axis, data2, linewidth=1)
-                #self.line = ax1
 
-                self.ax.set_title(f"{data_name} - {event}", fontsize=12)
+
+                #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
+                self.ax.set_title("MotorPower and PackPower", fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
                 self.ax.set_ylabel(data_name, fontsize=10)
                 self.ax2.set_ylabel("PackPower", fontsize=10)
@@ -171,6 +172,7 @@ class PlotCanvas2(FigureCanvas):
 
             self.ax2.relim()
             self.ax2.autoscale_view(scalex=True, scaley=True)
+
             self.fig.tight_layout()
             self.draw()
 
