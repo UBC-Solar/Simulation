@@ -25,7 +25,7 @@ from simulation.config import (
 )
 
 from physics.models.arrays import BaseArray, BasicArray
-from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel
+from physics.models.battery import BaseBattery, BasicBattery, BatteryModel
 from physics.models.lvs import BaseLVS, BasicLVS
 from physics.models.motor import BaseMotor, BasicMotor
 from physics.models.regen import BaseRegen, BasicRegen
@@ -395,8 +395,8 @@ class ModelBuilder:
 
                 self.battery = BasicBattery(self.initial_battery_charge, **arguments)
 
-            case "EquivalentCircuitBatteryModel":
-                self.battery = EquivalentCircuitBatteryModel(
+            case "BatteryModel":
+                self.battery = BatteryModel(
                     self._car_config.battery_config, self.initial_battery_charge
                 )
 
@@ -462,5 +462,4 @@ class ModelBuilder:
             max_acceleration=self.max_acceleration,
             max_deceleration=self.max_deceleration,
             start_time=self.start_time,
-            num_laps=self.num_laps
         )

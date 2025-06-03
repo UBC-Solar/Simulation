@@ -102,9 +102,7 @@ class Simulation:
         # ----- Expected distance estimate -----
 
         # Array of cumulative distances theoretically achievable via the speed array
-        # !!!
-        speeds = self.speed_kmh[0:18489]
-        self.distances = self.tick_array * speeds / 3.6
+        self.distances = self.tick_array * self.speed_kmh / 3.6
         self.cumulative_distances = np.cumsum(self.distances)
 
         # ----- Weather and location calculations -----

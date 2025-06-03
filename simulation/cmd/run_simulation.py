@@ -53,9 +53,9 @@ def run_simulation(
 
     # Initialize a "guess" speed array
     driving_hours = simulation_model.get_driving_time_divisions()
-    driving_hours = simulation_model.num_laps # !!!
+
     if speeds is None:
-        speeds = np.array([45] * driving_hours*1000) # !!!
+        speeds = np.array([45] * driving_hours)
 
     # Run simulation model with the "guess" speed array
     simulation_model.run_model(

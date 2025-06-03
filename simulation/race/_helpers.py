@@ -1,9 +1,8 @@
-import os
 import math
 import numpy as np
 from numba import jit
 from simulation.race import Race
-from physics.environment.gis.gis import GIS
+from physics.environment.gis.gis import calculate_driving_speeds
 
 
 def _reshape_and_repeat(input_array, reshape_length):
@@ -179,19 +178,10 @@ def reshape_speed_array(
     lap_speeds_ms = np.array(speed) * (1000/3600)
     
     # Idle time for 0m/s entries
-    idle_time = int((5*60)/tick) # ticks of idle time; for now this is set to be equivalent to 5 minutes
-
-    # Find the path of route_data_FSGP.npz
-    script_dir = os.path.dirname(__file__)
-    file_path = os.path.join(script_dir, "..", "cache", "route", "route_data_FSGP.npz")
-    route_data = np.load(file_path)
-
-    # GIS object creation
-    origin_coords = [37.00107373, -86.36854755] # !!! might need to change; based on location analysis
-    gis = GIS(route_data, origin_coords)
+    idle_time = (5*60)/tick # ticks of idle time; for now this is set to be equivalent to 5 minutes
 
     # Get a speed array where each entry is the speed at each time step
-    speed_ms = gis.calculate_driving_speeds(
+    speed_ms = calculate_driving_speeds(
         lap_speeds_ms,
         tick,
         driving_allowed,
