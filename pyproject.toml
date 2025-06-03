@@ -50,7 +50,6 @@ dependencies = [
     "google-auth-oauthlib>=1.2.0",
     "googleapis-common-protos>=1.62.0",
     "dill>=0.3.8",
-    "solcast>=1.2.3",
     "tzlocal>=5.2",
     "mplcursors>=0.5.3",
     "pandas>=2.2.2",
