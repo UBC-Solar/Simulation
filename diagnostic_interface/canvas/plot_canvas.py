@@ -122,8 +122,8 @@ class PlotCanvas2(FigureCanvas):
 
 
         try:
-            data = self.query_data("production", "power", "FSGP_2024_Day_1", "PackPower")
-            data2 = self.query_data("production", "power", "FSGP_2024_Day_1", "MotorPower")
+            data = self.query_data("production", "weather", "realtime", "WindSpeed10m")
+            data2 = self.query_data("production", "weather", "realtime", "PrecipitationRate")
 
             if not isinstance(data, TimeSeries):
                 raise TypeError("Expected TimeSeries.")
@@ -145,10 +145,13 @@ class PlotCanvas2(FigureCanvas):
 
 
                 #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
-                self.ax.set_title("MotorPower and PackPower", fontsize=12)
+                self.ax.set_title("WindSpeed10m & PrecipitationRate", fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
                 self.ax.set_ylabel(data_name, fontsize=10)
-                self.ax2.set_ylabel("PackPower", fontsize=10)
+                self.ax2.set_ylabel("PrecipitationRate", fontsize=10)
+
+                self.ax.legend([self.line1, self.line2], ["WindSpeed10m", "PrecipitationRate"])
+
 
                 # Improve datetime formatting
                 self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))

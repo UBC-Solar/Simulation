@@ -283,9 +283,7 @@ class WeatherTab(QWidget):
 
 
         self.plot_canvas2 = PlotCanvas2()
-        self.toolbar2 = CustomNavigationToolbar(canvas=self.plot_canvas2)
         plot2_layout.addWidget(self.plot_canvas2)
-        plot2_layout.addWidget(self.toolbar2)
 
 
 
@@ -310,6 +308,7 @@ class WeatherTab(QWidget):
         self.layout.addLayout(plot1_layout)
         self.layout.addLayout(bottom_plots_layout)
 
+        
 
         # Buttons
         help_button = QPushButton("Help")
@@ -325,7 +324,6 @@ class WeatherTab(QWidget):
         button_layout.addWidget(help_button)
         #button_layout.addWidget(close_button)
         button_group.setLayout(button_layout)
-
 
         self.layout.addWidget(button_group)
 
@@ -343,14 +341,14 @@ class WeatherTab(QWidget):
 
 
 
-        plot1 = self.plot_canvas1.query_and_plot("production", "power", "FSGP_2024_Day_1", "MotorPower")
+        plot1 = self.plot_canvas1.query_and_plot("production", "weather", "realtime", "DHI")
 
         #plot2 = self.plot_canvas2.query_and_plot("production", "power","FSGP_2024_Day_1", "MotorPower")
 
         plot2 = self.plot_canvas2
 
 
-        plot3 = self.plot_canvas3.query_and_plot("production", "power","FSGP_2024_Day_1", "PackPower")
+        plot3 = self.plot_canvas3.query_and_plot("production", "weather","realtime", "PrecipitationRate")
 
         if not (plot1 and plot2 and plot3):
             self.request_close()
@@ -367,18 +365,18 @@ class WeatherTab(QWidget):
     def refresh_plot(self):
 
 
-        worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "power", "FSGP_2024_Day_1", "MotorPower")
+        worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "weather", "realtime", "DHI")
 
         worker1.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker1)
 
 
-        worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "power", "FSGP_2024_Day_1", "MotorPower")
+        worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "weather", "realtime", "WindSpeed10m")
 
         worker2.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker2)
 
-        worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "power", "FSGP_2024_Day_1", "PackPower")
+        worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "PrecipitationRate")
 
         worker3.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker3)
