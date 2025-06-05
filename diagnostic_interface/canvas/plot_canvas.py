@@ -6,6 +6,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from data_tools import SunbeamClient, TimeSeries
 from matplotlib.pyplot import twinx
 
+import scipy.interpolate as interp
+
 from diagnostic_interface import settings
 
 # Use a light-theme friendly style
@@ -41,6 +43,10 @@ class PlotCanvas(FigureCanvas):
 
             if self.line is None:
                 self.line, = self.ax.plot(data.datetime_x_axis, data, linewidth=1)
+
+                self.ax.set_ylim(bottom=0)
+                self.ax.set_xlim(left=data.datetime_x_axis[0])
+
                 self.ax.set_title(f"{data_name} - {event}", fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
                 self.ax.set_ylabel(data_name, fontsize=10)

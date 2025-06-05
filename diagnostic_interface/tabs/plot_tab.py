@@ -9,6 +9,7 @@ from diagnostic_interface import settings
 from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas, PlotCanvas2
 
 
+
 HELP_MESSAGES = {
     "VehicleVelocity": "This plot shows velocity over time.\n\n"
                        "- X-axis: Time\n"
@@ -345,7 +346,7 @@ class WeatherTab(QWidget):
 
 
 
-        plot1 = self.plot_canvas1.query_and_plot("production", "weather", "realtime", "DHI")
+        plot1 = self.plot_canvas1.query_and_plot("production", "weather", "realtime", "GHI")
 
         #plot2 = self.plot_canvas2.query_and_plot("production", "power","FSGP_2024_Day_1", "MotorPower")
 
@@ -369,7 +370,7 @@ class WeatherTab(QWidget):
     def refresh_plot(self):
 
 
-        worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "weather", "realtime", "DHI")
+        worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "weather", "realtime", "GHI")
 
         worker1.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker1)
