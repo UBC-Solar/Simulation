@@ -23,6 +23,12 @@ class CustomNavigationToolbar(NavigationToolbar):
         self.save_data_action.triggered.connect(self.canvas.save_data_to_csv)
         self.addAction(self.save_data_action)
 
+
+
+
+        #stuff added:
+
+
         self.setIconSize(QSize(24, 24))
         self.setFixedHeight(25)
 

@@ -277,13 +277,17 @@ class WeatherTab(QWidget):
         plot2_layout = QVBoxLayout()
 
         # self.plot_canvas2 = PlotCanvas(self)
-        # self.toolbar2 = CustomNavigationToolbar(canvas=self.plot_canvas2)
+
         # plot2_layout.addWidget(self.plot_canvas2)
-        # plot2_layout.addWidget(self.toolbar2)
+        #
 
 
         self.plot_canvas2 = PlotCanvas2()
+        self.toolbar2 = CustomNavigationToolbar(canvas=self.plot_canvas2)
+
+        plot2_layout.addWidget(self.toolbar2)
         plot2_layout.addWidget(self.plot_canvas2)
+
 
 
 
@@ -348,7 +352,7 @@ class WeatherTab(QWidget):
         plot2 = self.plot_canvas2
 
 
-        plot3 = self.plot_canvas3.query_and_plot("production", "weather","realtime", "PrecipitationRate")
+        plot3 = self.plot_canvas3.query_and_plot("production", "weather","realtime", "GHI")
 
         if not (plot1 and plot2 and plot3):
             self.request_close()
@@ -372,11 +376,13 @@ class WeatherTab(QWidget):
 
 
         worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "weather", "realtime", "WindSpeed10m")
-
+        worker_add = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "PrecipitationRate")
         worker2.signals.finished.connect(self._on_plot_refresh_finished)
+        worker_add.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker2)
+        self._thread_pool.start(worker_add)
 
-        worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "PrecipitationRate")
+        worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "GHI")
 
         worker3.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker3)
