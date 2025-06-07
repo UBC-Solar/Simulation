@@ -6,7 +6,7 @@ from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer
 #from poetry.console.commands import self
 
 from diagnostic_interface import settings
-from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas, PlotCanvas2
+from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas, PlotCanvas2, IntegralPlot
 
 
 
@@ -295,7 +295,9 @@ class WeatherTab(QWidget):
 
         plot3_layout = QVBoxLayout()
 
-        self.plot_canvas3 = PlotCanvas(self)
+        #self.plot_canvas3 = PlotCanvas(self)
+
+        self.plot_canvas3 = IntegralPlot(self)
         self.toolbar3 = CustomNavigationToolbar(canvas=self.plot_canvas3)
         plot3_layout.addWidget(self.toolbar3)
 
@@ -353,8 +355,10 @@ class WeatherTab(QWidget):
         plot2 = self.plot_canvas2
 
 
-        plot3 = self.plot_canvas3.query_and_plot("production", "weather","realtime", "GHI")
+       # plot3 = self.plot_canvas3.query_and_plot("production", "weather","realtime", "GHI")
 
+
+        plot3 = self.plot_canvas3
         if not (plot1 and plot2 and plot3):
             self.request_close()
 
@@ -383,8 +387,8 @@ class WeatherTab(QWidget):
         self._thread_pool.start(worker2)
         self._thread_pool.start(worker_add)
 
+        #worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "GHI")
         worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "GHI")
-
         worker3.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker3)
 

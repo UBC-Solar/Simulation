@@ -253,6 +253,7 @@ class IntegralPlot(FigureCanvas):
 
         try:
             data = self.query_data("production", "weather", "realtime", "GHI")
+            integral_values = trapz(data, x=data.datetime_x_axis, initial=0)
 
             if not isinstance(data, TimeSeries):
                 raise TypeError("Expected TimeSeries.")
@@ -268,11 +269,9 @@ class IntegralPlot(FigureCanvas):
 
             if self.line1 is None:
 
-
-                self.line1, = self.ax.plot(data.datetime_x_axis, data, linewidth=1, color = 'red')
+                self.line1, = self.ax.plot(data.datetime_x_axis, integral_values, linewidth=1, color = 'red')
                 #add the comma so that its not just a normal 2d plot
 
-                integral_values = trapz(data, data.datetime_x_axis, initial=0)
 
                 #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
                 self.ax.set_title("WindSpeed10m & PrecipitationRate", fontsize=12)
@@ -291,15 +290,13 @@ class IntegralPlot(FigureCanvas):
                 # Only update data
                 self.line1.set_xdata(data.datetime_x_axis)
 
-                self.line1.set_ydata(data)
+                self.line1.set_ydata(integral_values)
 
 
 
             self.ax.relim()
             self.ax.autoscale_view(scalex=True, scaley=True)
 
-            self.ax2.relim()
-            self.ax2.autoscale_view(scalex=True, scaley=True)
 
             self.fig.tight_layout()
             self.draw()
