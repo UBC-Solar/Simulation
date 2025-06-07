@@ -304,7 +304,7 @@ class WeatherTab(QWidget):
         plot3_layout.addWidget(self.plot_canvas3)
 
 
-        self.label = QLabel("addtext")
+        self.label = QLabel("add text")
 
         bottom_plots_layout = QHBoxLayout()
 
@@ -359,6 +359,7 @@ class WeatherTab(QWidget):
 
 
         plot3 = self.plot_canvas3
+        
         if not (plot1 and plot2 and plot3):
             self.request_close()
 
