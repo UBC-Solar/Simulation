@@ -25,7 +25,7 @@ from simulation.config import (
 )
 
 from physics.models.arrays import BaseArray, BasicArray
-from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel
+from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel, BatteryModelConfig
 from physics.models.lvs import BaseLVS, BasicLVS
 from physics.models.motor import BaseMotor, BasicMotor
 from physics.models.regen import BaseRegen, BasicRegen
@@ -35,7 +35,6 @@ from physics.environment.meteorology import (
     IrradiantMeteorology,
     CloudedMeteorology,
 )
-
 
 load_dotenv()
 
@@ -90,12 +89,12 @@ class ModelBuilder:
         self.current_coord: Optional[NDArray] = None
         self.initial_battery_charge: Optional[float] = None
         self.start_time: Optional[int] = None
+        self.num_laps: Optional[int] = None
 
         # Hyperparameters
         self.simulation_period: Optional[int] = None
         self.return_type: Optional[SimulationReturnType] = None
         self.vehicle_speed_period: Optional[int] = None
-        self.num_laps: Optional[int] = None
 
         # Flags
         self._rebuild_route_cache: bool = False
@@ -306,7 +305,7 @@ class ModelBuilder:
     def _set_weather_data(self):
         environment_config = self._environment_config
 
-        environment_hash = ModelBuilder._truncate_hash(hash(environment_config))
+        environment_hash = ModelBuilder._truncate_hash(hash(environment_config) + hash(environment_config.weather_query_config))
         weather_data_path = WeatherPath / environment_hash
 
         weather_query_config = environment_config.weather_query_config
@@ -395,10 +394,18 @@ class ModelBuilder:
 
                 self.battery = BasicBattery(self.initial_battery_charge, **arguments)
 
-            case "EquivalentCircuitBatteryModel":
-                self.battery = EquivalentCircuitBatteryModel(
-                    self._car_config.battery_config, self.initial_battery_charge
+            case "BatteryModel":
+                battery_config = BatteryModelConfig(
+                    self._car_config.battery_config.R_0_data,
+                    self._car_config.battery_config.SOC_data,
+                    self._car_config.battery_config.R_P_data,
+                    self._car_config.battery_config.C_P_data,
+                    self._car_config.battery_config.Uoc_data,
+                    self._car_config.battery_config.Q_total
                 )
+                # battery_config = BatteryModelConfig(**self._car_config.battery_config.model_dump())
+
+                self.battery = EquivalentCircuitBatteryModel(battery_config, self.initial_battery_charge)
 
         self.motor = BasicMotor(
             vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
@@ -409,10 +416,10 @@ class ModelBuilder:
 
         self.num_laps = self.route_data.tiling
         route_data = {
-            "path": np.tile(self.route_data.coords, (self.num_laps, 1)),
+            "path": np.tile(self.route_data.coords, (tiling, 1)),
             "num_unique_coords": len(self.route_data.coords),
-            "time_zones": np.tile(self.route_data.path_time_zones, self.num_laps),
-            "elevations": np.tile(self.route_data.path_elevations, self.num_laps),
+            "time_zones": np.tile(self.route_data.path_time_zones, tiling),
+            "elevations": np.tile(self.route_data.path_elevations, tiling),
         }
 
         self.gis = GIS(route_data, self.origin_coord, self.current_coord)
@@ -462,5 +469,5 @@ class ModelBuilder:
             max_acceleration=self.max_acceleration,
             max_deceleration=self.max_deceleration,
             start_time=self.start_time,
-            num_laps=self.num_laps
+            num_laps = self.num_laps
         )
