@@ -18,7 +18,7 @@ def main(competition_name: str, car_name: str, speed_dt: int):
     This method parses initial conditions for the simulation and store them in a simulationState object. Then, begin
     optimizing simulation with Genetic optimization, and save the results.
 
-    :param granularity:
+    :param speed_dt:
     :param car_name:
     :param competition_name:
     :return: returns the time taken for simulation to complete before optimization
@@ -52,7 +52,7 @@ def main(competition_name: str, car_name: str, speed_dt: int):
     bounds = InputBounds()
     bounds.add_bounds(driving_laps, minimum_speed, maximum_speed)
 
-    input_speed = np.array([60] * driving_laps)
+    input_speed = np.array([60] * (driving_laps * 2)) # !!! How many laps do we need and why?
 
     # Run simulation model with the "guess" speed array
     simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False)
@@ -68,10 +68,10 @@ def main(competition_name: str, car_name: str, speed_dt: int):
         unit="Generation",
         smoothing=1.0,
     ) as pbar:
-        geneticOptimization = GeneticOptimization(
+        genetic_optimization = GeneticOptimization(
             simulation_model, bounds, settings=optimization_settings, pbar=pbar
         )
-        results_genetic = geneticOptimization.maximize()
+        results_genetic = genetic_optimization.maximize()
 
     simulation_model.run_model(results_genetic, plot_results=True)
 
@@ -96,6 +96,15 @@ if __name__ == "__main__":
         help="Define which race should be simulated. (ASC/FSGP)",
         type=str,
     )
+
+    parser.add_argument(
+        "--car",
+        required=False,
+        default="Brightside",
+        type=str,
+        help="Name of car model",
+    )
+
     parser.add_argument(
         "--granularity",
         required=False,
@@ -107,4 +116,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(race_type=args.race_type, granularity=args.granularity)
+    main(competition_name=args.race_type,
+         car_name = args.car,
+         speed_dt= args.granularity)

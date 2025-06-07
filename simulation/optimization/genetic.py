@@ -233,7 +233,6 @@ class GeneticOptimization(BaseOptimization):
         self,
         model: Model,
         bounds: InputBounds,
-        force_new_population_flag: bool = False,
         settings: OptimizationSettings = None,
         pbar: tqdm = None,
         plot_fitness: bool = False,
@@ -292,9 +291,6 @@ class GeneticOptimization(BaseOptimization):
         # Bind the value of each gene for the speeds we expect
         gene_space = list(range(0,61)) # [0, 1, 2, ..., 60]
 
-        # Add a time delay between generations (used for debug purposes)
-        delay_after_generation = 0.0
-
         # Store diversity of generation per optimization iteration
         self.diversity = []
 
@@ -336,9 +332,7 @@ class GeneticOptimization(BaseOptimization):
                 print("New generation!")
 
         # We must obtain or create an initial population for GA to work with.
-        initial_population = self.get_initial_population(
-            self.sol_per_pop, force_new_population_flag
-        )
+        initial_population = self.get_initial_population(self.sol_per_pop)
 
         # This informs GA when to end the optimization sequence. If blank, it will continue until the generation
         # iterations finish. Write "saturate_x" for the sequence to end after x generations of no improvement to
@@ -358,79 +352,24 @@ class GeneticOptimization(BaseOptimization):
             mutation_percent_genes=mutation_percent_genes,
             gene_space=gene_space,
             on_generation=on_generation_callback,
-            delay_after_gen=delay_after_generation,
             random_mutation_max_val=mutation_max_value,
             stop_criteria=str(stop_criteria),
         )
 
+    # Change this function; can randomize a population at run time !!!
     def get_initial_population(
-        self, num_arrays_to_generate, force_new_population_flag
+        self, num_arrays_to_generate
     ) -> np.ndarray:
         """
 
-        Acquire an array of valid driving speed arrays as a starting population for GA by either reading them
-        from cache or generating a new set.
+        Acquire an array of valid driving speed arrays as a starting population for GA by generating a new set.
 
         :param num_arrays_to_generate: the number of "guess" driving speed arrays that must be obtained
-        :param force_new_population_flag: force the creation of new arrays instead of reading a cached
         :return: an array of driving speed arrays with a length equal to `num_arrays_to_generate`
         :rtype: np.ndarray
 
         """
-
-        population_file = population_directory / "initial_population.npz"
-        arrays_from_cache = 0
-        new_initial_population = None
-
-        # Check if we can grab cached driving speed arrays
-        if os.path.isfile(population_file) and not force_new_population_flag:
-            try:
-                with np.load(population_file) as population_data:
-                    # We compare the hash value of the active Simulation model to the one that is cached
-                    # because speeds_directory that are valid for one model may not be valid for another (and the
-                    # driving speed array length may also differ)
-                    if population_data["hash_key"] == self.model.hash_key:
-                        initial_population = np.array(population_data["population"])
-
-                        if (
-                            not len(initial_population[0])
-                            == self.model.get_driving_time_divisions()
-                        ):
-                            raise IndexError
-
-                        # Check if the number of arrays needed and cached match. If we need more
-                        # arrays than are cached, we can still use the cached arrays and just generate more.
-                        if len(initial_population) == self.sol_per_pop:
-                            return initial_population
-                        else:
-                            # In the case that there are more cached arrays then we need, slice off the excess.
-                            new_initial_population = population_data["population"][
-                                :num_arrays_to_generate
-                            ]
-                            arrays_from_cache = len(new_initial_population)
-
-            except (IndexError, zipfile.BadZipFile):
-                print("Couldn't find valid arrays... generating")
-                arrays_from_cache = 0
-
-        # If we need more arrays, generate the number of new arrays that we need
-        if arrays_from_cache < num_arrays_to_generate:
-            remaining_arrays_needed = num_arrays_to_generate - arrays_from_cache
-            additional_arrays = self.generate_valid_speed_arrays(
-                remaining_arrays_needed
-            )
-            if arrays_from_cache == 0:
-                new_initial_population = additional_arrays
-            else:
-                new_initial_population = np.concatenate(
-                    (new_initial_population, additional_arrays)
-                )
-
-        # Cache the arrays we just generated with our active model's hash key
-        with open(population_file, "wb") as f:
-            np.savez(f, hash_key=self.model.hash_key, population=new_initial_population)
-
-        return new_initial_population
+        return self.generate_valid_speed_arrays(num_arrays_to_generate)
 
     def generate_valid_speed_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
         """
@@ -453,7 +392,7 @@ class GeneticOptimization(BaseOptimization):
         smoothing_sigma = 2 # Smoothing level; higher -> smoother
 
         # Determine the length that our driving speed arrays must be
-        length = self.model.num_laps
+        length = self.model.num_laps * 10 # !!!
         speed_arrays = []
 
         with tqdm(
