@@ -247,23 +247,24 @@ class IntegralPlot(FigureCanvas):
 
 
 
-    def query_and_plot(self, origin, source, event, data_name):
+    def query_and_plot(self):
 
 
 
         try:
             data = self.query_data("production", "weather", "realtime", "GHI")
-            integral_values = trapz(data, x=data.datetime_x_axis,initial=0)
+            y_val = data.values
+            integral_values = trapz(y_val, x=data.datetime_x_axis,initial=0)
 
             if not isinstance(data, TimeSeries):
                 raise TypeError("Expected TimeSeries.")
 
             self.current_data = integral_values
             #self.current_data2 = data2
-            self.current_data_name = data_name
-            self.current_event = event
-            self.current_origin = origin
-            self.current_source = source
+            # self.current_data_name = data_name
+            # self.current_event = event
+            # self.current_origin = origin
+            # self.current_source = source
 
             self.line1 = None
 
@@ -276,7 +277,7 @@ class IntegralPlot(FigureCanvas):
                 #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
                 self.ax.set_title("Integral of GHI", fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
-                self.ax.set_ylabel(data_name, fontsize=10)
+                self.ax.set_ylabel("integral_values", fontsize=10)
 
 
                 # Improve datetime formatting
@@ -323,6 +324,7 @@ class IntegralPlot(FigureCanvas):
             None,
             "Save Data",
             f"{self.current_data_name}_{self.current_event}_{self.current_origin}_{self.current_source}.csv",
+
             "CSV Files (*.csv);;All Files (*)",
             options=options,
         )

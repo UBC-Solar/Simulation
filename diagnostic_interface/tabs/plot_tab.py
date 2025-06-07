@@ -37,6 +37,31 @@ class PlotRefreshWorker(QRunnable):
         success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
         self.signals.finished.emit(success)
 
+
+
+##
+
+class PlotRefreshWorker2(QRunnable):
+    def __init__(self, plot_canvas):
+        super().__init__()
+        #self.plot_canvas = plot_canvas
+
+        self.plot_canvas = plot_canvas
+        # self.origin = origin
+        # self.source = source
+        # self.event = event
+        # self.data_name = data_name
+        self.signals = PlotRefreshWorkerSignals()
+
+
+    def run(self):
+        #success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
+        success = self.plot_canvas.query_and_plot()
+        self.signals.finished.emit(success)
+
+
+
+
 class PlotTab(QWidget):
     close_requested = pyqtSignal(QWidget)
 
@@ -389,7 +414,7 @@ class WeatherTab(QWidget):
         self._thread_pool.start(worker_add)
 
         #worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "GHI")
-        worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "GHI")
+        worker3 = PlotRefreshWorker(self.plot_canvas3)
         worker3.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker3)
 
