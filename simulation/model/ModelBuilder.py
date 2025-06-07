@@ -25,7 +25,7 @@ from simulation.config import (
 )
 
 from physics.models.arrays import BaseArray, BasicArray
-from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel
+from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel, BatteryModelConfig
 from physics.models.lvs import BaseLVS, BasicLVS
 from physics.models.motor import BaseMotor, BasicMotor
 from physics.models.regen import BaseRegen, BasicRegen
@@ -35,7 +35,6 @@ from physics.environment.meteorology import (
     IrradiantMeteorology,
     CloudedMeteorology,
 )
-
 
 load_dotenv()
 
@@ -395,9 +394,17 @@ class ModelBuilder:
                 self.battery = BasicBattery(self.initial_battery_charge, **arguments)
 
             case "BatteryModel":
-                self.battery = EquivalentCircuitBatteryModel(
-                    self._car_config.battery_config, self.initial_battery_charge
+                battery_config = BatteryModelConfig(
+                    self._car_config.battery_config.R_0_data,
+                    self._car_config.battery_config.SOC_data,
+                    self._car_config.battery_config.R_P_data,
+                    self._car_config.battery_config.C_P_data,
+                    self._car_config.battery_config.Uoc_data,
+                    self._car_config.battery_config.Q_total
                 )
+                # battery_config = BatteryModelConfig(**self._car_config.battery_config.model_dump())
+
+                self.battery = EquivalentCircuitBatteryModel(battery_config, self.initial_battery_charge)
 
         self.motor = BasicMotor(
             vehicle_mass=self._car_config.vehicle_config.vehicle_mass,

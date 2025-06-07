@@ -231,13 +231,14 @@ class Simulation:
 
         cumulative_delta_energy = np.cumsum(self.delta_energy)
         battery_variables_array = self.model.battery.update_array(
-            cumulative_delta_energy
+            delta_energy_array=self.delta_energy,
+            tick=self.model.simulation_dt
         )
 
         # stores the battery SOC at each time step
         self.state_of_charge = battery_variables_array[0]
+        self.raw_soc = self.state_of_charge
         self.state_of_charge[np.abs(self.state_of_charge) < 1e-03] = 0
-        self.raw_soc = self.model.battery.get_raw_soc(np.cumsum(self.delta_energy))
 
         # # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
         # self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
