@@ -2,6 +2,8 @@ import os
 import json
 import requests
 import numpy as np
+
+from simulation.config import CompetitionType
 from simulation.config import (
     SolcastConfig,
     OpenweatherConfig,
@@ -12,6 +14,11 @@ from simulation.config import (
 from numpy.typing import NDArray, ArrayLike
 from simulation.race import Coordinate
 from simulation.query import Query
+from data_tools.query import SolcastClient, SolcastOutput, SolcastPeriod
+import pandas as pd
+from datetime import timedelta, datetime
+from zoneinfo import ZoneInfo
+from timezonefinder import TimezoneFinder
 
 
 class SolcastQuery(Query[SolcastConfig]):
@@ -23,18 +30,127 @@ class SolcastQuery(Query[SolcastConfig]):
 
     def __init__(self, config: EnvironmentConfig):
         super().__init__(config)
+
         self._competition_config: CompetitionConfig = self._config.competition_config
-        self._weather_query_config: OpenweatherConfig = (
+        self._weather_query_config: SolcastConfig = (
             self._config.weather_query_config
         )
 
-    def make(self):
-        raise NotImplementedError(
-            "Querying for Solcast was not re-implemented when querying was refactored. See "
-            "https://github.com/UBC-Solar/Simulation/blob"
-            "/d33fa563b5feb09585af1db57be60a031964edc8/simulation/utils/Query.py for "
-            "inspiration on re-implementation."
+    @staticmethod
+    def update_path_weather_forecast_solcast(
+            coords: list[tuple[float, float]],
+            period: SolcastPeriod,
+            start_time: datetime,
+            end_time: datetime,
+    ) -> NDArray:
+        """
+        Get weather forecasts for `coords` between `start_time` and `end_time` with `period`.
+
+        Return packed as an array of shape [N][M][6] where N is the number of coordinates, and M is the number of
+        weather forecasts per coordinate (at different times).
+        The last dimension contains the data like [Time (Local), Latitude, Longitude, Wind Speed (m/s),
+        Wind Direction (degrees meteorological), GHI (W/m^2)].
+
+        :param  list[tuple[float, float]] coords: A list of coordinates to grab weather forecasts for
+        :param SolcastPeriod period: The weather forecast period.
+        :param start_time: The first time to grab weather forecasts for.
+        :param end_time: The last time to grab weather forecasts for.
+        """
+        weather_forecast = []
+        for i, coord in enumerate(coords):
+            weather_forecast.append(
+                SolcastQuery.get_coord_weather_forecast_solcast(
+                    coord,
+                    period,
+                    start_time,
+                    end_time
+                )
+            )
+
+        return np.array(weather_forecast)
+
+    @staticmethod
+    def get_coord_weather_forecast_solcast(
+            coord: tuple[float, float],
+            period: SolcastPeriod,
+            start_time: datetime,
+            end_time: datetime
+    ) -> NDArray:
+        """
+        Get weather forecasts for `coord` between `start_time` and `end_time` with `period`.
+
+        Return packed as an array of shape [M][6] and M is the number of
+        weather forecasts per coordinate (at different times).
+        The second dimension contains the data like [Time (Local), Latitude, Longitude, Wind Speed (m/s),
+        Wind Direction (degrees meteorological), GHI (W/m^2)].
+
+        :param  tuple[float, float] coord: The coordinate to grab weather forecasts for
+        :param SolcastPeriod period: The weather forecast period.
+        :param start_time: The first time to grab weather forecasts for.
+        :param end_time: The last time to grab weather forecasts for.
+        """
+        client = SolcastClient()
+
+        weather_forecast: pd.DataFrame = client.query(
+            coord[0],
+            coord[1],
+            period,
+            [SolcastOutput.wind_speed_10m, SolcastOutput.wind_direction_10m, SolcastOutput.ghi],
+            0,
+            start_time,
+            end_time,
+            return_dataframe=True,
+            return_datetime=True
         )
+
+        tf = TimezoneFinder()
+        tz_str = tf.timezone_at(lng=coord[1], lat=coord[0])
+        if tz_str is None:
+            raise ValueError(f"Could not determine a time-zone for [{coord[0]}, {coord[1]}]!")
+
+        tz = ZoneInfo(tz_str)
+        ts_local = weather_forecast.index.to_numpy()[0].tz_convert(tz)
+        offset_s = int(ts_local.utcoffset().total_seconds())
+
+        weather_array = np.zeros((len(weather_forecast), 6))
+        for i, (time, weather) in enumerate(weather_forecast.iterrows()):
+            time_dt: int = int(time.timestamp() + offset_s)  # ``time`` will be a pandas.time.Timestamp object
+            latitude: float = coord[0]
+            longitude: float = coord[1]
+            wind_speed: float = weather['wind_speed_10m']
+            wind_direction: float = weather['wind_direction_10m']
+            ghi: float = weather['ghi']
+
+            weather_array[i] = np.array([time_dt, latitude, longitude, wind_speed, wind_direction, ghi])
+
+        return weather_array
+
+    def make(self) -> NDArray:
+        """
+        Make the weather forecast query.
+
+        Return packed as an array of shape [N][M][6] where N is the number of coordinates, and M is the number of
+        weather forecasts per coordinate (at different times).
+        The last dimension contains the data like [Time (UTC), Latitude, Longitude, Wind Speed (m/s),
+        Wind Direction (degrees meteorological), GHI (W/m^2)].
+        """
+        coords = self._competition_config.route_config.coordinates
+
+        if self._competition_config.competition_type == CompetitionType.TrackCompetition:
+            coords = [coords[0]]
+
+        period = self._weather_query_config.weather_period
+        start_time = self._competition_config.date
+        end_time = self._competition_config.date + timedelta(days=self._competition_config.duration)
+
+        weather_forecast = SolcastQuery.update_path_weather_forecast_solcast(
+            coords,
+            period,
+            start_time,
+            end_time
+        )
+
+        return weather_forecast
 
 
 class OpenweatherQuery(Query[OpenweatherConfig]):
