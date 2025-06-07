@@ -229,7 +229,6 @@ class Simulation:
 
         # ----- Array calculations -----
 
-        cumulative_delta_energy = np.cumsum(self.delta_energy)
         battery_variables_array = self.model.battery.update_array(
             delta_energy_array=self.delta_energy,
             tick=self.model.simulation_dt
