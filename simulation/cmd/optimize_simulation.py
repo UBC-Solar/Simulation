@@ -12,7 +12,6 @@ from simulation.cmd.run_simulation import build_model, get_default_settings
 from simulation.config import SimulationHyperparametersConfig, SimulationReturnType
 from tqdm import tqdm
 
-# Probably need to change this too!
 def main(competition_name: str, car_name: str, speed_dt: int):
     """
 
@@ -43,7 +42,7 @@ def main(competition_name: str, car_name: str, speed_dt: int):
         environment, hyperparameters, initial_conditions, car_config
     )
 
-    # Initialize a "guess" speed array !!!
+    # Initialize a "guess" speed array
     driving_laps = simulation_model.num_laps
 
     # Set up optimization models
@@ -87,7 +86,7 @@ def get_random_string(length: int) -> str:
 
     return random_string
 
-
+# Do I need to change this part?
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(

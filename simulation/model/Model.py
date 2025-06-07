@@ -21,7 +21,7 @@ from physics.environment.meteorology import BaseMeteorology
 class Model:
     """
     A `Model` is a comprehensive model of a solar-powered vehicle's components within a fully qualified environment,
-    ready for simulation given an input of driving speeds for the vehicle to perform.
+    ready for simulation given an input of driving speeds_directory for the vehicle to perform.
     """
 
     def __init__(
@@ -104,14 +104,14 @@ class Model:
     ):
         """
 
-        Given an array of driving speeds, simulate the model by running calculations sequentially for the entire
+        Given an array of driving speeds_directory, simulate the model by running calculations sequentially for the entire
         simulation duration.
         Returns either time taken, distance travelled, or void.
 
         This function is mostly a wrapper
         around `run_simulation_calculations`,
         which is where the magic happens, that deals with processing the driving
-        speeds array as well as plotting and handling the calculation results.
+        speeds_directory array as well as plotting and handling the calculation results.
 
         Note: if the speed remains constant throughout this update, knowing the starting
               time, the cumulative distance at every time can be known.
@@ -138,7 +138,7 @@ class Model:
         """
         # We want to check that the speed array has at least as many elements as the number of laps we want to simulate
         assert len(speed) >= self.num_laps, (
-            "Input driving speeds array must have length greater than or "
+            "Input driving speeds_directory array must have length greater than or "
             "equal to self.num_laps! Current length is "
             f"{len(speed)} and length of {self.num_laps} is needed!"
         )
@@ -147,13 +147,12 @@ class Model:
         speed_kmh = reshape_speed_array(
             self.race,
             speed,
-            self.speed_dt,
             self.start_time,
             self.gis,
             self.simulation_dt,
             self.max_acceleration,
             self.max_deceleration,
-        )
+        ) #
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
@@ -203,7 +202,7 @@ class Model:
                 "SOC (%)",
                 "Delta energy (J)",
                 "Solar irradiance (W/m^2)",
-                "Wind speeds (km/h)",
+                "Wind speeds_directory (km/h)",
                 "Elevation (m)",
                 "Raw SOC (%)",
                 "Raw Speed (km/h)",

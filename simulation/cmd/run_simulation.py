@@ -12,7 +12,6 @@ from simulation.config import (
 )
 from numpy.typing import NDArray
 
-
 def run_simulation(
     competition_name: str,
     plot_results: bool,
@@ -54,7 +53,7 @@ def run_simulation(
     # Initialize a "guess" speed array
     driving_laps = simulation_model.num_laps
     if speeds is None:
-        speeds = np.array([45] * driving_laps*100)
+        speeds = np.array([45] * driving_laps)
 
     # Run simulation model with the "guess" speed array
     simulation_model.run_model(

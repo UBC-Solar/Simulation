@@ -7,6 +7,7 @@ import sys
 import csv
 import os
 
+from scipy.ndimage import gaussian_filter1d
 from strenum import StrEnum
 from tqdm import tqdm
 
@@ -195,10 +196,10 @@ class GeneticOptimization(BaseOptimization):
     Notable Vocabulary:
 
     1. Chromosome: a chromosome is a set of genes that describe a potential solution. In the context of UBC Solar's
-    Simulation where we are optimizing driving speeds, a chromosome is a driving speeds array.
+    Simulation where we are optimizing driving speeds_directory, a chromosome is a driving speeds_directory array.
 
     2. Gene: a gene is an element of a chromosome and genes are what will be modified through the course of optimization.
-    In our context where a chromosome is an abstraction of a driving speeds array, a gene represents the value for
+    In our context where a chromosome is an abstraction of a driving speeds_directory array, a gene represents the value for
     a single driving speed interval.
 
     3. Generation: a generation can be thought of as a single iteration of the optimization sequence. The members of a
@@ -216,9 +217,9 @@ class GeneticOptimization(BaseOptimization):
     6. Convergence: in the context of GA, convergence is how quickly GA arrives at a maximum (local or global) fitness
     value. On a Fitness vs Generation graph, convergence is the rate in which fitness plateaus.
 
-    7. "Successful Simulation": in its current state, Simulation can simulate a driving speeds array that
+    7. "Successful Simulation": in its current state, Simulation can simulate a driving speeds_directory array that
     results in state of charge dropping below 0%, which is a physical impossibility. A successful simulation is
-    one where this does not occur, and a successful/valid driving speeds array is one that will result in a successful
+    one where this does not occur, and a successful/valid driving speeds_directory array is one that will result in a successful
     simulation.
 
     Briefly, GA begins by evaluating an initial population, selecting certain potential solutions (chromosomes) to be
@@ -289,7 +290,7 @@ class GeneticOptimization(BaseOptimization):
         mutation_max_value = self.settings.max_mutation
 
         # Bind the value of each gene to be between 0 and 1 as chromosomes should be normalized.
-        gene_space = {"low": 0.0, "high": 1.0}
+        gene_space = {"low": 0.0, "high": 1.0} # !!! FIND OUT HOW TO MAKE THIS INTO INTEGERS
 
         # Add a time delay between generations (used for debug purposes)
         delay_after_generation = 0.0
@@ -386,7 +387,7 @@ class GeneticOptimization(BaseOptimization):
             try:
                 with np.load(population_file) as population_data:
                     # We compare the hash value of the active Simulation model to the one that is cached
-                    # because speeds that are valid for one model may not be valid for another (and the
+                    # because speeds_directory that are valid for one model may not be valid for another (and the
                     # driving speed array length may also differ)
                     if population_data["hash_key"] == self.model.hash_key:
                         initial_population = np.array(population_data["population"])
@@ -434,24 +435,24 @@ class GeneticOptimization(BaseOptimization):
     def generate_valid_speed_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
         """
 
-        Generate a set of normalized driving speeds arrays that are valid for the active Simulation model
+        Generate a set of normalized driving speeds_directory arrays that are valid for the active Simulation model
         using Perlin noise. Will return an array with num_arrays_to_generate valid arrays.
 
         :param int num_arrays_to_generate:
-        :return: an array of `num_arrays_to_generate` driving speeds, valid for the active Simulation model.
+        :return: an array of `num_arrays_to_generate` driving speeds_directory, valid for the active Simulation model.
         :rtype: np.ndarray
 
         """
 
         # These numbers were experimentally found to generate high fitness values in guess arrays
         # while having an acceptably low chance of not resulting in a successful simulation.
-        max_speed_kmh: float = 40
-        min_speed_kmh: float = 30
+        max_speed_kmh: int = 40
+        min_speed_kmh: int = 30
+        mean_speed = (max_speed_kmh + min_speed_kmh) / 2
+        std_dev = 3 # How spread out is the noise
+        smoothing_sigma = 2 # Smoothing level; higher -> smoother
 
-        # We will use Perlin noise to generate our guess arrays
-        noise_generator = Noise()  # noqa: F821
-
-        # Determine the length that our driving speed arrays must be !!!
+        # Determine the length that our driving speed arrays must be
         length = self.model.num_laps
         speed_arrays = []
 
@@ -462,31 +463,20 @@ class GeneticOptimization(BaseOptimization):
             position=0,
             leave=True,
         ) as pbar:
-            # Generate a matrix of normalized Gaussian noise of size [length, num_arrays_to_generate]
-            noise = noise_generator.get_gauss_noise_matrix(
-                length, num_arrays_to_generate
-            )
-
-            x = 0
 
             while len(speed_arrays) < num_arrays_to_generate:
-                # Read rows from the Gaussian noise matrix as a normalized driving speed array
-                guess_speed = normalize(noise[x])
+                # Generate Gaussian noise
+                noise = np.random.normal(loc = 0, scale= std_dev, size = length)
 
-                # We generate just enough noise to be able to test num_arrays_to_generate speed arrays.
-                # Thus, the following logic keeps careful track of the index because if we have even one
-                # unsuccessful array, we'll need to generate more noise.
-                if x >= len(noise) - 1:
-                    noise = noise_generator.get_gauss_noise_matrix(
-                        length, num_arrays_to_generate
-                    )
-                    x = 0
+                # Filter the noise; make it smoother
+                smooth_noise = gaussian_filter1d(noise, sigma = smoothing_sigma)
 
-                else:
-                    x += 1
+                # Generate speeds by adding noise to the mean speed
+                input_speed = mean_speed + smooth_noise
 
-                # We must denormalize the driving speeds array before simulating it.
-                input_speed = rescale(guess_speed, max_speed_kmh, min_speed_kmh)
+                # Ensuring elements are integers and fall within our bounds.
+                input_speed = np.clip(np.round(input_speed).astype(int), min_speed_kmh, max_speed_kmh)
+
                 self.model.run_model(
                     speed=input_speed, plot_results=False, is_optimizer=True
                 )
@@ -500,11 +490,13 @@ class GeneticOptimization(BaseOptimization):
 
         return np.array(speed_arrays)
 
+    # !!! MUTATION SHOULD ONLY INTRODUCE INTEGER VALUES
+
     def fitness(self, ga_instance, solution, solution_idx) -> float:
         """
 
         This function is called by GA to evaluate the fitness of a given chromosome.
-        The chromosome (driving speeds array) is fed as the driving speeds array and the
+        The chromosome (driving speeds_directory array) is fed as the driving speeds_directory array and the
         model is simulated. The distance that can be travelled during the simulation
         duration is returned as the fitness of the chromosome.
         If the simulation results in
