@@ -14,10 +14,10 @@ from simulation.config import (
 from numpy.typing import NDArray, ArrayLike
 from simulation.race import Coordinate
 from simulation.query import Query
-from data_tools.query import SolcastClient, SolcastOutput
+from data_tools.query import SolcastClient, SolcastOutput, SolcastPeriod
 import pandas as pd
-from datetime import timedelta
-from zoneinfo import ZoneInfo          # std-lib ≥3.9
+from datetime import timedelta, datetime
+from zoneinfo import ZoneInfo
 from timezonefinder import TimezoneFinder
 
 
@@ -30,13 +30,32 @@ class SolcastQuery(Query[SolcastConfig]):
 
     def __init__(self, config: EnvironmentConfig):
         super().__init__(config)
+
         self._competition_config: CompetitionConfig = self._config.competition_config
-        self._weather_query_config: OpenweatherConfig = (
+        self._weather_query_config: SolcastConfig = (
             self._config.weather_query_config
         )
 
     @staticmethod
-    def update_path_weather_forecast_solcast(coords, period, start_time, end_time):
+    def update_path_weather_forecast_solcast(
+            coords: list[tuple[float, float]],
+            period: SolcastPeriod,
+            start_time: datetime,
+            end_time: datetime,
+    ) -> NDArray:
+        """
+        Get weather forecasts for `coords` between `start_time` and `end_time` with `period`.
+
+        Return packed as an array of shape [N][M][6] where N is the number of coordinates, and M is the number of
+        weather forecasts per coordinate (at different times).
+        The last dimension contains the data like [Time (Local), Latitude, Longitude, Wind Speed (m/s),
+        Wind Direction (degrees meteorological), GHI (W/m^2)].
+
+        :param  list[tuple[float, float]] coords: A list of coordinates to grab weather forecasts for
+        :param SolcastPeriod period: The weather forecast period.
+        :param start_time: The first time to grab weather forecasts for.
+        :param end_time: The last time to grab weather forecasts for.
+        """
         weather_forecast = []
         for i, coord in enumerate(coords):
             weather_forecast.append(
@@ -51,14 +70,24 @@ class SolcastQuery(Query[SolcastConfig]):
         return np.array(weather_forecast)
 
     @staticmethod
-    def get_coord_weather_forecast_solcast(coord, period, start_time, end_time):
+    def get_coord_weather_forecast_solcast(
+            coord: tuple[float, float],
+            period: SolcastPeriod,
+            start_time: datetime,
+            end_time: datetime
+    ) -> NDArray:
         """
+        Get weather forecasts for `coord` between `start_time` and `end_time` with `period`.
 
-        :param coord:
-        :param period:
-        :param start_time: timezone-aware datetime
-        :param end_time: timezone-aware datetime
-        :return:
+        Return packed as an array of shape [M][6] and M is the number of
+        weather forecasts per coordinate (at different times).
+        The second dimension contains the data like [Time (Local), Latitude, Longitude, Wind Speed (m/s),
+        Wind Direction (degrees meteorological), GHI (W/m^2)].
+
+        :param  tuple[float, float] coord: The coordinate to grab weather forecasts for
+        :param SolcastPeriod period: The weather forecast period.
+        :param start_time: The first time to grab weather forecasts for.
+        :param end_time: The last time to grab weather forecasts for.
         """
         client = SolcastClient()
 
@@ -81,7 +110,7 @@ class SolcastQuery(Query[SolcastConfig]):
 
         tz = ZoneInfo(tz_str)
         ts_local = weather_forecast.index.to_numpy()[0].tz_convert(tz)
-        offset_s = int(ts_local.utcoffset().total_seconds())  # → −25 200 (−07:00)
+        offset_s = int(ts_local.utcoffset().total_seconds())
 
         weather_array = np.zeros((len(weather_forecast), 6))
         for i, (time, weather) in enumerate(weather_forecast.iterrows()):
@@ -97,6 +126,14 @@ class SolcastQuery(Query[SolcastConfig]):
         return weather_array
 
     def make(self) -> NDArray:
+        """
+        Make the weather forecast query.
+
+        Return packed as an array of shape [N][M][6] where N is the number of coordinates, and M is the number of
+        weather forecasts per coordinate (at different times).
+        The last dimension contains the data like [Time (UTC), Latitude, Longitude, Wind Speed (m/s),
+        Wind Direction (degrees meteorological), GHI (W/m^2)].
+        """
         coords = self._competition_config.route_config.coordinates
 
         if self._competition_config.competition_type == CompetitionType.TrackCompetition:
