@@ -289,8 +289,8 @@ class GeneticOptimization(BaseOptimization):
         # Define a maximum value for gene value mutations (should be 0 < x < 1)
         mutation_max_value = self.settings.max_mutation
 
-        # Bind the value of each gene to be between 0 and 1 as chromosomes should be normalized.
-        gene_space = {"low": 0.0, "high": 1.0} # !!! FIND OUT HOW TO MAKE THIS INTO INTEGERS
+        # Bind the value of each gene for the speeds we expect
+        gene_space = list(range(0,61)) # [0, 1, 2, ..., 60]
 
         # Add a time delay between generations (used for debug purposes)
         delay_after_generation = 0.0
@@ -489,8 +489,6 @@ class GeneticOptimization(BaseOptimization):
                     pbar.update(1)
 
         return np.array(speed_arrays)
-
-    # !!! MUTATION SHOULD ONLY INTRODUCE INTEGER VALUES
 
     def fitness(self, ga_instance, solution, solution_idx) -> float:
         """
