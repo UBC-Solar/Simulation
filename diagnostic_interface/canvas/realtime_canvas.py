@@ -10,10 +10,13 @@ from PyQt5.QtWidgets import QMessageBox
 plt.style.use("seaborn-v0_8-darkgrid")
 
 
-class SocCanvas(FigureCanvas):
-    def __init__(self, parent=None):
+class RealtimeCanvas(FigureCanvas):
+    def __init__(self, source: str, data_name: str, parent=None):
         fig = Figure(figsize=(5, 3))
         super().__init__(fig)
+
+        self.source = source
+        self.data_name = data_name
 
         self.setParent(parent)
         self.ax = fig.add_subplot(111)
@@ -21,7 +24,9 @@ class SocCanvas(FigureCanvas):
 
     def fetch_data(self) -> TimeSeries:
         client = SunbeamClient(settings.sunbeam_api_url)
-        file = client.get_file(settings.realtime_pipeline, settings.realtime_event, "energy", "SOC")
+        file = client.get_file(settings.realtime_pipeline, settings.realtime_event, self.source, self.data_name)
+        if not file:
+            print(file._result)
         result = file.unwrap()
 
         return result.values if hasattr(result, "values") else result.data
