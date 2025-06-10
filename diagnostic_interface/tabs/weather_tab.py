@@ -19,51 +19,51 @@ HELP_MESSAGES = {
 
 EVENT = "FSGP_2024_Day_1"
 
-
-class PlotRefreshWorkerSignals(QObject):
-    finished = pyqtSignal(bool)  # success or failure
-
-class PlotRefreshWorker(QRunnable):
-    def __init__(self, plot_canvas, origin, source, event, data_name):
-        super().__init__()
-        #self.plot_canvas = plot_canvas
-
-        self.plot_canvas = plot_canvas
-        self.origin = origin
-        self.source = source
-        self.event = event
-        self.data_name = data_name
-        self.signals = PlotRefreshWorkerSignals()
-
-
-    def run(self):
-        #success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
-        success = self.plot_canvas.fetch_data()
-        self.signals.finished.emit(success)
-
-
-# class PlotRefreshWorkerSignals(QObject):
-#     data_ready = pyqtSignal(object)  # emits the TimeSeries
-#     error = pyqtSignal(str)  # emits an error message
 #
+# class PlotRefreshWorkerSignals(QObject):
+#     finished = pyqtSignal(bool)  # success or failure
 #
 # class PlotRefreshWorker(QRunnable):
-#     def __init__(self, plot_canvas1: RealtimeCanvas, plot_canvas3: RealtimeCanvas):
+#     def __init__(self, plot_canvas, origin, source, event, data_name):
 #         super().__init__()
-#         self.plot_canvas1: RealtimeCanvas = plot_canvas1
-#         self.plot_canvas3: RealtimeCanvas = plot_canvas3
+#         #self.plot_canvas = plot_canvas
+#
+#         self.plot_canvas = plot_canvas
+#         self.origin = origin
+#         self.source = source
+#         self.event = event
+#         self.data_name = data_name
 #         self.signals = PlotRefreshWorkerSignals()
 #
-#     def run(self):
-#         try:
-#             plot = self.plot_canvas1.fetch_data()
-#             plot3 = self.plot_canvas3.fetch_data()
-#             self.signals.data_ready.emit(plot, plot3)
 #
-#         except Exception as e:
-#             print(e)
-#             self.signals.error.emit(str(e))
- ##
+#     def run(self):
+#         #success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
+#         success = self.plot_canvas.fetch_data()
+#         self.signals.finished.emit(success)
+#
+
+class PlotRefreshWorkerSignals(QObject):
+    data_ready = pyqtSignal(object)  # emits the TimeSeries
+    error = pyqtSignal(str)  # emits an error message
+
+
+class PlotRefreshWorker(QRunnable):
+    def __init__(self, plot_canvas1: RealtimeCanvas):
+        super().__init__()
+        self.plot_canvas1: RealtimeCanvas = plot_canvas1
+        #self.plot_canvas3: RealtimeCanvas = plot_canvas3
+        self.signals = PlotRefreshWorkerSignals()
+
+    def run(self):
+        try:
+            plot = self.plot_canvas1.fetch_data()
+            #plot3 = self.plot_canvas3.fetch_data()
+            self.signals.data_ready.emit(plot, plot3)
+
+        except Exception as e:
+            print(e)
+            self.signals.error.emit(str(e))
+ #
 
 class PlotRefreshWorker2(QRunnable):
     def __init__(self, plot_canvas):
@@ -205,12 +205,12 @@ class WeatherTab(QWidget):
         self._thread_pool.start(worker1)
 
 
-        worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "weather", "realtime", "WindSpeed10m")
-        worker_add = PlotRefreshWorker(self.plot_canvas2, "production", "weather", "realtime", "PrecipitationRate")
-        worker2.signals.finished.connect(self._on_plot_refresh_finished)
-        worker_add.signals.finished.connect(self._on_plot_refresh_finished)
-        self._thread_pool.start(worker2)
-        self._thread_pool.start(worker_add)
+        # worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "weather", "realtime", "WindSpeed10m")
+        # worker_add = PlotRefreshWorker(self.plot_canvas2, "production", "weather", "realtime", "PrecipitationRate")
+        # worker2.signals.finished.connect(self._on_plot_refresh_finished)
+        # worker_add.signals.finished.connect(self._on_plot_refresh_finished)
+        # self._thread_pool.start(worker2)
+        # self._thread_pool.start(worker_add)
 
 
         worker3 = PlotRefreshWorker2(self.plot_canvas3)
@@ -218,9 +218,9 @@ class WeatherTab(QWidget):
         self._thread_pool.start(worker3)
 
     @pyqtSlot(object, object)
-    def _on_data_ready(self, plot_canvas1, plot_canvas3):
+    def _on_data_ready(self, plot_canvas1):
         self.plot_canvas1.plot(plot_canvas1, f"SOC", "SOC (%)")
-        self.plot_canvas3.plot3(plot_canvas3, f"Unfiltered SOC", "SOC (%)")
+        #self.plot_canvas3.plot3(plot_canvas3, f"Unfiltered SOC", "SOC (%)")
 
     @pyqtSlot(str)
     def _on_data_error(self, msg):

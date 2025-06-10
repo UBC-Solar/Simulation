@@ -1,8 +1,9 @@
 # from .docker_panel import DockerStackTab
 #from diagnostic_interface import PlotTab
 
-from .plot_tab import WeatherTab
-from .plot_tab import PlotTab, WeatherTab
+#from .plot_tab import WeatherTab
+from .weather_tab import WeatherTab
+from .plot_tab import PlotTab
 from .docker_panel import DockerStackTab
 from .plot_tab import PlotTab
 from ._updatable import UpdatableTab
