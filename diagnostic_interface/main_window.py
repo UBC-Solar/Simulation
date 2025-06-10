@@ -13,7 +13,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
 from diagnostic_interface.widgets import DataSelect
-from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab
+from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab, SOCTab
 from diagnostic_interface.dialog import SettingsDialog
 from diagnostic_interface import settings
 
@@ -78,6 +78,9 @@ class MainWindow(QMainWindow):
         self.telemetry_tab = TelemetryTab()
         self.tabs.addTab(self.telemetry_tab, "Telemetry")
 
+        self.soc_tab = SOCTab()
+        self.tabs.addTab(self.soc_tab, "SOC")
+
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.
         This method contains a connection to the request_close method of the PlotTab class to receive
@@ -114,22 +117,35 @@ class MainWindow(QMainWindow):
         current_client_address = settings.sunbeam_api_url
         current_sunbeam_path = settings.sunbeam_path
         current_sunlink_path = settings.sunlink_path
+        current_realtime_event = settings.realtime_event
+        current_realtime_pipeline = settings.realtime_pipeline
 
         dialog = SettingsDialog(
             current_interval,
             current_client_address,
             current_sunbeam_path,
             current_sunlink_path,
+            current_realtime_event,
+            current_realtime_pipeline,
             self
         )
 
         if dialog.exec_():  # if user pressed OK
-            new_plot_interval, new_client_address, sunbeam_path, sunlink_path = dialog.get_settings()
+            (
+                new_plot_interval,
+                new_client_address,
+                sunbeam_path,
+                sunlink_path,
+                realtime_event,
+                realtime_pipeline
+            ) = dialog.get_settings()
 
             settings.plot_timer_interval = new_plot_interval
             settings.sunbeam_api_url = new_client_address
             settings.sunbeam_path = sunbeam_path
             settings.sunlink_path = sunlink_path
+            settings.realtime_event = realtime_event
+            settings.realtime_pipeline = realtime_pipeline
 
             # Refresh settings
             self.client = SunbeamClient(settings.sunbeam_api_url)

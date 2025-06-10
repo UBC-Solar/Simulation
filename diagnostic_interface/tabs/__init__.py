@@ -4,6 +4,7 @@ from ._updatable import UpdatableTab
 from .sunbeam_panel import SunbeamTab
 from .sunlink_panel import SunlinkTab
 from .telemetry_panel import TelemetryTab
+from .soc_tab import SOCTab
 
 __all__ = [
     "DockerStackTab",
@@ -11,5 +12,6 @@ __all__ = [
     "UpdatableTab",
     "SunbeamTab",
     "SunlinkTab",
-    "TelemetryTab"
+    "TelemetryTab",
+    "SOCTab"
 ]

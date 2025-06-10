@@ -53,6 +53,7 @@ class PersistentConfig(Generic[T]):
         else:
             super().__setattr__(name, value)
 
+
 class Settings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -60,6 +61,8 @@ class Settings(BaseModel):
     sunbeam_api_url: str = Field(..., description="Base URL for Sunbeam API")
     sunbeam_path: str = Field(..., description="Filesystem path to Sunbeam project")
     sunlink_path: str = Field(..., description="Filesystem path to Sunlink project")
+    realtime_event: str = Field(..., description="Realtime event for realtime-data visualization")
+    realtime_pipeline: str = Field(..., description="Realtime pipeline for realtime-data visualization")
 
 
 class CommandSettings(BaseModel):
