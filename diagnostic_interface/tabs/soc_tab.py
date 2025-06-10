@@ -151,13 +151,21 @@ class SOCTab(QWidget):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh_plot)
-        self.timer.start(settings.plot_timer_interval * 1000)
 
     def refresh_plot(self):
         worker = PlotRefreshWorker(self.soc_canvas, self.unfiltered_soc_canvas)
         worker.signals.data_ready.connect(self._on_data_ready)
         worker.signals.error.connect(self._on_data_error)
         self.pool.start(worker)
+
+    def set_tab_active(self, active: bool) -> None:
+        if active:
+            self.timer.setInterval(settings.plot_timer_interval * 1000)
+            self.timer.start()
+            QTimer.singleShot(0, self.refresh_plot)
+
+        else:
+            self.timer.stop()
 
     @pyqtSlot(object, object)
     def _on_data_ready(self, soc: TimeSeries, unfiltered_soc):
