@@ -8,14 +8,14 @@ version = "1.1.0"
 description = "UBC Solar's Simulation Environment"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = { text = "MIT" }
 authors = [
-    {name = "UBC Solar Strategy Team", email = "strategy@ubcsolar.com"},
-    {name = "Joshua Riefman", email = "joshuariefman@gmail.com"}
+    { name = "UBC Solar Strategy Team", email = "strategy@ubcsolar.com" },
+    { name = "Joshua Riefman", email = "joshuariefman@gmail.com" }
 ]
 maintainers = [
-    {name = "UBC Solar Strategy Team", email = "strategy@ubcsolar.com"},
-    {name = "Joshua Riefman", email = "joshuariefman@gmail.com"}
+    { name = "UBC Solar Strategy Team", email = "strategy@ubcsolar.com" },
+    { name = "Joshua Riefman", email = "joshuariefman@gmail.com" }
 ]
 keywords = ["car", "simulation", "solar"]
 classifiers = [
@@ -64,10 +64,7 @@ dependencies = [
     "pyqtwebengine>=5.15.7",
     "tomli>=2.2.1",
     "tomli-w>=1.2.0",
-    "ansi2html>=1.9.2",
-    "termqt>=1.0.0",
-    "pyte>=0.8.2",
-    "pyqtdarktheme>=2.1.0",
+    "qt-material>=2.17",
 ]
 
 [project.urls]
@@ -75,10 +72,9 @@ Homepage = "https://ubcsolar.com"
 Repository = "https://github.com/UBC-Solar/Simulation"
 Documentation = "https://ubc-solar-simulation.readthedocs.io/en/latest/"
 
-
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
-  "ruff >=0.11.2"
+  "ruff>=0.11.2"
 ]
 
 [tool.setuptools]

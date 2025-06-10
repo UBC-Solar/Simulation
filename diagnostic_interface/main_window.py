@@ -17,6 +17,7 @@ from diagnostic_interface.widgets import DataSelect
 from diagnostic_interface.tabs import WeatherTab, PlotTab, UpdatableTab
 
 
+from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab, SOCTab
 from diagnostic_interface.dialog import SettingsDialog
 from diagnostic_interface import settings
 
@@ -76,14 +77,17 @@ class MainWindow(QMainWindow):
         home_widget.setLayout(layout)
         self.tabs.addTab(home_widget, "Home")
 
-        # self.sunbeam_gui = SunbeamTab()
-        # self.tabs.addTab(self.sunbeam_gui, "Sunbeam")
-        #
-        # self.sunlink_gui = SunlinkTab()
-        # self.tabs.addTab(self.sunlink_gui, "Sunlink")
-        #
-        # self.telemetry_tab = TelemetryTab()
-        # self.tabs.addTab(self.telemetry_tab, "Telemetry")
+        self.sunbeam_gui = SunbeamTab()
+        self.tabs.addTab(self.sunbeam_gui, "Sunbeam")
+
+        self.sunlink_gui = SunlinkTab()
+        self.tabs.addTab(self.sunlink_gui, "Sunlink")
+
+        self.telemetry_tab = TelemetryTab()
+        self.tabs.addTab(self.telemetry_tab, "Telemetry")
+
+        self.soc_tab = SOCTab()
+        self.tabs.addTab(self.soc_tab, "SOC")
 
         plot_tab2 = WeatherTab()
         self.tabs.addTab(plot_tab2, f"WeatherTab")
@@ -135,22 +139,35 @@ class MainWindow(QMainWindow):
         current_client_address = settings.sunbeam_api_url
         current_sunbeam_path = settings.sunbeam_path
         current_sunlink_path = settings.sunlink_path
+        current_realtime_event = settings.realtime_event
+        current_realtime_pipeline = settings.realtime_pipeline
 
         dialog = SettingsDialog(
             current_interval,
             current_client_address,
             current_sunbeam_path,
             current_sunlink_path,
+            current_realtime_event,
+            current_realtime_pipeline,
             self
         )
 
         if dialog.exec_():  # if user pressed OK
-            new_plot_interval, new_client_address, sunbeam_path, sunlink_path = dialog.get_settings()
+            (
+                new_plot_interval,
+                new_client_address,
+                sunbeam_path,
+                sunlink_path,
+                realtime_event,
+                realtime_pipeline
+            ) = dialog.get_settings()
 
             settings.plot_timer_interval = new_plot_interval
             settings.sunbeam_api_url = new_client_address
             settings.sunbeam_path = sunbeam_path
             settings.sunlink_path = sunlink_path
+            settings.realtime_event = realtime_event
+            settings.realtime_pipeline = realtime_pipeline
 
             # Refresh settings
             self.client = SunbeamClient(settings.sunbeam_api_url)

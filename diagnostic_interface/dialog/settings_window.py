@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QDialog, QDialogButtonBox, QSpinBox, QLineEdit, QFormLayout, QFileDialog,
-                             QToolButton, QHBoxLayout, QMessageBox, QFrame, QWidget, QLabel, QVBoxLayout
+                             QToolButton, QHBoxLayout, QMessageBox, QFrame, QWidget, QLabel, QVBoxLayout, QCheckBox
                              )
 from PyQt5.QtGui import QFontMetrics
 from PyQt5.QtCore import Qt
@@ -66,6 +66,8 @@ class SettingsDialog(QDialog):
             current_client_address: str,
             current_sunbeam_path: str,
             current_sunlink_path: str,
+            current_realtime_event: str,
+            current_realtime_pipeline: str,
             parent=None
     ):
         """
@@ -88,6 +90,16 @@ class SettingsDialog(QDialog):
         self._client_input = QLineEdit()
         self._client_input.setText(current_client_address)
         layout.addRow("Sunbeam API URL:", self._client_input)
+
+        # Event selector
+        self._event_input = QLineEdit()
+        self._event_input.setText(current_realtime_event)
+        layout.addRow("Realtime Event:", self._event_input)
+
+        # Pipeline selector
+        self._pipeline_selector = QLineEdit()
+        self._pipeline_selector.setText(current_realtime_pipeline)
+        layout.addRow("Realtime Pipeline:", self._pipeline_selector)
 
         self._selected_sunlink_path = current_sunlink_path
         self._sunlink_path_widget = PathSelectionBox(current_sunlink_path, self.select_sunlink_folder)
@@ -123,10 +135,12 @@ class SettingsDialog(QDialog):
     def select_sunbeam_folder(self):
         self._select_docker_folder("_selected_sunbeam_path", "_sunbeam_path_widget")
 
-    def get_settings(self) -> tuple[int, str, str, str]:
+    def get_settings(self) -> tuple[int, str, str, str, str, str]:
         return (
             self._interval_spinbox.value(),
             self._client_input.text(),
             self._selected_sunbeam_path,
-            self._selected_sunlink_path
+            self._selected_sunlink_path,
+            self._event_input.text(),
+            self._pipeline_selector.text(),
         )

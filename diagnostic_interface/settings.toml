@@ -1,4 +1,8 @@
 plot_timer_interval = 1
 sunbeam_api_url = "api.sunbeam.ubcsolar.com"
+plot_timer_interval = 2
+sunbeam_api_url = "api.sunbeam.ubcsolar.com"
 sunbeam_path = "/Users/joshuariefman/Solar/sunbeam"
 sunlink_path = "/Users/joshuariefman/Solar/sunlink"
+realtime_event = "FSGP_2024_Day_1"
+realtime_pipeline = "soc_stage"

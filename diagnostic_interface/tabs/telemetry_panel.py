@@ -1,7 +1,8 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QDialog
 from PyQt5.QtCore import Qt
 from diagnostic_interface.widgets import CommandOutputWidget
-from diagnostic_interface import settings
+from diagnostic_interface.dialog import TextEditDialog
+from diagnostic_interface.config import command_settings
 
 
 class TelemetryTab(QWidget):
@@ -25,7 +26,23 @@ class TelemetryTab(QWidget):
         layout.addWidget(self.toggle_button)
         layout.addWidget(self.log_output)
 
+        edit_btn = QPushButton("Edit Commands", self)
+        edit_btn.clicked.connect(self.open_edit_dialog)
+
+        layout.addWidget(edit_btn)
+
         self.setLayout(layout)
+
+    @staticmethod
+    def start_stack_command() -> str:
+        return command_settings.sunlink_up_cmd
+
+    @staticmethod
+    def open_edit_dialog():
+        dlg = TextEditDialog([command_settings.telemetry_enable_cmd], ["Telemetry Link"])
+
+        if dlg.exec_() == QDialog.Accepted:
+            command_settings.telemetry_enable_cmd,  = dlg.getText()
 
     def toggle_stack(self):
         if self.running:
@@ -37,11 +54,9 @@ class TelemetryTab(QWidget):
         self.running = True
         self.status_label.setText("✅ Status: Running")
 
-        self.log_output.start_in_venv(
-            project_root=settings.sunlink_path,
-            script_path="./link_telemetry.py",
-            args=["-r", "can", "--debug"]
-        )
+        cmd = command_settings.telemetry_enable_cmd
+
+        self.log_output.start_cmd(cmd=cmd)
 
         self.toggle_button.setText("Stop Telemetry")
 
@@ -50,3 +65,9 @@ class TelemetryTab(QWidget):
         self.status_label.setText("❌ Status: Stopped")
         self.log_output.stop()
         self.toggle_button.setText("Start Telemetry")
+
+    def set_tab_active(self, active: bool):
+        if active:
+            self.log_output.activate()
+        else:
+            self.log_output.deactivate()
