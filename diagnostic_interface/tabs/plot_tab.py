@@ -2,10 +2,11 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QMessageBox,
     QGroupBox, QHBoxLayout
 )
-from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer
+from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot
 
 from diagnostic_interface import settings
 from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas
+from data_tools.collections import TimeSeries
 
 
 HELP_MESSAGES = {
@@ -19,11 +20,12 @@ EVENT = "FSGP_2024_Day_1"
 
 
 class PlotRefreshWorkerSignals(QObject):
-    finished = pyqtSignal(bool)  # success or failure
+    data_ready = pyqtSignal(object)  # emits the TimeSeries
+    error = pyqtSignal(str)  # emits an error message
 
 
 class PlotRefreshWorker(QRunnable):
-    def __init__(self, plot_canvas, origin, source, event, data_name):
+    def __init__(self, plot_canvas: PlotCanvas, origin, source, event, data_name):
         super().__init__()
         self.plot_canvas = plot_canvas
         self.origin = origin
@@ -33,8 +35,11 @@ class PlotRefreshWorker(QRunnable):
         self.signals = PlotRefreshWorkerSignals()
 
     def run(self):
-        success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
-        self.signals.finished.emit(success)
+        try:
+            data = self.plot_canvas.fetch_data(self.origin, self.event, self.source, self.data_name)
+            self.signals.data_ready.emit(data)
+        except Exception as e:
+            self.signals.error.emit(str(e))
 
 
 class PlotTab(QWidget):
@@ -87,8 +92,7 @@ class PlotTab(QWidget):
         self.refresh_timer = QTimer()
         self.refresh_timer.timeout.connect(self.refresh_plot)
 
-        if not self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name):
-            self.request_close()
+        QTimer.singleShot(0, self.refresh_plot)
 
     def set_tab_active(self, active: bool) -> None:
         if active:
@@ -107,12 +111,18 @@ class PlotTab(QWidget):
             self.event,
             self.data_name
         )
-        worker.signals.finished.connect(self._on_plot_refresh_finished)
+        worker.signals.data_ready.connect(self._on_data_ready)
+        worker.signals.error.connect(self._on_data_error)
         self._thread_pool.start(worker)
 
-    def _on_plot_refresh_finished(self, success: bool):
-        if not success:
-            self.request_close()
+    @pyqtSlot(object)
+    def _on_data_ready(self, data: TimeSeries):
+        self.plot_canvas.plot(data, f"{self.data_name}", data.units)
+
+    @pyqtSlot(str)
+    def _on_data_error(self, msg):
+        QMessageBox.critical(self, "Plot Error", msg)
+        self.request_close()
 
     def request_close(self):
         self.close_requested.emit(self)

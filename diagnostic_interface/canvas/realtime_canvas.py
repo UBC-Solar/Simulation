@@ -25,8 +25,6 @@ class RealtimeCanvas(FigureCanvas):
     def fetch_data(self) -> TimeSeries:
         client = SunbeamClient(settings.sunbeam_api_url)
         file = client.get_file(settings.realtime_pipeline, settings.realtime_event, self.source, self.data_name)
-        if not file:
-            print(file._result)
         result = file.unwrap()
 
         return result.values if hasattr(result, "values") else result.data

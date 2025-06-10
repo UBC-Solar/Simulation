@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QMessageBox
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QMessageBox, QHBoxLayout, QTextEdit
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot
 from diagnostic_interface import settings
 from diagnostic_interface.canvas import CustomNavigationToolbar, RealtimeCanvas
@@ -42,11 +42,34 @@ class SOCTab(QWidget):
         self.soc_toolbar = CustomNavigationToolbar(canvas=self.soc_canvas)
         self.unfiltered_soc_toolbar = CustomNavigationToolbar(canvas=self.unfiltered_soc_canvas)
 
-        self.layout.addWidget(self.soc_toolbar)
-        self.layout.addWidget(self.soc_canvas)
+        self.upper_plot_layout = QVBoxLayout()
 
-        self.layout.addWidget(self.unfiltered_soc_toolbar)
-        self.layout.addWidget(self.unfiltered_soc_canvas)
+        self.upper_plot_layout.addWidget(self.soc_toolbar)
+        self.upper_plot_layout.addWidget(self.soc_canvas)
+
+        self.layout.addLayout(self.upper_plot_layout, stretch=3)
+
+        self.lower_layout = QHBoxLayout()
+
+        self.lower_plot_layout = QVBoxLayout()
+        self.lower_plot_layout.addWidget(self.unfiltered_soc_toolbar)
+        self.lower_plot_layout.addWidget(self.unfiltered_soc_canvas)
+
+        self.lower_layout.addLayout(self.lower_plot_layout)
+
+        self.text_layout = QVBoxLayout()
+
+        self.text_widget1 = QTextEdit()
+        self.text_widget2 = QTextEdit()
+        self.text_widget3 = QTextEdit()
+
+        self.text_layout.addWidget(self.text_widget1)
+        self.text_layout.addWidget(self.text_widget2)
+        self.text_layout.addWidget(self.text_widget3)
+
+        self.lower_layout.addLayout(self.text_layout)
+
+        self.layout.addLayout(self.lower_layout, stretch=2)
 
         # one-off & repeating timer, interval in milliseconds
         QTimer.singleShot(0, self.refresh_plot)
