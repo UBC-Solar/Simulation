@@ -6,7 +6,7 @@ from .config import settings
 from .config import command_settings
 from widgets import TimedWidget, DataSelect
 from dialog import SettingsDialog
-from canvas import PlotCanvas, PlotCanvas2, IntegralPlot, CustomNavigationToolbar
+from canvas import PlotCanvas, PlotCanvas2, IntegralPlot, CustomNavigationToolbar, RealtimeCanvas
 from tabs import PlotTab, WeatherTab
 # from tabs import DockerStackTab, PlotTab
 from canvas import PlotCanvas, CustomNavigationToolbar
@@ -17,6 +17,7 @@ __all__ = [
     "SettingsDialog",
     "CustomNavigationToolbar",
     "PlotCanvas",
+    "RealtimeCanvas",
     "PlotCanvas2",
     "PlotTab",
     "IntegralPlot",
