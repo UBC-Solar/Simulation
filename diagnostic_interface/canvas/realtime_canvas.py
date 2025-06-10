@@ -11,11 +11,11 @@ plt.style.use("seaborn-v0_8-darkgrid")
 
 
 class RealtimeCanvas(FigureCanvas):
-    def __init__(self, event: str, data_name: str, parent=None):
+    def __init__(self, source: str, data_name: str, parent=None):
         fig = Figure(figsize=(5, 3))
         super().__init__(fig)
 
-        self.event = event
+        self.source = source
         self.data_name = data_name
 
         self.setParent(parent)
@@ -24,7 +24,7 @@ class RealtimeCanvas(FigureCanvas):
 
     def fetch_data(self) -> TimeSeries:
         client = SunbeamClient(settings.sunbeam_api_url)
-        file = client.get_file(settings.realtime_pipeline, settings.realtime_event, self.event, self.data_name)
+        file = client.get_file(settings.realtime_pipeline, settings.realtime_event, self.source, self.data_name)
         if not file:
             print(file._result)
         result = file.unwrap()
