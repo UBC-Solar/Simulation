@@ -86,7 +86,7 @@ class MainWindow(QMainWindow):
         # self.tabs.addTab(self.telemetry_tab, "Telemetry")
 
         plot_tab2 = WeatherTab()
-        self.tabs.addTab(plot_tab2, f"weather_tab")
+        self.tabs.addTab(plot_tab2, f"WeatherTab")
 
 
     def create_plot_tab(self):

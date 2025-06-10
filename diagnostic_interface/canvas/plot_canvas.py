@@ -49,7 +49,8 @@ class PlotCanvas(FigureCanvas):
                 self.ax.set_ylim(bottom=0)
                 self.ax.set_xlim(left=data.datetime_x_axis[0])
 
-                self.ax.set_title(f"{data_name} - {event}", fontsize=12)
+                #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
+                self.ax.set_title(f"{data_name}")
                 self.ax.set_xlabel("Time", fontsize=10)
                 self.ax.set_ylabel(data_name, fontsize=10)
 
@@ -238,34 +239,19 @@ class IntegralPlot(FigureCanvas):
         self.setParent(parent)
 
         self.current_data = None
-        self.current_data_name = ""
-        self.current_event = ""
-        self.current_origin = ""
-        self.current_source = ""
-
         self.line1 = None
-
-
 
     def query_and_plot(self):
 
-
-
         try:
             data = self.query_data("production", "weather", "realtime", "GHI")
-            y_val = data.values
-            integral_values = trapz(y_val, x=data.datetime_x_axis,initial=0)
+
+            integral_values = trapz(data, x=data.datetime_x_axis,initial=0)
 
             if not isinstance(data, TimeSeries):
                 raise TypeError("Expected TimeSeries.")
 
-            self.current_data = integral_values
-            #self.current_data2 = data2
-            # self.current_data_name = data_name
-            # self.current_event = event
-            # self.current_origin = origin
-            # self.current_source = source
-
+            self.current_data = None
             self.line1 = None
 
             if self.line1 is None:
@@ -277,7 +263,7 @@ class IntegralPlot(FigureCanvas):
                 #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
                 self.ax.set_title("Integral of GHI", fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
-                self.ax.set_ylabel("integral_values", fontsize=10)
+                self.ax.set_ylabel("Integral Values", fontsize=10)
 
 
                 # Improve datetime formatting

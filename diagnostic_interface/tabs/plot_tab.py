@@ -290,7 +290,6 @@ class WeatherTab(QWidget):
 
 
         #plots
-       # self.plot_canvas1 = PlotCanvas(self)
 
         plot1_layout = QVBoxLayout()
 
@@ -301,12 +300,6 @@ class WeatherTab(QWidget):
 
 
         plot2_layout = QVBoxLayout()
-
-        # self.plot_canvas2 = PlotCanvas(self)
-
-        # plot2_layout.addWidget(self.plot_canvas2)
-        #
-
 
         self.plot_canvas2 = PlotCanvas2()
         self.toolbar2 = CustomNavigationToolbar(canvas=self.plot_canvas2)
@@ -320,8 +313,6 @@ class WeatherTab(QWidget):
 
         plot3_layout = QVBoxLayout()
 
-        #self.plot_canvas3 = PlotCanvas(self)
-
         self.plot_canvas3 = IntegralPlot(self)
         self.toolbar3 = CustomNavigationToolbar(canvas=self.plot_canvas3)
         plot3_layout.addWidget(self.toolbar3)
@@ -329,32 +320,27 @@ class WeatherTab(QWidget):
         plot3_layout.addWidget(self.plot_canvas3)
 
 
-        self.label = QLabel("add text")
+       # self.label = QLabel("add text")
 
         bottom_plots_layout = QHBoxLayout()
 
-        bottom_plots_layout.addWidget(self.label)
+        #bottom_plots_layout.addWidget(self.label)
         bottom_plots_layout.addLayout(plot2_layout)
         bottom_plots_layout.addLayout(plot3_layout)
 
         self.layout.addLayout(plot1_layout)
         self.layout.addLayout(bottom_plots_layout)
 
-        
+
 
         # Buttons
         help_button = QPushButton("Help")
         help_button.setObjectName("helpButton")
         help_button.clicked.connect(lambda: self.show_help_message(self.data_name, self.event))
 
-        # close_button = QPushButton("Close Tab")
-        # close_button.setObjectName("closeButton")
-        # close_button.clicked.connect(self.request_close)
-
         button_group = QGroupBox("Actions")
         button_layout = QHBoxLayout()
         button_layout.addWidget(help_button)
-        #button_layout.addWidget(close_button)
         button_group.setLayout(button_layout)
 
         self.layout.addWidget(button_group)
@@ -375,16 +361,9 @@ class WeatherTab(QWidget):
 
         plot1 = self.plot_canvas1.query_and_plot("production", "weather", "realtime", "GHI")
 
-        #plot2 = self.plot_canvas2.query_and_plot("production", "power","FSGP_2024_Day_1", "MotorPower")
-
         plot2 = self.plot_canvas2
-
-
-       # plot3 = self.plot_canvas3.query_and_plot("production", "weather","realtime", "GHI")
-
-
         plot3 = self.plot_canvas3
-        
+
         if not (plot1 and plot2 and plot3):
             self.request_close()
 
@@ -407,14 +386,14 @@ class WeatherTab(QWidget):
 
 
         worker2 = PlotRefreshWorker(self.plot_canvas2, "production", "weather", "realtime", "WindSpeed10m")
-        worker_add = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "PrecipitationRate")
+        worker_add = PlotRefreshWorker(self.plot_canvas2, "production", "weather", "realtime", "PrecipitationRate")
         worker2.signals.finished.connect(self._on_plot_refresh_finished)
         worker_add.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker2)
         self._thread_pool.start(worker_add)
 
-        #worker3 = PlotRefreshWorker(self.plot_canvas3, "production", "weather", "realtime", "GHI")
-        worker3 = PlotRefreshWorker(self.plot_canvas3)
+
+        worker3 = PlotRefreshWorker2(self.plot_canvas3)
         worker3.signals.finished.connect(self._on_plot_refresh_finished)
         self._thread_pool.start(worker3)
 
