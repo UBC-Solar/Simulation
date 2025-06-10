@@ -24,21 +24,34 @@ class PlotRefreshWorkerSignals(QObject):
     finished = pyqtSignal(bool)  # success or failure
 
 
+# class PlotRefreshWorker(QRunnable):
+#     def __init__(self, plot_canvas, origin, source, event, data_name):
+#     #def __init__(self, plot_canvas):
+#         super().__init__()
+#         self.plot_canvas = plot_canvas
+#         self.origin = origin
+#         self.source = source
+#         self.event = event
+#         self.data_name = data_name
+#         self.signals = PlotRefreshWorkerSignals()
+#
+#     def run(self):
+#         success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
+#         self.signals.finished.emit(success)
+
 class PlotRefreshWorker(QRunnable):
-    def __init__(self, plot_canvas, origin, source, event, data_name):
-    #def __init__(self, plot_canvas):
+    def __init__(self, plot_canvas):
         super().__init__()
-        self.plot_canvas = plot_canvas
-        self.origin = origin
-        self.source = source
-        self.event = event
-        self.data_name = data_name
+        self.canvas = plot_canvas
         self.signals = PlotRefreshWorkerSignals()
 
     def run(self):
-        success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
-        self.signals.finished.emit(success)
+        try:
+            ts = self.canvas.fetch_data()
+            self.signals.data_ready.emit(ts)
 
+        except Exception as e:
+            self.signals.error.emit(str(e))
 
 
 ##
