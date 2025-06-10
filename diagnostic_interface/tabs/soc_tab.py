@@ -1,4 +1,3 @@
-# soc_tab.py
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QMessageBox
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot
 from diagnostic_interface import settings
