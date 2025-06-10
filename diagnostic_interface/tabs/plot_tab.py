@@ -309,14 +309,11 @@ class WeatherTab(QWidget):
 
 
 
-
-
         plot3_layout = QVBoxLayout()
 
         self.plot_canvas3 = IntegralPlot(self)
         self.toolbar3 = CustomNavigationToolbar(canvas=self.plot_canvas3)
         plot3_layout.addWidget(self.toolbar3)
-
         plot3_layout.addWidget(self.plot_canvas3)
 
 
