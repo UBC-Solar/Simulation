@@ -5,7 +5,8 @@
 #from .weather_tab import WeatherTab
 from .plot_tab import PlotTab
 from .docker_panel import DockerStackTab
-from .plot_tab import IntegralPlot, WeatherTab
+from .plot_tab import IntegralPlot
+from .weather_tab import WeatherTab
 from ._updatable import UpdatableTab
 from .sunbeam_panel import SunbeamTab
 from .sunlink_panel import SunlinkTab
@@ -15,7 +16,7 @@ from .soc_tab import SOCTab
 __all__ = [
     "DockerStackTab",
     "PlotTab",
-
+    "IntegralPlot",
     "UpdatableTab",
     "WeatherTab",
     # "SunbeamTab",
