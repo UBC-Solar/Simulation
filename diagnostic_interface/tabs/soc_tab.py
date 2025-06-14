@@ -84,6 +84,7 @@ class SOCTab(QWidget):
         worker.signals.error.connect(self._on_data_error)
         self.pool.start(worker)
 
+
     @pyqtSlot(object, object)
     def _on_data_ready(self, soc, unfiltered_soc):
         self.soc_canvas.plot(soc, f"SOC", "SOC (%)")
@@ -91,4 +92,5 @@ class SOCTab(QWidget):
 
     @pyqtSlot(str)
     def _on_data_error(self, msg):
+        self.timer.stop()
         QMessageBox.critical(self, "Plot Error", msg)

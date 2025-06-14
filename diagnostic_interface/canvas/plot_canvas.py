@@ -132,7 +132,7 @@ class PlotCanvas2(FigureCanvas):
                 #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
                 self.ax.set_title("WindSpeed10m & PrecipitationRate", fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
-                # self.ax.set_ylabel(data_name, fontsize=10)
+                self.ax.set_ylabel("WindSpeed10m", fontsize=10)
                 self.ax2.set_ylabel("PrecipitationRate", fontsize=10)
 
                 self.ax.legend([self.line1, self.line2], ["WindSpeed10m", "PrecipitationRate"])
@@ -145,6 +145,8 @@ class PlotCanvas2(FigureCanvas):
                 self.ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
                 self.ax2.xaxis.set_major_locator(mdates.HourLocator())
                 #self.fig.autofmt_xdate()
+
+
 
             else:
                 # Only update data
@@ -248,7 +250,6 @@ class IntegralPlot(FigureCanvas):
                 self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
                 self.ax.xaxis.set_major_locator(mdates.HourLocator())
                 self.fig.autofmt_xdate()
-
 
 
             else:

@@ -131,7 +131,7 @@ class WeatherTab(QWidget):
 
         plot1 = self.plot_canvas1.fetch_data()
         plot2 = self.plot_canvas2.fetch_data()
-        plot3 = self.plot_canvas3.fetch_data()
+        plot3 = self.plot_canvas3
 
         #if not(plot1 and plot2 and plot3):
         if plot1 is None:
@@ -148,9 +148,6 @@ class WeatherTab(QWidget):
 
     def refresh_plot(self):
 
-
-        #worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "weather", "realtime", "GHI")
-
         worker = PlotRefreshWorker(self.plot_canvas1, self.plot_canvas2)
         worker.signals.data_ready.connect(self._on_data_ready)
         worker.signals.error.connect(self._on_data_error)
@@ -158,15 +155,9 @@ class WeatherTab(QWidget):
 
 
 
-
-
-
-
-
-
     @pyqtSlot(object, object)
     def _on_data_ready(self, plot1_data, plot_2_data):
-        self.plot_canvas1.plot(plot1_data, "GHI", "Irradiance (W/m²)")
+        self.plot_canvas1.plot(plot1_data, "GHI", "realtime")
         self.plot_canvas2.plot(*plot_2_data)
         self.plot_canvas3.plot(plot1_data)
 
