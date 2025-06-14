@@ -146,8 +146,6 @@ class PlotCanvas2(FigureCanvas):
                 self.ax2.xaxis.set_major_locator(mdates.HourLocator())
 
                 self.fig.autofmt_xdate()
-                #self.fig.autofmt_xdate()
-
 
 
             else:

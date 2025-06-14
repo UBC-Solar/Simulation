@@ -26,7 +26,6 @@ class PlotRefreshWorkerSignals(QObject):
 class PlotRefreshWorker(QRunnable):
     def __init__(self, plot_canvas, origin, source, event, data_name):
         super().__init__()
-        #self.plot_canvas = plot_canvas
 
         self.plot_canvas = plot_canvas
         self.origin = origin
@@ -46,18 +45,12 @@ class PlotRefreshWorker(QRunnable):
 class PlotRefreshWorker2(QRunnable):
     def __init__(self, plot_canvas):
         super().__init__()
-        #self.plot_canvas = plot_canvas
-
         self.plot_canvas = plot_canvas
         self.signals = PlotRefreshWorkerSignals()
 
-
     def run(self):
-        #success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
         success = self.plot_canvas.query_and_plot()
         self.signals.finished.emit(success)
-
-
 
 
 class PlotTab(QWidget):
@@ -305,9 +298,4 @@ class PlotTab(QWidget):
 #
 #
 #
-#
-#
-#
-#
-#
-#
+
