@@ -117,43 +117,25 @@ class PlotCanvas2(FigureCanvas):
         self.line2 = None
 
 
-
-
-    def query_and_plot(self, origin, source, event, data_name):
-
-
-
+    def plot(self, data, data2):
         try:
-            data = self.query_data("production", "weather", "realtime", "WindSpeed10m")
-            data2 = self.query_data("production", "weather", "realtime", "PrecipitationRate")
-
-            if not isinstance(data, TimeSeries):
-                raise TypeError("Expected TimeSeries.")
 
             self.current_data = data
-            #self.current_data2 = data2
-            self.current_data_name = data_name
-            self.current_event = event
-            self.current_origin = origin
-            self.current_source = source
+            self.current_data2 = data2
 
             if self.line1 is None and self.line2 is None:
-
-
                 self.line1, = self.ax.plot(data.datetime_x_axis, data, linewidth=1, color = 'red')
                 #add the comma so that its not just a normal 2d plot
                 self.ax2 = self.ax.twinx()
                 self.line2, = self.ax2.plot(data2.datetime_x_axis, data2, linewidth=1)
 
-
                 #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
                 self.ax.set_title("WindSpeed10m & PrecipitationRate", fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
-                self.ax.set_ylabel(data_name, fontsize=10)
+                # self.ax.set_ylabel(data_name, fontsize=10)
                 self.ax2.set_ylabel("PrecipitationRate", fontsize=10)
 
                 self.ax.legend([self.line1, self.line2], ["WindSpeed10m", "PrecipitationRate"])
-
 
                 # Improve datetime formatting
                 self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
@@ -171,7 +153,6 @@ class PlotCanvas2(FigureCanvas):
                 self.line1.set_ydata(data)
                 self.line2.set_ydata(data2)
 
-
             self.ax.relim()
             self.ax.autoscale_view(scalex=True, scaley=True)
 
@@ -186,6 +167,12 @@ class PlotCanvas2(FigureCanvas):
         except Exception as e:
             QMessageBox.critical(None, "Plotting Error", f"Error fetching or plotting data:\n{str(e)}")
             return False
+
+    def fetch_data(self):
+        data = self.query_data(settings.realtime_pipeline, "weather", settings.realtime_event, "WindSpeed10m")
+        data2 = self.query_data(settings.realtime_pipeline, "weather", settings.realtime_event, "PrecipitationRate")
+
+        return data, data2
 
     def query_data(self, origin, source, event, data_name):
         client = SunbeamClient(settings.sunbeam_api_url)
@@ -234,11 +221,9 @@ class IntegralPlot(FigureCanvas):
         self.current_data = None
         self.line1 = None
 
-    def query_and_plot(self):
+    def plot(self, data):
 
         try:
-            data = self.query_data("production", "weather", "realtime", "GHI")
-
             integral_values = trapz(data, x=data.datetime_x_axis,initial=0)
 
             if not isinstance(data, TimeSeries):
