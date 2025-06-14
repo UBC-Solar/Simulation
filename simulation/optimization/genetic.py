@@ -403,10 +403,9 @@ class GeneticOptimization(BaseOptimization):
         # These numbers were experimentally found to generate high fitness values in guess arrays
         # while having an acceptably low chance of not resulting in a successful simulation.
         max_speed_kmh: int = 60 # !!! was 30-40
-        min_speed_kmh: int = 40
+        min_speed_kmh: int = 0
         mean_speed = (max_speed_kmh + min_speed_kmh) / 2
-        std_dev = 5 # How spread out is the noise
-        smoothing_sigma = 6 # Smoothing level; higher -> smoother
+        std_dev = 15 # Spread in the noise
 
         # Determine the length that our driving speed arrays must be
         length = self.model.num_laps
@@ -424,14 +423,11 @@ class GeneticOptimization(BaseOptimization):
                 # Generate Gaussian noise
                 noise = np.random.normal(loc = 0, scale= std_dev, size = length)
 
-                # Filter the noise; make it smoother !!! Consider removing this
-                #smooth_noise = gaussian_filter1d(noise, sigma = smoothing_sigma)
-
                 # Generate speeds by adding noise to the mean speed
                 input_speed = mean_speed + noise
 
                 # Ensuring elements are integers and fall within our bounds.
-                input_speed = np.clip(np.round(input_speed).astype(int), min_speed_kmh, max_speed_kmh)
+                input_speed = self.stopping_speeds(np.clip(np.round(input_speed).astype(int), min_speed_kmh, max_speed_kmh))
 
                 self.model.run_model(
                     speed=input_speed, plot_results=False, is_optimizer=True
