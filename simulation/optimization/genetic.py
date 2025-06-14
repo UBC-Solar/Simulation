@@ -289,7 +289,8 @@ class GeneticOptimization(BaseOptimization):
         mutation_max_value = self.settings.max_mutation
 
         # Bind the value of each gene for the speeds we expect
-        gene_space = list(range(0,61)) # [0, 1, 2, ..., 60]
+        original = list(range(0,61)) # Speeds that are allowed
+        gene_space = [x/60 for x in original] # Normalizing speeds
 
         # Store diversity of generation per optimization iteration
         self.diversity = []
@@ -356,7 +357,6 @@ class GeneticOptimization(BaseOptimization):
             stop_criteria=str(stop_criteria),
         )
 
-    # Change this function; can randomize a population at run time !!!
     def get_initial_population(
         self, num_arrays_to_generate
     ) -> np.ndarray:
@@ -375,7 +375,7 @@ class GeneticOptimization(BaseOptimization):
         """
 
         Generate a set of normalized driving speeds_directory arrays that are valid for the active Simulation model
-        using Perlin noise. Will return an array with num_arrays_to_generate valid arrays.
+        using Gaussian noise. Will return an array with num_arrays_to_generate valid arrays.
 
         :param int num_arrays_to_generate:
         :return: an array of `num_arrays_to_generate` driving speeds_directory, valid for the active Simulation model.
@@ -392,7 +392,7 @@ class GeneticOptimization(BaseOptimization):
         smoothing_sigma = 2 # Smoothing level; higher -> smoother
 
         # Determine the length that our driving speed arrays must be
-        length = self.model.num_laps * 10 # !!!
+        length = self.model.num_laps * 10 # !!! Should make the num_laps depend on driving times instead of tiling?
         speed_arrays = []
 
         with tqdm(
@@ -429,6 +429,17 @@ class GeneticOptimization(BaseOptimization):
 
         return np.array(speed_arrays)
 
+    def stopping_speeds(self, speed_array):
+        """
+        If the GA suggests a speed < 20 km/hr, we want to stop to charge instead. To do this, we simply need to
+        set the speed to zero in the speed array. The reshape_speed_array helper will implement stopping.
+
+        :param speed_array: array of speeds in km/hr
+        :return: array of speeds in km/hr
+        """
+        # Set speeds < 20 km/h to 0 (i.e., stopping to charge)
+        return [0 if speed < 20 else speed for speed in speed_array]
+
     def fitness(self, ga_instance, solution, solution_idx) -> float:
         """
 
@@ -452,8 +463,12 @@ class GeneticOptimization(BaseOptimization):
 
         # Chromosomes are normalized, so must be denormalized before being fed to Simulation.
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
+
+        # Change speeds to implement stopping
+        driving_speeds = self.stopping_speeds(solution_denormalized)
+
         distance_travelled, time_taken = self.func(
-            speed=solution_denormalized, is_optimizer=True
+            speed=driving_speeds, is_optimizer=True
         )
 
         # If Simulation did not complete successfully (SOC dropped below 0) then return the distance when that occurred.

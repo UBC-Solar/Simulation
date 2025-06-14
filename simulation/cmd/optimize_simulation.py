@@ -52,7 +52,7 @@ def main(competition_name: str, car_name: str, speed_dt: int):
     bounds = InputBounds()
     bounds.add_bounds(driving_laps, minimum_speed, maximum_speed)
 
-    input_speed = np.array([60] * (driving_laps * 2)) # !!! How many laps do we need and why?
+    input_speed = np.array([60] * (driving_laps * 2)) # !!!
 
     # Run simulation model with the "guess" speed array
     simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False)

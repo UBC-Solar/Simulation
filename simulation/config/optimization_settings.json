@@ -1,7 +1,7 @@
 {
   "chromosome_size": 48,
   "parent_selection_type": "tournament",
-  "generation_limit": 5,
+  "generation_limit": 100,
   "num_parents": 16,
   "k_tournament": 10,
   "crossover_type": "single_point",
