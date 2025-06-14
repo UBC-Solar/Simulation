@@ -19,27 +19,29 @@ HELP_MESSAGES = {
 
 EVENT = "FSGP_2024_Day_1"
 
-#
-# class PlotRefreshWorkerSignals(QObject):
-#     finished = pyqtSignal(bool)  # success or failure
-#
-# class PlotRefreshWorker(QRunnable):
-#     def __init__(self, plot_canvas, origin, source, event, data_name):
-#         super().__init__()
-#         #self.plot_canvas = plot_canvas
-#
-#         self.plot_canvas = plot_canvas
-#         self.origin = origin
-#         self.source = source
-#         self.event = event
-#         self.data_name = data_name
-#         self.signals = PlotRefreshWorkerSignals()
-#
-#
-#     def run(self):
-#         #success = self.plot_canvas.query_and_plot(self.origin, self.source, self.event, self.data_name)
-#         success = self.plot_canvas.fetch_data()
-#         self.signals.finished.emit(success)
+
+class PlotRefreshWorkerSignals2(QObject):
+    finished = pyqtSignal(bool)
+
+class PlotRefreshWorker2(QRunnable):
+    def __init__(self, plot_canvas):
+        super().__init__()
+
+        self.plot_canvas = plot_canvas
+        self.signals = PlotRefreshWorkerSignals2()
+
+
+    def run(self):
+        success = self.plot_canvas.query_and_plot()
+        self.signals.finished.emit(success)
+
+
+
+
+
+class PlotRefreshWorkerSignals(QObject):
+    data_ready = pyqtSignal(object, object)  # emits the TimeSeries
+    error = pyqtSignal(str)  # emits an error message
 
 
 class PlotRefreshWorker(QRunnable):
@@ -51,22 +53,14 @@ class PlotRefreshWorker(QRunnable):
 
     def run(self):
         try:
-            plot1 = self.plot_canvas.fetch_data()
-
-            # this one does the fetching + plotting together
-            success = self.plot_canvas2.query_and_plot("production", "weather", "realtime", "WindSpeed10m")
-
-            if not success:
-                raise RuntimeError("PlotCanvas2 failed to fetch or plot.")
-
-            self.signals.data_ready.emit(plot1, None)  # Only plot1 passed here
+            plot_canvas1 = self.plot_canvas.fetch_data()
+            plot_canvas2 = self.plot_canvas2
+            self.signals.data_ready.emit(plot_canvas1, plot_canvas2)
 
         except Exception as e:
             print(e)
             self.signals.error.emit(str(e))
 
-
-#
 
 
 
@@ -157,12 +151,13 @@ class WeatherTab(QWidget):
 
 
 
-       # plot1 = self.plot_canvas1.query_and_plot("production", "weather", "realtime", "GHI")
+
         plot1 = self.plot_canvas1.fetch_data()
         # plot2 = self.plot_canvas2.query_and_plot("production", "weather", "realtime", "WindSpeed10m")
         # self.plot_canvas2.query_and_plot("production", "weather", "realtime", "PrecipitationRate")
+
         plot2 = self.plot_canvas2
-        plot3 = self.plot_canvas3
+        plot3 = self.plot_canvas3.query_and_plot()
 
         #if not(plot1 and plot2 and plot3):
         if plot1 is None:
@@ -180,124 +175,29 @@ class WeatherTab(QWidget):
     def refresh_plot(self):
 
 
-        #worker1 = PlotRefreshWorker(self.plot_canvas1, "production", "weather", "realtime", "GHI")
-
         worker = PlotRefreshWorker(self.plot_canvas1, self.plot_canvas2)
         worker.signals.data_ready.connect(self._on_data_ready)
         worker.signals.error.connect(self._on_data_error)
         self._thread_pool.start(worker)
 
+        worker3 = PlotRefreshWorker2(self.plot_canvas3)
+        worker3.signals.finished.connect(self._on_plot_refresh_finished)
+        self._thread_pool.start(worker3)
 
 
 
 
 
 
-    # @pyqtSlot(object, object)
-    # def _on_data_ready(self, plot_canvas1, plot_canvas2):
-    #     #self.plot_canvas1.plot(plot_canvas1, plot_canvas2, f"SOC", "SOC (%)")
-    #     self.plot_canvas1.plot(plot_canvas1, "GHI", "GHI Realtime")
-    #
-    #     #self.plot_canvas3.plot3(plot_canvas3, f"Unfiltered SOC", "SOC (%)")
+
+
+
 
     @pyqtSlot(object, object)
-    def _on_data_ready(self, plot1_data, _unused):
-        self.plot_canvas1.plot(plot1_data, "GHI", "Irradiance (W/m²)")
-        # plot_canvas2 already plotted internally
+    def _on_data_ready(self, plot_canvas1, plot_canvas2):
+        self.plot_canvas1.plot(plot_canvas2, f"", "SOC (%)")
+        self.unfiltered_soc_canvas.plot(unfiltered_soc, f"Unfiltered SOC", "SOC (%)")
 
     @pyqtSlot(str)
     def _on_data_error(self, msg):
         QMessageBox.critical(self, "Plot Error", msg)
-
-    def _on_plot_refresh_finished(self, success: bool):
-        if not success:
-            self.request_close()
-
-    def request_close(self):
-        self.close_requested.emit(self)
-
-    def show_help_message(self, data_name):
-        message1 = HELP_MESSAGES.get(data_name, "No specific help available for this plot.")
-        QMessageBox.information(self, f"Help: {data_name}", message1)
-
-
-
-
-
-
-
-
-
-
-
-
-
-# class SOCTab(QWidget):
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
-#         self.origin = settings.realtime_pipeline
-#         self.source = "energy"
-#         self.event = settings.realtime_event
-#         self.data_name = "SOC"
-#
-#         self.pool = QThreadPool()
-#         self.layout = QVBoxLayout(self)
-#         self.soc_canvas = RealtimeCanvas("energy", "SOC")
-#         self.unfiltered_soc_canvas = RealtimeCanvas("energy", "UnfilteredSOC")
-#         self.soc_toolbar = CustomNavigationToolbar(canvas=self.soc_canvas)
-#         self.unfiltered_soc_toolbar = CustomNavigationToolbar(canvas=self.unfiltered_soc_canvas)
-#
-#         self.upper_plot_layout = QVBoxLayout()
-#
-#         self.upper_plot_layout.addWidget(self.soc_toolbar)
-#         self.upper_plot_layout.addWidget(self.soc_canvas)
-#
-#         self.layout.addLayout(self.upper_plot_layout, stretch=3)
-#
-#         self.lower_layout = QHBoxLayout()
-#
-#         self.lower_plot_layout = QVBoxLayout()
-#         self.lower_plot_layout.addWidget(self.unfiltered_soc_toolbar)
-#         self.lower_plot_layout.addWidget(self.unfiltered_soc_canvas)
-#
-#         self.lower_layout.addLayout(self.lower_plot_layout)
-#
-#         self.text_layout = QVBoxLayout()
-#
-#         self.text_widget1 = QTextEdit()
-#         self.text_widget2 = QTextEdit()
-#         self.text_widget3 = QTextEdit()
-#
-#         self.text_layout.addWidget(self.text_widget1)
-#         self.text_layout.addWidget(self.text_widget2)
-#         self.text_layout.addWidget(self.text_widget3)
-#
-#         self.lower_layout.addLayout(self.text_layout)
-#
-#         self.layout.addLayout(self.lower_layout, stretch=2)
-#
-#         # one-off & repeating timer, interval in milliseconds
-#         QTimer.singleShot(0, self.refresh_plot)
-#
-#         self.timer = QTimer(self)
-#         self.timer.timeout.connect(self.refresh_plot)
-#         self.timer.start(settings.plot_timer_interval * 1000)
-#
-#     def refresh_plot(self):
-#         worker = PlotRefreshWorker(self.soc_canvas, self.unfiltered_soc_canvas)
-#         worker.signals.data_ready.connect(self._on_data_ready)
-#         worker.signals.error.connect(self._on_data_error)
-#         self.pool.start(worker)
-#
-#     @pyqtSlot(object, object)
-#     def _on_data_ready(self, soc, unfiltered_soc):
-#         self.soc_canvas.plot(soc, f"SOC", "SOC (%)")
-#         self.unfiltered_soc_canvas.plot(unfiltered_soc, f"Unfiltered SOC", "SOC (%)")
-#
-#     @pyqtSlot(str)
-#     def _on_data_error(self, msg):
-#         QMessageBox.critical(self, "Plot Error", msg)
-#
-#
-#
-#
