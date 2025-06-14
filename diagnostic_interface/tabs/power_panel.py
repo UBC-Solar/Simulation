@@ -40,7 +40,7 @@ class PlotRefreshWorker(QRunnable):
 
 
 class PowerTab(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, font_size: int = 36, parent=None):
         super().__init__(parent)
         self.parent = parent
 
@@ -75,6 +75,11 @@ class PowerTab(QWidget):
         self.map_text_1 = QLabel("Current Lap: ?")
         self.map_text_2 = QLabel("Maximum Laps: ?")
         self.map_text_3 = QLabel("Total Energy: ?")
+
+        self.map_text_1.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
+        self.map_text_2.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
+        self.map_text_3.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
+
         self.map_text_layout.addWidget(self.map_text_1)
         self.map_text_layout.addWidget(self.map_text_2)
         self.map_text_layout.addWidget(self.map_text_3)
