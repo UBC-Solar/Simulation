@@ -375,6 +375,19 @@ class GeneticOptimization(BaseOptimization):
         """
         return self.generate_valid_speed_arrays(num_arrays_to_generate)
 
+    def stopping_speeds(self, speed_array):
+        """
+        We only want to have speeds between 20-60 km/hr. For speeds that are lower than 20km/hr, it is best
+        to stop and recharge our battery. This function will default all speeds below that threshold to zero.
+
+        :param speed_array: input speed array
+        :return: an array of speeds that are either 0, or between (20,60)
+        """
+        speed_array = np.where(speed_array < 20, 0, speed_array)
+
+        return speed_array
+
+
     def generate_valid_speed_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
         """
 
@@ -390,13 +403,13 @@ class GeneticOptimization(BaseOptimization):
         # These numbers were experimentally found to generate high fitness values in guess arrays
         # while having an acceptably low chance of not resulting in a successful simulation.
         max_speed_kmh: int = 60 # !!! was 30-40
-        min_speed_kmh: int = 0
+        min_speed_kmh: int = 40
         mean_speed = (max_speed_kmh + min_speed_kmh) / 2
-        std_dev = 15 # How spread out is the noise
+        std_dev = 5 # How spread out is the noise
         smoothing_sigma = 6 # Smoothing level; higher -> smoother
 
         # Determine the length that our driving speed arrays must be
-        length = self.model.num_laps * 10 # !!! Should make the num_laps depend on driving times instead of tiling?
+        length = self.model.num_laps
         speed_arrays = []
 
         with tqdm(
@@ -411,11 +424,11 @@ class GeneticOptimization(BaseOptimization):
                 # Generate Gaussian noise
                 noise = np.random.normal(loc = 0, scale= std_dev, size = length)
 
-                # Filter the noise; make it smoother
-                smooth_noise = gaussian_filter1d(noise, sigma = smoothing_sigma)
+                # Filter the noise; make it smoother !!! Consider removing this
+                #smooth_noise = gaussian_filter1d(noise, sigma = smoothing_sigma)
 
                 # Generate speeds by adding noise to the mean speed
-                input_speed = mean_speed + smooth_noise
+                input_speed = mean_speed + noise
 
                 # Ensuring elements are integers and fall within our bounds.
                 input_speed = np.clip(np.round(input_speed).astype(int), min_speed_kmh, max_speed_kmh)
