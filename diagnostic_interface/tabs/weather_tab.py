@@ -9,6 +9,10 @@ from diagnostic_interface import settings
 from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas, PlotCanvas2, IntegralPlot, RealtimeCanvas
 
 
+class PlotRefreshWorkerSignals(QObject):
+    data_ready = pyqtSignal(object, object)
+    error = pyqtSignal(str)
+
 
 HELP_MESSAGES = {
     "VehicleVelocity": "This plot shows velocity over time.\n\n"
@@ -51,22 +55,13 @@ class PlotRefreshWorker(QRunnable):
 
     def run(self):
         try:
-            plot1 = self.plot_canvas.fetch_data()
-
-            # this one does the fetching + plotting together
-            success = self.plot_canvas2.query_and_plot("production", "weather", "realtime", "WindSpeed10m")
-
-            if not success:
-                raise RuntimeError("PlotCanvas2 failed to fetch or plot.")
-
-            self.signals.data_ready.emit(plot1, None)  # Only plot1 passed here
+            plot_canvas_1_data = self.plot_canvas.fetch_data()
+            plot_canvas_2_data = self.plot_canvas2.fetch_data()
+            self.signals.data_ready.emit(plot_canvas_1_data, plot_canvas_2_data)
 
         except Exception as e:
             print(e)
             self.signals.error.emit(str(e))
-
-
-#
 
 
 
@@ -201,9 +196,10 @@ class WeatherTab(QWidget):
     #     #self.plot_canvas3.plot3(plot_canvas3, f"Unfiltered SOC", "SOC (%)")
 
     @pyqtSlot(object, object)
-    def _on_data_ready(self, plot1_data, _unused):
+    def _on_data_ready(self, plot1_data, plot_2_data):
         self.plot_canvas1.plot(plot1_data, "GHI", "Irradiance (W/m²)")
-        # plot_canvas2 already plotted internally
+        self.plot_canvas2.plot(*plot_2_data)
+        self.plot_canvas3.plot(plot1_data)
 
     @pyqtSlot(str)
     def _on_data_error(self, msg):
