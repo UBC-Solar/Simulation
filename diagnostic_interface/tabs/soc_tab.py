@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-from PyQt5.QtWidgets import QMessageBox, QTextEdit
+from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot
 from diagnostic_interface import settings
 from diagnostic_interface.canvas import CustomNavigationToolbar, RealtimeCanvas
@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 from data_tools.collections import TimeSeries
-from PyQt5.QtGui import QPalette, QColor
 
 
 class PercentageWidget(QWidget):
@@ -169,8 +168,8 @@ class SOCTab(QWidget):
 
     @pyqtSlot(object, object)
     def _on_data_ready(self, soc: TimeSeries, unfiltered_soc):
-        self.soc_canvas.plot(soc, f"SOC", "SOC (%)")
-        self.unfiltered_soc_canvas.plot(unfiltered_soc, f"Unfiltered SOC", "SOC (%)")
+        self.soc_canvas.plot(soc, "SOC", "SOC (%)")
+        self.unfiltered_soc_canvas.plot(unfiltered_soc, "Unfiltered SOC", "SOC (%)")
 
         initial_soc = soc[0] * 100
         current_soc = soc[-1] * 100

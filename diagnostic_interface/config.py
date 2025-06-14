@@ -4,7 +4,7 @@ from typing import Any, Generic, Type, TypeVar
 
 import tomli
 import tomli_w
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T", bound=BaseModel)
 
