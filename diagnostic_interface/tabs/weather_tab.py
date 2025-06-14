@@ -107,7 +107,7 @@ class WeatherTab(QWidget):
         # Buttons
         help_button = QPushButton("Help")
         help_button.setObjectName("helpButton")
-        help_button.clicked.connect(lambda: self.show_help_message(self.data_name, self.event))
+        help_button.clicked.connect(lambda: self.show_help_message(self.data_name))
 
         button_group = QGroupBox("Actions")
         button_layout = QHBoxLayout()
