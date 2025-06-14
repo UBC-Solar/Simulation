@@ -33,4 +33,5 @@ __all__ = [
     "normalize",
     "denormalize",
     "rescale",
+    "Coordinate"
 ]

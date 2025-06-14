@@ -59,13 +59,11 @@ class BatteryModelConfig(BatteryConfig):
     """
 
     R_0_data: list[float]
-    R_P: float
-    C_P: float
+    R_P_data: list[float]
+    C_P_data: list[float]
     Q_total: float
     SOC_data: list[float]
     Uoc_data: list[float]
-    max_current_capacity: float
-    max_energy_capacity: float
 
 
 class BasicBatteryConfig(BatteryConfig):
