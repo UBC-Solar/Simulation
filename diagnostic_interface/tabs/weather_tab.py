@@ -159,10 +159,13 @@ class WeatherTab(QWidget):
 
        # plot1 = self.plot_canvas1.query_and_plot("production", "weather", "realtime", "GHI")
         plot1 = self.plot_canvas1.fetch_data()
-        plot2 = self.plot_canvas2.query_and_plot()
+        # plot2 = self.plot_canvas2.query_and_plot("production", "weather", "realtime", "WindSpeed10m")
+        # self.plot_canvas2.query_and_plot("production", "weather", "realtime", "PrecipitationRate")
+        plot2 = self.plot_canvas2
         plot3 = self.plot_canvas3
 
-        if not (plot1 and plot2 and plot3):
+        #if not(plot1 and plot2 and plot3):
+        if plot1 is None:
             self.request_close()
 
     def set_tab_active(self, active: bool) -> None:

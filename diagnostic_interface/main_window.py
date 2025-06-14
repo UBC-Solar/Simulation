@@ -17,7 +17,7 @@ from diagnostic_interface.widgets import DataSelect
 from diagnostic_interface.tabs import WeatherTab
 
 
-from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab, SOCTab
+from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab, SOCTab, WeatherTab
 from diagnostic_interface.dialog import SettingsDialog
 from diagnostic_interface import settings
 

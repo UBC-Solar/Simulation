@@ -17,11 +17,8 @@ __all__ = [
     "DockerStackTab",
     "PlotTab",
     "IntegralPlot",
-    "UpdatableTab",
     "WeatherTab",
-    # "SunbeamTab",
-    # "SunlinkTab",
-    # "TelemetryTab"
+    "UpdatableTab",
     "SunbeamTab",
     "SunlinkTab",
     "TelemetryTab",
