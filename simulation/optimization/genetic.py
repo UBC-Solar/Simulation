@@ -326,9 +326,9 @@ class GeneticOptimization(BaseOptimization):
             # Record Stopping point info
             self.stopping_point = x.generations_completed
 
-            # !!! Checking to see if fitness improved after each generation
+            # Checking to see if fitness improved after each generation
             solution, solution_fitness, solution_idx = self.ga_instance.best_solution()
-            print(f"Our current fitness is {solution_fitness}")
+            print(" Our current fitness is ", solution_fitness)
 
             # Update progress bar if it exists
             if pbar is not None:
@@ -402,13 +402,15 @@ class GeneticOptimization(BaseOptimization):
 
         # These numbers were experimentally found to generate high fitness values in guess arrays
         # while having an acceptably low chance of not resulting in a successful simulation.
-        max_speed_kmh: int = 60 # !!! was 30-40
+        max_speed_kmh: int = 60
         min_speed_kmh: int = 0
         mean_speed = (max_speed_kmh + min_speed_kmh) / 2
         std_dev = 15 # Spread in the noise
 
-        # Determine the length that our driving speed arrays must be
-        length = self.model.num_laps
+        # Determine the length that our driving speed arrays must be ; we give ourselves a buffer because
+        # calculate_driving_speeds requires us to have enough avg speeds to drive during a certain amount of time.
+        # The number of avg_speeds needed will depend on the value of the speeds.
+        length = self.model.num_laps + (self.model.num_laps // 10)
         speed_arrays = []
 
         with tqdm(
@@ -427,14 +429,18 @@ class GeneticOptimization(BaseOptimization):
                 input_speed = mean_speed + noise
 
                 # Ensuring elements are integers and fall within our bounds.
-                input_speed = self.stopping_speeds(np.clip(np.round(input_speed).astype(int), min_speed_kmh, max_speed_kmh))
+                input_speed = np.clip(np.round(input_speed).astype(int), min_speed_kmh, max_speed_kmh)
+
+                # Set speeds below 20 km/hr to 0 km/hr
+                input_speed = self.stopping_speeds(input_speed)
 
                 self.model.run_model(
                     speed=input_speed, plot_results=False, is_optimizer=True
                 )
 
                 # If the speed results in a successful simulation, add it to the population.
-                if self.model.was_successful():
+                if self.model.was_successful(): # !!! Over here, the model is failing after setting some speeds to zero
+                    print("Model was successful")
                     speed_arrays.append(
                         normalize(input_speed, self.bounds[2], self.bounds[1])
                     )

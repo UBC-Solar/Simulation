@@ -3,7 +3,6 @@ import numpy as np
 from numba import jit
 from simulation.race import Race
 
-
 def _reshape_and_repeat(input_array, reshape_length):
     """
 
