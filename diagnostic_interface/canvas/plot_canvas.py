@@ -4,12 +4,7 @@ import matplotlib.dates as mdates
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from data_tools import SunbeamClient, TimeSeries
-from matplotlib.pyplot import twinx
-
-
 from scipy.integrate import cumulative_trapezoid as trapz
-import numpy as np
-
 from diagnostic_interface import settings
 from typing import Optional
 
@@ -49,21 +44,6 @@ class PlotCanvas(FigureCanvas):
             self.ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
             self.ax.xaxis.set_major_locator(mdates.HourLocator())
             self.figure.autofmt_xdate()
-            if self.line is None:
-                self.line, = self.ax.plot(data.datetime_x_axis, data, linewidth=1)
-
-                self.ax.set_ylim(bottom=0)
-                self.ax.set_xlim(left=data.datetime_x_axis[0])
-
-                #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
-                self.ax.set_title(f"{data_name}")
-                self.ax.set_xlabel("Time", fontsize=10)
-                self.ax.set_ylabel(data_name, fontsize=10)
-
-                # Improve datetime formatting
-                self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-                self.ax.xaxis.set_major_locator(mdates.HourLocator())
-                self.fig.autofmt_xdate()
 
         else:
             self.line.set_xdata(x)
@@ -171,8 +151,9 @@ class PlotCanvas2(FigureCanvas):
             return False
 
     def fetch_data(self):
-        data = self.query_data(settings.realtime_pipeline, "weather", settings.realtime_event, "WindSpeed10m")
-        data2 = self.query_data(settings.realtime_pipeline, "weather", settings.realtime_event, "PrecipitationRate")
+        try:
+            data = self.query_data(settings.realtime_pipeline, "weather", settings.realtime_event, "WindSpeed10m")
+            data2 = self.query_data(settings.realtime_pipeline, "weather", settings.realtime_event, "PrecipitationRate")
 
         return data, data2
 

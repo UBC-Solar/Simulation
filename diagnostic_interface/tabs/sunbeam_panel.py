@@ -40,8 +40,8 @@ class SunbeamTab(DockerStackTab):
         return settings.sunbeam_path
 
     def raise_docker_error(self):
-        QMessageBox.critical(None, "Docker Error", f"Did not get a response from the Sunbeam Docker service "
-                                                   f"stack.\n Is Docker running and is Sunbeam path correct? \n")
+        QMessageBox.critical(None, "Docker Error", "Did not get a response from the Sunbeam Docker service "
+                                                   "stack.\n Is Docker running and is Sunbeam path correct? \n")
 
     @abstractmethod
     def evaluate_readiness(self, num_running_containers):

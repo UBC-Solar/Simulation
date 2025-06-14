@@ -13,11 +13,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
 from diagnostic_interface.widgets import DataSelect
-# from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab
-from diagnostic_interface.tabs import WeatherTab
-
-
-from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab, SOCTab, WeatherTab
+from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab, SOCTab, PowerTab, WeatherTab
 from diagnostic_interface.dialog import SettingsDialog
 from diagnostic_interface import settings
 
@@ -27,11 +23,10 @@ WINDOW_TITLE = "Diagnostic Interface"
 X_COORD = 100  # Sets the x-coord where the interface will be created
 Y_COORD = 100  # Sets the y-coord where the interface will be created
 WIDTH = 800  # Sizing of window
-HEIGHT = 1200  # Size of window
+HEIGHT = 600  # Size of window
 
 
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super().__init__()
         self.setWindowTitle(WINDOW_TITLE)
@@ -64,9 +59,6 @@ class MainWindow(QMainWindow):
         # Button to load the plot
         submit_button = QPushButton("Load Data")
         submit_button.clicked.connect(self.create_plot_tab)
-
-
-
         layout.addWidget(submit_button)
 
         #Settings button
@@ -89,16 +81,16 @@ class MainWindow(QMainWindow):
         self.soc_tab = SOCTab()
         self.tabs.addTab(self.soc_tab, "SOC")
 
-        plot_tab2 = WeatherTab()
-        self.tabs.addTab(plot_tab2, f"WeatherTab")
+        self.power_tab = PowerTab()
+        self.tabs.addTab(self.power_tab, "Power")
 
+        self.weather_tab = WeatherTab()
+        self.tabs.addTab(self.weather_tab, "Weather")
 
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.
         This method contains a connection to the request_close method of the PlotTab class to receive
         the signal to close a tab."""
-
-
 
         # Getting the values that we will query.
         origin: str = self.data_select_form.selected_origin
@@ -106,19 +98,11 @@ class MainWindow(QMainWindow):
         event: str = self.data_select_form.selected_event
         data_name: str = self.data_select_form.selected_data
 
-
-
         # Creating PlotTab object and adding it to the list of tabs.
-
-
         plot_tab = PlotTab(origin, source, event, data_name)
         self.tabs.addTab(plot_tab, f"{data_name}")
 
-
         plot_tab.close_requested.connect(self.close_tab)
-
-
-
 
     def close_tab(self, widget) -> None:
         """
@@ -178,4 +162,3 @@ class MainWindow(QMainWindow):
             widget = self.tabs.widget(i)
             if isinstance(widget, UpdatableTab):
                 widget.set_tab_active(i == index)
-

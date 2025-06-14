@@ -38,8 +38,8 @@ class SunlinkTab(DockerStackTab):
         return settings.sunlink_path
 
     def raise_docker_error(self):
-        QMessageBox.critical(None, "Docker Error", f"Did not get a response from the Sunlink Docker service "
-                                                   f"stack.\n Is Docker running and is Sunlink path correct? \n")
+        QMessageBox.critical(None, "Docker Error", "Did not get a response from the Sunlink Docker service "
+                                                   "stack.\n Is Docker running and is Sunlink path correct? \n")
 
     @abstractmethod
     def evaluate_readiness(self, num_running_containers: int):

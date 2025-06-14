@@ -4,7 +4,6 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QTextEdit
 import datetime
 import os
-import shlex
 
 
 class DockerLogWidget(QTextEdit):

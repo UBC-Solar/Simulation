@@ -14,8 +14,7 @@ from ._weather import (
     WeatherProvider,
     SolcastConfig,
     OpenweatherConfig,
-    OpenweatherPeriod,
-    SolcastWeatherPeriod,
+    OpenweatherPeriod
 )
 
 from ._environment import EnvironmentConfig
