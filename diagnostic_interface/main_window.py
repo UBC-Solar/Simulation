@@ -81,9 +81,8 @@ class MainWindow(QMainWindow):
         self.soc_tab = SOCTab()
         self.tabs.addTab(self.soc_tab, "SOC")
 
-        power_button = QPushButton("Load Power Tab")
-        power_button.clicked.connect(self.create_power_tab)
-        layout.addWidget(power_button)
+        self.power_tab = PowerTab()
+        self.tabs.addTab(self.power_tab, "Power")
 
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.

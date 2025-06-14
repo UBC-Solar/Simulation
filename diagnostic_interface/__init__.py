@@ -1,4 +1,4 @@
-from .config import settings, command_settings
+from .config import settings, command_settings, coords
 from widgets import TimedWidget, DataSelect
 from dialog import SettingsDialog
 from canvas import PlotCanvas, CustomNavigationToolbar
@@ -13,5 +13,6 @@ __all__ = [
     "DataSelect",
     "DockerStackTab",
     "settings",
-    "command_settings"
+    "command_settings",
+    "coords"
 ]
