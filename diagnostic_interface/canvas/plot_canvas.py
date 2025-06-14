@@ -140,10 +140,12 @@ class PlotCanvas2(FigureCanvas):
                 # Improve datetime formatting
                 self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
                 self.ax.xaxis.set_major_locator(mdates.HourLocator())
-                self.fig.autofmt_xdate()
+
 
                 self.ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
                 self.ax2.xaxis.set_major_locator(mdates.HourLocator())
+
+                self.fig.autofmt_xdate()
                 #self.fig.autofmt_xdate()
 
 

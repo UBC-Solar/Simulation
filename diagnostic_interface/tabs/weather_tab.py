@@ -65,7 +65,6 @@ class WeatherTab(QWidget):
         plot1_layout = QVBoxLayout()
 
         self.plot_canvas1 = RealtimeCanvas("weather", "GHI")
-
         self.data_name = "GHI"
 
         self.toolbar1 = CustomNavigationToolbar(canvas=self.plot_canvas1)
