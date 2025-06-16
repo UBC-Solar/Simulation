@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QMessageBox,
-    QGroupBox, QHBoxLayout
+    QHBoxLayout
 )
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot
 #from poetry.console.commands import self
