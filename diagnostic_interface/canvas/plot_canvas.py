@@ -7,6 +7,7 @@ from data_tools import SunbeamClient, TimeSeries
 from scipy.integrate import cumulative_trapezoid as trapz
 from diagnostic_interface import settings
 from typing import Optional
+import mplcursors
 
 
 plt.style.use("seaborn-v0_8-darkgrid")
@@ -53,6 +54,22 @@ class PlotCanvas(FigureCanvas):
         self.ax.autoscale_view(scalex=True, scaley=True)
         self.draw()
 
+        cursor = mplcursors.cursor(self.line, hover=True)
+
+        @cursor.connect("add")
+        def _(sel):
+            x, y = sel.target  # x is a float (matplotlib date), y is the y-value
+            dt = mdates.num2date(x)
+            sel.annotation.set_text(
+                f"{y:.2f} {ts.units} at {dt.strftime('%H:%M')}"
+            )
+            # optional: tweak annotation style
+            bbox = sel.annotation.get_bbox_patch()
+            bbox.set_facecolor("white")
+            bbox.set_edgecolor("black")
+            bbox.set_alpha(0.8)
+            bbox.set_boxstyle("round,pad=0.3")
+
     def save_data_to_csv(self):
         if self.current_data is None:
             print("No data available to save.")
@@ -76,11 +93,6 @@ class PlotCanvas(FigureCanvas):
             print(f"Data saved to {file_name}")
 
 
-
-
-###
-
-
 class PlotCanvas2(FigureCanvas):
     def __init__(self, parent=None):
         self.fig, self.ax = plt.subplots()
@@ -96,7 +108,6 @@ class PlotCanvas2(FigureCanvas):
         self.line1 = None
         self.line2 = None
 
-
     def plot(self, data, data2):
         try:
 
@@ -104,29 +115,23 @@ class PlotCanvas2(FigureCanvas):
             self.current_data2 = data2
 
             if self.line1 is None and self.line2 is None:
-                self.line1, = self.ax.plot(data.datetime_x_axis, data, linewidth=1, color = 'red')
-                #add the comma so that its not just a normal 2d plot
+                self.line1, = self.ax.plot(data.datetime_x_axis, data, linewidth=1, color='red')
+
                 self.ax2 = self.ax.twinx()
                 self.line2, = self.ax2.plot(data2.datetime_x_axis, data2, linewidth=1)
 
                 #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
-                self.ax.set_title("WindSpeed10m & PrecipitationRate", fontsize=12)
+                self.ax.set_title("Wind Speed and Precipitation", fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
                 self.ax.set_ylabel("WindSpeed10m", fontsize=10)
                 self.ax2.set_ylabel("PrecipitationRate", fontsize=10)
 
-                self.ax.legend([self.line1, self.line2], ["WindSpeed10m", "PrecipitationRate"])
+                self.ax.legend([self.line1, self.line2], ["Wind Speed", "Precipitation Rate"])
 
-                # Improve datetime formatting
-                self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-                self.ax.xaxis.set_major_locator(mdates.HourLocator())
-
-
-                self.ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-                self.ax2.xaxis.set_major_locator(mdates.HourLocator())
-
-                self.fig.autofmt_xdate()
-
+                locator = mdates.AutoDateLocator()
+                formatter = mdates.ConciseDateFormatter(locator)
+                self.ax.xaxis.set_major_locator(locator)
+                self.ax.xaxis.set_major_formatter(formatter)
 
             else:
                 # Only update data
@@ -144,6 +149,22 @@ class PlotCanvas2(FigureCanvas):
             self.fig.tight_layout()
             self.draw()
 
+            cursor = mplcursors.cursor([self.line1, self.line2], hover=True)
+
+            @cursor.connect("add")
+            def _(sel):
+                x, y = sel.target  # x is a float (matplotlib date), y is the y-value
+                dt = mdates.num2date(x)
+                sel.annotation.set_text(
+                    f"{y:.2f} at {dt.strftime('%H:%M')}"
+                )
+                # optional: tweak annotation style
+                bbox = sel.annotation.get_bbox_patch()
+                bbox.set_facecolor("white")
+                bbox.set_edgecolor("black")
+                bbox.set_alpha(0.8)
+                bbox.set_boxstyle("round,pad=0.3")
+
             return True
 
         except Exception as e:
@@ -151,9 +172,8 @@ class PlotCanvas2(FigureCanvas):
             return False
 
     def fetch_data(self):
-        try:
-            data = self.query_data(settings.realtime_pipeline, "weather", settings.realtime_event, "WindSpeed10m")
-            data2 = self.query_data(settings.realtime_pipeline, "weather", settings.realtime_event, "PrecipitationRate")
+        data = self.query_data(settings.realtime_pipeline, "weather", settings.realtime_event, "WindSpeed10m")
+        data2 = self.query_data(settings.realtime_pipeline, "weather", settings.realtime_event, "PrecipitationRate")
 
         return data, data2
 
@@ -186,15 +206,6 @@ class PlotCanvas2(FigureCanvas):
             print(f"Data saved to {file_name}")
 
 
-
-
-##
-
-
-
-
-
-
 class IntegralPlot(FigureCanvas):
     def __init__(self, parent=None):
         self.fig, self.ax = plt.subplots()
@@ -204,10 +215,10 @@ class IntegralPlot(FigureCanvas):
         self.current_data = None
         self.line1 = None
 
-    def plot(self, data):
+    def plot(self, data, plot_title, ylabel):
 
         try:
-            integral_values = trapz(data, x=data.datetime_x_axis,initial=0)
+            integral_values = trapz(data, x=data.x_axis, initial=0)
 
             if not isinstance(data, TimeSeries):
                 raise TypeError("Expected TimeSeries.")
@@ -217,21 +228,19 @@ class IntegralPlot(FigureCanvas):
 
             if self.line1 is None:
 
-                self.line1, = self.ax.plot(data.datetime_x_axis, integral_values, linewidth=1, color = 'red')
+                self.line1, = self.ax.plot(data.datetime_x_axis, integral_values, linewidth=1, color='red')
                 #add the comma so that its not just a normal 2d plot
 
-
                 #self.ax.set_title(f"{data_name} - {event}", fontsize=12)
-                self.ax.set_title("Integral of GHI", fontsize=12)
+                self.ax.set_title(plot_title, fontsize=12)
                 self.ax.set_xlabel("Time", fontsize=10)
-                self.ax.set_ylabel("Integral Values", fontsize=10)
-
+                self.ax.set_ylabel(ylabel, fontsize=10)
 
                 # Improve datetime formatting
-                self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-                self.ax.xaxis.set_major_locator(mdates.HourLocator())
-                self.fig.autofmt_xdate()
-
+                locator = mdates.AutoDateLocator()
+                formatter = mdates.ConciseDateFormatter(locator)
+                self.ax.xaxis.set_major_locator(locator)
+                self.ax.xaxis.set_major_formatter(formatter)
 
             else:
                 # Only update data
@@ -239,14 +248,27 @@ class IntegralPlot(FigureCanvas):
 
                 self.line1.set_ydata(integral_values)
 
-
-
             self.ax.relim()
             self.ax.autoscale_view(scalex=True, scaley=True)
 
-
             self.fig.tight_layout()
             self.draw()
+
+            cursor = mplcursors.cursor(self.line1, hover=True)
+
+            @cursor.connect("add")
+            def _(sel):
+                x, y = sel.target  # x is a float (matplotlib date), y is the y-value
+                dt = mdates.num2date(x)
+                sel.annotation.set_text(
+                    f"{y/1e6:.2f} MJ/m^2 at {dt.strftime('%H:%M')}"
+                )
+                # optional: tweak annotation style
+                bbox = sel.annotation.get_bbox_patch()
+                bbox.set_facecolor("white")
+                bbox.set_edgecolor("black")
+                bbox.set_alpha(0.8)
+                bbox.set_boxstyle("round,pad=0.3")
 
             return True
 
@@ -282,4 +304,3 @@ class IntegralPlot(FigureCanvas):
             })
             df.to_csv(file_name, index=False)
             print(f"Data saved to {file_name}")
-

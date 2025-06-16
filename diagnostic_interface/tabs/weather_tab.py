@@ -1,12 +1,12 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QMessageBox,
-    QGroupBox, QHBoxLayout, QLabel
+    QGroupBox, QHBoxLayout
 )
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot
 #from poetry.console.commands import self
 
 from diagnostic_interface import settings
-from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas, PlotCanvas2, IntegralPlot, RealtimeCanvas
+from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas2, IntegralPlot, RealtimeCanvas
 
 
 class PlotRefreshWorkerSignals(QObject):
@@ -85,26 +85,12 @@ class WeatherTab(QWidget):
         bottom_plots_layout.addLayout(plot2_layout)
         bottom_plots_layout.addLayout(plot3_layout)
 
-        self.layout.addLayout(plot1_layout)
-        self.layout.addLayout(bottom_plots_layout)
+        self.layout.addLayout(plot1_layout, stretch=6)
+        self.layout.addLayout(bottom_plots_layout, stretch=4)
 
         help_button = QPushButton("Help")
         help_button.setObjectName("helpButton")
         help_button.clicked.connect(lambda: self.show_help_message(self.data_name))
-
-        button_group = QGroupBox("Actions")
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(help_button)
-        button_group.setLayout(button_layout)
-
-        self.layout.addWidget(button_group)
-
-        self.setStyleSheet("""
-            QPushButton#helpButton, QPushButton#closeButton {
-                padding: 6px 12px;
-                border-radius: 8px;
-            }
-        """)
 
         self.refresh_timer = QTimer()
         self.refresh_timer.timeout.connect(self.refresh_plot)
@@ -127,9 +113,9 @@ class WeatherTab(QWidget):
 
     @pyqtSlot(object, object)
     def _on_data_ready(self, plot1_data, plot_2_data):
-        self.plot_canvas1.plot(plot1_data, "GHI", "realtime")
+        self.plot_canvas1.plot(plot1_data, "GHI", "Irradiance (W/m^2)")
         self.plot_canvas2.plot(*plot_2_data)
-        self.plot_canvas3.plot(plot1_data)
+        self.plot_canvas3.plot(plot1_data, "Energy Per Unit Solar Panel Area", "J/m^2")
 
     @pyqtSlot(str)
     def _on_data_error(self, msg):

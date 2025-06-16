@@ -5,6 +5,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from data_tools import SunbeamClient, TimeSeries
 from diagnostic_interface import settings
 from PyQt5.QtWidgets import QMessageBox
+import mplcursors
 
 
 plt.style.use("seaborn-v0_8-darkgrid")
@@ -38,9 +39,11 @@ class RealtimeCanvas(FigureCanvas):
             self.ax.set_title(title)
             self.ax.set_xlabel("Time")
             self.ax.set_ylabel(y_label)
-            self.ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-            self.ax.xaxis.set_major_locator(mdates.HourLocator())
-            self.figure.autofmt_xdate()
+
+            locator = mdates.AutoDateLocator()
+            formatter = mdates.ConciseDateFormatter(locator)
+            self.ax.xaxis.set_major_locator(locator)
+            self.ax.xaxis.set_major_formatter(formatter)
 
         else:
             self.line.set_xdata(x)
@@ -49,6 +52,22 @@ class RealtimeCanvas(FigureCanvas):
         self.ax.relim()
         self.ax.autoscale_view(scalex=True, scaley=True)
         self.draw()
+
+        cursor = mplcursors.cursor(self.line, hover=True)
+
+        @cursor.connect("add")
+        def _(sel):
+            x, y = sel.target  # x is a float (matplotlib date), y is the y-value
+            dt = mdates.num2date(x)
+            sel.annotation.set_text(
+                f"{y:.2f} {ts.units} at {dt.strftime('%H:%M')}"
+            )
+            # optional: tweak annotation style
+            bbox = sel.annotation.get_bbox_patch()
+            bbox.set_facecolor("white")
+            bbox.set_edgecolor("black")
+            bbox.set_alpha(0.8)
+            bbox.set_boxstyle("round,pad=0.3")
 
     def save_data_to_csv(self):
         QMessageBox.warning(self, "Cannot save data from here! Please plot manually with the Home Tab.")

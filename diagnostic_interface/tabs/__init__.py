@@ -5,7 +5,6 @@
 #from .weather_tab import WeatherTab
 from .plot_tab import PlotTab
 from .docker_panel import DockerStackTab
-from .plot_tab import PlotTab
 from .weather_tab import WeatherTab
 from ._updatable import UpdatableTab
 from .power_panel import PowerTab
