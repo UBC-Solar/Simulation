@@ -175,6 +175,7 @@ class OptimizationSettings:
 
         self._fitness = fitness
 
+
 class GeneticOptimization(BaseOptimization):
     """
     Genetic Optimization (also known as Genetic Algorithm, or GA) follows the following primary steps:
@@ -402,7 +403,7 @@ class GeneticOptimization(BaseOptimization):
 
         # These numbers were experimentally found to generate high fitness values in guess arrays
         # while having an acceptably low chance of not resulting in a successful simulation.
-        max_speed_kmh: int = 60
+        max_speed_kmh: int = 40
         min_speed_kmh: int = 0
         mean_speed = (max_speed_kmh + min_speed_kmh) / 2
         std_dev = 15 # Spread in the noise
@@ -410,7 +411,7 @@ class GeneticOptimization(BaseOptimization):
         # Determine the length that our driving speed arrays must be ; we give ourselves a buffer because
         # calculate_driving_speeds requires us to have enough avg speeds to drive during a certain amount of time.
         # The number of avg_speeds needed will depend on the value of the speeds.
-        length = self.model.num_laps + (self.model.num_laps // 10)
+        length = self.model.num_laps
         speed_arrays = []
 
         with tqdm(
@@ -423,7 +424,7 @@ class GeneticOptimization(BaseOptimization):
 
             while len(speed_arrays) < num_arrays_to_generate:
                 # Generate Gaussian noise
-                noise = np.random.normal(loc = 0, scale= std_dev, size = length)
+                noise = np.random.normal(loc=0, scale=std_dev, size=length)
 
                 # Generate speeds by adding noise to the mean speed
                 input_speed = mean_speed + noise
@@ -431,15 +432,12 @@ class GeneticOptimization(BaseOptimization):
                 # Ensuring elements are integers and fall within our bounds.
                 input_speed = np.clip(np.round(input_speed).astype(int), min_speed_kmh, max_speed_kmh)
 
-                # Set speeds below 20 km/hr to 0 km/hr
-                input_speed = self.stopping_speeds(input_speed)
-
                 self.model.run_model(
                     speed=input_speed, plot_results=False, is_optimizer=True
                 )
 
                 # If the speed results in a successful simulation, add it to the population.
-                if self.model.was_successful(): # !!! Over here, the model is failing after setting some speeds to zero
+                if self.model.was_successful():  # !!! Over here, the model is failing after setting some speeds to zero
                     print("Model was successful")
                     speed_arrays.append(
                         normalize(input_speed, self.bounds[2], self.bounds[1])
@@ -471,7 +469,6 @@ class GeneticOptimization(BaseOptimization):
 
         # Chromosomes are normalized, so must be denormalized before being fed to Simulation.
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
-
 
         distance_travelled, time_taken = self.func(
             speed=solution_denormalized, is_optimizer=True

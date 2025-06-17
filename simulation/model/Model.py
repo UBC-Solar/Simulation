@@ -137,22 +137,25 @@ class Model:
             when true.
         """
         # We want to check that the speed array has at least as many elements as the number of laps we want to simulate
-        assert len(speed) >= self.num_laps, (
-            "Input driving speeds_directory array must have length greater than or "
-            "equal to self.num_laps! Current length is "
-            f"{len(speed)} and length of {self.num_laps} is needed!"
-        )
+        # assert len(speed) >= self.num_laps, (
+        #     "Input driving speeds_directory array must have length greater than or "
+        #     "equal to self.num_laps! Current length is "
+        #     f"{len(speed)} and length of {self.num_laps} is needed!"
+        # )
+
+        minimum_speed = 10  # km/h
+        speeds = np.where(speed < minimum_speed, 0, speed)
 
         # ----- Reshape speed array -----
         speed_kmh = reshape_speed_array(
             self.race,
-            speed,
+            speeds,
             self.start_time,
             self.gis,
             self.simulation_dt,
             self.max_acceleration,
             self.max_deceleration,
-        ) #
+        )
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()

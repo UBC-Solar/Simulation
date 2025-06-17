@@ -175,7 +175,7 @@ def reshape_speed_array(
     lap_speeds_ms = np.array(speed) * (1000/3600)
     
     # Idle time for 0m/s entries
-    idle_time = int((5*60)/tick) # ticks of idle time; for now this is set to be equivalent to 5 minutes
+    idle_time = 5*60  # seconds of idle time; for now this is set to be equivalent to 5 minutes
 
     # Get a speed array where each entry is the speed at each time step
     speed_ms = gis_object.calculate_driving_speeds(
@@ -320,7 +320,6 @@ def get_map_data_indices(closest_gis_indices):
     return map_data_indices
 
 
-@jit(nopython=True)
 def normalize(
     input_array: np.ndarray, max_value: float = None, min_value: float = None
 ) -> np.ndarray:
@@ -331,14 +330,12 @@ def normalize(
     )
 
 
-@jit(nopython=True)
 def denormalize(
     input_array: np.ndarray, max_value: float, min_value: float = 0
 ) -> np.ndarray:
     return input_array * (max_value - min_value) + min_value
 
 
-@jit(nopython=True)
 def rescale(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
     normalized_array = normalize(input_array)
     return denormalize(normalized_array, upper_bound, lower_bound)
