@@ -16,11 +16,8 @@ from simulation.config import (
     EnvironmentConfig,
     CarConfig,
 )
-from simulation.optimization.genetic import OptimizationSettings
-
 
 from scipy.optimize import differential_evolution
-
 
 def load_configs(competition_name = "FSGP", car_name: str = "BrightSide"):
     config_path = ConfigDirectory / f"initial_conditions_{competition_name}.toml"
@@ -108,22 +105,6 @@ def get_random_trajectory(mesh):
     return random_trajectory
 
 
-def optimize_trajectory(mesh, gradients, trajectory_length, num_lateral_indices, speed_kmh, motor_model):
-    # Perform optimization with Genetic Optimization
-    optimization_settings: OptimizationSettings = OptimizationSettings()
-
-    genetic_optimization = MicroSimulationOptimizer(
-        mesh=mesh,
-        gradients=gradients,
-        trajectory_length=trajectory_length,
-        num_lateral_indices=num_lateral_indices,
-        speed_kmh=speed_kmh,
-        model=motor_model,
-        settings=optimization_settings,)
-    results_genetic = genetic_optimization.maximize()
-    return results_genetic
-
-
 def objective_trajectory_energy(
     x,
     mesh,
@@ -153,7 +134,7 @@ def objective_trajectory_energy(
     return np.sum(energy)
 
 
-def optimize_trajectory_scipy(
+def optimize_trajectory(
     mesh,
     gradients,
     trajectory_length,
@@ -170,7 +151,7 @@ def optimize_trajectory_scipy(
         strategy="best1bin",
         popsize=15,
         maxiter=250,
-        mutation=(0.5, 1.0),
+        mutation=(0.4, 1.2),
         recombination=0.7,
         tol=0.01,
         polish=False,
@@ -253,15 +234,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    # optimized_trajectory = optimize_trajectory(
-    #     mesh=mesh,
-    #     gradients=gradients,
-    #     trajectory_length=len(trajectory_FSGP),
-    #     num_lateral_indices=num_lateral_indices,
-    #     speed_kmh=50,
-    #     motor_model=advanced_motor)
-
-    optimized_trajectory = optimize_trajectory_scipy(
+    optimized_trajectory = optimize_trajectory(
         mesh=mesh,
         gradients=gradients,
         trajectory_length=len(trajectory_FSGP),
@@ -287,31 +260,25 @@ if __name__ == '__main__':
         road_friction_array_op,
         drag_forces_op,
         g_forces_op)
+
     folium_map_optimized.save("optimized_trajectory.html")
 
     print("____Optimization Results____\n")
-
     print(f"Total Energy - Random Route:     {np.sum(energy_consumed):.2f} J")
     print(f"Total Energy - Optimized Route:  {np.sum(energy_consumed_op):.2f} J")
-
     print(f"Cornering Loss - Random Route:   {np.sum(cornering_work):.2f} J")
     print(f"Cornering Loss - Optimized Route:{np.sum(cornering_work_op):.2f} J")
-
     print(f"Drag Work - Random Route:        {np.sum(drag_forces * distances_m):.2f} J")
     print(f"Drag Work - Optimized Route:     {np.sum(drag_forces_op * distances_m_op):.2f} J")
-
     print(f"Avg G-Force - Random Route:      {np.mean(g_forces):.3f} g")
     print(f"Avg G-Force - Optimized Route:   {np.mean(g_forces_op):.3f} g")
-
     end_time = time.time()
     elapsed = end_time - start_time
     minutes = int(elapsed // 60)
     seconds = int(elapsed % 60)
     print(f"Optimization Duration:           {minutes} min {seconds} sec")
-
     print("______________________________\n")
 
-    # Save optimized trajectory as a .npy file (binary)
     np.save("optimized_trajectory.npy", np.array(optimized_trajectory))
 
 
