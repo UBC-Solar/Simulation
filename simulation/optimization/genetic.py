@@ -616,10 +616,7 @@ class DifferentialEvolutionOptimization(BaseOptimization):
         :return: best speed profile in km/h
         """
         if not initial_population:
-            try:
-                initial_population = self.generate_valid_speed_arrays(self.popsize)
-            except Exception as e:
-                pass
+            initial_population = self.generate_valid_speed_arrays(self.popsize)
 
         def callback(intermediate_result: optimize.OptimizeResult):
             if pbar:
