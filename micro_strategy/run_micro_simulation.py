@@ -19,6 +19,9 @@ from simulation.config import (
 from simulation.optimization.genetic import OptimizationSettings
 
 
+from scipy.optimize import differential_evolution
+
+
 def load_configs(competition_name = "FSGP", car_name: str = "BrightSide"):
     config_path = ConfigDirectory / f"initial_conditions_{competition_name}.toml"
     with open(config_path, "rb") as f:
@@ -121,6 +124,66 @@ def optimize_trajectory(mesh, gradients, trajectory_length, num_lateral_indices,
     return results_genetic
 
 
+def objective_trajectory_energy(
+    x,
+    mesh,
+    gradients,
+    speed_kmh,
+    motor_model,
+    num_lateral_indices
+):
+    # Round and clamp index values
+    idx = np.rint(x).astype(int).clip(0, num_lateral_indices - 1)
+
+    # Convert index array to lat/lon trajectory
+    path = [mesh[i][j] for i, j in enumerate(idx)]
+    dists_m = np.array(get_distances(path))
+
+    # Constant speed profile
+    v_kmh = np.full(len(path), speed_kmh)
+    v_ms = v_kmh / 3.6
+    ticks = dists_m / v_ms
+    winds = np.zeros_like(dists_m)
+
+    # Energy evaluation from motor model
+    energy, *_ = motor_model.calculate_energy_in(
+        v_kmh, gradients, winds, ticks, path
+    )
+
+    return np.sum(energy)
+
+
+def optimize_trajectory_scipy(
+    mesh,
+    gradients,
+    trajectory_length,
+    num_lateral_indices,
+    speed_kmh,
+    motor_model
+):
+    bounds = [(0, num_lateral_indices - 1)] * trajectory_length
+
+    result = differential_evolution(
+        objective_trajectory_energy,
+        bounds,
+        args=(mesh, gradients, speed_kmh, motor_model, num_lateral_indices),
+        strategy="best1bin",
+        popsize=15,
+        maxiter=250,
+        mutation=(0.5, 1.0),
+        recombination=0.7,
+        tol=0.01,
+        polish=False,
+        disp=True,
+        workers=-1,  # parallel evaluation
+        seed=42
+    )
+
+    best_idx = np.rint(result.x).astype(int).clip(0, num_lateral_indices - 1)
+    best_path = [mesh[i][j] for i, j in enumerate(best_idx)]
+    return best_path
+
+
 def run_motor_model(speed_kmh, distances_m, trajectory):
     num_elements = len(trajectory)
     if len(distances_m) != num_elements:
@@ -159,9 +222,12 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
 
 
 if __name__ == '__main__':
+    mesh_branch_length = 4
     trajectory_FSGP = get_FSGP_trajectory()
-    mesh = generate_lateral_mesh(trajectory_FSGP, 2, 4)
+    mesh = generate_lateral_mesh(trajectory_FSGP, 2, mesh_branch_length)
     random_trajectory = get_random_trajectory(mesh)
+
+    num_lateral_indices = mesh_branch_length * 2 + 1
 
     distances = get_distances(random_trajectory)
     distances_m = np.array(distances)
@@ -187,13 +253,22 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    optimized_trajectory = optimize_trajectory(
+    # optimized_trajectory = optimize_trajectory(
+    #     mesh=mesh,
+    #     gradients=gradients,
+    #     trajectory_length=len(trajectory_FSGP),
+    #     num_lateral_indices=num_lateral_indices,
+    #     speed_kmh=50,
+    #     motor_model=advanced_motor)
+
+    optimized_trajectory = optimize_trajectory_scipy(
         mesh=mesh,
         gradients=gradients,
         trajectory_length=len(trajectory_FSGP),
-        num_lateral_indices=9,
+        num_lateral_indices=num_lateral_indices,
         speed_kmh=50,
-        motor_model=advanced_motor)
+        motor_model=advanced_motor
+    )
 
     distances_op = get_distances(random_trajectory)
     distances_m_op = np.array(distances)
