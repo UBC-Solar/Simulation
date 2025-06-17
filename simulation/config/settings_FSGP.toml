@@ -4,7 +4,7 @@ competition_name = "FSGP"
 date = "2025-06-06T05:00:00.0Z"
 
 [competition_config.TrackCompetition]
-tiling = 1000
+tiling = 200
 
 [competition_config.time_ranges.charging]
 0 = [25200, 72000]
