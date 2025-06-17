@@ -76,7 +76,7 @@ def main(competition_name: str, car_name: str, speed_dt: int):
             )
 
             try:
-                results_genetic = genetic_optimization.maximize(initial_population)
+                results_genetic = genetic_optimization.maximize(initial_population, pbar)
                 break
 
             except ValueError:

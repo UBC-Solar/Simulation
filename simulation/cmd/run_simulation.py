@@ -102,7 +102,7 @@ def build_model(
         .set_environment_config(
             environment,
             rebuild_weather_cache=False,
-            rebuild_route_cache=True,
+            rebuild_route_cache=False,
             rebuild_competition_cache=False,
         )
         .set_hyperparameters(hyperparameters)
