@@ -1,22 +1,21 @@
 import json
 
 import numpy as np
-import zipfile
 import pygad
 import sys
 import csv
-import os
-
-from scipy.ndimage import gaussian_filter1d
 from strenum import StrEnum
 from tqdm import tqdm
 
-from simulation.cache.optimization_population import population_directory
-from simulation.optimization.base_optimization import BaseOptimization
 from simulation.race import denormalize, normalize, rescale
 from simulation.config import ConfigDirectory, SimulationReturnType
+from scipy import optimize
+from simulation.race import denormalize
+from simulation.config import SimulationReturnType
+from simulation.optimization.base_optimization import BaseOptimization
 from simulation.utils import InputBounds
 from simulation.model import Model
+import math
 
 
 class OptimizationSettings:
@@ -54,10 +53,10 @@ class OptimizationSettings:
             reach = "reach"
 
         def __init__(
-            self,
-            criteria: Criteria_Type = Criteria_Type.saturate,
-            value: int = 10,
-            string: str = None,
+                self,
+                criteria: Criteria_Type = Criteria_Type.saturate,
+                value: int = 10,
+                string: str = None,
         ):
             self.string = string
             self.criteria = criteria
@@ -72,18 +71,18 @@ class OptimizationSettings:
         reach: Criteria_Type = Criteria_Type.reach
 
     def __init__(
-        self,
-        chromosome_size: int = None,
-        parent_selection_type: Parent_Selection_Type = None,
-        generation_limit: int = None,
-        num_parents: int = None,
-        k_tournament: int = None,
-        crossover_type: Crossover_Type = None,
-        elitism: int = None,
-        mutation_type: Mutation_Type = None,
-        mutation_percent: float = None,
-        max_mutation: float = None,
-        stopping_criteria: Stopping_Criteria = None,
+            self,
+            chromosome_size: int = None,
+            parent_selection_type: Parent_Selection_Type = None,
+            generation_limit: int = None,
+            num_parents: int = None,
+            k_tournament: int = None,
+            crossover_type: Crossover_Type = None,
+            elitism: int = None,
+            mutation_type: Mutation_Type = None,
+            mutation_percent: float = None,
+            max_mutation: float = None,
+            stopping_criteria: Stopping_Criteria = None,
     ):
         with open(ConfigDirectory / "optimization_settings.json", "r") as settings_file:
             settings = json.load(settings_file)
@@ -290,8 +289,8 @@ class GeneticOptimization(BaseOptimization):
         mutation_max_value = self.settings.max_mutation
 
         # Bind the value of each gene for the speeds we expect
-        original = [0] + list(range(20, 61)) # If speed < 20km/hr, we want to stop
-        gene_space = [x/60 for x in original] # Normalizing speeds
+        original = [0] + list(range(20, 61))  # If speed < 20km/hr, we want to stop
+        gene_space = [x / 60 for x in original]  # Normalizing speeds
 
         # Store diversity of generation per optimization iteration
         self.diversity = []
@@ -406,7 +405,7 @@ class GeneticOptimization(BaseOptimization):
         max_speed_kmh: int = 40
         min_speed_kmh: int = 0
         mean_speed = (max_speed_kmh + min_speed_kmh) / 2
-        std_dev = 15 # Spread in the noise
+        std_dev = 15  # Spread in the noise
 
         # Determine the length that our driving speed arrays must be ; we give ourselves a buffer because
         # calculate_driving_speeds requires us to have enough avg speeds to drive during a certain amount of time.
@@ -567,3 +566,150 @@ class GeneticOptimization(BaseOptimization):
         for settings in settings_list:
             total += settings.generation_limit
         return total
+
+
+class DifferentialEvolutionOptimization(BaseOptimization):
+    """
+    Simplified optimizer using SciPy's differential_evolution.
+    """
+
+    def __init__(
+            self,
+            model: Model,
+            bounds: InputBounds,
+            strategy: str = "best1bin",
+            maxiter: int = 100,
+            popsize: int = 25,
+            tol: float = 0.00001,
+            mutation: tuple[float, float] = (0.2, 0.4),
+            recombination: float = 0.3,
+            pbar=None,
+    ):
+        assert model.return_type is SimulationReturnType.distance_and_time, (
+            "Model must return distance_and_time"
+        )
+        super().__init__(bounds.get_bounds_list(), model.run_model)
+        self.model = model
+
+        self.num_genes = math.ceil(model.num_laps / 10)
+        self.bounds = bounds.get_bounds_list()
+
+        self.strategy = strategy
+        self.maxiter = maxiter
+        self.popsize = popsize
+        self.tol = tol
+        self.mutation = mutation
+        self.recombination = recombination
+        self.strategy = strategy
+
+        self.pbar = pbar
+
+    def _objective(self, x_norm: np.ndarray) -> float:
+        x_denorm = denormalize(x_norm, self.bounds[2], self.bounds[1])
+        distance, _ = self.func(speed=x_denorm, is_optimizer=True)
+
+        return -distance
+
+    def maximize(self, initial_population=None) -> np.ndarray:
+        """
+        Run the differential evolution optimization.
+        :return: best speed profile in km/h
+        """
+        if not initial_population:
+            try:
+                initial_population = self.generate_valid_speed_arrays(self.popsize)
+            except Exception as e:
+                pass
+
+        def callback(intermediate_result: optimize.OptimizeResult):
+            if self.pbar:
+                self.pbar.update(1)
+
+            self.bestinput = intermediate_result.x
+
+        bounds = [(0, 1)] * self.num_genes
+
+        try:
+            result = optimize.differential_evolution(
+                func=self._objective,
+                bounds=bounds,
+                strategy=self.strategy,
+                init=initial_population,
+                maxiter=100,
+                popsize=self.popsize,
+                tol=self.tol,
+                # mutation=self.mutation,
+                recombination=self.recombination,
+                polish=False,
+                callback=callback,
+            )
+
+            best_speed = denormalize(result.x, self.bounds[2], self.bounds[1])
+
+        except ValueError as e:
+            if len(self.bestinput) > 0:
+                self.bestinput = denormalize(self.bestinput, self.bounds[2], self.bounds[1])
+
+            raise e
+
+        return best_speed
+
+    def fitness(self, *args, **kwargs):
+        raise NotImplementedError("Use maximize() to obtain optimized speeds.")
+
+    def generate_valid_speed_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
+        """
+
+        Generate a set of normalized driving speeds_directory arrays that are valid for the active Simulation model
+        using Gaussian noise. Will return an array with num_arrays_to_generate valid arrays.
+
+        :param int num_arrays_to_generate:
+        :return: an array of `num_arrays_to_generate` driving speeds_directory, valid for the active Simulation model.
+        :rtype: np.ndarray
+
+        """
+
+        # These numbers were experimentally found to generate high fitness values in guess arrays
+        # while having an acceptably low chance of not resulting in a successful simulation.
+        max_speed_kmh: int = 30
+        min_speed_kmh: int = 0
+        mean_speed = (max_speed_kmh + min_speed_kmh) / 2
+        std_dev = 15  # Spread in the noise
+
+        # Determine the length that our driving speed arrays must be ; we give ourselves a buffer because
+        # calculate_driving_speeds requires us to have enough avg speeds to drive during a certain amount of time.
+        # The number of avg_speeds needed will depend on the value of the speeds.
+        length = self.num_genes
+        speed_arrays = []
+
+        with tqdm(
+                total=num_arrays_to_generate,
+                file=sys.stdout,
+                desc="Generating new initial population ",
+                position=0,
+                leave=True,
+        ) as pbar:
+
+            while len(speed_arrays) < num_arrays_to_generate:
+                # Generate Gaussian noise
+                noise = np.random.normal(loc=0, scale=std_dev, size=length)
+
+                # Generate speeds by adding noise to the mean speed
+                input_speed = mean_speed + noise
+
+                # Ensuring elements are integers and fall within our bounds.
+                input_speed = np.clip(np.round(input_speed).astype(int), min_speed_kmh, max_speed_kmh)
+
+                self.model.run_model(
+                    speed=input_speed, plot_results=False, is_optimizer=True
+                )
+
+                # If the speed results in a successful simulation, add it to the population.
+                if self.model.was_successful():  # !!! Over here, the model is failing after setting some speeds to zero
+                    print("Model was successful")
+                    speed_arrays.append(
+                        normalize(input_speed, self.bounds[2], self.bounds[1])
+                    )
+                    pbar.update(1)
+
+        return np.array(speed_arrays)
