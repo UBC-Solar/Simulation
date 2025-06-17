@@ -236,4 +236,7 @@ if __name__ == '__main__':
 
     print("______________________________\n")
 
+    # Save optimized trajectory as a .npy file (binary)
+    np.save("optimized_trajectory.npy", np.array(optimized_trajectory))
+
 

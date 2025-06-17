@@ -5,6 +5,21 @@ from physics.models.motor.advanced_motor import AdvancedMotor
 
 from geometry import get_distances
 
+
+def integer_mutation_func(offspring, ga_instance):
+    for i in range(offspring.shape[0]):
+        gene_idx = np.random.randint(0, ga_instance.num_genes)
+
+        # Randomly choose either -2, -1, +1, or +2
+        mutation = np.random.choice([-2, -1, 1, 2])
+
+        new_val = int(offspring[i, gene_idx]) + mutation
+        new_val = np.clip(new_val, 0, ga_instance.gene_space["high"])  # Respect lateral index bounds
+
+        offspring[i, gene_idx] = new_val
+    return offspring
+
+
 class MicroSimulationOptimizer(GeneticOptimization):
     def __init__(
             self,
@@ -31,27 +46,27 @@ class MicroSimulationOptimizer(GeneticOptimization):
             run_model=None,
             settings=settings,
             pbar=pbar,
+            mutation_function=integer_mutation_func,
             force_new_population_flag=force_new_population_flag,
         )
 
         self.ga_instance.gene_space = {"low": 0, "high": num_lateral_indices - 1, "step": 1}  # Discrete path indices
-
-        # long run
-        self.ga_instance.num_generations = 2000
-        self.ga_instance.population_size = 250
-        self.ga_instance.mutation_probability = 0.2
-        self.ga_instance.stop_criteria = []  # disables early stopping
+        
+        self.ga_instance.num_generations = 400
+        self.ga_instance.population_size = 275
+        self.ga_instance.mutation_probability = 0.3
+        self.ga_instance.stop_criteria = [] 
 
         # short run
         # self.ga_instance.num_generations = 500
         # self.ga_instance.population_size = 200
-        # self.ga_instance.mutation_probability = 0.2
+        # self.ga_instance.mutation_probability = 0.35
         # self.ga_instance.stop_criteria = []  # disables early stopping
 
 
     def generate_valid_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
         """
-        Generate valid path choice arrays (instead of speed arrays).
+        Generate valid path choice arrays.
         Each gene represents a path index (e.g., 0, 1, or 2) at a trajectory point.
         """
         path_arrays = []
