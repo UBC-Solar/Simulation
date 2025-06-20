@@ -178,12 +178,16 @@ class SOCTab(QWidget):
         time_1hr_ago = time_now - timedelta(hours=1)
         time_1hr_ago_relative = time_1hr_ago.timestamp() - soc.datetime_x_axis[0].timestamp()
 
-        index_1hr_ago = soc.index_of(time_1hr_ago_relative)
+        try:
+            index_1hr_ago = soc.index_of(time_1hr_ago_relative)
+        except ValueError:
+            index_1hr_ago = 0
+
         soc_1hr_ago = soc[index_1hr_ago] * 100
 
         self.text_widget1.set_percentage(initial_soc)
         self.text_widget2.set_percentage(current_soc)
-        self.text_widget3.set_percentage(soc_1hr_ago - current_soc, is_delta=True)
+        self.text_widget3.set_percentage(current_soc - soc_1hr_ago, is_delta=True)
 
     @pyqtSlot(str)
     def _on_data_error(self, msg):

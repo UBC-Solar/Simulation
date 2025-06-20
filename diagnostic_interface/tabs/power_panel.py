@@ -185,4 +185,4 @@ class PowerTab(QWidget):
     @pyqtSlot(str)
     def _on_data_error(self, msg):
         QMessageBox.critical(self, "Plot Error", msg)
-
+        self.timer.stop()
