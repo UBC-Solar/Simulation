@@ -9,5 +9,6 @@ __all__ = [
     "TimedWidget",
     "DockerLogWidget",
     "CommandOutputWidget",
-    "FoliumMapWidget"
+    "FoliumMapWidget",
+    "CommandOutputWidget"
 ]
