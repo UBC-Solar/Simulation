@@ -105,6 +105,9 @@ class PowerTab(QWidget):
         self.current_lap_number = 0
 
     def next_lap(self):
+        if self.max_laps is None:
+            return
+
         if not self.current_lap_number + 1 > self.max_laps:
             self.current_lap_number += 1
             self.draw_map()
@@ -113,6 +116,9 @@ class PowerTab(QWidget):
             QMessageBox.warning(None, "Lap Error", f"There is no lap available after {self.max_laps}.")
 
     def prev_lap(self):
+        if self.max_laps is None:
+            return
+
         if not self.current_lap_number < 1:
             self.current_lap_number -= 1
             self.draw_map()
@@ -136,6 +142,9 @@ class PowerTab(QWidget):
             self.timer.stop()
 
     def draw_map(self):
+        if (self.lap_indices is None) or (self.motor_power is None) or (self.gis_indices is None):
+            return
+
         current_lap_mask = self.lap_indices == self.current_lap_number
 
         energy = np.empty(len(coords), dtype=float)
@@ -159,20 +168,22 @@ class PowerTab(QWidget):
 
             try:
 
+                self.gis_indices = gis_indices_result.unwrap().data
+                self.lap_indices = lap_numbers_result.unwrap().data
+                self.max_laps = int(np.nanmax(self.lap_indices))
+
                 if self.max_laps is None:
                     draw_map = True
                 else:
                     draw_map = False
 
-                self.gis_indices = gis_indices_result.unwrap().data
-                self.lap_indices = lap_numbers_result.unwrap().data
-                self.max_laps = int(np.nanmax(self.lap_indices))
-
                 if draw_map:
                     self.draw_map()
 
             except UnwrappedError:
-                pass
+                self.gis_indices = None
+                self.lap_indices = None
+                self.max_laps = None
 
         except UnwrappedError as e:
             traceback.print_exc()
