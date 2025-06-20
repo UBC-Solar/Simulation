@@ -46,10 +46,10 @@ class SunbeamTab(DockerStackTab):
     @abstractmethod
     def evaluate_readiness(self, num_running_containers):
         client = SunbeamClient(settings.sunbeam_api_url)
-        if num_running_containers == 6 and client.is_alive():
+        if num_running_containers == 5 and client.is_alive():
             self.status_label.setText("✅ Status: 100%")
             self.stack_running = True
 
         else:
-            self.status_label.setText(f"❌ Status: {int(num_running_containers/7. * 100)}%")
+            self.status_label.setText(f"❌ Status: {int(num_running_containers/6. * 100)}%")
             self.stack_running = True
