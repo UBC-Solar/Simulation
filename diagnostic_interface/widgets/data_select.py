@@ -133,7 +133,7 @@ class DataSelect(QFormLayout):
             return available_origins, available_sources, available_events, available_data
 
         except requests_exceptions.Timeout as e:
-            QMessageBox.critical(None, "Plotting Error", f"Error fetching Sunbeam files:\n{str(e)}")
+            # QMessageBox.critical(None, "Plotting Error", f"Error fetching Sunbeam files:\n{str(e)}")
             return [], [], [], []
 
     @staticmethod
