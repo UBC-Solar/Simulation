@@ -6,14 +6,23 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 from matplotlib.colors import LinearSegmentedColormap
 
-def plot_mesh(trajectory, mesh, distances, speeds, energies, times, cornering_work, gradients, road_friction_array, drag_forces, g_forces):
+def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, cornering_work, gradients, road_friction_array, drag_forces, g_forces):
+    heat_map_options = {"energy", "speed"}
+    if heat_map not in heat_map_options:
+        raise ValueError("Invalid heatmap option passed to plot_mesh. Muse be either \"energy\" or \"speed\"")
+
+    if heat_map == "energy":
+        plot_value = energies
+    else:
+        plot_value = speeds
+
     map_center = trajectory[0]
     m = folium.Map(location=map_center, zoom_start=15)
 
     m.add_child(MeasureControl()) # adds measurement tool
 
     # Normalize energy values for color mapping
-    norm = mcolors.PowerNorm(gamma=0.15, vmin=min(energies), vmax=max(energies)) # more gamme = more lower energy colors
+    norm = mcolors.PowerNorm(gamma=0.15, vmin=min(plot_value), vmax=max(plot_value)) # more gamme = more lower energy colors
     cmap = cm.get_cmap('plasma')  # Clean, perceptual gradient
     # cmap = cm.get_cmap('turbo')  # Clean, perceptual gradient
     # cmap = LinearSegmentedColormap.from_list("blue_red", ["blue", "red"])
@@ -34,16 +43,13 @@ def plot_mesh(trajectory, mesh, distances, speeds, energies, times, cornering_wo
         # Connect lateral points with a polyline (perpendicular cross-section)
         folium.PolyLine(row, color='gray', weight=1, opacity=0.5).add_to(m)
 
-    # Plot the trajectory (in blue)
-    # folium.PolyLine(trajectory, color='blue', weight=3, opacity=0.2).add_to(m)
-
     # Plot colored line segments between each pair of points
     for i in range(len(trajectory) - 1):
         latlon_start = trajectory[i]
         latlon_end = trajectory[i + 1]
 
         # Average energy between the two points
-        avg_energy = (energies[i] + energies[i + 1]) / 2
+        avg_energy = (plot_value[i] + plot_value[i + 1]) / 2
         rgba = cmap(norm(avg_energy))
         hex_color = mcolors.to_hex(rgba)
 
@@ -57,8 +63,8 @@ def plot_mesh(trajectory, mesh, distances, speeds, energies, times, cornering_wo
     gradients = np.arctan(gradients) * 360
     # attach metadata to chosen points
     for i, (lat, lon) in enumerate(trajectory):
-        energy = energies[i]
-        rgba = cmap(norm(energy))  # RGBA tuple
+        val = plot_value[i]
+        rgba = cmap(norm(val))  # RGBA tuple
         hex_color = mcolors.to_hex(rgba)  # Convert to hex for folium
         metadata = (
             f"<b>General Information</b>"

@@ -1,91 +1,47 @@
 import pathlib
-import warnings
 import numpy as np
 from typing import Optional
-from numpy.typing import NDArray
 from dotenv import load_dotenv
-from simulation.race import Race, Route
+from numpy.typing import NDArray
 from haversine import haversine, Unit
-from simulation.cache import SimulationCache, Cache, RoutePath, RacePath
-from simulation.config import CarConfig, WeatherProvider
-from simulation.query import (
-    TrackRouteQuery,
-    RoadRouteQuery,
-)
+
+from simulation.race import Race, Route
+from simulation.query import TrackRouteQuery, RoadRouteQuery
 from simulation.config import (
-    SimulationHyperparametersConfig,
+    CarConfig,
     EnvironmentConfig,
     InitialConditions,
     CompetitionType,
 )
-
-from physics.models.arrays import BaseArray, BasicArray
-from physics.models.battery import BaseBattery, BasicBattery, BatteryModel
-from physics.models.lvs import BaseLVS, BasicLVS
-from physics.models.motor import BaseMotor, BasicMotor, AdvancedMotor
-from physics.models.regen import BaseRegen, BasicRegen
-from physics.environment.gis import BaseGIS, GIS
-from physics.environment.meteorology import (
-    BaseMeteorology,
-    IrradiantMeteorology,
-    CloudedMeteorology,
-)
-
+from simulation.cache import SimulationCache, Cache, RoutePath, RacePath
+from physics.models.motor import AdvancedMotor
+from physics.environment.gis import GIS
 
 load_dotenv()
 
-
 class MicroModelBuilder:
-    """
-
-    This builder class is used to easily set the parameters and conditions of Simulation.
-
-    """
-
     def __init__(self, cache: Cache = None):
         self._compiled = False
         self._cache: Cache = cache if cache is not None else SimulationCache
 
         self._environment_config: Optional[EnvironmentConfig] = None
-        self._hyperparameter_config: Optional[SimulationHyperparametersConfig] = None
         self._initial_conditions: Optional[InitialConditions] = None
         self._car_config: Optional[CarConfig] = None
 
-        # Components
-        self.array: Optional[BaseArray] = None
-        self.lvs: Optional[BaseLVS] = None
-        self.gis: Optional[BaseGIS] = None
-        self.meteorology: Optional[BaseMeteorology] = None
-        self.motor: Optional[BaseMotor] = None
         self.advanced_motor: Optional[AdvancedMotor] = None
-        self.battery: Optional[BaseBattery] = None
-        self.regen: Optional[BaseRegen] = None
-        self.max_acceleration: Optional[float] = None
-        self.max_deceleration: Optional[float] = None
+        self.gis: Optional[GIS] = None
 
-        # Environment
-        self.race_data: Optional[Race] = None
-        self.route_data: Optional[Route] = None
-        self.weather_forecasts: Optional[NDArray] = None
-        self.origin_coord: Optional[NDArray] = None
-        self.dest_coord: Optional[NDArray] = None
-        self.waypoints: Optional[NDArray] = None
-        self.race_duration: Optional[int] = None
-        self.weather_provider: Optional[WeatherProvider] = None
-
-        # Initial Conditions
-        self.current_coord: Optional[NDArray] = None
-        self.initial_battery_charge: Optional[float] = None
-        self.start_time: Optional[int] = None
-
-        # Flags
         self._rebuild_route_cache: bool = False
-        self._rebuild_weather_cache: bool = False
         self._rebuild_competition_cache: bool = False
+
+        self.origin_coord: Optional[NDArray] = None
+        self.current_coord: Optional[NDArray] = None
+        self.route_data: Optional[Route] = None
+        self.race_data: Optional[Race] = None
+        self.initial_battery_charge: Optional[float] = None
 
     def set_initial_conditions(self, initial_conditions: InitialConditions):
         self._initial_conditions = initial_conditions
-
         return self
 
     def set_environment_config(
@@ -96,250 +52,111 @@ class MicroModelBuilder:
         rebuild_route_cache: bool = False,
     ):
         self._environment_config = environment_config
-        self._rebuild_weather_cache = rebuild_weather_cache
-        self._rebuild_competition_cache = rebuild_competition_cache
         self._rebuild_route_cache = rebuild_route_cache
-
+        self._rebuild_competition_cache = rebuild_competition_cache
         return self
 
     def set_car_config(self, car_config: CarConfig):
         self._car_config = car_config
-
         return self
 
-    def _set_initial_conditions(self):
-        initial_conditions = self._initial_conditions
-
-        self.current_coord = initial_conditions.current_coord
-        self.initial_battery_charge = initial_conditions.initial_battery_soc
-
-    @staticmethod
-    def _truncate_hash(hashed: int, num_chars: int = 12) -> str:
+    def _truncate_hash(self, hashed: int, num_chars: int = 12) -> str:
         return str(hashed)[:num_chars]
 
-    def _set_competition_data(self):
-        competition_config = self._environment_config.competition_config
-
-        competition_hash = MicroModelBuilder._truncate_hash(hash(competition_config))
-        competition_data_path = RacePath / competition_hash
-
-        # Try to find cached race data
-        try:
-            if self._rebuild_competition_cache:
-                raise KeyError()  # Raise a KeyError so that we go to the except block where we rebuild the cache
-
-            race = self._cache.get(competition_data_path)
-        # Generate new race data
-        except KeyError:
-            race = Race(competition_config)
-            self._cache.put(race, competition_data_path)
-
-            print(f"Compiling {race.race_type} race")
-
-        self.race_data = race
-
-    def _set_car(self):
-        pass
-
-    @staticmethod
-    def _calculate_path_distances(coords):
-        """
-
-        Obtain the distance between each coordinate by approximating the spline between them
-        as a straight line, and use the Haversine formula (https://en.wikipedia.org/wiki/Haversine_formula)
-        to calculate distance between coordinates on a sphere.
-
-        :param np.ndarray coords: A NumPy array [n][latitude, longitude]
-        :returns path_distances: a NumPy array [n-1][distances],
-        :rtype: np.ndarray
-
-        """
-
+    def _calculate_path_distances(self, coords):
         coords_offset = np.roll(coords, (1, 1))
-        path_distances = []
-        for u, v in zip(coords, coords_offset):
-            path_distances.append(haversine(u, v, unit=Unit.METERS))
-
+        path_distances = [haversine(u, v, unit=Unit.METERS) for u, v in zip(coords, coords_offset)]
         return np.array(path_distances)
 
-    @staticmethod
-    def _closest_index(target_distance, distances):
+    def _closest_index(self, target_distance, distances):
         return np.argmin(np.abs(distances - target_distance))
 
-    @staticmethod
-    def _calculate_speed_limits(path, speed_limits_per_coordinate) -> np.ndarray:
-        cumulative_path_distances = np.cumsum(
-            MicroModelBuilder._calculate_path_distances(path)
-        )
+    def _calculate_speed_limits(self, path, speed_limits_per_coordinate) -> np.ndarray:
+        cumulative_path_distances = np.cumsum(self._calculate_path_distances(path))
         speed_limits = np.empty([int(cumulative_path_distances[-1]) + 1], dtype=int)
-
         for position in range(int(cumulative_path_distances[-1]) + 1):
-            gis_index = MicroModelBuilder._closest_index(position, cumulative_path_distances)
-            speed_limit = speed_limits_per_coordinate[gis_index]
-            speed_limits[position] = speed_limit
-
+            gis_index = self._closest_index(position, cumulative_path_distances)
+            speed_limits[position] = speed_limits_per_coordinate[gis_index]
         return speed_limits
 
     def _set_route_data(self):
-        competition_config = self._environment_config.competition_config
-        route_hash = MicroModelBuilder._truncate_hash(competition_config.route_hash())
+        config = self._environment_config.competition_config
+        route_hash = self._truncate_hash(config.route_hash())
         route_data_path = RoutePath / route_hash
+        coordinates = config.route_config.coordinates
 
-        coordinates = competition_config.route_config.coordinates
-
-        # Acquire speed limits
         try:
-            speed_limits_per_coordinate: NDArray = self._cache.get(
-                pathlib.Path("route") / "speed_constraints"
-            )
-
+            speed_limits_per_coordinate = self._cache.get(pathlib.Path("route") / "speed_constraints")
         except KeyError:
-            warnings.warn(
-                "Did not find any cached speed constraints at route/speed_constraints! "
-                "Using 1000km/h as a dummy constraint. Please see docs/SPEED_CONSTRAINTS.md"
-            )
-            speed_limits_per_coordinate = np.full(
-                (len(coordinates),), fill_value=1000.0
-            )
+            speed_limits_per_coordinate = np.full((len(coordinates),), fill_value=1000.0)
 
-        speed_limits = MicroModelBuilder._calculate_speed_limits(
-            coordinates, speed_limits_per_coordinate
-        )
+        speed_limits = self._calculate_speed_limits(coordinates, speed_limits_per_coordinate)
 
-        # Try to find cached route data
         try:
             if self._rebuild_route_cache:
-                raise KeyError()  # Raise a KeyError so that we go to the except block where we rebuild the cache
-
+                raise KeyError()
             route: Route = self._cache.get(route_data_path)
-
-        # Generate new route data data
         except KeyError:
-            match competition_config.competition_type:
+            match config.competition_type:
                 case CompetitionType.TrackCompetition:
-                    query = TrackRouteQuery(competition_config)
+                    query = TrackRouteQuery(config)
                 case CompetitionType.RoadCompetition:
-                    query = RoadRouteQuery(competition_config)
+                    query = RoadRouteQuery(config)
                 case _:
-                    raise ValueError(
-                        f"Unknown Competition Type: {competition_config.competition_type}"
-                    )
+                    raise ValueError(f"Unknown Competition Type: {config.competition_type}")
 
-            path_time_zones, path_elevations, coordinates, tiling = query.make()
-
-            route = Route(
-                speed_limits=speed_limits,
-                path_elevations=path_elevations,
-                path_time_zones=path_time_zones,
-                coords=coordinates,
-                tiling=tiling,
-            )
-
+            tz, elev, coords, tiling = query.make()
+            route = Route(speed_limits, elev, tz, coords, tiling)
             self._cache.put(route, route_data_path)
-
-            print(f"Queried route data")
 
         self.route_data = route
         self.origin_coord = route.coords[0]
-        self.dest_coord = route.coords[-1]
-        self.waypoints = route.coords[
-            1:-1
-        ]  # Get all coords between first and last coordinate
+        self.current_coord = self._initial_conditions.current_coord
+
+    def _set_competition_data(self):
+        config = self._environment_config.competition_config
+        competition_hash = self._truncate_hash(hash(config))
+        competition_data_path = RacePath / competition_hash
+
+        try:
+            if self._rebuild_competition_cache:
+                raise KeyError()
+            race = self._cache.get(competition_data_path)
+        except KeyError:
+            race = Race(config)
+            self._cache.put(race, competition_data_path)
+
+        self.race_data = race
 
     def compile(self):
-        if self._environment_config is None:
-            raise RuntimeError(
-                "You are trying to compile before setting environment configuration! Please"
-                "use `set_environment_config` first!"
-            )
+        if not all([self._environment_config, self._initial_conditions, self._car_config]):
+            raise RuntimeError("Missing configuration before compiling")
+
+        self.initial_battery_charge = self._initial_conditions.initial_battery_soc
+
         self._set_route_data()
         self._set_competition_data()
 
-        if self._initial_conditions is None:
-            raise RuntimeError(
-                "You are trying to compile before setting initial conditions! Please"
-                "use `set_initial_conditions` first!"
-            )
-        self._set_initial_conditions()
-
-
-        if self._car_config is None:
-            raise RuntimeError(
-                "You are trying to compile before binding a car configuration! Please"
-                "use `set_car_config` first!"
-            )
-
-        self.max_acceleration = self._car_config.vehicle_config.max_acceleration
-        self.max_deceleration = self._car_config.vehicle_config.max_deceleration
-
-        self.array = BasicArray(**self._car_config.array_config.model_dump())
-
-        # The consumed_energy argument does not do anything, which is why it is set to zero.
-        self.lvs = BasicLVS(0, **self._car_config.lvs_config.model_dump())
-
-        match self._car_config.battery_config.battery_type:
-            case "BasicBattery":
-                arguments = self._car_config.battery_config.model_dump()
-                del arguments["battery_type"]
-
-                self.battery = BasicBattery(self.initial_battery_charge, **arguments)
-
-            case "BatteryModel":
-                self.battery = BatteryModel(
-                    self._car_config.battery_config, self.initial_battery_charge
-                )
-
-        self.motor = BasicMotor(
-            vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
-            **self._car_config.motor_config.model_dump(),
-        )
-
-        self.regen = BasicRegen(self._car_config.vehicle_config.vehicle_mass)
-
-        tiling = self.route_data.tiling
+        route = self.route_data
+        tiling = route.tiling
         route_data = {
-            "path": np.tile(self.route_data.coords, (tiling, 1)),
-            "num_unique_coords": len(self.route_data.coords),
-            "time_zones": np.tile(self.route_data.path_time_zones, tiling),
-            "elevations": np.tile(self.route_data.path_elevations, tiling),
+            "path": np.tile(route.coords, (tiling, 1)),
+            "num_unique_coords": len(route.coords),
+            "time_zones": np.tile(route.path_time_zones, tiling),
+            "elevations": np.tile(route.path_elevations, tiling),
         }
 
         self.gis = GIS(route_data, self.origin_coord, self.current_coord)
 
-        match self.weather_provider:
-            case WeatherProvider.Solcast:
-                self.meteorology = IrradiantMeteorology(
-                    race=self.race_data, weather_forecasts=self.weather_forecasts
-                )
-
-            case WeatherProvider.Openweather:
-                self.meteorology = CloudedMeteorology(
-                    race=self.race_data, weather_forecasts=self.weather_forecasts
-                )
-
         self.advanced_motor = AdvancedMotor(
             vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
-            **self
-            ._car_config.motor_config.model_dump(),
+            **self._car_config.motor_config.model_dump(),
         )
-        self._compiled = True
 
+        self._compiled = True
         return self
 
     def get(self):
-        """
-        Returns a Simulation object if race data matches the model parameters' hash.
-        Compares the hash of race data with model parameters. Raises RaceDataNotMatching if they differ.
-
-        Returns:
-            Simulation: A new Simulation object.
-
-        Raises:
-            RaceDataNotMatching: If hashes do not match.
-        """
         if not self._compiled:
-            raise RuntimeError(
-                "Model has not been compiled! Please use `compile` before trying to get an instance."
-            )
-
+            raise RuntimeError("Model not compiled. Call `compile()` first.")
         return self.advanced_motor, self.gis

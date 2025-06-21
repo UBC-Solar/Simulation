@@ -8,7 +8,6 @@ from data import get_FSGP_trajectory
 from geometry import get_distances
 from plotting import plot_mesh
 from micro_model_builder import MicroModelBuilder
-from genetic_optimizer import MicroSimulationOptimizer
 
 from simulation.config import ConfigDirectory
 from simulation.config import (
@@ -155,7 +154,7 @@ def optimize_trajectory(
         args=(mesh, gradients, motor_model, num_lateral_indices, speed_range),
         strategy="best1bin",
         popsize=15,
-        maxiter=10000,
+        maxiter=20,
         mutation=(0.4, 1.2),
         recombination=0.7,
         tol=0.01,
@@ -173,7 +172,7 @@ def optimize_trajectory(
     return best_path, best_speeds
 
 
-def run_motor_model(speed_kmh, distances_m, trajectory):
+def run_motor_model(speed_kmh, distances_m, trajectory, environment_config):
     num_elements = len(trajectory)
     if len(distances_m) != num_elements:
         raise RuntimeError("All arrays must have the same length.")
@@ -192,8 +191,6 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
     speed_ms_arr = speed_kmh_arr / 3.6
     for index, d in enumerate(distances_m):
         tick_arr[index] = d / speed_ms_arr[index]
-
-    initial_conditions, environment_config, car_config = load_configs()
 
     micro_builder = (
         MicroModelBuilder()
@@ -218,7 +215,9 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
 
 if __name__ == '__main__':
     mesh_branch_length = 2
-    trajectory_FSGP = get_FSGP_trajectory()
+
+    initial_conditions, environment_config, car_config = load_configs()
+    trajectory_FSGP = environment_config.competition_config.route_config.coordinates
     mesh = generate_lateral_mesh(trajectory_FSGP, 2, mesh_branch_length)
     random_trajectory = get_random_trajectory(mesh)
 
@@ -233,10 +232,13 @@ if __name__ == '__main__':
     energy_consumed, cornering_work, road_friction_array, drag_forces, g_forces, ticks, speeds_kmh, gradients, advanced_motor = run_motor_model(
         speed_kmh=50,
         distances_m=distances_m,
-        trajectory=random_trajectory)
+        trajectory=random_trajectory,
+        environment_config=environment_config
+    )
 
 
     folium_map = plot_mesh(
+        "energy",
         random_trajectory,
         mesh,
         distances_m,
@@ -264,9 +266,15 @@ if __name__ == '__main__':
     distances_op = get_distances(random_trajectory)
     distances_m_op = np.array(distances)
 
-    energy_consumed_op, cornering_work_op, road_friction_array_op, drag_forces_op, g_forces_op, ticks_op, speeds_kmh_op, gradients_op, advanced_motor = run_motor_model(optimized_speeds, distances_m, optimized_trajectory)
+    energy_consumed_op, cornering_work_op, road_friction_array_op, drag_forces_op, g_forces_op, ticks_op, speeds_kmh_op, gradients_op, advanced_motor = run_motor_model(
+        optimized_speeds,
+        distances_m,
+        optimized_trajectory,
+        environment_config,
+    )
 
     folium_map_optimized = plot_mesh(
+        "energy",
         optimized_trajectory,
         mesh,
         distances_m_op,
@@ -279,7 +287,23 @@ if __name__ == '__main__':
         drag_forces_op,
         g_forces_op)
 
-    folium_map_optimized.save("optimized_trajectory.html")
+    folium_map_optimized.save("optimized_trajectory_energy.html")
+
+    folium_map_optimized = plot_mesh(
+        "speed",
+        optimized_trajectory,
+        mesh,
+        distances_m_op,
+        speeds_kmh_op,
+        energy_consumed_op,
+        ticks_op,
+        cornering_work_op,
+        gradients_op,
+        road_friction_array_op,
+        drag_forces_op,
+        g_forces_op)
+
+    folium_map_optimized.save("optimized_trajectory_speed.html")
 
     print("____Optimization Results____\n")
     print(f"Total Energy - Random Route:     {np.sum(energy_consumed):.2f} J")
@@ -296,7 +320,7 @@ if __name__ == '__main__':
     seconds = int(elapsed % 60)
     print(f"Optimization Duration:           {minutes} min {seconds} sec")
     print("______________________________\n")
-    #
-    # np.save("optimized_trajectory.npy", np.array(optimized_trajectory))
-    #
+
+    np.save("optimized_trajectory.npy", np.array(optimized_trajectory))
+    np.save("optimized_speeds.npy", np.array(optimized_speeds))
 
