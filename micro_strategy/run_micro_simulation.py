@@ -155,7 +155,7 @@ def optimize_trajectory(
         args=(mesh, gradients, motor_model, num_lateral_indices, speed_range),
         strategy="best1bin",
         popsize=15,
-        maxiter=250,
+        maxiter=10000,
         mutation=(0.4, 1.2),
         recombination=0.7,
         tol=0.01,
@@ -217,7 +217,7 @@ def run_motor_model(speed_kmh, distances_m, trajectory):
 
 
 if __name__ == '__main__':
-    mesh_branch_length = 4
+    mesh_branch_length = 2
     trajectory_FSGP = get_FSGP_trajectory()
     mesh = generate_lateral_mesh(trajectory_FSGP, 2, mesh_branch_length)
     random_trajectory = get_random_trajectory(mesh)
