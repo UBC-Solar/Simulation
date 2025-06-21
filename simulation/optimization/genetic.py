@@ -17,6 +17,7 @@ from simulation.utils import InputBounds
 from simulation.model import Model
 import math
 
+LAPS_PER_INDEX = 10
 
 class OptimizationSettings:
     """
@@ -404,8 +405,8 @@ class GeneticOptimization(BaseOptimization):
         # while having an acceptably low chance of not resulting in a successful simulation.
         max_speed_kmh: int = 40
         min_speed_kmh: int = 0
-        mean_speed = (max_speed_kmh + min_speed_kmh) / 2
-        std_dev = 15  # Spread in the noise
+        mean_speed = 36 # if at this constant speed; get to SOC = 0 at the end of the race
+        std_dev = 4  # Spread in the noise
 
         # Determine the length that our driving speed arrays must be ; we give ourselves a buffer because
         # calculate_driving_speeds requires us to have enough avg speeds to drive during a certain amount of time.
@@ -591,7 +592,7 @@ class DifferentialEvolutionOptimization(BaseOptimization):
         super().__init__(bounds.get_bounds_list(), model.run_model)
         self.model = model
 
-        self.num_genes = math.ceil(model.num_laps / 10)
+        self.num_genes = math.ceil(model.num_laps / LAPS_PER_INDEX)
         self.bounds = bounds.get_bounds_list()
 
         self.strategy = strategy

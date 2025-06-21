@@ -1,7 +1,10 @@
 import math
 import numpy as np
 from numba import jit
+
 from simulation.race import Race
+
+LAPS_PER_INDEX = 10
 
 def _reshape_and_repeat(input_array, reshape_length):
     """
@@ -182,7 +185,8 @@ def reshape_speed_array(
         lap_speeds_ms,
         tick,
         driving_allowed,
-        idle_time
+        idle_time,
+        LAPS_PER_INDEX
     )
     
     speed_kmh = np.array(speed_ms) * (3600/1000) # Transform back to km/hr
