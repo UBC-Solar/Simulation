@@ -1,13 +1,18 @@
-from .timer_widget import TimedWidget
-from .settings_window import SettingsDialog
-from .custom_toolbar import CustomNavigationToolbar
-from .plot_canvas import PlotCanvas
-from .plot_tab import PlotTab
+from .config import settings, command_settings, coords
+from widgets import TimedWidget, DataSelect
+from dialog import SettingsDialog
+from canvas import PlotCanvas, CustomNavigationToolbar
+from tabs import DockerStackTab, PlotTab
 
 __all__ = [
     "TimedWidget",
     "SettingsDialog",
     "CustomNavigationToolbar",
     "PlotCanvas",
-    "PlotTab"
+    "PlotTab",
+    "DataSelect",
+    "DockerStackTab",
+    "settings",
+    "command_settings",
+    "coords"
 ]

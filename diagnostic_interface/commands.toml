@@ -1,0 +1,5 @@
+sunbeam_up_cmd = "wsl bash -lc \"cd ~/sunbeam && docker compose up -d\""
+sunbeam_down_cmd = "wsl bash -lc \"cd ~/sunbeam && docker compose down\""
+sunlink_up_cmd = "docker compose up -d"
+sunlink_down_cmd = "docker compose down"
+telemetry_enable_cmd = "bash -lc 'cd /Users/joshuariefman/Solar/sunlink && source environment/bin/activate && ./link_telemetry.py -r can --debug'"
