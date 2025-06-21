@@ -7,7 +7,7 @@ import string
 
 from simulation.utils.InputBounds import InputBounds
 from simulation.config import speeds_directory
-from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings, DifferentialEvolutionOptimization
+from simulation.optimization.genetic import OptimizationSettings, DifferentialEvolutionOptimization
 from simulation.cmd.run_simulation import build_model, get_default_settings
 from simulation.config import SimulationHyperparametersConfig, SimulationReturnType
 from tqdm import tqdm
@@ -79,7 +79,7 @@ def main(competition_name: str, car_name: str, speed_dt: int):
                 results_genetic = genetic_optimization.maximize(initial_population, pbar)
                 break
 
-            except ValueError as e:
+            except ValueError:
                 initial_population = genetic_optimization.bestinput
                 driving_laps += 20
 

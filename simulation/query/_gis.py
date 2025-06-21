@@ -1,12 +1,10 @@
 import os
 import sys
 import json
-import pytz
 import requests
 import datetime
 import numpy as np
 from tqdm import tqdm
-from timezonefinder import TimezoneFinder
 from simulation.config import CompetitionConfig
 from numpy.typing import NDArray, ArrayLike
 from simulation.query import Query

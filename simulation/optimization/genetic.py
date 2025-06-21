@@ -7,11 +7,9 @@ import csv
 from strenum import StrEnum
 from tqdm import tqdm
 
-from simulation.race import denormalize, normalize, rescale
+from simulation.race import denormalize, normalize
 from simulation.config import ConfigDirectory, SimulationReturnType
 from scipy import optimize
-from simulation.race import denormalize
-from simulation.config import SimulationReturnType
 from simulation.optimization.base_optimization import BaseOptimization
 from simulation.utils import InputBounds
 from simulation.model import Model
