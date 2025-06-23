@@ -1,6 +1,7 @@
 import random
 import string
 import sys
+from tqdm import tqdm
 from typing import Optional, TypedDict
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QProgressBar, QTabWidget, \
     QSizePolicy
@@ -18,7 +19,9 @@ import os
 import tempfile
 from PyQt5.QtCore import QUrl
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 from pathlib import Path
+from simulation.optimization.genetic import OptimizationSettings, DifferentialEvolutionOptimization
 
 my_speeds_dir = Path("prescriptive_interface/speeds_directory")
 my_speeds_dir.mkdir(parents=True, exist_ok=True)  # Create it if it doesn't exist
@@ -92,6 +95,29 @@ class SimulationCanvas(FigureCanvas):
 
         self.fig.canvas.draw_idle()
 
+class SpeedPlotCanvas(FigureCanvas):
+    """Canvas to display the optimized speed graph in the optimization window."""
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.ax = self.fig.add_subplot(111)
+        super().__init__(self.fig)
+        self.setParent(parent)
+
+    def plot_optimized_speeds(self, speeds):
+        """
+        Plot optimized speeds vs laps on the optimization tab.
+
+        :param speeds: The optimized speeds; one per lap.
+        :returns: None
+        """
+        print("CHECK 3")
+        self.ax.clear()
+        self.ax.plot(range(1, len(speeds) + 1), speeds, marker='o')
+        self.ax.set_xlabel("Lap")
+        self.ax.set_ylabel("Speed [km/h]")
+        self.ax.set_title("Optimized Speed vs Lap")
+        self.ax.grid(True)
+        self.draw()
 
 class FoliumMapWidget(QWebEngineView):
     def __init__(self, parent=None):
@@ -182,18 +208,22 @@ class SimulationThread(QThread):
     update_signal = pyqtSignal(str)
     plot_data_signal = pyqtSignal(dict)  # Send multiple plots as a dictionary
 
-    def __init__(self, settings: SimulationSettingsDict, speeds_filename: Optional[str]):
+    def __init__(self, settings: SimulationSettingsDict, speeds_filename: Optional[str], optimized_speeds: Optional[np.ndarray] = None):
         super().__init__()
         self.settings = settings
         self.speeds_filename = speeds_filename
+        self.optimized_speeds = optimized_speeds
 
     def run(self):
         self.update_signal.emit("Starting simulation...")
 
         try:
             # Determine speeds_directory array
-            if self.speeds_filename is None:
-                # Temporary fallback to determine length
+            if self.optimized_speeds is not None:
+                speeds = self.optimized_speeds
+            elif self.speeds_filename is not None:
+                speeds = np.load(my_speeds_dir / (self.speeds_filename + ".npy"))
+            else:
                 dummy_model = run_simulation.run_simulation(
                     competition_name=self.settings["race_type"],
                     plot_results=False,
@@ -203,8 +233,6 @@ class SimulationThread(QThread):
                 )
                 driving_hours = dummy_model.get_driving_time_divisions()
                 speeds = np.array([45] * driving_hours)
-            else:
-                speeds = np.load(my_speeds_dir / (self.speeds_filename + ".npy"))
 
             # Run simulation with updated API
             simulation_model = run_simulation.run_simulation(
@@ -246,7 +274,7 @@ class SimulationThread(QThread):
 class OptimizationThread(QThread):
     update_signal = pyqtSignal(str)
     progress_signal = pyqtSignal(int)
-    model_signal = pyqtSignal(object)  # Emits optimized simulation model
+    model_signal = pyqtSignal(object, object)  # Emits optimized simulation model, speeds
 
     def __init__(self, settings: SimulationSettingsDict):
         super().__init__()
@@ -265,12 +293,17 @@ class OptimizationThread(QThread):
                 car=self.settings["car"]
             )
 
-            driving_hours = base_model.get_driving_time_divisions()
+            driving_laps = base_model.num_laps
+
+            # Bounds
+            maximum_speed = 60
+            minimum_speed = 0
+
             bounds = InputBounds()
-            bounds.add_bounds(driving_hours, 0, 60)
+            bounds.add_bounds(driving_laps, minimum_speed, maximum_speed)
 
             # Initial guess
-            input_speed = np.array([60] * driving_hours)
+            input_speed = np.array([60] * driving_laps)
             base_model.run_model(
                 speed=input_speed,
                 plot_results=False,
@@ -278,22 +311,11 @@ class OptimizationThread(QThread):
                 route_visualization=False
             )
 
-            # optimization_settings = OptimizationSettings()
-            # optimization_settings.generation_limit = 2  # keep it short for testing
-            #
-            # optimizer = GeneticOptimization(
-            #     base_model,
-            #     bounds,
-            #     settings=optimization_settings,
-            #     pbar=None,
-            #     progress_signal=self.progress_signal,
-            #     update_signal=self.update_signal,
-            # )
+            genetic_optimization = DifferentialEvolutionOptimization(base_model, bounds, popsize=6)
+            optimized_speed_array = genetic_optimization.maximize()
 
-            # optimized_speed_array = optimizer.maximize()
-
-            # Randomized speeds_directory for testing the heat map
-            optimized_speed_array = np.random.uniform(low=10, high=80, size=driving_hours)
+            # Randomized speeds_directory for testing the heat map !!! MUST DELETE
+            #optimized_speed_array = np.random.uniform(low=10, high=80, size=driving_laps)
 
             self.progress_signal.emit(100)
 
@@ -311,7 +333,7 @@ class OptimizationThread(QThread):
             filename = self.get_random_string(7) + ".npy"
             np.save(my_speeds_dir / filename, optimized_speed_array)
             self.update_signal.emit(f"Optimization completed successfully! Results saved in: {filename}")
-            self.model_signal.emit(optimized_model)
+            self.model_signal.emit(optimized_model, optimized_speed_array)
 
         except Exception as e:
             self.update_signal.emit(f"Error: {str(e)}")
@@ -377,12 +399,12 @@ class OptimizationTab(QWidget):
         """
         super().__init__()
         self.optimize_callback = optimize_callback
-        self.lap_callback = lap_callback
+        # self.lap_callback = lap_callback
 
         self.optimize_button: Optional[QPushButton] = None
         self.output_text: Optional[QTextEdit] = None
         self.progress_bar: Optional[QProgressBar] = None
-        self.speed_canvas: Optional[FoliumMapWidget] = None
+        self.speed_canvas: Optional[SpeedPlotCanvas] = None
         self.prev_lap_button: Optional[QPushButton] = None
         self.next_lap_button: Optional[QPushButton] = None
 
@@ -403,20 +425,21 @@ class OptimizationTab(QWidget):
         self.progress_bar.setValue(0)
         layout.addWidget(self.progress_bar)
 
-        self.speed_canvas = FoliumMapWidget(self)
+        self.speed_canvas = SpeedPlotCanvas(self)
         self.speed_canvas.setMinimumHeight(500)
         self.speed_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         layout.addWidget(self.speed_canvas)
 
-        self.prev_lap_button = QPushButton("Previous Lap")
-        self.prev_lap_button.clicked.connect(lambda: self.lap_callback("prev"))
+        # No need to have buttons for previous and next lap
+        #self.prev_lap_button = QPushButton("Previous Lap")
+        #self.prev_lap_button.clicked.connect(lambda: self.lap_callback("prev"))
 
-        self.next_lap_button = QPushButton("Next Lap")
-        self.next_lap_button.clicked.connect(lambda: self.lap_callback("next"))
+        #self.next_lap_button = QPushButton("Next Lap")
+        #self.next_lap_button.clicked.connect(lambda: self.lap_callback("next"))
 
         nav_layout = QVBoxLayout()
-        nav_layout.addWidget(self.prev_lap_button)
-        nav_layout.addWidget(self.next_lap_button)
+        #nav_layout.addWidget(self.prev_lap_button)
+        #nav_layout.addWidget(self.next_lap_button)
         layout.addLayout(nav_layout)
 
         self.setLayout(layout)
@@ -511,6 +534,26 @@ class SimulationApp(QWidget):
         """
         self.optimization_tab.speed_canvas.plot_optimized_speeds(model)
 
+    def optimization_plot(self, model, optimized_speeds):
+        """
+        ADD EXPLANATION
+        """
+        self.optimization_tab.speed_canvas.plot_optimized_speeds(optimized_speeds)
+
+        # 2. Store or pass optimized speeds to simulation tab
+        self.optimized_speeds = optimized_speeds  # Keep as an attribute
+
+        # 3. Start simulation with these speeds
+        self.simulation_thread = SimulationThread(self.simulation_settings, speeds_filename=None)
+        self.simulation_thread.update_signal.connect(self.simulation_tab.sim_output_text.append)
+        self.simulation_thread.plot_data_signal.connect(self.simulation_tab.sim_canvas.plot_simulation_results)
+        self.simulation_thread.finished.connect(lambda: self.simulation_tab.start_button.setEnabled(True))
+
+        # Patch in the new speeds directly to the thread (no need to load from file)
+        self.simulation_thread.optimized_speeds = optimized_speeds
+
+        self.simulation_thread.start()
+
     def optimize_simulation(self):
         self.optimization_tab.optimize_button.setEnabled(False)
         self.optimization_tab.output_text.clear()
@@ -519,7 +562,7 @@ class SimulationApp(QWidget):
         self.optimization_thread.update_signal.connect(self.optimization_tab.output_text.append)
         self.optimization_thread.progress_signal.connect(
             lambda value: self.optimization_tab.progress_bar.setValue(value))
-        self.optimization_thread.model_signal.connect(self.optimization_tab.speed_canvas.plot_optimized_speeds)
+        self.optimization_thread.model_signal.connect(self.optimization_plot)
         self.optimization_thread.finished.connect(lambda: self.optimization_tab.optimize_button.setEnabled(True))
 
         self.optimization_thread.start()
