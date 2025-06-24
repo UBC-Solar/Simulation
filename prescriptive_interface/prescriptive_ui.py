@@ -38,7 +38,7 @@ class SimulationCanvas(FigureCanvas):
     """Canvas to display multiple simulation plots dynamically with better formatting."""
 
     def __init__(self, parent=None):
-        self.fig, self.axes = plt.subplots(3, 3, figsize=(16, 12))  # Increased figure size
+        self.fig, self.axes = plt.subplots(2, 3, figsize=(16, 12))  # Increased figure size
         super().__init__(self.fig)
         self.setParent(parent)
         # Create a Matplotlib Canvas
@@ -70,16 +70,14 @@ class SimulationCanvas(FigureCanvas):
        :rtype: None
        """
         self.fig.clear()  # Clear previous plots
-        axes = self.fig.subplots(3, 3)  # Regenerate subplots with better spacing
+        axes = self.fig.subplots(2,3)  # Regenerate subplots with better spacing
         y_labels = {
             "speed_kmh": "Speed (km/h)",
             "distances": "Distance (km)",
             "state_of_charge": "SOC (%)",
             "delta_energy": "Delta Energy (J)",
             "solar_irradiances": "Solar Irradiance (W/m²)",
-            "wind_speeds": "Wind Speed (km/h)",
-            "gis_route_elevations_at_each_tick": "Elevation (m)",
-            "raw_soc": "Raw SOC (%)",
+            "wind_speeds": "Wind Speed (km/h)"
         }
 
         for ax, (label, (timestamps, data)) in zip(axes.flat, results_dict.items()):
@@ -90,7 +88,7 @@ class SimulationCanvas(FigureCanvas):
             ax.set_ylabel(y_labels.get(label, "Value"), fontsize=10, fontweight='normal', labelpad=5)
 
         # Adjust subplot spacing to avoid overlap
-        self.fig.tight_layout(pad=8.0)
+        self.fig.tight_layout(pad=2.0)
         self.fig.subplots_adjust(hspace=0.4, wspace=0.3)  # Add horizontal & vertical spacing
 
         self.fig.canvas.draw_idle()
@@ -264,8 +262,7 @@ class SimulationThread(QThread):
 
             # Extract multiple data series
             results_keys = ["timestamps", "speed_kmh", "distances", "state_of_charge",
-                            "delta_energy", "solar_irradiances", "wind_speeds",
-                            "gis_route_elevations_at_each_tick", "raw_soc"]
+                            "delta_energy", "solar_irradiances", "wind_speeds"] # !!! changed to get rid of bottom 3 things
             results_values = simulation_model.get_results(results_keys)
             results_dict = {key: (results_values[0], values) for key, values in
                             zip(results_keys[1:], results_values[1:])}
