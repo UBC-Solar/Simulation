@@ -3,6 +3,7 @@ from .timer_widget import TimedWidget
 from .docker_log_widget import DockerLogWidget
 from .command_output import CommandOutputWidget
 from .map_widget import FoliumMapWidget
+from .realtime_map_widget import RealtimeMapWidget
 
 __all__ = [
     "DataSelect",
@@ -10,5 +11,6 @@ __all__ = [
     "DockerLogWidget",
     "CommandOutputWidget",
     "FoliumMapWidget",
-    "CommandOutputWidget"
+    "CommandOutputWidget",
+    "RealtimeMapWidget"
 ]

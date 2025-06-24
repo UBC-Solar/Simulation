@@ -2,12 +2,13 @@ import traceback
 from data_tools.query import SunbeamClient
 from data_tools.schema import UnwrappedError
 from PyQt5.QtWidgets import QMessageBox, QPushButton, QLabel
-from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot
-from diagnostic_interface import settings, coords
+from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot, QTime, QDate, QDateTime
+from diagnostic_interface import settings
 from diagnostic_interface.canvas import CustomNavigationToolbar, RealtimeCanvas
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
-from diagnostic_interface.widgets import FoliumMapWidget
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTimeEdit
+from diagnostic_interface.widgets import RealtimeMapWidget
 import numpy as np
+from data_tools.collections import TimeSeries
 
 
 class PlotRefreshWorkerSignals(QObject):
@@ -29,10 +30,10 @@ class PlotRefreshWorker(QRunnable):
 
             motor_power = self.power_canvas.fetch_data()
 
-            gis_indices = client.get_file(pipeline, event, "localization", "TrackIndex")
-            lap_numbers = client.get_file(pipeline, event, "localization", "LapIndex")
+            gps_longitude = client.get_file(pipeline, event, "localization", "GPSLongitude")
+            gps_latitude = client.get_file(pipeline, event, "localization", "GPSLatitude")
 
-            self.signals.data_ready.emit(motor_power, gis_indices, lap_numbers)
+            self.signals.data_ready.emit(motor_power, gps_longitude, gps_latitude)
 
         except Exception as e:
             print(e)
@@ -57,7 +58,7 @@ class PowerTab(QWidget):
 
         self.map_widget_layout = QVBoxLayout()
 
-        self.map_widget = FoliumMapWidget(coords)
+        self.map_widget = RealtimeMapWidget(15.5 if "FSGP" in settings.realtime_event else 17.5)
         self.map_widget_layout.addWidget(self.map_widget, stretch=5)
 
         self.map_button_layout = QHBoxLayout()
@@ -72,16 +73,28 @@ class PowerTab(QWidget):
         self.map_panel_layout.addLayout(self.map_widget_layout, stretch=4)
 
         self.map_text_layout = QVBoxLayout()
-        self.map_text_1 = QLabel("Current Lap: ?")
-        self.map_text_2 = QLabel("Maximum Laps: ?")
-        self.map_text_3 = QLabel("Total Energy: ?")
 
-        self.map_text_1.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
-        self.map_text_2.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
+        # Time-begin editor
+        self.time_begin = QTimeEdit()
+        self.time_begin.setDisplayFormat("HH:mm:ss")
+        self.time_begin.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
+        self.time_begin.timeChanged.connect(self.on_time_begin_changed)
+        self.time_begin.setKeyboardTracking(False)
+
+        # Time-end editor
+        self.time_end = QTimeEdit()
+        self.time_end.setDisplayFormat("HH:mm:ss")
+        self.time_end.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
+        self.time_end.timeChanged.connect(self.on_time_end_changed)
+        self.time_end.setKeyboardTracking(False)
+
+        # Total energy stays a label
+        self.map_text_3 = QLabel("Total Energy: ?")
         self.map_text_3.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
 
-        self.map_text_layout.addWidget(self.map_text_1)
-        self.map_text_layout.addWidget(self.map_text_2)
+        # pack them into the layout
+        self.map_text_layout.addWidget(self.time_begin)
+        self.map_text_layout.addWidget(self.time_end)
         self.map_text_layout.addWidget(self.map_text_3)
         self.map_panel_layout.addLayout(self.map_text_layout, stretch=1)
 
@@ -102,29 +115,83 @@ class PowerTab(QWidget):
         self.lap_indices = None
         self.motor_power = None
         self.max_laps = None
-        self.current_lap_number = 0
+        self.start_time = None
+        self.end_time = None
+        self.current_lap_number = 36
+        self.time_difference = 60
+        self.date = None
+
+    def on_time_begin_changed(self, new_time: QTime):
+        self.start_time = new_time
+        self.draw_map()
+
+    def on_time_end_changed(self, new_time: QTime):
+        self.end_time = new_time
+        self.draw_map()
 
     def next_lap(self):
-        if self.max_laps is None:
+        start = self.time_begin.time()
+        end = self.time_end.time()
+        diff = start.secsTo(end)
+
+        if diff <= 0:
+            QMessageBox.warning(self, "Invalid Interval",
+                                "Cannot advance when end ≤ start.")
             return
 
-        if not self.current_lap_number + 1 > self.max_laps:
-            self.current_lap_number += 1
-            self.draw_map()
+        new_start = end
+        new_end = end.addSecs(diff)
 
-        else:
-            QMessageBox.warning(None, "Lap Error", f"There is no lap available after {self.max_laps}.")
+        # ensure still within the allowed window
+        if new_start < self.minimum_time or new_end > self.maximum_time:
+            QMessageBox.warning(self, "Out of Range",
+                                f"Advancing by {diff}s would exceed allowed times "
+                                f"({self.minimum_time.toString()}–{self.maximum_time.toString()}).")
+            return
+
+        # apply without firing intermediate recalcs
+        self.time_begin.blockSignals(True)
+        self.time_end.blockSignals(True)
+
+        self.time_begin.setTime(new_start)
+        self.time_end.setTime(new_end)
+
+        self.time_begin.blockSignals(False)
+        self.time_end.blockSignals(False)
+
+        self.draw_map()
 
     def prev_lap(self):
-        if self.max_laps is None:
+        start = self.time_begin.time()
+        end = self.time_end.time()
+        diff = -start.secsTo(end)
+
+        if diff >= 0:
+            QMessageBox.warning(self, "Invalid Interval",
+                                "Cannot advance when end ≤ start.")
             return
 
-        if not self.current_lap_number < 1:
-            self.current_lap_number -= 1
-            self.draw_map()
+        new_start = start.addSecs(diff)
+        new_end = start
 
-        else:
-            QMessageBox.warning(None, "Lap Error", "There is no lap available before 0.")
+        # ensure still within the allowed window
+        if new_start < self.minimum_time or new_end > self.maximum_time:
+            QMessageBox.warning(self, "Out of Range",
+                                f"Advancing by {diff}s would exceed allowed times "
+                                f"({self.minimum_time.toString()}–{self.maximum_time.toString()}).")
+            return
+
+        # apply without firing intermediate recalcs
+        self.time_begin.blockSignals(True)
+        self.time_end.blockSignals(True)
+
+        self.time_begin.setTime(new_start)
+        self.time_end.setTime(new_end)
+
+        self.time_begin.blockSignals(False)
+        self.time_end.blockSignals(False)
+
+        self.draw_map()
 
     def refresh_plot(self):
         worker = PlotRefreshWorker(self.power_canvas)
@@ -142,48 +209,99 @@ class PowerTab(QWidget):
             self.timer.stop()
 
     def draw_map(self):
-        if (self.lap_indices is None) or (self.motor_power is None) or (self.gis_indices is None):
-            return
+        if (self.motor_power is not None) and (self.gps_longitude is not None) and (self.gps_latitude is not None) and (self.start_time is not None) and (self.end_time is not None) and (self.date is not None):
+            current_lap_time = QDateTime(self.date, self.time_end.time()).toPyDateTime()
+            previous_lap_time = QDateTime(self.date, self.time_begin.time()).toPyDateTime()
 
-        current_lap_mask = self.lap_indices == self.current_lap_number
-
-        energy = np.empty(len(coords), dtype=float)
-
-        for i in range(len(coords)):
-            current_gis_indices = np.logical_and(self.gis_indices == i, current_lap_mask)
-            energy_used = np.sum(self.motor_power[current_gis_indices] * self.motor_power.period, axis=0)
-
-            energy[i] = energy_used
-
-        self.map_widget.update_map(energy, "J")
-        self.map_text_1.setText(f"Current Lap: {self.current_lap_number}")
-        self.map_text_2.setText(f"Maximum Laps: {self.max_laps}")
-        self.map_text_3.setText(f"Total Energy: {np.sum(energy) / 1e3:.1f} kJ")
-
-    @pyqtSlot(object, object, object)
-    def _on_data_ready(self, motor_power, gis_indices_result, lap_numbers_result):
-        try:
-            self.motor_power = motor_power
-            self.power_canvas.plot(motor_power, "Motor Power", "Power (W)")
+            current_lap_time_relative = current_lap_time.timestamp() - self.initial_time.timestamp()
+            previous_lap_time_relative = previous_lap_time.timestamp() - self.initial_time.timestamp()
 
             try:
+                current_index = self.gps_latitude.index_of(current_lap_time_relative)
+            except ValueError:
+                return
 
-                self.gis_indices = gis_indices_result.unwrap().data
-                self.lap_indices = lap_numbers_result.unwrap().data
-                self.max_laps = int(np.nanmax(self.lap_indices))
+            try:
+                previous_index = self.gps_latitude.index_of(previous_lap_time_relative)
+            except ValueError:
+                previous_index = 0
 
-                if self.max_laps is None:
-                    draw_map = True
-                else:
-                    draw_map = False
+            latitudes = self.gps_latitude[previous_index:current_index]
+            longitudes = -self.gps_longitude[previous_index:current_index]
+            power = self.motor_power[previous_index:current_index]
 
-                if draw_map:
+            energy = power * power.period
+
+            try:
+                self.map_widget.update_map(energy, latitudes=latitudes, longitudes=longitudes, units="J", map_centroid=self.map_centroid)
+            except ValueError:
+                return
+
+            self.map_text_3.setText(f"Total Energy: {np.sum(energy) / 1e3:.1f} kJ")
+
+    @pyqtSlot(object, object, object)
+    def _on_data_ready(self, motor_power, gps_longitude_result, gps_latitude_result):
+        try:
+            self.motor_power = motor_power
+
+            try:
+                gps_longitude_unaligned: TimeSeries = gps_longitude_result.unwrap().data
+                gps_latitude_unaligned: TimeSeries = gps_latitude_result.unwrap().data
+
+                tzinfo: TimeSeries = motor_power._start.tzinfo
+
+                print(f"Motor Power tzinfo: {tzinfo}")
+
+                gps_longitude_unaligned._stop = gps_longitude_unaligned._stop.replace(tzinfo=tzinfo)
+                gps_latitude_unaligned._stop = gps_latitude_unaligned._stop.replace(tzinfo=tzinfo)
+                gps_longitude_unaligned._start = gps_longitude_unaligned._start.replace(tzinfo=tzinfo)
+                gps_latitude_unaligned._start = gps_latitude_unaligned._start.replace(tzinfo=tzinfo)
+
+                self.gps_longitude, self.gps_latitude, self.motor_power = TimeSeries.align(gps_longitude_unaligned,
+                                                                                              gps_latitude_unaligned,
+                                                                                              self.motor_power)
+
+                self.map_centroid = [np.mean(self.gps_latitude), -np.mean(self.gps_longitude)]
+
+                self.gps_longitude._stop = self.gps_longitude._stop.replace(tzinfo=tzinfo)
+                self.gps_latitude._stop = self.gps_latitude._stop.replace(tzinfo=tzinfo)
+                self.gps_longitude._start = self.gps_longitude._start.replace(tzinfo=tzinfo)
+                self.gps_latitude._stop = self.gps_latitude._stop.replace(tzinfo=tzinfo)
+
+                self.initial_time = self.gps_longitude.datetime_x_axis[0]
+
+                self.maximum_time = QTime(self.gps_longitude._stop.hour, self.gps_longitude._stop.minute, self.gps_longitude._stop.second)
+                self.minimum_time = QTime(self.gps_longitude._start.hour, self.gps_longitude._start.minute, self.gps_longitude._start.second)
+
+                self.time_begin.setMinimumTime(self.minimum_time)
+                self.time_begin.setMaximumTime(self.maximum_time)
+                #
+                # self.time_end.setMinimumTime(self.minimum_time)
+                self.time_end.setMaximumTime(self.maximum_time)
+
+                self.date = QDate(self.gps_longitude._start.year, self.gps_longitude._start.month, self.gps_longitude._start.day)
+
+                if self.start_time is None or self.end_time is None:
+                    self.start_time = self.minimum_time
+                    self.end_time = self.minimum_time.addSecs(60)
+
+                    self.time_begin.blockSignals(True)
+                    self.time_end.blockSignals(True)
+
+                    self.time_begin.setTime(self.minimum_time)
+                    self.time_end.setTime(self.minimum_time.addSecs(60))
+
+                    self.time_begin.blockSignals(False)
+                    self.time_end.blockSignals(False)
+
                     self.draw_map()
 
             except UnwrappedError:
-                self.gis_indices = None
-                self.lap_indices = None
-                self.max_laps = None
+                self.gps_longitude = None
+                self.gps_latitude = None
+                self.gps_indices = None
+
+            self.power_canvas.plot(self.motor_power, "Motor Power", "Power (W)")
 
         except UnwrappedError as e:
             traceback.print_exc()

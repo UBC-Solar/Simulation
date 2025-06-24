@@ -36,6 +36,7 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(self.tabs)
         home_widget = QWidget()
+
         layout = QVBoxLayout()
 
         self.client = SunbeamClient(settings.sunbeam_api_url)
