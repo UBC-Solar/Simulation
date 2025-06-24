@@ -22,10 +22,10 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from pathlib import Path
 from simulation.optimization.genetic import OptimizationSettings, DifferentialEvolutionOptimization
+import mplcursors
 
 my_speeds_dir = Path("prescriptive_interface/speeds_directory")
 my_speeds_dir.mkdir(parents=True, exist_ok=True)  # Create it if it doesn't exist
-
 
 class SimulationSettingsDict(TypedDict):
     race_type: str
@@ -103,21 +103,39 @@ class SpeedPlotCanvas(FigureCanvas):
         super().__init__(self.fig)
         self.setParent(parent)
 
-    def plot_optimized_speeds(self, speeds):
+    def plot_optimized_speeds(self, speeds, laps_per_index):
         """
         Plot optimized speeds vs laps on the optimization tab.
 
         :param speeds: The optimized speeds; one per lap.
         :returns: None
         """
-        print("CHECK 3")
         self.ax.clear()
-        self.ax.plot(range(1, len(speeds) + 1), speeds, marker='o')
+
+        y = [speed for speed in speeds for _ in range(laps_per_index)] # Make sure that speeds repeat for a certain number of laps
+        x = range(1, len(y) + 1)
+
+        [self.line] = self.ax.plot(x, y, marker='o')
+
         self.ax.set_xlabel("Lap")
         self.ax.set_ylabel("Speed [km/h]")
         self.ax.set_title("Optimized Speed vs Lap")
         self.ax.grid(True)
         self.draw()
+
+        # Adding tooltips on hover
+        cursor = mplcursors.cursor(self.line, hover=True)
+
+        @cursor.connect("add")
+        def _(sel):
+            x, y = sel.target
+            sel.annotation.set_text(f"{y:.2f} km/h at lap {int(x)}")
+
+            bbox = sel.annotation.get_bbox_patch()
+            bbox.set_facecolor("white")
+            bbox.set_edgecolor("black")
+            bbox.set_alpha(0.8)
+            bbox.set_boxstyle("round,pad=0.3")
 
 class FoliumMapWidget(QWebEngineView):
     def __init__(self, parent=None):
@@ -274,7 +292,7 @@ class SimulationThread(QThread):
 class OptimizationThread(QThread):
     update_signal = pyqtSignal(str)
     progress_signal = pyqtSignal(int)
-    model_signal = pyqtSignal(object, object)  # Emits optimized simulation model, speeds
+    model_signal = pyqtSignal(object, object, int)  # Emits optimized simulation model, speeds
 
     def __init__(self, settings: SimulationSettingsDict):
         super().__init__()
@@ -313,6 +331,7 @@ class OptimizationThread(QThread):
 
             genetic_optimization = DifferentialEvolutionOptimization(base_model, bounds, popsize=6)
             optimized_speed_array = genetic_optimization.maximize()
+            laps_per_index = int(driving_laps / genetic_optimization.num_genes) # Each speed in the above array is used for this many laps
 
             # Randomized speeds_directory for testing the heat map !!! MUST DELETE
             #optimized_speed_array = np.random.uniform(low=10, high=80, size=driving_laps)
@@ -333,7 +352,7 @@ class OptimizationThread(QThread):
             filename = self.get_random_string(7) + ".npy"
             np.save(my_speeds_dir / filename, optimized_speed_array)
             self.update_signal.emit(f"Optimization completed successfully! Results saved in: {filename}")
-            self.model_signal.emit(optimized_model, optimized_speed_array)
+            self.model_signal.emit(optimized_model, optimized_speed_array, laps_per_index) # !!!
 
         except Exception as e:
             self.update_signal.emit(f"Error: {str(e)}")
@@ -534,22 +553,26 @@ class SimulationApp(QWidget):
         """
         self.optimization_tab.speed_canvas.plot_optimized_speeds(model)
 
-    def optimization_plot(self, model, optimized_speeds):
+    def optimization_plot(self, model, optimized_speeds, laps_per_index):
         """
-        ADD EXPLANATION
-        """
-        self.optimization_tab.speed_canvas.plot_optimized_speeds(optimized_speeds)
+        Plots optimized speeds on optimization tab. It will then run the simulation with the optimized
+        speeds, and display the results in the optimization tab.
 
-        # 2. Store or pass optimized speeds to simulation tab
+        :param model: Optimized simulation model.
+        :param optimized_speeds: Array of optimized speeds.
+        """
+        self.optimization_tab.speed_canvas.plot_optimized_speeds(optimized_speeds, laps_per_index)
+
+        # Store optimized speeds
         self.optimized_speeds = optimized_speeds  # Keep as an attribute
 
-        # 3. Start simulation with these speeds
+        # Run simulation with optimized speeds
         self.simulation_thread = SimulationThread(self.simulation_settings, speeds_filename=None)
         self.simulation_thread.update_signal.connect(self.simulation_tab.sim_output_text.append)
         self.simulation_thread.plot_data_signal.connect(self.simulation_tab.sim_canvas.plot_simulation_results)
         self.simulation_thread.finished.connect(lambda: self.simulation_tab.start_button.setEnabled(True))
 
-        # Patch in the new speeds directly to the thread (no need to load from file)
+        # Simulation tab will now have the results using the optimized speeds
         self.simulation_thread.optimized_speeds = optimized_speeds
 
         self.simulation_thread.start()
@@ -569,7 +592,6 @@ class SimulationApp(QWidget):
 
     def update_output(self, message):
         self.output_text.append(message)
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

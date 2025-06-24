@@ -269,6 +269,10 @@ class ModelBuilder:
 
             route: Route = self._cache.get(route_data_path)
 
+            if hasattr(competition_config, "tiling"):
+                if route.tiling != competition_config.tiling:
+                    raise KeyError
+
         # Generate new route data data
         except KeyError:
             match competition_config.competition_type:

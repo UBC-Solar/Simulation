@@ -631,7 +631,7 @@ class DifferentialEvolutionOptimization(BaseOptimization):
                 bounds=bounds,
                 # strategy=self.strategy,
                 init=initial_population,
-                maxiter=100,
+                maxiter=10, # normally 100
                 popsize=self.popsize,
                 tol=self.tol,
                 # mutation=self.mutation,
