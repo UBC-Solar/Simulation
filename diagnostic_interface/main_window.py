@@ -13,7 +13,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
 from diagnostic_interface.widgets import DataSelect
-from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab, SOCTab, PowerTab, WeatherTab
+from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab, SOCTab, PowerTab, WeatherTab, SpeedTab, ArrayTab
 from diagnostic_interface.dialog import SettingsDialog
 from diagnostic_interface import settings
 
@@ -87,6 +87,12 @@ class MainWindow(QMainWindow):
 
         self.weather_tab = WeatherTab()
         self.tabs.addTab(self.weather_tab, "Weather")
+
+        self.speed_tab = SpeedTab()
+        self.tabs.addTab(self.speed_tab, "Speed")
+
+        self.array_tab = ArrayTab()
+        self.tabs.addTab(self.array_tab, "Array")
 
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.
