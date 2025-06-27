@@ -34,6 +34,8 @@ class SimulationSettingsDict(TypedDict):
     car: str
 
 class SettingsDialog(QDialog):
+    """Settings tab where the user can change the population size and number of iterations of the optimization."""
+
     def __init__(self, popsize, maxiter, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Optimization Settings")
@@ -172,9 +174,8 @@ class SpeedPlotCanvas(FigureCanvas):
 
     def open_settings(self):
         """
-        Opens a settings menu that allows you to change the popsize and generation limit of the optimization.
+        Opens a settings menu that allows you to change the population size and generation limit of the optimization.
         """
-        print(f"Opened settings! with {self.popsize} population and {self.maxiter} iterations")
         dialog = SettingsDialog(self.popsize, self.maxiter)
         if dialog.exec_() == QDialog.Accepted:
             popsize, maxiter = dialog.get_values()
@@ -508,7 +509,7 @@ class OptimizationTab(QWidget):
         #self.next_lap_button.clicked.connect(lambda: self.lap_callback("next"))
 
         self.settings_button = QPushButton("Settings")
-        self.settings_button.clicked.connect(self.settings_callback) # !!!
+        self.settings_button.clicked.connect(self.settings_callback)
 
         nav_layout = QVBoxLayout()
         nav_layout.addWidget(self.settings_button)
@@ -643,9 +644,8 @@ class SimulationApp(QWidget):
         self.optimization_tab.optimize_button.setEnabled(False)
         self.optimization_tab.output_text.clear()
 
-        # !!! error here
-        popsize = self.optimization_tab.speed_canvas.popsize
-        maxiter = self.optimization_tab.speed_canvas.maxiter
+        popsize = self.optimization_tab.speed_canvas.popsize # Population size for optimization
+        maxiter = self.optimization_tab.speed_canvas.maxiter # Number of iterations for optimization
         self.optimization_thread = OptimizationThread(self.simulation_settings, popsize, maxiter)
         self.optimization_thread.update_signal.connect(self.optimization_tab.output_text.append)
         self.optimization_thread.progress_signal.connect(
