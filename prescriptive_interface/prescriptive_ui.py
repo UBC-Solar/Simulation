@@ -643,7 +643,10 @@ class SimulationApp(QWidget):
         self.optimization_tab.optimize_button.setEnabled(False)
         self.optimization_tab.output_text.clear()
 
-        self.optimization_thread = OptimizationThread(self.simulation_settings, self.popsize, self.maxiter)
+        # !!! error here
+        popsize = self.optimization_tab.speed_canvas.popsize
+        maxiter = self.optimization_tab.speed_canvas.maxiter
+        self.optimization_thread = OptimizationThread(self.simulation_settings, popsize, maxiter)
         self.optimization_thread.update_signal.connect(self.optimization_tab.output_text.append)
         self.optimization_thread.progress_signal.connect(
             lambda value: self.optimization_tab.progress_bar.setValue(value))
