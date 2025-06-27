@@ -4,7 +4,7 @@ import sys
 from tqdm import tqdm
 from typing import Optional, TypedDict
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QProgressBar, QTabWidget, \
-    QSizePolicy
+    QSizePolicy, QDialog, QFormLayout, QLineEdit, QDialogButtonBox
 from PyQt5.QtCore import QThread, pyqtSignal, QSize
 from simulation.cmd import run_simulation
 from simulation.utils import InputBounds
@@ -32,6 +32,39 @@ class SimulationSettingsDict(TypedDict):
     verbose: bool
     granularity: int
     car: str
+
+class SettingsDialog(QDialog):
+    def __init__(self, popsize, maxiter, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Optimization Settings")
+
+        # Create layout
+        layout = QVBoxLayout()
+        form_layout = QFormLayout()
+
+        self.popsize_input = QLineEdit(str(popsize))
+        self.maxiter_input = QLineEdit(str(maxiter))
+
+        form_layout.addRow("Population Size:", self.popsize_input)
+        form_layout.addRow("Generation Limit:", self.maxiter_input)
+
+        layout.addLayout(form_layout)
+
+        # Add OK/Cancel buttons
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        layout.addWidget(self.buttons)
+
+        self.setLayout(layout)
+
+    def get_values(self):
+        try:
+            popsize = int(self.popsize_input.text())
+            maxiter = int(self.maxiter_input.text())
+            return popsize, maxiter
+        except ValueError:
+            return None, None
 
 
 class SimulationCanvas(FigureCanvas):
@@ -100,6 +133,8 @@ class SpeedPlotCanvas(FigureCanvas):
         self.ax = self.fig.add_subplot(111)
         super().__init__(self.fig)
         self.setParent(parent)
+        self.popsize = 6  # default population size
+        self.maxiter = 100  # default number of iterations
 
     def plot_optimized_speeds(self, speeds, laps_per_index):
         """
@@ -134,6 +169,21 @@ class SpeedPlotCanvas(FigureCanvas):
             bbox.set_edgecolor("black")
             bbox.set_alpha(0.8)
             bbox.set_boxstyle("round,pad=0.3")
+
+    def open_settings(self):
+        """
+        Opens a settings menu that allows you to change the popsize and generation limit of the optimization.
+        """
+        print(f"Opened settings! with {self.popsize} population and {self.maxiter} iterations")
+        dialog = SettingsDialog(self.popsize, self.maxiter)
+        if dialog.exec_() == QDialog.Accepted:
+            popsize, maxiter = dialog.get_values()
+            if popsize and maxiter:
+                self.popsize = popsize
+                self.maxiter = maxiter
+                print(f"Updated settings: popsize={popsize}, maxiter={maxiter}")
+            else:
+                print("Invalid input.")
 
 class FoliumMapWidget(QWebEngineView):
     def __init__(self, parent=None):
@@ -291,9 +341,11 @@ class OptimizationThread(QThread):
     progress_signal = pyqtSignal(int)
     model_signal = pyqtSignal(object, object, int)  # Emits optimized simulation model, speeds
 
-    def __init__(self, settings: SimulationSettingsDict):
+    def __init__(self, settings: SimulationSettingsDict, popsize: int, maxiter: int):
         super().__init__()
         self.settings = settings
+        self.popsize = popsize
+        self.maxiter = maxiter
 
     def run(self):
         self.update_signal.emit("Starting optimization...")
@@ -326,7 +378,7 @@ class OptimizationThread(QThread):
                 route_visualization=False
             )
 
-            genetic_optimization = DifferentialEvolutionOptimization(base_model, bounds, popsize=6)
+            genetic_optimization = DifferentialEvolutionOptimization(base_model, bounds, maxiter = self.maxiter, popsize=self.popsize)
             optimized_speed_array = genetic_optimization.maximize()
             laps_per_index = int(driving_laps / genetic_optimization.num_genes) # Each speed in the above array is used for this many laps
 
@@ -399,7 +451,7 @@ class SimulationTab(QWidget):
 
 
 class OptimizationTab(QWidget):
-    def __init__(self, optimize_callback, lap_callback):
+    def __init__(self, optimize_callback, lap_callback, settings_callback):
         """
         Initialize the OptimizationTab widget.
 
@@ -415,12 +467,14 @@ class OptimizationTab(QWidget):
         """
         super().__init__()
         self.optimize_callback = optimize_callback
+        self.settings_callback = settings_callback
         # self.lap_callback = lap_callback
 
         self.optimize_button: Optional[QPushButton] = None
         self.output_text: Optional[QTextEdit] = None
         self.progress_bar: Optional[QProgressBar] = None
         self.speed_canvas: Optional[SpeedPlotCanvas] = None
+        self.settings_button: Optional[QPushButton] = None
         self.prev_lap_button: Optional[QPushButton] = None
         self.next_lap_button: Optional[QPushButton] = None
 
@@ -453,7 +507,11 @@ class OptimizationTab(QWidget):
         #self.next_lap_button = QPushButton("Next Lap")
         #self.next_lap_button.clicked.connect(lambda: self.lap_callback("next"))
 
+        self.settings_button = QPushButton("Settings")
+        self.settings_button.clicked.connect(self.settings_callback) # !!!
+
         nav_layout = QVBoxLayout()
+        nav_layout.addWidget(self.settings_button)
         #nav_layout.addWidget(self.prev_lap_button)
         #nav_layout.addWidget(self.next_lap_button)
         layout.addLayout(nav_layout)
@@ -494,6 +552,12 @@ class SimulationApp(QWidget):
         """
         self.optimization_tab.speed_canvas.update_lap(direction)
 
+    def open_settings(self):
+        """
+        Allows you to change the settings of the optimization.
+        """
+        self.optimization_tab.speed_canvas.open_settings()
+
     def init_ui(self):
         layout = QVBoxLayout()
         self.tabs = QTabWidget()
@@ -501,7 +565,8 @@ class SimulationApp(QWidget):
         self.simulation_tab = SimulationTab(run_callback=self.run_simulation)
         self.optimization_tab = OptimizationTab(
             optimize_callback=self.optimize_simulation,
-            lap_callback=self.update_lap
+            lap_callback=self.update_lap,
+            settings_callback = self.open_settings
         )
 
         self.tabs.addTab(self.simulation_tab, "Run Simulation")
@@ -578,7 +643,7 @@ class SimulationApp(QWidget):
         self.optimization_tab.optimize_button.setEnabled(False)
         self.optimization_tab.output_text.clear()
 
-        self.optimization_thread = OptimizationThread(self.simulation_settings)
+        self.optimization_thread = OptimizationThread(self.simulation_settings, self.popsize, self.maxiter)
         self.optimization_thread.update_signal.connect(self.optimization_tab.output_text.append)
         self.optimization_thread.progress_signal.connect(
             lambda value: self.optimization_tab.progress_bar.setValue(value))

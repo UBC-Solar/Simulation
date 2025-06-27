@@ -624,14 +624,14 @@ class DifferentialEvolutionOptimization(BaseOptimization):
             self.bestinput = intermediate_result.x
 
         bounds = [(0, 1)] * self.num_genes
-
+        # !!! Must change this so it is possible to change maxiter and posize in prescriptive ui
         try:
             result = optimize.differential_evolution(
                 func=self._objective,
                 bounds=bounds,
                 # strategy=self.strategy,
                 init=initial_population,
-                maxiter=10, # normally 100
+                maxiter=self.maxiter,
                 popsize=self.popsize,
                 tol=self.tol,
                 # mutation=self.mutation,
