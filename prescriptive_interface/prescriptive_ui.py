@@ -20,7 +20,7 @@ from PyQt5.QtCore import QUrl
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from pathlib import Path
 
-my_speeds_dir = Path("prescriptive_interface/speeds")
+my_speeds_dir = Path("prescriptive_interface/speeds_directory")
 my_speeds_dir.mkdir(parents=True, exist_ok=True)  # Create it if it doesn't exist
 
 

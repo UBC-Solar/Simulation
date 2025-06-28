@@ -1,22 +1,21 @@
 import json
 
 import numpy as np
-import zipfile
 import pygad
 import sys
 import csv
-import os
-
 from strenum import StrEnum
 from tqdm import tqdm
 
-from simulation.cache.optimization_population import population_directory
-from simulation.optimization.base_optimization import BaseOptimization
-from simulation.race import denormalize, normalize, rescale
+from simulation.race import denormalize, normalize
 from simulation.config import ConfigDirectory, SimulationReturnType
+from scipy import optimize
+from simulation.optimization.base_optimization import BaseOptimization
 from simulation.utils import InputBounds
 from simulation.model import Model
+import math
 
+LAPS_PER_INDEX = 10
 
 class OptimizationSettings:
     """
@@ -53,10 +52,10 @@ class OptimizationSettings:
             reach = "reach"
 
         def __init__(
-            self,
-            criteria: Criteria_Type = Criteria_Type.saturate,
-            value: int = 10,
-            string: str = None,
+                self,
+                criteria: Criteria_Type = Criteria_Type.saturate,
+                value: int = 10,
+                string: str = None,
         ):
             self.string = string
             self.criteria = criteria
@@ -71,18 +70,18 @@ class OptimizationSettings:
         reach: Criteria_Type = Criteria_Type.reach
 
     def __init__(
-        self,
-        chromosome_size: int = None,
-        parent_selection_type: Parent_Selection_Type = None,
-        generation_limit: int = None,
-        num_parents: int = None,
-        k_tournament: int = None,
-        crossover_type: Crossover_Type = None,
-        elitism: int = None,
-        mutation_type: Mutation_Type = None,
-        mutation_percent: float = None,
-        max_mutation: float = None,
-        stopping_criteria: Stopping_Criteria = None,
+            self,
+            chromosome_size: int = None,
+            parent_selection_type: Parent_Selection_Type = None,
+            generation_limit: int = None,
+            num_parents: int = None,
+            k_tournament: int = None,
+            crossover_type: Crossover_Type = None,
+            elitism: int = None,
+            mutation_type: Mutation_Type = None,
+            mutation_percent: float = None,
+            max_mutation: float = None,
+            stopping_criteria: Stopping_Criteria = None,
     ):
         with open(ConfigDirectory / "optimization_settings.json", "r") as settings_file:
             settings = json.load(settings_file)
@@ -196,10 +195,10 @@ class GeneticOptimization(BaseOptimization):
     Notable Vocabulary:
 
     1. Chromosome: a chromosome is a set of genes that describe a potential solution. In the context of UBC Solar's
-    Simulation where we are optimizing driving speeds, a chromosome is a driving speeds array.
+    Simulation where we are optimizing driving speeds_directory, a chromosome is a driving speeds_directory array.
 
     2. Gene: a gene is an element of a chromosome and genes are what will be modified through the course of optimization.
-    In our context where a chromosome is an abstraction of a driving speeds array, a gene represents the value for
+    In our context where a chromosome is an abstraction of a driving speeds_directory array, a gene represents the value for
     a single driving speed interval.
 
     3. Generation: a generation can be thought of as a single iteration of the optimization sequence. The members of a
@@ -217,9 +216,9 @@ class GeneticOptimization(BaseOptimization):
     6. Convergence: in the context of GA, convergence is how quickly GA arrives at a maximum (local or global) fitness
     value. On a Fitness vs Generation graph, convergence is the rate in which fitness plateaus.
 
-    7. "Successful Simulation": in its current state, Simulation can simulate a driving speeds array that
+    7. "Successful Simulation": in its current state, Simulation can simulate a driving speeds_directory array that
     results in state of charge dropping below 0%, which is a physical impossibility. A successful simulation is
-    one where this does not occur, and a successful/valid driving speeds array is one that will result in a successful
+    one where this does not occur, and a successful/valid driving speeds_directory array is one that will result in a successful
     simulation.
 
     Briefly, GA begins by evaluating an initial population, selecting certain potential solutions (chromosomes) to be
@@ -233,7 +232,6 @@ class GeneticOptimization(BaseOptimization):
         self,
         model: Model,
         bounds: InputBounds,
-        force_new_population_flag: bool = False,
         settings: OptimizationSettings = None,
         pbar: tqdm = None,
         plot_fitness: bool = False,
@@ -289,11 +287,9 @@ class GeneticOptimization(BaseOptimization):
         # Define a maximum value for gene value mutations (should be 0 < x < 1)
         mutation_max_value = self.settings.max_mutation
 
-        # Bind the value of each gene to be between 0 and 1 as chromosomes should be normalized.
-        gene_space = {"low": 0.0, "high": 1.0}
-
-        # Add a time delay between generations (used for debug purposes)
-        delay_after_generation = 0.0
+        # Bind the value of each gene for the speeds we expect
+        original = [0] + list(range(20, 61))  # If speed < 20km/hr, we want to stop
+        gene_space = [x / 60 for x in original]  # Normalizing speeds
 
         # Store diversity of generation per optimization iteration
         self.diversity = []
@@ -329,6 +325,10 @@ class GeneticOptimization(BaseOptimization):
             # Record Stopping point info
             self.stopping_point = x.generations_completed
 
+            # Checking to see if fitness improved after each generation
+            solution, solution_fitness, solution_idx = self.ga_instance.best_solution()
+            print(" Our current fitness is ", solution_fitness)
+
             # Update progress bar if it exists
             if pbar is not None:
                 pbar.update(1)
@@ -336,9 +336,7 @@ class GeneticOptimization(BaseOptimization):
                 print("New generation!")
 
         # We must obtain or create an initial population for GA to work with.
-        initial_population = self.get_initial_population(
-            self.sol_per_pop, force_new_population_flag
-        )
+        initial_population = self.get_initial_population(self.sol_per_pop)
 
         # This informs GA when to end the optimization sequence. If blank, it will continue until the generation
         # iterations finish. Write "saturate_x" for the sequence to end after x generations of no improvement to
@@ -358,102 +356,60 @@ class GeneticOptimization(BaseOptimization):
             mutation_percent_genes=mutation_percent_genes,
             gene_space=gene_space,
             on_generation=on_generation_callback,
-            delay_after_gen=delay_after_generation,
             random_mutation_max_val=mutation_max_value,
             stop_criteria=str(stop_criteria),
         )
 
     def get_initial_population(
-        self, num_arrays_to_generate, force_new_population_flag
+        self, num_arrays_to_generate
     ) -> np.ndarray:
         """
 
-        Acquire an array of valid driving speed arrays as a starting population for GA by either reading them
-        from cache or generating a new set.
+        Acquire an array of valid driving speed arrays as a starting population for GA by generating a new set.
 
         :param num_arrays_to_generate: the number of "guess" driving speed arrays that must be obtained
-        :param force_new_population_flag: force the creation of new arrays instead of reading a cached
         :return: an array of driving speed arrays with a length equal to `num_arrays_to_generate`
         :rtype: np.ndarray
 
         """
+        return self.generate_valid_speed_arrays(num_arrays_to_generate)
 
-        population_file = population_directory / "initial_population.npz"
-        arrays_from_cache = 0
-        new_initial_population = None
+    def stopping_speeds(self, speed_array):
+        """
+        We only want to have speeds between 20-60 km/hr. For speeds that are lower than 20km/hr, it is best
+        to stop and recharge our battery. This function will default all speeds below that threshold to zero.
 
-        # Check if we can grab cached driving speed arrays
-        if os.path.isfile(population_file) and not force_new_population_flag:
-            try:
-                with np.load(population_file) as population_data:
-                    # We compare the hash value of the active Simulation model to the one that is cached
-                    # because speeds that are valid for one model may not be valid for another (and the
-                    # driving speed array length may also differ)
-                    if population_data["hash_key"] == self.model.hash_key:
-                        initial_population = np.array(population_data["population"])
+        :param speed_array: input speed array
+        :return: an array of speeds that are either 0, or between (20,60)
+        """
+        speed_array = np.where(speed_array < 20, 0, speed_array)
 
-                        if (
-                            not len(initial_population[0])
-                            == self.model.get_driving_time_divisions()
-                        ):
-                            raise IndexError
+        return speed_array
 
-                        # Check if the number of arrays needed and cached match. If we need more
-                        # arrays than are cached, we can still use the cached arrays and just generate more.
-                        if len(initial_population) == self.sol_per_pop:
-                            return initial_population
-                        else:
-                            # In the case that there are more cached arrays then we need, slice off the excess.
-                            new_initial_population = population_data["population"][
-                                :num_arrays_to_generate
-                            ]
-                            arrays_from_cache = len(new_initial_population)
-
-            except (IndexError, zipfile.BadZipFile):
-                print("Couldn't find valid arrays... generating")
-                arrays_from_cache = 0
-
-        # If we need more arrays, generate the number of new arrays that we need
-        if arrays_from_cache < num_arrays_to_generate:
-            remaining_arrays_needed = num_arrays_to_generate - arrays_from_cache
-            additional_arrays = self.generate_valid_speed_arrays(
-                remaining_arrays_needed
-            )
-            if arrays_from_cache == 0:
-                new_initial_population = additional_arrays
-            else:
-                new_initial_population = np.concatenate(
-                    (new_initial_population, additional_arrays)
-                )
-
-        # Cache the arrays we just generated with our active model's hash key
-        with open(population_file, "wb") as f:
-            np.savez(f, hash_key=self.model.hash_key, population=new_initial_population)
-
-        return new_initial_population
 
     def generate_valid_speed_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
         """
 
-        Generate a set of normalized driving speeds arrays that are valid for the active Simulation model
-        using Perlin noise. Will return an array with num_arrays_to_generate valid arrays.
+        Generate a set of normalized driving speeds_directory arrays that are valid for the active Simulation model
+        using Gaussian noise. Will return an array with num_arrays_to_generate valid arrays.
 
         :param int num_arrays_to_generate:
-        :return: an array of `num_arrays_to_generate` driving speeds, valid for the active Simulation model.
+        :return: an array of `num_arrays_to_generate` driving speeds_directory, valid for the active Simulation model.
         :rtype: np.ndarray
 
         """
 
         # These numbers were experimentally found to generate high fitness values in guess arrays
         # while having an acceptably low chance of not resulting in a successful simulation.
-        max_speed_kmh: float = 40
-        min_speed_kmh: float = 30
+        max_speed_kmh: int = 40
+        min_speed_kmh: int = 0
+        mean_speed = 36 # if at this constant speed; get to SOC = 0 at the end of the race
+        std_dev = 4  # Spread in the noise
 
-        # We will use Perlin noise to generate our guess arrays
-        noise_generator = Noise()  # noqa: F821
-
-        # Determine the length that our driving speed arrays must be
-        length = self.model.get_driving_time_divisions()
+        # Determine the length that our driving speed arrays must be ; we give ourselves a buffer because
+        # calculate_driving_speeds requires us to have enough avg speeds to drive during a certain amount of time.
+        # The number of avg_speeds needed will depend on the value of the speeds.
+        length = self.model.num_laps
         speed_arrays = []
 
         with tqdm(
@@ -463,37 +419,24 @@ class GeneticOptimization(BaseOptimization):
             position=0,
             leave=True,
         ) as pbar:
-            # Generate a matrix of normalized Gaussian noise of size [length, num_arrays_to_generate]
-            noise = noise_generator.get_gauss_noise_matrix(
-                length, num_arrays_to_generate
-            )
-
-            x = 0
 
             while len(speed_arrays) < num_arrays_to_generate:
-                # Read rows from the Gaussian noise matrix as a normalized driving speed array
-                guess_speed = normalize(noise[x])
+                # Generate Gaussian noise
+                noise = np.random.normal(loc=0, scale=std_dev, size=length)
 
-                # We generate just enough noise to be able to test num_arrays_to_generate speed arrays.
-                # Thus, the following logic keeps careful track of the index because if we have even one
-                # unsuccessful array, we'll need to generate more noise.
-                if x >= len(noise) - 1:
-                    noise = noise_generator.get_gauss_noise_matrix(
-                        length, num_arrays_to_generate
-                    )
-                    x = 0
+                # Generate speeds by adding noise to the mean speed
+                input_speed = mean_speed + noise
 
-                else:
-                    x += 1
+                # Ensuring elements are integers and fall within our bounds.
+                input_speed = np.clip(np.round(input_speed).astype(int), min_speed_kmh, max_speed_kmh)
 
-                # We must denormalize the driving speeds array before simulating it.
-                input_speed = rescale(guess_speed, max_speed_kmh, min_speed_kmh)
                 self.model.run_model(
                     speed=input_speed, plot_results=False, is_optimizer=True
                 )
 
                 # If the speed results in a successful simulation, add it to the population.
-                if self.model.was_successful():
+                if self.model.was_successful():  # !!! Over here, the model is failing after setting some speeds to zero
+                    print("Model was successful")
                     speed_arrays.append(
                         normalize(input_speed, self.bounds[2], self.bounds[1])
                     )
@@ -505,7 +448,7 @@ class GeneticOptimization(BaseOptimization):
         """
 
         This function is called by GA to evaluate the fitness of a given chromosome.
-        The chromosome (driving speeds array) is fed as the driving speeds array and the
+        The chromosome (driving speeds_directory array) is fed as the driving speeds_directory array and the
         model is simulated. The distance that can be travelled during the simulation
         duration is returned as the fitness of the chromosome.
         If the simulation results in
@@ -524,6 +467,7 @@ class GeneticOptimization(BaseOptimization):
 
         # Chromosomes are normalized, so must be denormalized before being fed to Simulation.
         solution_denormalized = denormalize(solution, self.bounds[2], self.bounds[1])
+
         distance_travelled, time_taken = self.func(
             speed=solution_denormalized, is_optimizer=True
         )
@@ -533,7 +477,7 @@ class GeneticOptimization(BaseOptimization):
             distance_travelled if self.model.was_successful() else 0.0
         )
 
-        fitness = (691200 / time_taken) * (distance_travelled_real / 2466)
+        fitness = distance_travelled_real
 
         return fitness
 
@@ -621,3 +565,147 @@ class GeneticOptimization(BaseOptimization):
         for settings in settings_list:
             total += settings.generation_limit
         return total
+
+
+class DifferentialEvolutionOptimization(BaseOptimization):
+    """
+    Simplified optimizer using SciPy's differential_evolution.
+    """
+
+    def __init__(
+            self,
+            model: Model,
+            bounds: InputBounds,
+            strategy: str = "best1bin",
+            maxiter: int = 100,
+            popsize: int = 25,
+            tol: float = 0.00001,
+            mutation: tuple[float, float] = (0.2, 0.4),
+            recombination: float = 0.3,
+            pbar=None,
+    ):
+        assert model.return_type is SimulationReturnType.distance_and_time, (
+            "Model must return distance_and_time"
+        )
+        super().__init__(bounds.get_bounds_list(), model.run_model)
+        self.model = model
+
+        self.num_genes = math.ceil(model.num_laps / LAPS_PER_INDEX)
+        self.bounds = bounds.get_bounds_list()
+
+        self.strategy = strategy
+        self.maxiter = maxiter
+        self.popsize = popsize
+        self.tol = tol
+        self.mutation = mutation
+        self.recombination = recombination
+        self.strategy = strategy
+
+        self.pbar = pbar
+
+    def _objective(self, x_norm: np.ndarray) -> float:
+        x_denorm = denormalize(x_norm, self.bounds[2], self.bounds[1])
+        distance, _ = self.func(speed=x_denorm, is_optimizer=True)
+
+        return -distance
+
+    def maximize(self, initial_population=None, pbar=None) -> np.ndarray:
+        """
+        Run the differential evolution optimization.
+        :return: best speed profile in km/h
+        """
+        if not initial_population:
+            initial_population = self.generate_valid_speed_arrays(self.popsize)
+
+        def callback(intermediate_result: optimize.OptimizeResult):
+            if pbar:
+                pbar.update(1)
+
+            self.bestinput = intermediate_result.x
+
+        bounds = [(0, 1)] * self.num_genes
+
+        try:
+            result = optimize.differential_evolution(
+                func=self._objective,
+                bounds=bounds,
+                # strategy=self.strategy,
+                init=initial_population,
+                maxiter=100,
+                popsize=self.popsize,
+                tol=self.tol,
+                # mutation=self.mutation,
+                recombination=self.recombination,
+                polish=False,
+                callback=callback,
+            )
+
+            best_speed = denormalize(result.x, self.bounds[2], self.bounds[1])
+
+        except ValueError as e:
+            if len(self.bestinput) > 0:
+                self.bestinput = denormalize(self.bestinput, self.bounds[2], self.bounds[1])
+
+            raise e
+
+        return best_speed
+
+    def fitness(self, *args, **kwargs):
+        raise NotImplementedError("Use maximize() to obtain optimized speeds.")
+
+    def generate_valid_speed_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
+        """
+
+        Generate a set of normalized driving speeds_directory arrays that are valid for the active Simulation model
+        using Gaussian noise. Will return an array with num_arrays_to_generate valid arrays.
+
+        :param int num_arrays_to_generate:
+        :return: an array of `num_arrays_to_generate` driving speeds_directory, valid for the active Simulation model.
+        :rtype: np.ndarray
+
+        """
+
+        # These numbers were experimentally found to generate high fitness values in guess arrays
+        # while having an acceptably low chance of not resulting in a successful simulation.
+        max_speed_kmh: int = 30
+        min_speed_kmh: int = 0
+        mean_speed = (max_speed_kmh + min_speed_kmh) / 2
+        std_dev = 15  # Spread in the noise
+
+        # Determine the length that our driving speed arrays must be ; we give ourselves a buffer because
+        # calculate_driving_speeds requires us to have enough avg speeds to drive during a certain amount of time.
+        # The number of avg_speeds needed will depend on the value of the speeds.
+        length = self.num_genes
+        speed_arrays = []
+
+        with tqdm(
+                total=num_arrays_to_generate,
+                file=sys.stdout,
+                desc="Generating new initial population ",
+                position=0,
+                leave=True,
+        ) as pbar:
+
+            while len(speed_arrays) < num_arrays_to_generate:
+                # Generate Gaussian noise
+                noise = np.random.normal(loc=0, scale=std_dev, size=length)
+
+                # Generate speeds by adding noise to the mean speed
+                input_speed = mean_speed + noise
+
+                # Ensuring elements are integers and fall within our bounds.
+                input_speed = np.clip(np.round(input_speed).astype(int), min_speed_kmh, max_speed_kmh)
+
+                self.model.run_model(
+                    speed=input_speed, plot_results=False, is_optimizer=True
+                )
+
+                # If the speed results in a successful simulation, add it to the population.
+                if self.model.was_successful():  # !!! Over here, the model is failing after setting some speeds to zero
+                    print("Model was successful")
+                    speed_arrays.append(
+                        normalize(input_speed, self.bounds[2], self.bounds[1])
+                    )
+                    pbar.update(1)
+
+        return np.array(speed_arrays)
