@@ -232,21 +232,24 @@ class GeneticOptimization(BaseOptimization):
     def __init__(
         self,
         model: Model,
+        run_model,
         bounds: InputBounds,
         force_new_population_flag: bool = False,
         settings: OptimizationSettings = None,
         pbar: tqdm = None,
+        mutation_function = None,
         plot_fitness: bool = False,
     ):
-        assert model.return_type is SimulationReturnType.distance_and_time, (
-            "Simulation Model for Genetic Optimization must have return type: SimulationReturnType.distance_and_time!"
-        )
+        # assert model.return_type is SimulationReturnType.distance_and_time, (
+        #     "Simulation Model for Genetic Optimization must have return type: SimulationReturnType.distance_and_time!"
+        # )
 
-        super().__init__(bounds, model.run_model)
+        super().__init__(bounds, run_model)
         self.model = model
         self.bounds = bounds.get_bounds_list()
         self.settings = settings if settings is not None else OptimizationSettings()
         self.output_hyperparameters = plot_fitness
+        self.mutation_function = mutation_function
 
         # Define the function that will be used to determine the fitness of each chromosome
         fitness_function = self.fitness
@@ -282,6 +285,12 @@ class GeneticOptimization(BaseOptimization):
 
         # Define the type of mutation that will be used in offspring creation
         mutation_type = self.settings.mutation_type
+
+        if self.mutation_function is not None:
+            mutation_type = self.mutation_function
+        else:
+            mutation_type = str(mutation_type)
+
 
         # Define the number of genes that will be mutated (0 <= x < 1)
         mutation_percent_genes = self.settings.mutation_percent
@@ -354,11 +363,11 @@ class GeneticOptimization(BaseOptimization):
             K_tournament=K_tournament,
             keep_elitism=keep_elitism,
             crossover_type=str(crossover_type),
-            mutation_type=str(mutation_type),
+            mutation_type=mutation_type,
             mutation_percent_genes=mutation_percent_genes,
             gene_space=gene_space,
             on_generation=on_generation_callback,
-            delay_after_gen=delay_after_generation,
+            # delay_after_gen=delay_after_generation,
             random_mutation_max_val=mutation_max_value,
             stop_criteria=str(stop_criteria),
         )
@@ -416,7 +425,7 @@ class GeneticOptimization(BaseOptimization):
         # If we need more arrays, generate the number of new arrays that we need
         if arrays_from_cache < num_arrays_to_generate:
             remaining_arrays_needed = num_arrays_to_generate - arrays_from_cache
-            additional_arrays = self.generate_valid_speed_arrays(
+            additional_arrays = self.generate_valid_arrays(
                 remaining_arrays_needed
             )
             if arrays_from_cache == 0:
@@ -432,7 +441,7 @@ class GeneticOptimization(BaseOptimization):
 
         return new_initial_population
 
-    def generate_valid_speed_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
+    def generate_valid_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
         """
 
         Generate a set of normalized driving speeds arrays that are valid for the active Simulation model
