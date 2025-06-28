@@ -191,7 +191,7 @@ class SimulationThread(QThread):
         self.update_signal.emit("Starting simulation...")
 
         try:
-            # Determine speeds_directory array
+            # Determine speeds array
             if self.speeds_filename is None:
                 # Temporary fallback to determine length
                 dummy_model = run_simulation.run_simulation(
@@ -292,12 +292,12 @@ class OptimizationThread(QThread):
 
             # optimized_speed_array = optimizer.maximize()
 
-            # Randomized speeds_directory for testing the heat map
+            # Randomized speeds for testing the heat map
             optimized_speed_array = np.random.uniform(low=10, high=80, size=driving_hours)
 
             self.progress_signal.emit(100)
 
-            # Rerun simulation with optimized speeds_directory
+            # Rerun simulation with optimized speeds
             optimized_model = run_simulation.run_simulation(
                 competition_name=self.settings["race_type"],
                 plot_results=False,
@@ -501,7 +501,7 @@ class SimulationApp(QWidget):
 
     def update_speed_plot(self, model):
         """
-        This method visualizes the optimized lap speeds_directory on a folium map by passing
+        This method visualizes the optimized lap speeds on a folium map by passing
         the model to the FoliumMapWidget.
 
         :param model: The optimized simulation model containing GIS and speed data.

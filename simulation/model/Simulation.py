@@ -79,11 +79,11 @@ class Simulation:
 
         Simulate the model by sequentially running calculations for the entire model duration at once.
 
-        To begin, we use the driving speeds_directory array to obtain the theoretical position of the car at every tick.
+        To begin, we use the driving speeds array to obtain the theoretical position of the car at every tick.
         Then, we map the position of the car at every tick to a GIS coordinate and to a Weather coordinate. Next,
         we use the GIS coordinates to calculate gradients, vehicle bearings, and we also determine the time in which we
         arrive at each position. Then, we use the time and Weather coordinate to map each tick to a weather
-        forecast. From the weather, we can calculate wind speeds_directory, cloud cover, and estimate solar irradiance.
+        forecast. From the weather, we can calculate wind speeds, cloud cover, and estimate solar irradiance.
         From the aforementioned calculations, we can determine the energy needed for the motor, and the energy
         that the solar arrays will collect; from those two, we can determine the delta energy at every tick.
         Then, we use the delta energy to determine how much energy we are drawing or storing from/into the battery
@@ -165,7 +165,7 @@ class Simulation:
         self.absolute_wind_speeds = self.model.meteorology.wind_speed
         self.wind_directions = self.model.meteorology.wind_direction
 
-        # Get the wind speeds_directory at every location
+        # Get the wind speeds at every location
         self.wind_speeds = get_array_directional_wind_speed(
             self.gis_vehicle_bearings, self.absolute_wind_speeds, self.wind_directions
         )
@@ -178,7 +178,7 @@ class Simulation:
             self.gis_route_elevations_at_each_tick,
         )
 
-        # TLDR: we have now obtained solar irradiances, wind speeds_directory, and gradients at each tick
+        # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
         # ----- Energy Calculations -----
 

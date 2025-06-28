@@ -96,7 +96,7 @@ def get_random_string(length: int) -> str:
 
     return random_string
 
-# Do I need to change this part?
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
