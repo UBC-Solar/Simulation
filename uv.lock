@@ -18,15 +18,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ansi2html"
-version = "1.9.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/4b/d5/e3546dcd5e4a9566f4ed8708df5853e83ca627461a5b048a861c6f8e7a26/ansi2html-1.9.2.tar.gz", hash = "sha256:3453bf87535d37b827b05245faaa756dbab4ec3d69925e352b6319c3c955c0a5", size = 44300 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/71/aee71b836e9ee2741d5694b80d74bfc7c8cd5dbdf7a9f3035fcf80d792b1/ansi2html-1.9.2-py3-none-any.whl", hash = "sha256:dccb75aa95fb018e5d299be2b45f802952377abfdce0504c17a6ee6ef0a420c5", size = 17614 },
-]
-
-[[package]]
 name = "anytree"
 version = "2.13.0"
 source = { registry = "https://pypi.org/simple" }
@@ -350,15 +341,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a9/95/a3dbbb5028f35eafb79008e7522a75244477d2838f38cbb722248dabc2a8/cycler-0.12.1.tar.gz", hash = "sha256:88bb128f02ba341da8ef447245a9e138fae777f6a23943da4540077d3601eb1c", size = 7615 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl", hash = "sha256:85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30", size = 8321 },
-]
-
-[[package]]
-name = "darkdetect"
-version = "0.7.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/48/2e/346667de53b48417e6237efd9d076d6530c413666fcbc381adbfeff21ce7/darkdetect-0.7.1.tar.gz", hash = "sha256:47be3cf5134432ddb616bbffc927237718407914993c82809983e7ccebf49013", size = 6976 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/63/bd/b31abc8fcaab163e0b9501020309dd9094b47d609035a23e6ec0a0a8ba10/darkdetect-0.7.1-py2.py3-none-any.whl", hash = "sha256:3efe69f8ecd5f1b7f4fbb0d1d93f656b0e493c45cc49222380ffe2a529cbc866", size = 8199 },
 ]
 
 [[package]]
@@ -1695,18 +1677,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyqtdarktheme"
-version = "2.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "darkdetect" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/f1/786feaad7a333072b34a913dbe38aef94b5ae43ad188934f5d70007aea79/pyqtdarktheme-2.1.0.tar.gz", hash = "sha256:5f8274ddfa3a5481ed9743cdb0f9debfeb7ff695b3a0d202a8104361d17dadb8", size = 42186 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/cd/8ce0ac84e9f68dc549edcc5cbdeac7511439c5f7ee6c05f1f8826ef05d44/pyqtdarktheme-2.1.0-py3-none-any.whl", hash = "sha256:8739d99502230fbaca42551ea033c9ae31c81c4ebfec2f1ffde38f32a18bea7a", size = 54242 },
-]
-
-[[package]]
 name = "pyqtwebengine"
 version = "5.15.7"
 source = { registry = "https://pypi.org/simple" }
@@ -1732,18 +1702,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/9e/b9/ef6286ba4f3bb12d12addb3809808f6b2c6491b330286076c9a51b59363d/PyQtWebEngine_Qt5-5.15.17-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:f46be013bdfa883c328c9fff554c6443671833a2ef5b7f649bd33b0d5cf09d2f", size = 74866238 },
     { url = "https://files.pythonhosted.org/packages/55/66/515bbd2e15930b11b5d0e237cd6cca5210c72bff3da9a847affbc0ea3a73/PyQtWebEngine_Qt5-5.15.17-py3-none-macosx_11_0_arm64.whl", hash = "sha256:508b8e5083b5fc88c93ac22d157198576931ce3cacbdec7ef86687c0f957e87a", size = 67346127 },
     { url = "https://files.pythonhosted.org/packages/7b/5f/a611480315a4a7cc369d567b91eab776e6170003317f595d24a8432e7b68/PyQtWebEngine_Qt5-5.15.17-py3-none-manylinux2014_x86_64.whl", hash = "sha256:daee5f95692f5dccd0c34423bce036d31dce44e02848e9ed6923fd669ac02a7a", size = 90628242 },
-]
-
-[[package]]
-name = "pyte"
-version = "0.8.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "wcwidth" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ab/ab/b599762933eba04de7dc5b31ae083112a6c9a9db15b01d3109ad797559d9/pyte-0.8.2.tar.gz", hash = "sha256:5af970e843fa96a97149d64e170c984721f20e52227a2f57f0a54207f08f083f", size = 92301 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/59/d0/bb522283b90853afbf506cd5b71c650cf708829914efd0003d615cf426cd/pyte-0.8.2-py3-none-any.whl", hash = "sha256:85db42a35798a5aafa96ac4d8da78b090b2c933248819157fc0e6f78876a0135", size = 31627 },
 ]
 
 [[package]]
@@ -1803,19 +1761,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pywinpty"
-version = "2.0.15"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2d/7c/917f9c4681bb8d34bfbe0b79d36bbcd902651aeab48790df3d30ba0202fb/pywinpty-2.0.15.tar.gz", hash = "sha256:312cf39153a8736c617d45ce8b6ad6cd2107de121df91c455b10ce6bba7a39b2", size = 29017 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a6/b7/855db919ae526d2628f3f2e6c281c4cdff7a9a8af51bb84659a9f07b1861/pywinpty-2.0.15-cp310-cp310-win_amd64.whl", hash = "sha256:8e7f5de756a615a38b96cd86fa3cd65f901ce54ce147a3179c45907fa11b4c4e", size = 1405161 },
-    { url = "https://files.pythonhosted.org/packages/5e/ac/6884dcb7108af66ad53f73ef4dad096e768c9203a6e6ce5e6b0c4a46e238/pywinpty-2.0.15-cp311-cp311-win_amd64.whl", hash = "sha256:9a6bcec2df2707aaa9d08b86071970ee32c5026e10bcc3cc5f6f391d85baf7ca", size = 1405249 },
-    { url = "https://files.pythonhosted.org/packages/88/e5/9714def18c3a411809771a3fbcec70bffa764b9675afb00048a620fca604/pywinpty-2.0.15-cp312-cp312-win_amd64.whl", hash = "sha256:83a8f20b430bbc5d8957249f875341a60219a4e971580f2ba694fbfb54a45ebc", size = 1405243 },
-    { url = "https://files.pythonhosted.org/packages/fb/16/2ab7b3b7f55f3c6929e5f629e1a68362981e4e5fed592a2ed1cb4b4914a5/pywinpty-2.0.15-cp313-cp313-win_amd64.whl", hash = "sha256:ab5920877dd632c124b4ed17bc6dd6ef3b9f86cd492b963ffdb1a67b85b0f408", size = 1405020 },
-    { url = "https://files.pythonhosted.org/packages/7c/16/edef3515dd2030db2795dbfbe392232c7a0f3dc41b98e92b38b42ba497c7/pywinpty-2.0.15-cp313-cp313t-win_amd64.whl", hash = "sha256:a4560ad8c01e537708d2790dbe7da7d986791de805d89dd0d3697ca59e9e4901", size = 1404151 },
-]
-
-[[package]]
 name = "pyyaml"
 version = "6.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1860,15 +1805,15 @@ wheels = [
 ]
 
 [[package]]
-name = "qtpy"
-version = "2.4.3"
+name = "qt-material"
+version = "2.17"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "packaging" },
+    { name = "jinja2" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/70/01/392eba83c8e47b946b929d7c46e0f04b35e9671f8bb6fc36b6f7945b4de8/qtpy-2.4.3.tar.gz", hash = "sha256:db744f7832e6d3da90568ba6ccbca3ee2b3b4a890c3d6fbbc63142f6e4cdf5bb", size = 66982 }
+sdist = { url = "https://files.pythonhosted.org/packages/3a/57/d6473fc7f9b1a81f6bddea555119270818c54be7717f38d0977bb6161408/qt_material-2.17.tar.gz", hash = "sha256:b500a0c1f5ef8f46a8cf037d1aa5bdf9ea4eb618180b6332539dfbdd0647ad0d", size = 1668475 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/69/76/37c0ccd5ab968a6a438f9c623aeecc84c202ab2fabc6a8fd927580c15b5a/QtPy-2.4.3-py3-none-any.whl", hash = "sha256:72095afe13673e017946cc258b8d5da43314197b741ed2890e563cf384b51aa1", size = 95045 },
+    { url = "https://files.pythonhosted.org/packages/37/63/e1085fd76bfea103b6c93d133d849f80a5a94b924f31897eb936cabe8459/qt_material-2.17-py3-none-any.whl", hash = "sha256:660523341ae45b79d222bf15e202ec76ba3bf5e7e82170b66759738d7bb4873d", size = 1687312 },
 ]
 
 [[package]]
@@ -2207,19 +2152,6 @@ wheels = [
 ]
 
 [[package]]
-name = "termqt"
-version = "1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pywinpty", marker = "sys_platform == 'win32'" },
-    { name = "qtpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/2f/5c1b687d846d5ff2c5dfae733518b963dbcb94bbf218f507d7da5817344e/termqt-1.1.tar.gz", hash = "sha256:a88939610307a1afb6b274906b0dd37e3ab30d462eb914f2783ab11d4511cc64", size = 33960 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/8e/23a40fcba01303cb356c010161c56c65ac692031d67d8121f2c32796faca/termqt-1.1-py3-none-any.whl", hash = "sha256:82c9582e83e6a9a291643c82afb6a433d15b933255633c1d903a49e40fbb29be", size = 34899 },
-]
-
-[[package]]
 name = "threadpoolctl"
 version = "3.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2446,7 +2378,6 @@ name = "ubc-solar-simulation"
 version = "1.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "ansi2html" },
     { name = "anytree" },
     { name = "bayesian-optimization" },
     { name = "bokeh" },
@@ -2469,18 +2400,18 @@ dependencies = [
     { name = "polyline" },
     { name = "pydantic" },
     { name = "pygad" },
+    { name = "pyqt5" },
     { name = "pyqt5-stubs" },
-    { name = "pyqtdarktheme" },
     { name = "pyqtwebengine" },
-    { name = "pyte" },
     { name = "pytest" },
     { name = "python-dotenv" },
     { name = "pytz" },
+    { name = "qt-material" },
     { name = "requests" },
     { name = "scikit-learn" },
     { name = "setuptools" },
+    { name = "solcast" },
     { name = "strenum" },
-    { name = "termqt" },
     { name = "timezonefinder" },
     { name = "tomli" },
     { name = "tomli-w" },
@@ -2497,7 +2428,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ansi2html", specifier = ">=1.9.2" },
     { name = "anytree", specifier = ">=2.12.1" },
     { name = "bayesian-optimization", specifier = ">=1.4.3" },
     { name = "bokeh", specifier = ">=3.5.1" },
@@ -2520,19 +2450,19 @@ requires-dist = [
     { name = "polyline", specifier = ">=1.4.0" },
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "pygad", specifier = ">=3.0.1" },
+    { name = "pyqt5", specifier = "==5.15.11" },
     { name = "pyqt5-stubs", specifier = ">=5.15.6.0" },
-    { name = "pyqtdarktheme", specifier = ">=2.1.0" },
-    { name = "pyqtwebengine", specifier = ">=5.15.7" },
-    { name = "pyte", specifier = ">=0.8.2" },
+    { name = "pyqtwebengine", specifier = "==5.15.7" },
     { name = "pytest", specifier = ">=7.1.1" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pytz" },
+    { name = "qt-material", specifier = ">=2.17" },
     { name = "requests", specifier = ">=2.26.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11.2" },
     { name = "scikit-learn", specifier = ">=1.2.2" },
     { name = "setuptools", specifier = ">=76.0.0" },
+    { name = "solcast", specifier = ">=1.2.3" },
     { name = "strenum", specifier = ">=0.4.15" },
-    { name = "termqt", specifier = ">=1.0.0" },
     { name = "timezonefinder", specifier = ">=6.0.1" },
     { name = "tomli", specifier = ">=2.2.1" },
     { name = "tomli-w", specifier = ">=1.2.0" },
@@ -2559,15 +2489,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/43/6d/fa469ae21497ddc8bc93e5877702dca7cb8f911e337aca7452b5724f1bb6/urllib3-2.2.2.tar.gz", hash = "sha256:dd505485549a7a552833da5e6063639d0d177c04f23bc3864e41e5dc5f612168", size = 292266 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ca/1c/89ffc63a9605b583d5df2be791a27bc1a42b7c32bab68d3c8f2f73a98cd4/urllib3-2.2.2-py3-none-any.whl", hash = "sha256:a448b2f64d686155468037e1ace9f2d2199776e17f0a46610480d311f73e3472", size = 121444 },
-]
-
-[[package]]
-name = "wcwidth"
-version = "0.2.13"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6c/63/53559446a878410fc5a5974feb13d31d78d752eb18aeba59c7fef1af7598/wcwidth-0.2.13.tar.gz", hash = "sha256:72ea0c06399eb286d978fdedb6923a9eb47e1c486ce63e9b4e64fc18303972b5", size = 101301 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/84/fd2ba7aafacbad3c4201d395674fc6348826569da3c0937e75505ead3528/wcwidth-0.2.13-py2.py3-none-any.whl", hash = "sha256:3da69048e4540d84af32131829ff948f1e022c1c6bdb8d6102117aac784f6859", size = 34166 },
 ]
 
 [[package]]

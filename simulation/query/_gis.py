@@ -143,16 +143,11 @@ def _calculate_time_zones(coords: ArrayLike, date: datetime.datetime) -> NDArray
 
     timezones_return = np.zeros(len(coords))
 
-    # tf = TimezoneFinder()
-
     with tqdm(
         total=len(coords), file=sys.stdout, desc="Calculating Time Zones"
     ) as pbar:
         for index, coord in enumerate(coords):
             pbar.update(1)
-            # tz_string = tf.timezone_at(lat=coord[0], lng=coord[1])
-            # timezone = pytz.timezone(tz_string)
-
             timezones_return[index] = date.utcoffset().total_seconds()
 
     return timezones_return
