@@ -165,7 +165,6 @@ class ModelBuilder:
 
         self.current_coord = initial_conditions.current_coord
         self.initial_battery_charge = initial_conditions.initial_battery_soc
-        self.start_time = initial_conditions.start_time
 
     @staticmethod
     def _truncate_hash(hashed: int, num_chars: int = 12) -> str:
