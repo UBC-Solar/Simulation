@@ -10,9 +10,6 @@ import numpy as np
 from data_tools.schema import UnwrappedError
 from data_tools.collections import TimeSeries
 
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
-
 from datetime import datetime
 
 LOCAL_TZ = datetime.now().astimezone().tzinfo
@@ -22,7 +19,6 @@ class TimedMapPlot(QWidget):
     def __init__(self, font_size, transformer, reducer, horizontal=True, parent=None):
         super().__init__(parent)
 
-        # --- Layout & Map widget setup ---
         self.transformer = transformer
         self.reducer = reducer
         self.map_centroid = None
@@ -31,13 +27,11 @@ class TimedMapPlot(QWidget):
         left = QVBoxLayout()
         right = QVBoxLayout()
 
-        # Map
         self.map_widget = RealtimeMapWidget(
             15.5 if "FSGP" in settings.realtime_event else 17.5
         )
         left.addWidget(self.map_widget, stretch=5)
 
-        # Next / Prev buttons
         btns = QHBoxLayout()
         for name, slot in (
                 ("Previous Lap", self.prev_lap),
@@ -176,8 +170,8 @@ class TimedMapPlot(QWidget):
 
         # extract and plot
         segment = self.vertex_data[i0:i1]
-        lat_seg = self.gps_latitude[i0:i1] if self.gps_latitude else None
-        lon_seg = -self.gps_longitude[i0:i1] if self.gps_longitude else None
+        lat_seg = self.gps_latitude[i0:i1] if self.gps_latitude is not None else None
+        lon_seg = -self.gps_longitude[i0:i1] if self.gps_longitude is not None else None
 
         transformed = self.transformer(segment)
         reduced = self.reducer(transformed)
@@ -195,8 +189,6 @@ class TimedMapPlot(QWidget):
                 pass
 
         self.lbl_energy.setText(str(reduced))
-
-    # ——— Helpers ———
 
     def get_begin_dt(self) -> datetime:
         py = self.dt_begin.dateTime().toPyDateTime()  # naive local-time
