@@ -9,6 +9,8 @@ from simulation.model.Simulation import Simulation
 from simulation.race import Race, reshape_speed_array, get_granularity_reduced_boolean
 from simulation.config import SimulationReturnType
 
+from micro_strategy import OptimizedSpeedsPath
+
 from physics.models.arrays import BaseArray
 from physics.models.battery import BaseBattery
 from physics.models.lvs import BaseLVS
@@ -80,7 +82,7 @@ class Model:
         self.start_time = start_time
         self.num_laps = num_laps
 
-        self.time_of_initialization = self.meteorology.last_updated_time  # Real Time
+        self.time_of_initialization = race.date.timestamp() + self.start_time  # Real Time
 
         self.simulation_duration = race.race_duration - self.start_time
 
@@ -136,6 +138,8 @@ class Model:
         Reduces verbosity
             when true.
         """
+        track_speeds = np.load(OptimizedSpeedsPath)
+
         # ----- Reshape speed array -----
         speed_kmh = reshape_speed_array(
             self.race,
@@ -153,7 +157,7 @@ class Model:
 
         # ------ Run calculations and get result and modified speed array -------
         self._simulation = Simulation(self)
-        self._simulation.run_simulation_calculations(speed_kmh)
+        self._simulation.run_simulation_calculations(speed_kmh, track_speeds)
 
         results = self.get_results(
             [

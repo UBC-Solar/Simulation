@@ -74,7 +74,7 @@ class Simulation:
         self.final_soc = None
         self.map_data_indices = None
 
-    def run_simulation_calculations(self, speed_kmh: NDArray) -> None:
+    def run_simulation_calculations(self, speed_kmh: NDArray, track_speeds: NDArray) -> None:
         """
 
         Simulate the model by sequentially running calculations for the entire model duration at once.
@@ -113,8 +113,11 @@ class Simulation:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        self.closest_gis_indices = self.model.gis.calculate_closest_gis_indices(
-            self.distances
+        track_speeds_normalized = (track_speeds - np.mean(track_speeds)) / 10
+        self.closest_gis_indices, self.speed_kmh = self.model.gis.calculate_speeds_and_position(
+            self.speed_kmh,
+            track_speeds_normalized,
+            self.model.simulation_dt
         )
 
         self.model.meteorology.spatially_localize(
@@ -153,8 +156,9 @@ class Simulation:
         self.time_zones = self.model.gis.get_time_zones(self.closest_gis_indices)
 
         # Local times in UNIX timestamps
+        local_time_of_initialization = self.model.time_of_initialization + self.time_zones[0]
         local_times = adjust_timestamps_to_local_times(
-            self.timestamps, self.model.time_of_initialization, self.time_zones
+            self.timestamps, local_time_of_initialization, self.time_zones
         )
 
         # Get the weather at every location
@@ -250,9 +254,6 @@ class Simulation:
 
         self.distance = self.speed_kmh * (self.time_in_motion / 3600)
         self.distances = np.cumsum(self.distance)
-
-        # Car cannot exceed Max distance, and it is not in motion after exceeded
-        self.distances = self.distances.clip(0, self.max_route_distance / 1000)
 
         self.map_data_indices = get_map_data_indices(self.closest_gis_indices)
 
