@@ -51,7 +51,7 @@ class InitialConditionsDialog(QDialog):
 
     def __init__(self, initial_conditions: PersistentConfig, comp_start_date: datetime, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Enter the initial conditions for the optimization")
+        self.setWindowTitle("Set Optimization Initial Conditions")
 
         self.comp_start_date = comp_start_date
 
