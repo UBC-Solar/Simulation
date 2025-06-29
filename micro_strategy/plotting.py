@@ -60,7 +60,7 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
             opacity=0.8
         ).add_to(m)
 
-    gradients = np.arctan(gradients) * 360
+    incline_angles = np.degrees(np.arctan(gradients))
     # attach metadata to chosen points
     for i, (lat, lon) in enumerate(trajectory):
         val = plot_value[i]
@@ -72,7 +72,7 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
             f"<br>Distance (m): {distances[i]:.2f}"
             f"<br>Speed (km/h): {speeds[i]:.2f}"
             f"<br>Time (s): {times[i]:.2f}"
-            f"<br>Incline Angle (°): {gradients[i]:.2f}"
+            f"<br>Incline Angle (°): {incline_angle[i]:.2f}"
             f"<hr style='margin:5px 0'>"
             f"<b>⚡ Energy Calculations</b> (J)"
             f"<br>Energy Consumed: {energies[i]:.2f}"
