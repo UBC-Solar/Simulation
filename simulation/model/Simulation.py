@@ -256,7 +256,14 @@ class Simulation:
 
         self.map_data_indices = get_map_data_indices(self.closest_gis_indices)
 
-        self.distance_travelled = self.distances[-1]
+        battery_dead_indices = np.where(self.state_of_charge < 0)[0]
+
+        if len(battery_dead_indices) > 0:
+            stop_index = battery_dead_indices[0]
+        else:
+            stop_index = -1
+
+        self.distance_travelled = self.distances[stop_index]
 
         if self.distance_travelled >= self.route_length:
             self.time_taken = self.timestamps[

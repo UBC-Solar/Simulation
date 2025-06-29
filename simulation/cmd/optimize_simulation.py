@@ -7,7 +7,7 @@ import string
 
 from simulation.utils.InputBounds import InputBounds
 from simulation.config import speeds_directory
-from simulation.optimization.genetic import GeneticOptimization, OptimizationSettings
+from simulation.optimization.genetic import OptimizationSettings, DifferentialEvolutionOptimization
 from simulation.cmd.run_simulation import build_model, get_default_settings
 from simulation.config import SimulationHyperparametersConfig, SimulationReturnType
 from tqdm import tqdm
@@ -19,7 +19,7 @@ def main(competition_name: str, car_name: str, speed_dt: int):
     This method parses initial conditions for the simulation and store them in a simulationState object. Then, begin
     optimizing simulation with Genetic optimization, and save the results.
 
-    :param granularity:
+    :param speed_dt:
     :param car_name:
     :param competition_name:
     :return: returns the time taken for simulation to complete before optimization
@@ -39,25 +39,16 @@ def main(competition_name: str, car_name: str, speed_dt: int):
             "speed_dt": speed_dt,
         }
     )
-    simulation_model = build_model(
-        environment, hyperparameters, initial_conditions, car_config
-    )
 
     # Initialize a "guess" speed array
-    driving_hours = simulation_model.get_driving_time_divisions()
+    driving_laps = environment.competition_config.tiling
 
     # Set up optimization models
     maximum_speed = 60
     minimum_speed = 0
 
     bounds = InputBounds()
-    bounds.add_bounds(driving_hours, minimum_speed, maximum_speed)
-
-    driving_hours = simulation_model.get_driving_time_divisions()
-    input_speed = np.array([60] * driving_hours)
-
-    # Run simulation model with the "guess" speed array
-    simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False)
+    bounds.add_bounds(driving_laps, minimum_speed, maximum_speed)
 
     # Perform optimization with Genetic Optimization
     optimization_settings: OptimizationSettings = OptimizationSettings()
@@ -70,10 +61,27 @@ def main(competition_name: str, car_name: str, speed_dt: int):
         unit="Generation",
         smoothing=1.0,
     ) as pbar:
-        geneticOptimization = GeneticOptimization(
-            simulation_model, bounds, settings=optimization_settings, pbar=pbar
-        )
-        results_genetic = geneticOptimization.maximize()
+        initial_population = None
+
+        while True:
+            print(f"Optimizing for {driving_laps} laps!")
+            environment.competition_config.tiling = driving_laps
+
+            simulation_model = build_model(
+                environment, hyperparameters, initial_conditions, car_config
+            )
+
+            genetic_optimization = DifferentialEvolutionOptimization(
+                simulation_model, bounds, pbar, popsize=6
+            )
+
+            try:
+                results_genetic = genetic_optimization.maximize(initial_population, pbar)
+                break
+
+            except ValueError:
+                initial_population = genetic_optimization.bestinput
+                driving_laps += 20
 
     simulation_model.run_model(results_genetic, plot_results=True)
 
@@ -98,6 +106,15 @@ if __name__ == "__main__":
         help="Define which race should be simulated. (ASC/FSGP)",
         type=str,
     )
+
+    parser.add_argument(
+        "--car",
+        required=False,
+        default="Brightside",
+        type=str,
+        help="Name of car model",
+    )
+
     parser.add_argument(
         "--granularity",
         required=False,
@@ -109,4 +126,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(race_type=args.race_type, granularity=args.granularity)
+    main(competition_name=args.race_type,
+         car_name = args.car,
+         speed_dt= args.granularity)
