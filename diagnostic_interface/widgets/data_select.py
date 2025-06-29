@@ -1,5 +1,5 @@
 
-from PyQt5.QtWidgets import QComboBox, QFormLayout, QMessageBox
+from PyQt5.QtWidgets import QComboBox, QFormLayout
 from data_tools import SunbeamClient
 from diagnostic_interface import settings
 from requests import exceptions as requests_exceptions
@@ -132,8 +132,8 @@ class DataSelect(QFormLayout):
 
             return available_origins, available_sources, available_events, available_data
 
-        except requests_exceptions.Timeout as e:
-            QMessageBox.critical(None, "Plotting Error", f"Error fetching Sunbeam files:\n{str(e)}")
+        except requests_exceptions.Timeout:
+            # QMessageBox.critical(None, "Plotting Error", f"Error fetching Sunbeam files:\n{str(e)}")
             return [], [], [], []
 
     @staticmethod

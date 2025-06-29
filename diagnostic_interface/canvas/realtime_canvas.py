@@ -6,9 +6,12 @@ from data_tools import SunbeamClient, TimeSeries
 from diagnostic_interface import settings
 from PyQt5.QtWidgets import QMessageBox
 import mplcursors
+from datetime import timezone
+from dateutil import tz
 
 
 plt.style.use("seaborn-v0_8-darkgrid")
+local_tz = tz.tzlocal()
 
 
 class RealtimeCanvas(FigureCanvas):
@@ -25,9 +28,13 @@ class RealtimeCanvas(FigureCanvas):
 
     def fetch_data(self) -> TimeSeries:
         client = SunbeamClient(settings.sunbeam_api_url)
-        file = client.get_file(settings.realtime_pipeline, settings.realtime_event, self.source, self.data_name)
+        file = client.get_file(
+            settings.realtime_pipeline,
+            settings.realtime_event,
+            self.source,
+            self.data_name
+        )
         result = file.unwrap()
-
         return result.values if hasattr(result, "values") else result.data
 
     def plot(self, ts: TimeSeries, title: str, y_label: str) -> None:
@@ -35,13 +42,15 @@ class RealtimeCanvas(FigureCanvas):
         y = ts
 
         if self.line is None:
+            # Tell AutoDateLocator that the source tz is UTC and make the formatter display in local time
+            locator = mdates.AutoDateLocator(tz=local_tz)
+            formatter = mdates.ConciseDateFormatter(locator, tz=local_tz)
+
             self.line, = self.ax.plot(x, y, linewidth=1)
             self.ax.set_title(title)
             self.ax.set_xlabel("Time")
             self.ax.set_ylabel(y_label)
 
-            locator = mdates.AutoDateLocator()
-            formatter = mdates.ConciseDateFormatter(locator)
             self.ax.xaxis.set_major_locator(locator)
             self.ax.xaxis.set_major_formatter(formatter)
 
@@ -57,12 +66,13 @@ class RealtimeCanvas(FigureCanvas):
 
         @cursor.connect("add")
         def _(sel):
-            x, y = sel.target  # x is a float (matplotlib date), y is the y-value
-            dt = mdates.num2date(x)
+            xdate, yval = sel.target
+            # Interpret xdate as UTC, then convert to local
+            dt_utc = mdates.num2date(xdate, tz=timezone.utc)
+            dt_local = dt_utc.astimezone(local_tz)
             sel.annotation.set_text(
-                f"{y:.2f} {ts.units} at {dt.strftime('%H:%M')}"
+                f"{yval:.2f} {ts.units} at {dt_local.strftime('%H:%M:%S')}"
             )
-            # optional: tweak annotation style
             bbox = sel.annotation.get_bbox_patch()
             bbox.set_facecolor("white")
             bbox.set_edgecolor("black")
@@ -70,4 +80,8 @@ class RealtimeCanvas(FigureCanvas):
             bbox.set_boxstyle("round,pad=0.3")
 
     def save_data_to_csv(self):
-        QMessageBox.warning(self, "Cannot save data from here! Please plot manually with the Home Tab.")
+        QMessageBox.warning(
+            self,
+            "Cannot save data from here!",
+            "Please plot manually with the Home Tab."
+        )
