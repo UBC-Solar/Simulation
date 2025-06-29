@@ -83,7 +83,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(WINDOW_TITLE)
 
-        from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab, SOCTab, PowerTab, WeatherTab, SpeedTab, ArrayTab
+        from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, TelemetryTab, SOCTab, PowerTab, WeatherTab, SpeedTab, ArrayTab
 
         self.tabs = QTabWidget()
         self.tabs.currentChanged.connect(self.on_tab_changed)

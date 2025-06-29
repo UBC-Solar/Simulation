@@ -1,20 +1,14 @@
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QMessageBox,
-    QHBoxLayout
+    QWidget, QVBoxLayout, QMessageBox
 )
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot
 
 from diagnostic_interface import settings
-from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas2, IntegralPlot, RealtimeCanvas
-import pandas as pd
+from diagnostic_interface.canvas import CustomNavigationToolbar
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from PyQt5.QtWidgets import QMessageBox, QFileDialog
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from data_tools import SunbeamClient, TimeSeries
-from scipy.integrate import cumulative_trapezoid as trapz
-from diagnostic_interface import settings
-from typing import Optional
+from data_tools import SunbeamClient
 import mplcursors
 
 

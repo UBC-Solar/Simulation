@@ -13,7 +13,7 @@ from tqdm import tqdm
 from simulation.cache.optimization_population import population_directory
 from simulation.optimization.base_optimization import BaseOptimization
 from simulation.race import denormalize, normalize, rescale
-from simulation.config import ConfigDirectory, SimulationReturnType
+from simulation.config import ConfigDirectory
 from simulation.utils import InputBounds
 from simulation.model import Model
 

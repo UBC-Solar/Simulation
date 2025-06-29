@@ -1,10 +1,7 @@
-import traceback
 from data_tools.query import SunbeamClient
 from data_tools.schema import UnwrappedError
-from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot
 from diagnostic_interface import settings
-from diagnostic_interface.canvas import CustomNavigationToolbar, RealtimeCanvas
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 import numpy as np
 from diagnostic_interface.widgets import TimedMapPlot
@@ -81,7 +78,7 @@ class SpeedTab(QWidget):
             speed = speed_result.unwrap().data
             self.map_plot_panel.set_data(speed, gps_latitude_result, gps_longitude_result)
 
-        except UnwrappedError as e:
+        except UnwrappedError:
             pass
 
     @pyqtSlot(str)
