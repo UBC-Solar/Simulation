@@ -152,7 +152,7 @@ def optimize_trajectory(
         bounds,
         args=(mesh, gradients, motor_model, num_lateral_indices, speed_range),
         strategy="best1bin",
-        popsize=15,
+        popsize=14,
         maxiter=iterations,
         mutation=(0.4, 1.2),
         recombination=0.7,
@@ -261,7 +261,7 @@ if __name__ == '__main__':
     start_time = time.time()
 
     optimized_trajectory, optimized_speeds = optimize_trajectory(
-        iterations=30,
+        iterations=500,
         mesh=mesh,
         gradients=gradients,
         trajectory_length=len(trajectory_FSGP),

@@ -412,8 +412,6 @@ class GeneticOptimization(BaseOptimization):
                         ):
                             raise IndexError
 
-<<<<<<< HEAD
-=======
                         # Check if the number of arrays needed and cached match. If we need more
                         # arrays than are cached, we can still use the cached arrays and just generate more.
                         if len(initial_population) == self.sol_per_pop:
@@ -447,7 +445,6 @@ class GeneticOptimization(BaseOptimization):
             np.savez(f, hash_key=self.model.hash_key, population=new_initial_population)
 
         return new_initial_population
->>>>>>> macrostrategy_optimization
 
     def generate_valid_arrays(self, num_arrays_to_generate: int) -> np.ndarray:
         """
