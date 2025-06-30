@@ -1,5 +1,3 @@
-import random
-import string
 import sys
 from typing import Optional
 
@@ -12,8 +10,6 @@ from diagnostic_interface.widgets import SplashOverlay
 from simulation.cmd.run_simulation import get_default_settings
 from simulation.config import SimulationReturnType, SimulationHyperparametersConfig, InitialConditions
 from pathlib import Path
-from prescriptive_interface import (SimulationTab, OptimizationTab, SimulationSettingsDict, OptimizationThread,
-                                    SimulationThread, MutableInitialConditions, InitialConditionsDialog)
 from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import Qt
 
@@ -33,6 +29,7 @@ HTML_TABS = [
     ("Speed Heatmap", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_speed.html"),
     ("Energy Heatmap", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_energy.html"),
 ]
+
 
 class SimulationApp(QWidget):
     def __init__(self):
@@ -147,8 +144,9 @@ class SimulationApp(QWidget):
 
         self.simulation_tab = SimulationTab(run_callback=self.run_simulation)
         self.optimization_tab = OptimizationTab(
-            optimize_callback=self.optimize_simulation,
-            lap_callback=self.update_lap
+            optimize_callback=self.prompt_for_initial_conditions,
+            lap_callback=self.update_lap,
+            settings_callback=self.open_settings
         )
 
         self.tabs.addTab(self.optimization_tab, "Optimization")
