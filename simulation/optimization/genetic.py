@@ -679,7 +679,7 @@ class DifferentialEvolutionOptimization(BaseOptimization):
 
         return -distance
 
-    def maximize(self, initial_population=None, pbar=None) -> np.ndarray:
+    def maximize(self, initial_population=None, pbar=None, progress_signal=None) -> np.ndarray:
         """
         Run the differential evolution optimization.
         :return: best speed profile in km/h
@@ -690,6 +690,10 @@ class DifferentialEvolutionOptimization(BaseOptimization):
         def callback(intermediate_result: optimize.OptimizeResult):
             if pbar:
                 pbar.update(1)
+            elif progress_signal:
+                progress_signal.emit(1)
+            else:
+                print("Completed generation!")
 
             self.bestinput = intermediate_result.x
 

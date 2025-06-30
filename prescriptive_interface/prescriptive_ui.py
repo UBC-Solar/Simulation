@@ -1,600 +1,17 @@
-import random
-import string
 import sys
-from datetime import datetime
-from typing import Optional, TypedDict
-from zoneinfo import ZoneInfo
+from typing import Optional
 
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QProgressBar, QTabWidget,
-    QSizePolicy, QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QHBoxLayout
+    QApplication, QWidget, QVBoxLayout, QTabWidget, QDialog,
 )
-from PyQt5.QtCore import QThread, pyqtSignal, QSize, Qt
-from pydantic import BaseModel, ConfigDict, Field
 from diagnostic_interface.config import PersistentConfig
-from simulation.cmd.run_simulation import get_default_settings, build_model, run_simulation
-from simulation.config import SimulationReturnType, SimulationHyperparametersConfig, InitialConditions, CarConfig, \
-    EnvironmentConfig
-from simulation.utils import InputBounds
-from simulation.optimization.genetic import DifferentialEvolutionOptimization
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-import matplotlib.pyplot as plt
-import numpy as np
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-import folium
-import matplotlib.colors as mcolors
-import matplotlib.cm as cm
-import os
-import tempfile
-from PyQt5.QtCore import QUrl
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+from simulation.cmd.run_simulation import get_default_settings
+from simulation.config import SimulationReturnType, SimulationHyperparametersConfig, InitialConditions
 from pathlib import Path
-import mplcursors
+from prescriptive_interface import (SimulationTab, OptimizationTab, SimulationSettingsDict, OptimizationThread,
+                                    SimulationThread, MutableInitialConditions, InitialConditionsDialog)
 
 config_dir = Path(__file__).parent.parent / "simulation" / "config"
-my_speeds_dir = Path("prescriptive_interface/speeds_directory")
-my_speeds_dir.mkdir(parents=True, exist_ok=True)  # Create it if it doesn't exist
-
-class MutableInitialConditions(BaseModel):
-    """
-    Pydantic object which stores user-adjustable initial condition parameters for simulation optimization runs
-    """
-    model_config = ConfigDict(extra="ignore")
-
-    current_coord: tuple[float, float]  # Initial Position of the car
-    initial_battery_soc: float = Field(ge=0.0, le=1.0)  # 0% <= SOC < 100%
-    start_time: int  # Time since the beginning of the first day (12:00:00AM) in s
-
-class InitialConditionsDialog(QDialog):
-    """Prompt the user to enter a starting SoC and time before running an optimization"""
-
-    def __init__(self, initial_conditions: PersistentConfig, comp_start_date: datetime, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Set Optimization Initial Conditions")
-
-        self.comp_start_date = comp_start_date
-
-        # Create layout
-        layout = QVBoxLayout()
-        form_layout = QFormLayout()
-
-        self.soc_input = QLineEdit(str(initial_conditions.initial_battery_soc))
-
-        start_time_layout = QHBoxLayout()
-        self.start_time_input = QLineEdit(str(initial_conditions.start_time))
-        get_time_button = QPushButton("Get Current Time")
-        get_time_button.clicked.connect(self.fill_current_time)
-
-        start_time_layout.addWidget(self.start_time_input)
-        start_time_layout.addWidget(get_time_button)
-
-        form_layout.addRow("Initial SoC (0-1):", self.soc_input)
-        form_layout.addRow("Start Time (s):", start_time_layout)
-
-        layout.addLayout(form_layout)
-
-        # Add OK/Cancel buttons
-        self.buttons = QDialogButtonBox(Qt.Horizontal)
-        self.buttons.addButton(QPushButton(self.tr("&Go!")), QDialogButtonBox.AcceptRole)
-        self.buttons.addButton(QPushButton(self.tr("&Cancel")), QDialogButtonBox.RejectRole)
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
-
-        self.setLayout(layout)
-
-    def fill_current_time(self):
-        """Fill start_time_input with seconds between now and comp_start_date"""
-        now = datetime.now(tz=ZoneInfo("America/Chicago"))
-        delta = now - self.comp_start_date
-        self.start_time_input.setText(str(int(delta.total_seconds())))
-
-    def get_values(self):
-        try:
-            initial_battery_soc = float(self.soc_input.text())
-            start_time = int(self.start_time_input.text())
-            print(initial_battery_soc, start_time)
-            return initial_battery_soc, start_time
-        except ValueError:
-            return None, None
-
-class SimulationSettingsDict(TypedDict):
-    race_type: str
-    verbose: bool
-    granularity: int
-    car: str
-
-class SettingsDialog(QDialog):
-    """Settings tab where the user can change the population size and number of iterations of the optimization."""
-
-    def __init__(self, popsize, maxiter, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Optimization Settings")
-
-        # Create layout
-        layout = QVBoxLayout()
-        form_layout = QFormLayout()
-
-        self.popsize_input = QLineEdit(str(popsize))
-        self.maxiter_input = QLineEdit(str(maxiter))
-
-        form_layout.addRow("Population Size:", self.popsize_input)
-        form_layout.addRow("Generation Limit:", self.maxiter_input)
-
-        layout.addLayout(form_layout)
-
-        # Add OK/Cancel buttons
-        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
-
-        self.setLayout(layout)
-
-    def get_values(self):
-        try:
-            popsize = int(self.popsize_input.text())
-            maxiter = int(self.maxiter_input.text())
-            return popsize, maxiter
-        except ValueError:
-            return None, None
-
-
-class SimulationCanvas(FigureCanvas):
-    """Canvas to display multiple simulation plots dynamically with better formatting."""
-
-    def __init__(self, parent=None):
-        self.fig, self.axes = plt.subplots(2, 3, figsize=(16, 12))  # Increased figure size
-        super().__init__(self.fig)
-        self.setParent(parent)
-        # Create a Matplotlib Canvas
-        self.canvas = FigureCanvas(self.fig)
-
-        # Add Navigation Toolbar
-        self.toolbar = NavigationToolbar(self.canvas, self)
-        self.toolbar.setStyleSheet("background: none; border: none;")
-        self.toolbar.setIconSize(QSize(18, 18))
-        self.toolbar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)  # Prevent expanding into plots
-        # Layout setup
-        layout = QVBoxLayout()
-        layout.addWidget(self.toolbar)
-        layout.addWidget(self.canvas)
-        layout.setContentsMargins(0, 0, 0, 0)  # Add margins for proper spacing
-        self.setLayout(layout)
-
-    def plot_simulation_results(self, results_dict):
-        """
-       Plot simulation results across a 3x3 grid of subplots.
-
-       This method takes a dictionary of simulation result data where each key maps to a (timestamps, values) tuple.
-       Each subplot displays a single result over time with appropriate axis labels, titles, and legends.
-
-       :param results_dict: A dictionary mapping result labels to (timestamps, data) tuples.
-                            Example: {"speed_kmh": ([...timestamps...], [...values...]), ...}
-       :type results_dict: dict
-       :returns: None
-       :rtype: None
-       """
-        self.fig.clear()  # Clear previous plots
-        axes = self.fig.subplots(2,3)  # Regenerate subplots with better spacing
-        y_labels = {
-            "speed_kmh": "Speed (km/h)",
-            "distances": "Distance (km)",
-            "state_of_charge": "SOC (%)",
-            "delta_energy": "Delta Energy (J)",
-            "solar_irradiances": "Solar Irradiance (W/m²)",
-            "wind_speeds": "Wind Speed (km/h)"
-        }
-
-        for ax, (label, (timestamps, data)) in zip(axes.flat, results_dict.items()):
-            ax.plot(timestamps, data, label=label)
-            ax.set_title(label, fontsize=12, loc="left", pad=10)  # Add spacing below title
-            ax.set_xlabel("Time (s)", fontsize=10, loc="right", labelpad=5)
-            ax.legend(fontsize=9)
-            ax.set_ylabel(y_labels.get(label, "Value"), fontsize=10, fontweight='normal', labelpad=5)
-
-        # Adjust subplot spacing to avoid overlap
-        self.fig.tight_layout(pad=2.0)
-        self.fig.subplots_adjust(hspace=0.4, wspace=0.3)  # Add horizontal & vertical spacing
-
-        self.fig.canvas.draw_idle()
-
-class SpeedPlotCanvas(FigureCanvas):
-    """Canvas to display the optimized speed graph in the optimization window."""
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
-        self.ax = self.fig.add_subplot(111)
-        super().__init__(self.fig)
-        self.setParent(parent)
-        self.popsize = 6  # default population size
-        self.maxiter = 100  # default number of iterations
-
-    def plot_optimized_speeds(self, speeds, laps_per_index):
-        """
-        Plot optimized speeds vs laps on the optimization tab.
-
-        :param speeds: The optimized speeds; one per lap.
-        :returns: None
-        """
-        self.ax.clear()
-
-        y = [speed for speed in speeds for _ in range(laps_per_index)] # Make sure that speeds repeat for a certain number of laps
-        x = range(1, len(y) + 1)
-
-        [self.line] = self.ax.plot(x, y, marker='o')
-
-        self.ax.set_xlabel("Lap")
-        self.ax.set_ylabel("Speed [km/h]")
-        self.ax.set_title("Optimized Speed vs Lap")
-        self.ax.grid(True)
-        self.draw()
-
-        # Adding tooltips on hover
-        cursor = mplcursors.cursor(self.line, hover=True)
-
-        @cursor.connect("add")
-        def _(sel):
-            x, y = sel.target
-            sel.annotation.set_text(f"{y:.2f} km/h at lap {int(x)}")
-
-            bbox = sel.annotation.get_bbox_patch()
-            bbox.set_facecolor("white")
-            bbox.set_edgecolor("black")
-            bbox.set_alpha(0.8)
-            bbox.set_boxstyle("round,pad=0.3")
-
-    def open_settings(self):
-        """
-        Opens a settings menu that allows you to change the population size and generation limit of the optimization.
-        """
-        dialog = SettingsDialog(self.popsize, self.maxiter)
-        if dialog.exec_() == QDialog.Accepted:
-            popsize, maxiter = dialog.get_values()
-            if popsize and maxiter:
-                self.popsize = popsize
-                self.maxiter = maxiter
-                print(f"Updated settings: popsize={popsize}, maxiter={maxiter}")
-            else:
-                print("Invalid input.")
-
-class FoliumMapWidget(QWebEngineView):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.lap_num = 0
-        self.model = None
-        self.temp_dir = tempfile.gettempdir()
-
-    def plot_optimized_speeds(self, model):
-        """
-        Store the optimized model and render it on the Folium map widget.
-
-        :param model: The optimized simulation model containing GIS and speed data.
-        :type model: SimulationModel
-        :returns: None
-        :rtype: None
-        """
-        self.model = model
-        self.update_map()
-
-    def update_lap(self, direction):
-        """
-        Change the currently displayed lap and refresh the map visualization.
-
-        :param direction: The direction to move in lap navigation ("next" or "prev").
-        :type direction: str
-        :returns: None
-        :rtype: None
-        """
-        if direction == "next":
-            self.lap_num += 1
-        elif direction == "prev":
-            self.lap_num = max(0, self.lap_num - 1)
-        self.update_map()
-
-    def update_map(self):
-        if not self.model:
-            return
-
-        num_coordinates = int(self.model.gis.num_unique_coords)
-        gis_indices, speed_kmh = self.model.get_results(["closest_gis_indices", "speed_kmh"])
-        coords = self.model.gis.get_path()
-
-        beginning_coordinate = num_coordinates * self.lap_num
-        end_coordinate = num_coordinates * (self.lap_num + 1)
-        coords_of_interest = coords[beginning_coordinate:end_coordinate + 1]
-
-        speeds = []
-
-        for i in range(len(coords_of_interest) - 1):
-            k = i + beginning_coordinate
-
-            if k >= 288:
-                break  # Stop plotting if index exceeds 288 (one lap)
-
-            indices = np.where(gis_indices == k)[0]
-            if len(indices) > 0:
-                speed = speed_kmh[indices[0]]
-            else:
-                speed = 0
-            speeds.append(speed)
-
-        max_speed = max(speeds) if speeds else 1
-        norm = mcolors.Normalize(vmin=0, vmax=max_speed)
-        cmap = cm.get_cmap('YlOrRd')
-
-        # Create map
-        fmap = folium.Map(location=coords_of_interest[0], zoom_start=14)
-        for i in range(len(speeds)):
-            speed = speeds[i]
-            color = mcolors.to_hex(cmap(norm(speed)))
-
-            folium.PolyLine(
-                locations=[coords_of_interest[i], coords_of_interest[i + 1]],
-                color=color,
-                weight=5,
-                tooltip=f"{speed:.1f} km/h",
-                popup=f"Segment speed: {speed:.1f} km/h"
-            ).add_to(fmap)
-
-        # Save and display
-        filepath = os.path.join(self.temp_dir, "optimized_route_map.html")
-        fmap.save(filepath)
-        self.load(QUrl.fromLocalFile(filepath))
-
-
-class SimulationThread(QThread):
-    update_signal = pyqtSignal(str)
-    plot_data_signal = pyqtSignal(dict)  # Send multiple plots as a dictionary
-
-    def __init__(self, settings: SimulationSettingsDict, speeds_filename: Optional[str], optimized_speeds: Optional[np.ndarray] = None):
-        super().__init__()
-        self.settings = settings
-        self.speeds_filename = speeds_filename
-        self.optimized_speeds = optimized_speeds
-
-    def run(self):
-        self.update_signal.emit("Starting simulation...")
-
-        try:
-            # Determine speeds_directory array
-            if self.optimized_speeds is not None:
-                speeds = self.optimized_speeds
-            elif self.speeds_filename is not None:
-                speeds = np.load(my_speeds_dir / (self.speeds_filename + ".npy"))
-            else:
-                dummy_model = run_simulation(
-                    competition_name=self.settings["race_type"],
-                    plot_results=False,
-                    verbose=self.settings["verbose"],
-                    speed_dt=self.settings["granularity"],
-                    car=self.settings["car"]
-                )
-                driving_hours = dummy_model.get_driving_time_divisions()
-                speeds = np.array([45] * driving_hours)
-
-            # Run simulation with updated API
-            simulation_model = run_simulation(
-                competition_name=self.settings["race_type"],
-                plot_results=False,
-                verbose=self.settings["verbose"],
-                speed_dt=self.settings["granularity"],
-                car=self.settings["car"],
-                speeds=speeds
-            )
-
-            # Extract multiple data series
-            results_keys = ["timestamps", "speed_kmh", "distances", "state_of_charge",
-                            "delta_energy", "solar_irradiances", "wind_speeds"] # !!! changed to get rid of bottom 3 things
-            results_values = simulation_model.get_results(results_keys)
-            results_dict = {key: (results_values[0], values) for key, values in
-                            zip(results_keys[1:], results_values[1:])}
-
-            self.plot_data_signal.emit(results_dict)
-
-            # Format result summary
-            results = simulation_model.get_results(
-                ["time_taken", "max_route_distance", "distance_travelled", "speed_kmh", "final_soc"])
-            formatted_results = (
-                f"Simulation successful!\n"
-                f"Time taken: {results[0]}\n"
-                f"Route length: {results[1]:.2f}km\n"
-                f"Maximum distance traversable: {results[2]:.2f}km\n"
-                f"Average speed: {np.average(results[3]):.2f}km/h\n"
-                f"Final battery SOC: {results[4]:.2f}%\n"
-            )
-            self.update_signal.emit(formatted_results)
-
-        except Exception as e:
-            self.update_signal.emit(f"Error: {str(e)}")
-
-
-class OptimizationThread(QThread):
-    update_signal = pyqtSignal(str)
-    progress_signal = pyqtSignal(int)
-    model_signal = pyqtSignal(object, object, int)  # Emits optimized simulation model, speeds
-
-    def __init__(self, settings: SimulationSettingsDict,
-                 popsize: int,
-                 maxiter: int,
-                 initial_conditions: InitialConditions,
-                 hyperparameters: SimulationHyperparametersConfig,
-                 environment_config: EnvironmentConfig,
-                 car_config: CarConfig):
-        super().__init__()
-        self.settings = settings
-        self.popsize = popsize
-        self.maxiter = maxiter
-        self.hyperparameters = hyperparameters
-        self.initial_conditions = initial_conditions
-        self.environment_config = environment_config
-        self.car_config = car_config
-
-    def run(self):
-        self.update_signal.emit("Starting optimization...")
-
-        try:
-            base_model = build_model(
-                self.environment_config, self.hyperparameters, self.initial_conditions, self.car_config
-            )
-
-            driving_laps = base_model.num_laps
-
-            # Bounds
-            maximum_speed = 60
-            minimum_speed = 0
-
-            bounds = InputBounds()
-            bounds.add_bounds(driving_laps, minimum_speed, maximum_speed)
-
-            # Initial guess
-            input_speed = np.array([60] * driving_laps)
-            base_model.run_model(
-                speed=input_speed,
-                plot_results=False,
-                verbose=self.settings["verbose"],
-                route_visualization=False
-            )
-
-            genetic_optimization = DifferentialEvolutionOptimization(base_model, bounds, maxiter = self.maxiter, popsize=self.popsize)
-            optimized_speed_array = genetic_optimization.maximize()
-            laps_per_index = int(driving_laps / genetic_optimization.num_genes) # Each speed in the above array is used for this many laps
-
-            # Randomized speeds_directory for testing the heat map !!! MUST DELETE
-            #optimized_speed_array = np.random.uniform(low=10, high=80, size=driving_laps)
-
-            self.progress_signal.emit(100)
-
-            # Rerun simulation with optimized speeds_directory
-            optimized_model = run_simulation(
-                competition_name=self.settings["race_type"],
-                plot_results=False,
-                verbose=self.settings["verbose"],
-                speed_dt=self.settings["granularity"],
-                car=self.settings["car"],
-                speeds=optimized_speed_array
-            )
-
-            # Save result
-            filename = self.get_random_string(7) + ".npy"
-            np.save(my_speeds_dir / filename, optimized_speed_array)
-            self.update_signal.emit(f"Optimization completed successfully! Results saved in: {filename}")
-            self.model_signal.emit(optimized_model, optimized_speed_array, laps_per_index) # !!!
-
-        except Exception as e:
-            self.update_signal.emit(f"Error: {str(e)}")
-
-    def get_random_string(self, length: int) -> str:
-        characters = string.ascii_letters + string.digits
-        return ''.join(random.choice(characters) for _ in range(length))
-
-
-class SimulationTab(QWidget):
-    def __init__(self, run_callback):
-        """
-        Initialize the SimulationTab widget.
-
-        Sets up internal references and prepares the UI layout for running simulations.
-        A callback function is required to handle the simulation logic when the run button is pressed.
-
-        :param run_callback: Function to be called when the simulation run button is clicked.
-        :type run_callback: Callable
-        :returns: None
-        :rtype: None
-        """
-        super().__init__()
-        self.run_callback = run_callback
-        self.start_button: Optional[QPushButton] = None
-        self.sim_output_text: Optional[QTextEdit] = None
-        self.sim_canvas: Optional[SimulationCanvas] = None
-
-        self.init_ui()
-
-    def init_ui(self):
-        layout = QVBoxLayout()
-
-        self.start_button = QPushButton("Run Simulation")
-        self.start_button.clicked.connect(self.run_callback)
-        layout.addWidget(self.start_button)
-
-        self.sim_output_text = QTextEdit()
-        self.sim_output_text.setReadOnly(True)
-        self.sim_output_text.setFixedHeight(100)
-        layout.addWidget(self.sim_output_text)
-
-        self.sim_canvas = SimulationCanvas()
-        layout.addWidget(self.sim_canvas)
-
-        self.setLayout(layout)
-
-
-class OptimizationTab(QWidget):
-    def __init__(self, optimize_callback, lap_callback, settings_callback):
-        """
-        Initialize the OptimizationTab widget.
-
-        Sets up internal UI components for running the simulation optimization and navigating lap segments.
-        Requires two callback functions to be passed in for optimization logic and lap navigation.
-
-        :param optimize_callback: Function to be called when the optimization button is clicked.
-        :type optimize_callback: Callable
-        :param lap_callback: Function to be called when lap navigation buttons are clicked.
-        :type lap_callback: Callable
-        :returns: None
-        :rtype: None
-        """
-        super().__init__()
-        self.optimize_callback = optimize_callback
-        self.settings_callback = settings_callback
-        # self.lap_callback = lap_callback
-
-        self.optimize_button: Optional[QPushButton] = None
-        self.output_text: Optional[QTextEdit] = None
-        self.progress_bar: Optional[QProgressBar] = None
-        self.speed_canvas: Optional[SpeedPlotCanvas] = None
-        self.settings_button: Optional[QPushButton] = None
-        self.prev_lap_button: Optional[QPushButton] = None
-        self.next_lap_button: Optional[QPushButton] = None
-
-        self.init_ui()
-
-    def init_ui(self):
-        layout = QVBoxLayout()
-
-        self.optimize_button = QPushButton("Optimize Simulation")
-        self.optimize_button.clicked.connect(self.optimize_callback)
-        layout.addWidget(self.optimize_button)
-
-        self.output_text = QTextEdit()
-        self.output_text.setReadOnly(True)
-        layout.addWidget(self.output_text)
-
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setValue(0)
-        layout.addWidget(self.progress_bar)
-
-        self.speed_canvas = SpeedPlotCanvas(self)
-        self.speed_canvas.setMinimumHeight(500)
-        self.speed_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        layout.addWidget(self.speed_canvas)
-
-        # No need to have buttons for previous and next lap
-        #self.prev_lap_button = QPushButton("Previous Lap")
-        #self.prev_lap_button.clicked.connect(lambda: self.lap_callback("prev"))
-
-        #self.next_lap_button = QPushButton("Next Lap")
-        #self.next_lap_button.clicked.connect(lambda: self.lap_callback("next"))
-
-        self.settings_button = QPushButton("Settings")
-        self.settings_button.clicked.connect(self.settings_callback)
-
-        nav_layout = QVBoxLayout()
-        nav_layout.addWidget(self.settings_button)
-        #nav_layout.addWidget(self.prev_lap_button)
-        #nav_layout.addWidget(self.next_lap_button)
-        layout.addLayout(nav_layout)
-
-        self.setLayout(layout)
 
 
 class SimulationApp(QWidget):
@@ -615,7 +32,7 @@ class SimulationApp(QWidget):
         self.optimization_thread: Optional[OptimizationThread] = None
 
         self.initial_conditions = PersistentConfig(
-            MutableInitialConditions, config_dir / f"initial_conditions_{self.simulation_settings["race_type"]}.toml"
+            MutableInitialConditions, config_dir / f"initial_conditions_{self.simulation_settings['race_type']}.toml"
         )
 
         self.default_initial_conditions, self.default_environment_config, self.default_car_config = get_default_settings(
@@ -658,8 +75,8 @@ class SimulationApp(QWidget):
         )
 
         if dialog.exec_() == QDialog.Accepted:
-            initial_battery_soc, start_time = dialog.get_values()
-            if not None in [initial_battery_soc, start_time]:
+            initial_battery_soc, start_time, get_weather = dialog.get_values()
+            if not None in [initial_battery_soc, start_time, get_weather]:
                 print(f"Set optimization initial conditions: {initial_battery_soc=}, {start_time=}")
                 self.initial_conditions.initial_battery_soc = initial_battery_soc
                 self.initial_conditions.start_time = start_time
@@ -672,7 +89,7 @@ class SimulationApp(QWidget):
                         "start_time": self.initial_conditions.start_time,
                     }
                 )
-                self.optimize_simulation(initial_conditions)
+                self.optimize_simulation(initial_conditions, get_weather)
             else:
                 print("Invalid input.")
 
@@ -684,7 +101,7 @@ class SimulationApp(QWidget):
         self.optimization_tab = OptimizationTab(
             optimize_callback=self.prompt_for_initial_conditions,
             lap_callback=self.update_lap,
-            settings_callback = self.open_settings
+            settings_callback=self.open_settings
         )
 
         self.tabs.addTab(self.simulation_tab, "Run Simulation")
@@ -757,12 +174,12 @@ class SimulationApp(QWidget):
 
         self.simulation_thread.start()
 
-    def optimize_simulation(self, initial_conditions: InitialConditions):
+    def optimize_simulation(self, initial_conditions: InitialConditions, get_weather: bool):
         self.optimization_tab.optimize_button.setEnabled(False)
         self.optimization_tab.output_text.clear()
 
-        popsize = self.optimization_tab.speed_canvas.popsize # Population size for optimization
-        maxiter = self.optimization_tab.speed_canvas.maxiter # Number of iterations for optimization
+        popsize = self.optimization_tab.speed_canvas.popsize  # Population size for optimization
+        maxiter = self.optimization_tab.speed_canvas.maxiter  # Number of iterations for optimization
         self.optimization_thread = OptimizationThread(
             self.simulation_settings,
             popsize,
@@ -771,10 +188,12 @@ class SimulationApp(QWidget):
             self.default_hyperparameters,
             self.default_environment_config,
             self.default_car_config,
+            get_weather
         )
+        self.optimization_tab.progress_bar.setMaximum(maxiter)
         self.optimization_thread.update_signal.connect(self.optimization_tab.output_text.append)
         self.optimization_thread.progress_signal.connect(
-            lambda value: self.optimization_tab.progress_bar.setValue(value))
+            lambda value: self.optimization_tab.progress_bar.setValue(self.optimization_tab.progress_bar.value() + value))
         self.optimization_thread.model_signal.connect(self.optimization_plot)
         self.optimization_thread.finished.connect(lambda: self.optimization_tab.optimize_button.setEnabled(True))
 
@@ -782,6 +201,7 @@ class SimulationApp(QWidget):
 
     def update_output(self, message):
         self.output_text.append(message)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

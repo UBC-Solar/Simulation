@@ -1821,7 +1821,7 @@ wheels = [
 
 [[package]]
 name = "ubc-solar-data-tools"
-version = "1.9.0"
+version = "1.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dill" },
@@ -1838,11 +1838,11 @@ dependencies = [
     { name = "solcast" },
     { name = "sqlalchemy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/38/38/f45a6385e9f2e7013887d11cccac91726574ef32f318ba4eceece6579b1f/ubc_solar_data_tools-1.9.0.tar.gz", hash = "sha256:1ecd9fba0f7b4beab464b2121611d9562ff051f1d241201c0fa763ac921222b8", size = 31926 }
+sdist = { url = "https://files.pythonhosted.org/packages/6b/1c/614e7daf9845006ad056347f534c6cc12f71aaa3ba0ca9116e44e8915a2e/ubc_solar_data_tools-1.9.1.tar.gz", hash = "sha256:ac3fe42888d9dafa0c3204a9e3b3cc5589f78f5bc306933368edab74991412e2", size = 31963 }
 
 [[package]]
 name = "ubc-solar-physics"
-version = "1.8.0"
+version = "1.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backports-tarfile" },
@@ -1881,14 +1881,18 @@ dependencies = [
     { name = "urllib3" },
     { name = "zipp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fd/1b/9de01a1f9add53edb330ba87902b1729a5b7f125bb7e75790f46657430ce/ubc_solar_physics-1.8.0.tar.gz", hash = "sha256:73bbea6c79ba8d09067f6bcf3cc4e7fc60bc90cfd172a233573d3a0cd6a27e62", size = 22460025 }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/33/ed6605897c4ec171c4c3e0afe983cb7d4fc69c19d0c1dee350c2512b7cdf/ubc_solar_physics-1.8.1.tar.gz", hash = "sha256:5bc996569c3fef5d55576850cae1384e70217589e7c5627a0ae1013e241851b9", size = 22460027 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/c9/4806c91ae52b12725e5a49885365d6eae5b22ef83d6f30d8d242825934d1/ubc_solar_physics-1.8.0-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:ed1613ac59ed6c843162ac847a66cff2d485753ab9f4f8609745d30402145181", size = 340107 },
-    { url = "https://files.pythonhosted.org/packages/9d/4a/423cce0815c38b4bb70bdf11678393b0f3b1bd77ad83428a7e4c4b39e638/ubc_solar_physics-1.8.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:e9ec07325b36e816803c72049bbf46bbc7b547451ede243d5d63fb8c35bc5b6e", size = 331806 },
-    { url = "https://files.pythonhosted.org/packages/dd/9c/66f69678739aef38001d28ce0a5e3400cbb157d6833015fa1eba1fb7d475/ubc_solar_physics-1.8.0-cp312-cp312-win_amd64.whl", hash = "sha256:30d01a61964aa65fcbcc8456c1dd458657eb12fc2402d517c52f5403b4c492a9", size = 225051 },
-    { url = "https://files.pythonhosted.org/packages/12/af/4940af02eefd061267836eae0aba7b6cf32675623cf78441c11be42c7440/ubc_solar_physics-1.8.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:f3f06c78d8ffad5077d7645f1721a55eb6add048a92b3b8860313f7b6c86a860", size = 340107 },
-    { url = "https://files.pythonhosted.org/packages/d6/ed/5dad5623fc9889a253ffb9c9fd830d223171284832b336e3e8108f73074a/ubc_solar_physics-1.8.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:f3e88df00c36734f7e680a3ef81df8f4e285ced901d354d27f9fc39980160076", size = 331809 },
-    { url = "https://files.pythonhosted.org/packages/08/6b/ef743e9e188041d04ff59d38ac858fe43de671654c2c68a470ab9a4d5c27/ubc_solar_physics-1.8.0-cp313-cp313-win_amd64.whl", hash = "sha256:d262a7803ecc3579a5236efda53b7b042f52b1a5d1919b6f46f4c6f9ec592042", size = 225053 },
+    { url = "https://files.pythonhosted.org/packages/ba/9c/9507b0eada03db8aa8f18cb566a3e0ea3ba75ab0151ce154e5fb43ca5275/ubc_solar_physics-1.8.1-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:b19ff3e6cf52831d39b30a1681beb59b71b0446c92917dba7d93064ee4b92432", size = 340115 },
+    { url = "https://files.pythonhosted.org/packages/04/b5/9a970ccd4d545dd6bb9c62f51c641be6a1f361a8b856cd21698cd5ca84c4/ubc_solar_physics-1.8.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:56425e60c26b3e3660bf0efd7fb7ab6a1f0383734637ca26e0dfff45b6e6ddde", size = 331815 },
+    { url = "https://files.pythonhosted.org/packages/4d/0a/203f944af0c52dbb31a1fbc88d07bfae8d4bf6d42dee81178fede26dba97/ubc_solar_physics-1.8.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:58451f8f0e9f86f0d8071b473fad56840f042e6c995961e362c12b9486e631d1", size = 367680 },
+    { url = "https://files.pythonhosted.org/packages/94/70/4e181a81f1eddd008b8950722edfe4a8b3964e5781d4266ecc1eb1889536/ubc_solar_physics-1.8.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:209c6d5c14fab9f64a303c6c0d7a157aab1e320a216dc73d88a5c6956baa1fca", size = 383007 },
+    { url = "https://files.pythonhosted.org/packages/b9/69/f795717bb63305ca541bab70a64e111fcb2425754a71cc1c731454ce4360/ubc_solar_physics-1.8.1-cp312-cp312-win_amd64.whl", hash = "sha256:5418c019dba598b26343dadb480c6d6f36839adb95d1f67dccf2f00bf652108c", size = 225058 },
+    { url = "https://files.pythonhosted.org/packages/d2/5f/b906d808799e01cae07712b4e4739bdcac809eaa39662af4a331dcc7203f/ubc_solar_physics-1.8.1-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:3b682cb2d3ff67f72683ba83c253e22ec845340564e05b3917219d6a1fa7d60b", size = 340114 },
+    { url = "https://files.pythonhosted.org/packages/8a/94/0a8f96616a7c2bd04874f09bb55b468194e7059c8531a707f94233723b44/ubc_solar_physics-1.8.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:792418022956ea237e57f687dbe2cc97de19e69733f9dd8aeeec101f70a74ee4", size = 331817 },
+    { url = "https://files.pythonhosted.org/packages/12/3c/9955d093bbe5c4d657dd929a266045786eb75f1ef86b2f03cbaccf22249c/ubc_solar_physics-1.8.1-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5fea39aa4b80aa898cea279a53ae143f21cb832c32a542b1a9cc51cf7308601d", size = 367680 },
+    { url = "https://files.pythonhosted.org/packages/04/3f/19a45c5e36d59de5e0601dad202525d4993db0f8f20d021c4b423e6fb9cf/ubc_solar_physics-1.8.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:48dd936970e7b66229f8e131c8b544dd531ccae01e4163d33d1b8e1052958094", size = 383008 },
+    { url = "https://files.pythonhosted.org/packages/24/30/e0c46a57b2609da18cdf86842119e17e141711233336728480bcc58c3e30/ubc_solar_physics-1.8.1-cp313-cp313-win_amd64.whl", hash = "sha256:7117c2238064e323e3cb32ca4c17beb2fefbd314996027000e604c1a62d0f8f8", size = 225057 },
 ]
 
 [[package]]
@@ -1986,8 +1990,8 @@ requires-dist = [
     { name = "tomli-w", specifier = ">=1.2.0" },
     { name = "tqdm", specifier = ">=4.64.0" },
     { name = "tzlocal", specifier = ">=5.2" },
-    { name = "ubc-solar-data-tools", specifier = ">=1.5.0" },
-    { name = "ubc-solar-physics", specifier = "==1.8.0" },
+    { name = "ubc-solar-data-tools", specifier = "==1.9.1" },
+    { name = "ubc-solar-physics", specifier = "==1.8.1" },
 ]
 provides-extras = ["dev"]
 
