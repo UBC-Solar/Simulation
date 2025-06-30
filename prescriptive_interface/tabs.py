@@ -1,8 +1,18 @@
 from typing import Optional
+from pathlib import Path
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QTextEdit, QProgressBar, QSizePolicy
 )
 from prescriptive_interface import SimulationCanvas, SpeedPlotCanvas
+
+from PyQt5.QtCore import QUrl
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+import subprocess
+
+from micro_strategy import run_micro_simulation
+import io
+from contextlib import redirect_stdout, redirect_stderr
+
 
 
 class SimulationTab(QWidget):
@@ -102,3 +112,64 @@ class OptimizationTab(QWidget):
         layout.addLayout(nav_layout)
 
         self.setLayout(layout)
+
+
+class HtmlViewerTab(QWidget):
+    """A tab that displays an HTML file and runs a fixed script when a button is pressed."""
+
+    def __init__(self, html_path: str):
+        """
+        :param html_path: Absolute or relative path to the local HTML file to display.
+        """
+        super().__init__()
+        self.html_path = html_path
+        self.script_path = Path(__file__).resolve().parent.parent / "micro_strategy" / "run_micro_simulation.py"
+
+        self.view: Optional[QWebEngineView] = None
+        self.run_button: Optional[QPushButton] = None
+        self.sim_output_text: Optional[QTextEdit] = None  # Renamed for alignment
+
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+        self.run_button = QPushButton("Run Report Generator")
+        self.run_button.clicked.connect(self.run_script)
+        layout.addWidget(self.run_button)
+
+        self.sim_output_text = QTextEdit()
+        self.sim_output_text.setReadOnly(True)
+        self.sim_output_text.setFixedHeight(100)
+        layout.addWidget(self.sim_output_text)
+
+        self.view = QWebEngineView()
+        local_url = QUrl.fromLocalFile(str(Path(self.html_path).resolve()))
+        self.view.load(local_url)
+        self.view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout.addWidget(self.view)
+
+        self.setLayout(layout)
+
+    def reload(self):
+        """Reload the HTML view."""
+        if self.view:
+            self.view.reload()
+
+    def run_script(self):
+        """Call run_micro_simulation.main() and capture printed output."""
+        self.run_button.setEnabled(False)
+        self.sim_output_text.clear()
+
+        try:
+            buffer = io.StringIO()
+            with redirect_stdout(buffer), redirect_stderr(buffer):
+                run_micro_simulation.main()
+
+            output = buffer.getvalue().strip()
+            self.sim_output_text.append(output if output else "Script completed successfully.")
+        except Exception as e:
+            self.sim_output_text.append(f"Error running script: {e}")
+
+        self.reload()
+        self.run_button.setEnabled(True)

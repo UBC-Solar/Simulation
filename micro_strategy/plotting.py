@@ -20,8 +20,8 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
 
     m.add_child(MeasureControl()) # adds measurement tool
     # Use percentiles to suppress the influence of outliers
-    lower = np.percentile(plot_value, 10)  
-    upper = np.percentile(plot_value, 90)
+    lower = np.percentile(plot_value, 15)  
+    upper = np.percentile(plot_value, 95)
 
     norm = mcolors.Normalize(vmin=lower, vmax=upper)
     cmap = cm.get_cmap('plasma')
@@ -79,7 +79,7 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
             f"<b>🫸🏼 Force Calculations</b> (N)"
             f"<br>Drag Force: {drag_forces[i]:.2f}"
             f"<br>Rolling Resistance: {road_friction_array[i]:.2f}"
-            f"<br>Gravity Parallel Force: {g_forces[i]:.2f}"
+            f"<br>Downforce: {g_forces[i]:.2f}"
         )
         folium.CircleMarker(
             location=(lat, lon),

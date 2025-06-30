@@ -42,5 +42,4 @@ def get_distances(trajectory):
         distance_array_m.append(distance_norm)
 
     distance_array_m.insert(0, 0) # first point has no distance
-    distance_array_m[len(distance_array_m) - 1] = 0
     return distance_array_m

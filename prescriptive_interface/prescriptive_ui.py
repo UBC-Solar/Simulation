@@ -8,11 +8,15 @@ from diagnostic_interface.config import PersistentConfig
 from simulation.cmd.run_simulation import get_default_settings
 from simulation.config import SimulationReturnType, SimulationHyperparametersConfig, InitialConditions
 from pathlib import Path
-from prescriptive_interface import (SimulationTab, OptimizationTab, SimulationSettingsDict, OptimizationThread,
+from prescriptive_interface import (SimulationTab, OptimizationTab, HtmlViewerTab, SimulationSettingsDict, OptimizationThread,
                                     SimulationThread, MutableInitialConditions, InitialConditionsDialog)
 
 config_dir = Path(__file__).parent.parent / "simulation" / "config"
 
+HTML_TABS = [
+    ("Speed Heatmap", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_speed.html"),
+    ("Energy Heatmap", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_energy.html"),
+]
 
 class SimulationApp(QWidget):
     def __init__(self):
@@ -21,6 +25,7 @@ class SimulationApp(QWidget):
 
         self.simulation_tab: Optional[SimulationTab] = None
         self.optimization_tab: Optional[OptimizationTab] = None
+        self.html_tabs: dict[str, HtmlViewerTab] = {}
         self.simulation_settings: SimulationSettingsDict = {
             "race_type": "FSGP",
             "verbose": True,
@@ -46,7 +51,7 @@ class SimulationApp(QWidget):
                 "speed_dt": self.simulation_settings["granularity"],
             }
         )
-
+        
         self.init_ui()
 
     def update_lap(self, direction):
@@ -106,6 +111,11 @@ class SimulationApp(QWidget):
 
         self.tabs.addTab(self.simulation_tab, "Run Simulation")
         self.tabs.addTab(self.optimization_tab, "Optimize Simulation")
+
+        for label, html_path in HTML_TABS:
+            viewer_tab = HtmlViewerTab(str(html_path.resolve()))
+            self.html_tabs[label] = viewer_tab
+            self.tabs.addTab(viewer_tab, label)
 
         layout.addWidget(self.tabs)
         self.setLayout(layout)
