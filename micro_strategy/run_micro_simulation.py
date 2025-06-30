@@ -127,8 +127,8 @@ def objective_trajectory_energy(
     ticks = dists_m / v_ms
     winds = np.zeros_like(dists_m)
 
-    energy, *_ = motor_model.calculate_energy_in(
-        speed_kmh, gradients, winds, ticks, path
+    energy = motor_model.calculate_energy_in(
+        speed_kmh, gradients, winds, ticks, path, plotting=False
     )
 
     return np.sum(energy)
@@ -242,6 +242,9 @@ if __name__ == '__main__':
         trajectory=random_trajectory,
         environment_config=environment_config
     )
+    print("after first run")
+    print(speeds_kmh)
+    print(f"total energy: {np.sum(energy_consumed)}")
 
     folium_map = plot_mesh(
         "energy",
@@ -269,7 +272,7 @@ if __name__ == '__main__':
         num_lateral_indices=num_lateral_indices,
         motor_model=advanced_motor
     )
-    
+
     distances_m_op = np.array(get_distances(random_trajectory))
 
     energy_consumed_op, cornering_work_op, road_friction_array_op, drag_forces_op, g_forces_op, ticks_op, speeds_kmh_op, gradients_op, advanced_motor = run_motor_model(
