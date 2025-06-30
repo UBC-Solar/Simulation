@@ -1,4 +1,6 @@
 import sys
+import os
+sys.path.insert(0, os.getcwd())
 from typing import Optional
 
 from PyQt5.QtWidgets import (
@@ -142,7 +144,7 @@ class SimulationApp(QWidget):
         layout = QVBoxLayout()
         self.tabs = QTabWidget()
 
-        self.simulation_tab = SimulationTab(run_callback=self.run_simulation)
+        self.simulation_tab = SimulationTab()
         self.optimization_tab = OptimizationTab(
             optimize_callback=self.prompt_for_initial_conditions,
             lap_callback=self.update_lap,
@@ -186,41 +188,6 @@ class SimulationApp(QWidget):
         :rtype: None
         """
         self.simulation_tab.sim_canvas.plot_simulation_results(results_dict)
-
-    def update_speed_plot(self, model):
-        """
-        This method visualizes the optimized lap speeds_directory on a folium map by passing
-        the model to the FoliumMapWidget.
-
-        :param model: The optimized simulation model containing GIS and speed data.
-        :type model: object
-        :returns: None
-        :rtype: None
-        """
-        self.optimization_tab.speed_canvas.plot_optimized_speeds(model)
-
-    def optimization_plot(self, model, optimized_speeds, laps_per_index, num_laps):
-        """
-        Plots optimized speeds on optimization tab. It will then run the simulation with the optimized
-        speeds, and display the results in the optimization tab.
-
-        :param model: Optimized simulation model.
-        :param optimized_speeds: Array of optimized speeds.
-        """
-        self.optimization_tab.speed_canvas.plot_optimized_speeds(optimized_speeds, laps_per_index, num_laps)
-
-        # Store optimized speeds
-        self.optimized_speeds = optimized_speeds  # Keep as an attribute
-
-        # Run simulation with optimized speeds
-        self.simulation_thread = SimulationThread(self.simulation_settings, model=model, speeds_filename=None)
-        self.simulation_thread.update_signal.connect(self.simulation_tab.sim_output_text.append)
-        self.simulation_thread.plot_data_signal.connect(self.simulation_tab.sim_canvas.plot_simulation_results)
-
-        # Simulation tab will now have the results using the optimized speeds
-        self.simulation_thread.optimized_speeds = optimized_speeds
-
-        self.simulation_thread.start()
 
     def optimize_simulation(self, initial_conditions: InitialConditions, get_weather: bool, days):
         self.optimization_tab.optimize_button.setEnabled(False)

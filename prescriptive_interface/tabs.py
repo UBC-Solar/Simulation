@@ -13,7 +13,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 
 class SimulationTab(QWidget):
-    def __init__(self, run_callback):
+    def __init__(self):
         """
         Initialize the SimulationTab widget.
 
@@ -26,7 +26,6 @@ class SimulationTab(QWidget):
         :rtype: None
         """
         super().__init__()
-        self.run_callback = run_callback
         self.start_button: Optional[QPushButton] = None
         self.sim_output_text: Optional[QTextEdit] = None
         self.sim_canvas: Optional[SimulationCanvas] = None

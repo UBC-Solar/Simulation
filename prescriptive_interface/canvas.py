@@ -93,7 +93,7 @@ class SpeedPlotCanvas(FigureCanvas):
         self.popsize = 6  # default population size
         self.maxiter = 100  # default number of iterations
 
-    def plot_optimized_speeds(self, speeds, laps_per_index, num_laps):
+    def plot_optimized_speeds(self, base_model, speeds, laps_per_index, num_laps):
         """
         Plot optimized speeds vs laps on the optimization tab.
 
