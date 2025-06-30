@@ -4,7 +4,6 @@ from folium.plugins import MeasureControl
 import numpy as np
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
-from matplotlib.colors import LinearSegmentedColormap
 
 def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, cornering_work, gradients, road_friction_array, drag_forces, g_forces):
     heat_map_options = {"energy", "speed"}
@@ -21,11 +20,11 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
 
     m.add_child(MeasureControl()) # adds measurement tool
     # Use percentiles to suppress the influence of outliers
-    lower = np.percentile(plot_value, 20)  
-    upper = np.percentile(plot_value, 80)
+    lower = np.percentile(plot_value, 10)  
+    upper = np.percentile(plot_value, 90)
 
     norm = mcolors.Normalize(vmin=lower, vmax=upper)
-    cmap = cm.get_cmap('plasma')  # Clean, perceptual gradient
+    cmap = cm.get_cmap('plasma')
 
     # Plot the lateral mesh points
     for i, row in enumerate(mesh):

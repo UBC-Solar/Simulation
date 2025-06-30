@@ -4,7 +4,6 @@ import tomllib as toml
 from geopy.distance import distance
 import time
 
-from data import get_FSGP_trajectory
 from geometry import get_distances
 from plotting import plot_mesh
 from micro_model_builder import MicroModelBuilder
@@ -242,9 +241,6 @@ if __name__ == '__main__':
         trajectory=random_trajectory,
         environment_config=environment_config
     )
-    print("after first run")
-    print(speeds_kmh)
-    print(f"total energy: {np.sum(energy_consumed)}")
 
     folium_map = plot_mesh(
         "energy",
