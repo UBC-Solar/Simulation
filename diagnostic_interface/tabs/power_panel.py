@@ -1,13 +1,13 @@
 import traceback
 from data_tools.query import SunbeamClient
 from data_tools.schema import UnwrappedError
-from PyQt5.QtWidgets import QMessageBox, QPushButton, QLabel
+from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer, pyqtSlot
-from diagnostic_interface import settings, coords
+from diagnostic_interface import settings
 from diagnostic_interface.canvas import CustomNavigationToolbar, RealtimeCanvas
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
-from diagnostic_interface.widgets import FoliumMapWidget
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
 import numpy as np
+from diagnostic_interface.widgets import TimedMapPlot
 
 
 class PlotRefreshWorkerSignals(QObject):
@@ -29,10 +29,10 @@ class PlotRefreshWorker(QRunnable):
 
             motor_power = self.power_canvas.fetch_data()
 
-            gis_indices = client.get_file(pipeline, event, "localization", "TrackIndex")
-            lap_numbers = client.get_file(pipeline, event, "localization", "LapIndex")
+            gps_longitude = client.get_file(pipeline, event, "localization", "GPSLongitude")
+            gps_latitude = client.get_file(pipeline, event, "localization", "GPSLatitude")
 
-            self.signals.data_ready.emit(motor_power, gis_indices, lap_numbers)
+            self.signals.data_ready.emit(motor_power, gps_longitude, gps_latitude)
 
         except Exception as e:
             print(e)
@@ -53,39 +53,9 @@ class PowerTab(QWidget):
         self.layout.addWidget(power_toolbar)
         self.layout.addWidget(self.power_canvas, stretch=1)
 
-        self.map_panel_layout = QHBoxLayout()
-
-        self.map_widget_layout = QVBoxLayout()
-
-        self.map_widget = FoliumMapWidget(coords)
-        self.map_widget_layout.addWidget(self.map_widget, stretch=5)
-
-        self.map_button_layout = QHBoxLayout()
-        self.next_lap_button = QPushButton("Next Lap")
-        self.next_lap_button.clicked.connect(self.next_lap)
-        self.prev_lap_button = QPushButton("Previous Lap")
-        self.prev_lap_button.clicked.connect(self.prev_lap)
-        self.map_button_layout.addWidget(self.next_lap_button)
-        self.map_button_layout.addWidget(self.prev_lap_button)
-
-        self.map_widget_layout.addLayout(self.map_button_layout, stretch=1)
-        self.map_panel_layout.addLayout(self.map_widget_layout, stretch=4)
-
-        self.map_text_layout = QVBoxLayout()
-        self.map_text_1 = QLabel("Current Lap: ?")
-        self.map_text_2 = QLabel("Maximum Laps: ?")
-        self.map_text_3 = QLabel("Total Energy: ?")
-
-        self.map_text_1.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
-        self.map_text_2.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
-        self.map_text_3.setStyleSheet(f"font-size: {font_size}pt; font-weight: bold;")
-
-        self.map_text_layout.addWidget(self.map_text_1)
-        self.map_text_layout.addWidget(self.map_text_2)
-        self.map_text_layout.addWidget(self.map_text_3)
-        self.map_panel_layout.addLayout(self.map_text_layout, stretch=1)
-
-        self.layout.addLayout(self.map_panel_layout, stretch=3)
+        self.map_plot_panel = TimedMapPlot(font_size, lambda x: x * x.period,
+                                           lambda x: f"Total Energy: {np.sum(x) / 1e3:.1f} kJ")
+        self.layout.addWidget(self.map_plot_panel, stretch=3)
 
         self.line = None
 
@@ -98,33 +68,13 @@ class PowerTab(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh_plot)
 
-        self.gis_indices = None
-        self.lap_indices = None
         self.motor_power = None
         self.max_laps = None
-        self.current_lap_number = 0
-
-    def next_lap(self):
-        if self.max_laps is None:
-            return
-
-        if not self.current_lap_number + 1 > self.max_laps:
-            self.current_lap_number += 1
-            self.draw_map()
-
-        else:
-            QMessageBox.warning(None, "Lap Error", f"There is no lap available after {self.max_laps}.")
-
-    def prev_lap(self):
-        if self.max_laps is None:
-            return
-
-        if not self.current_lap_number < 1:
-            self.current_lap_number -= 1
-            self.draw_map()
-
-        else:
-            QMessageBox.warning(None, "Lap Error", "There is no lap available before 0.")
+        self.start_time = None
+        self.end_time = None
+        self.current_lap_number = 36
+        self.time_difference = 60
+        self.date = None
 
     def refresh_plot(self):
         worker = PlotRefreshWorker(self.power_canvas)
@@ -141,49 +91,14 @@ class PowerTab(QWidget):
         else:
             self.timer.stop()
 
-    def draw_map(self):
-        if (self.lap_indices is None) or (self.motor_power is None) or (self.gis_indices is None):
-            return
-
-        current_lap_mask = self.lap_indices == self.current_lap_number
-
-        energy = np.empty(len(coords), dtype=float)
-
-        for i in range(len(coords)):
-            current_gis_indices = np.logical_and(self.gis_indices == i, current_lap_mask)
-            energy_used = np.sum(self.motor_power[current_gis_indices] * self.motor_power.period, axis=0)
-
-            energy[i] = energy_used
-
-        self.map_widget.update_map(energy, "J")
-        self.map_text_1.setText(f"Current Lap: {self.current_lap_number}")
-        self.map_text_2.setText(f"Maximum Laps: {self.max_laps}")
-        self.map_text_3.setText(f"Total Energy: {np.sum(energy) / 1e3:.1f} kJ")
-
     @pyqtSlot(object, object, object)
-    def _on_data_ready(self, motor_power, gis_indices_result, lap_numbers_result):
+    def _on_data_ready(self, motor_power, gps_longitude_result, gps_latitude_result):
         try:
             self.motor_power = motor_power
-            self.power_canvas.plot(motor_power, "Motor Power", "Power (W)")
 
-            try:
+            self.map_plot_panel.set_data(motor_power, gps_latitude_result, gps_longitude_result)
 
-                self.gis_indices = gis_indices_result.unwrap().data
-                self.lap_indices = lap_numbers_result.unwrap().data
-                self.max_laps = int(np.nanmax(self.lap_indices))
-
-                if self.max_laps is None:
-                    draw_map = True
-                else:
-                    draw_map = False
-
-                if draw_map:
-                    self.draw_map()
-
-            except UnwrappedError:
-                self.gis_indices = None
-                self.lap_indices = None
-                self.max_laps = None
+            self.power_canvas.plot(self.motor_power, "Motor Power", "Power (W)")
 
         except UnwrappedError as e:
             traceback.print_exc()

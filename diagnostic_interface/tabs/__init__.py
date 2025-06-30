@@ -12,6 +12,8 @@ from .sunbeam_panel import SunbeamTab
 from .sunlink_panel import SunlinkTab
 from .telemetry_panel import TelemetryTab
 from .soc_tab import SOCTab
+from .speed_tab import SpeedTab
+from .array_tab import ArrayTab
 
 __all__ = [
     "DockerStackTab",
@@ -22,5 +24,7 @@ __all__ = [
     "SunlinkTab",
     "TelemetryTab",
     "PowerTab",
-    "SOCTab"
+    "SOCTab",
+    "SpeedTab",
+    "ArrayTab"
 ]

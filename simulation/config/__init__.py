@@ -29,6 +29,7 @@ from .models import (
 )
 
 ConfigDirectory = pathlib.Path(__file__).parent
+speeds_directory = ConfigDirectory / "speeds_directory"  # Points to speeds_directory
 
 
 __all__ = [
