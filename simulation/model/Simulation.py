@@ -153,6 +153,7 @@ class Simulation:
         # ----- Timing Calculations -----
 
         # Get time zones at each point on the GIS path
+        print(self.closest_gis_indices)
         self.time_zones = self.model.gis.get_time_zones(self.closest_gis_indices)
 
         # Local times in UNIX timestamps

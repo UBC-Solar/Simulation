@@ -1,7 +1,7 @@
 from typing import TypedDict
 from PyQt5.QtWidgets import (
     QVBoxLayout, QDialog, QFormLayout, QLineEdit, QDialogButtonBox,
-    QHBoxLayout, QPushButton, QCheckBox
+    QHBoxLayout, QPushButton, QCheckBox, QWidget, QButtonGroup
 )
 from diagnostic_interface.config import PersistentConfig
 from datetime import datetime
@@ -14,6 +14,29 @@ class SimulationSettingsDict(TypedDict):
     verbose: bool
     granularity: int
     car: str
+
+
+class MultiToggleBar(QWidget):
+    def __init__(self, labels, parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0,0,0,0)
+
+        self.group = QButtonGroup(self)
+        self.group.setExclusive(False)
+
+        for lbl in labels:
+            btn = QPushButton(lbl)
+            btn.setCheckable(True)
+            btn.setFlat(True)
+            btn.setChecked(True)
+            layout.addWidget(btn)
+            self.group.addButton(btn)
+
+    def not_selected(self):
+        # returns list of labels currently checked
+        return [b.text() for b in self.group.buttons() if not b.isChecked()]
 
 
 class InitialConditionsDialog(QDialog):
@@ -45,6 +68,9 @@ class InitialConditionsDialog(QDialog):
         form_layout.addRow("Start Time (s):", start_time_layout)
         form_layout.addRow("Get Weather:", self.get_weather_checkbox)
 
+        self.days = MultiToggleBar([str(i) for i in [1, 2, 3]])
+        form_layout.addRow("Days:", self.days)
+
         layout.addLayout(form_layout)
 
         # Add OK/Cancel buttons
@@ -68,10 +94,11 @@ class InitialConditionsDialog(QDialog):
             initial_battery_soc = float(self.soc_input.text())
             start_time = int(self.start_time_input.text())
             get_weather = bool(self.get_weather_checkbox.isChecked())
-            print(initial_battery_soc, start_time)
-            return initial_battery_soc, start_time, get_weather
+            days = [int(i) - 1 for i in self.days.not_selected()]
+
+            return initial_battery_soc, start_time, get_weather, days
         except ValueError:
-            return None, None, None
+            return None, None, None, None
 
 
 class SettingsDialog(QDialog):
