@@ -27,7 +27,7 @@ from simulation.config import (
 from physics.models.arrays import BaseArray, BasicArray
 from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel, BatteryModelConfig
 from physics.models.lvs import BaseLVS, BasicLVS
-from physics.models.motor import BaseMotor, BasicMotor
+from physics.models.motor import BaseMotor, BasicMotor, AdvancedMotor
 from physics.models.regen import BaseRegen, BasicRegen
 from physics.environment.gis import BaseGIS, GIS
 from physics.environment.meteorology import (
@@ -269,6 +269,10 @@ class ModelBuilder:
 
             route: Route = self._cache.get(route_data_path)
 
+            if hasattr(competition_config, "tiling"):
+                if route.tiling != competition_config.tiling:
+                    raise KeyError
+
         # Generate new route data data
         except KeyError:
             match competition_config.competition_type:
@@ -407,10 +411,18 @@ class ModelBuilder:
 
                 self.battery = EquivalentCircuitBatteryModel(battery_config, self.initial_battery_charge)
 
-        self.motor = BasicMotor(
-            vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
-            **self._car_config.motor_config.model_dump(),
-        )
+        match self._car_config.motor_config.motor_type:
+            case "BasicMotor":
+                self.motor = BasicMotor(
+                    vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
+                    **self._car_config.motor_config.model_dump(),
+                )
+
+            case "AdvancedMotor":
+                self.motor = AdvancedMotor(
+                    vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
+                    **self._car_config.motor_config.model_dump()
+                )
 
         self.regen = BasicRegen(self._car_config.vehicle_config.vehicle_mass)
 

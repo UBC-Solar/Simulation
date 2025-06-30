@@ -1,7 +1,7 @@
 [competition_config]
 competition_type = "TrackCompetition"
 competition_name = "FSGP"
-date = "2025-06-06T05:00:00.0Z"
+date = "2025-06-29T05:00:00.0Z"
 
 [competition_config.TrackCompetition]
 tiling = 300

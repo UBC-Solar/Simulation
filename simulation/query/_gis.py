@@ -2,12 +2,15 @@ import os
 import sys
 import json
 import requests
-import datetime
+from simulation.config import CompetitionConfig
+from numpy.typing import ArrayLike
+from simulation.query import Query
+from timezonefinder import TimezoneFinder
+from zoneinfo import ZoneInfo
 import numpy as np
 from tqdm import tqdm
-from simulation.config import CompetitionConfig
-from numpy.typing import NDArray, ArrayLike
-from simulation.query import Query
+from datetime import datetime
+from numpy.typing import NDArray
 
 
 class TrackRouteQuery(Query[CompetitionConfig]):
@@ -130,24 +133,39 @@ def _calculate_path_elevations(coords):
     return elevations
 
 
-def _calculate_time_zones(coords: ArrayLike, date: datetime.datetime) -> NDArray:
+def _calculate_time_zones(coords: ArrayLike, date: datetime) -> NDArray:
     """
+    For each (lat, lng) in coords, find the local timezone
+    and return its offset from UTC at the given date, in seconds.
 
-    Takes in an array of coordinates, return the time zone relative to UTC, of each location in seconds
-
-    :param date:
-    :param np.ndarray coords: (float[N][lat lng]) array of coordinates
-    :returns np.ndarray time_diff: (float[N]) array of time differences in seconds
-
+    :param coords: array-like of shape (N, 2) with (latitude, longitude)
+    :param date:   a datetime (naive or tz-aware); if naive, assumed UTC
+    :returns:      numpy array of length N with offset in seconds
     """
+    _tf = TimezoneFinder()
 
-    timezones_return = np.zeros(len(coords))
+    # ensure date is timezone-aware in UTC
+    if date.tzinfo is None:
+        date = date.replace(tzinfo=ZoneInfo("UTC"))
 
-    with tqdm(
-        total=len(coords), file=sys.stdout, desc="Calculating Time Zones"
-    ) as pbar:
-        for index, coord in enumerate(coords):
+    n = len(coords)
+    offsets = np.full(n, np.nan, dtype=float)
+
+    with tqdm(total=n, file=sys.stdout, desc="Calculating Time Zones") as pbar:
+        for i, (lat, lng) in enumerate(coords):
             pbar.update(1)
-            timezones_return[index] = date.utcoffset().total_seconds()
+            tzname = _tf.timezone_at(lat=lat, lng=lng)
 
-    return timezones_return
+            if tzname is None:
+                tzname = _tf.closest_timezone_at(lat=lat, lng=lng)
+
+            try:
+                tz = ZoneInfo(tzname)
+                local_dt = date.astimezone(tz)
+                offsets[i] = local_dt.utcoffset().total_seconds()
+
+            except Exception:
+                continue
+
+    return offsets
+

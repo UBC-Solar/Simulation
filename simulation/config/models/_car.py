@@ -84,12 +84,22 @@ class MotorConfig(Config):
     Configuration object describing the motor of a vehicle.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, subclass_field="motor_type")
+
+    motor_type: str
 
     road_friction: float  # Road friction coefficient, dimensionless
     tire_radius: float  # Tire radius, in m
     vehicle_frontal_area: float  # Vehicle frontal area, in m^2
     drag_coefficient: float  # Drag coefficient, dimensionless
+
+
+class BasicMotorConfig(MotorConfig):
+    pass
+
+
+class AdvancedMotorConfig(MotorConfig):
+    cornering_coefficient: float
 
 
 class RegenConfig(Config):
