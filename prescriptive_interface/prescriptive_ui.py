@@ -142,7 +142,7 @@ class SimulationApp(QWidget):
         layout = QVBoxLayout()
         self.tabs = QTabWidget()
 
-        self.simulation_tab = SimulationTab(run_callback=self.run_simulation)
+        self.simulation_tab = SimulationTab()
         self.optimization_tab = OptimizationTab(
             optimize_callback=self.prompt_for_initial_conditions,
             lap_callback=self.update_lap,
