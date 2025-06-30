@@ -153,7 +153,6 @@ class Model:
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
-        # speed_kmh = core.constrain_speeds(self.speed_limits.astype(float), speed_kmh, self.simulation_dt)
 
         # ------ Run calculations and get result and modified speed array -------
         self._simulation = Simulation(self)

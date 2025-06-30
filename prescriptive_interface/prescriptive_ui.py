@@ -1,17 +1,33 @@
+import random
+import string
 import sys
 from typing import Optional
 
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QTabWidget, QDialog,
+    QApplication, QWidget, QVBoxLayout, QTabWidget, QDialog, QMessageBox
 )
+from PyQt5.QtGui import QPixmap
 from diagnostic_interface.config import PersistentConfig
+from diagnostic_interface.widgets import SplashOverlay
 from simulation.cmd.run_simulation import get_default_settings
 from simulation.config import SimulationReturnType, SimulationHyperparametersConfig, InitialConditions
+from pathlib import Path
+from prescriptive_interface import (SimulationTab, OptimizationTab, SimulationSettingsDict, OptimizationThread,
+                                    SimulationThread, MutableInitialConditions, InitialConditionsDialog)
+from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import Qt
+
+from qt_material import apply_stylesheet
+
+config_dir = Path(__file__).parent.parent / "simulation" / "config"
+
 from pathlib import Path
 from prescriptive_interface import (SimulationTab, OptimizationTab, HtmlViewerTab, SimulationSettingsDict, OptimizationThread,
                                     SimulationThread, MutableInitialConditions, InitialConditionsDialog)
 
-config_dir = Path(__file__).parent.parent / "simulation" / "config"
+my_speeds_dir = Path("prescriptive_interface/speeds_directory")
+my_speeds_dir.mkdir(parents=True, exist_ok=True)  # Create it if it doesn't exist
+
 
 HTML_TABS = [
     ("Speed Heatmap", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_speed.html"),
@@ -51,8 +67,14 @@ class SimulationApp(QWidget):
                 "speed_dt": self.simulation_settings["granularity"],
             }
         )
-        
+
         self.init_ui()
+
+        pix = QPixmap("Solar_Sun.png").scaled(200, 200, Qt.KeepAspectRatio)
+        self._splash = SplashOverlay(self, pix, interval=20)
+
+    def finishSplash(self):
+        self._splash.hide()
 
     def update_lap(self, direction):
         """
@@ -80,21 +102,42 @@ class SimulationApp(QWidget):
         )
 
         if dialog.exec_() == QDialog.Accepted:
-            initial_battery_soc, start_time, get_weather = dialog.get_values()
-            if not None in [initial_battery_soc, start_time, get_weather]:
+            initial_battery_soc, start_time, get_weather, days = dialog.get_values()
+            if None not in [initial_battery_soc, start_time, get_weather, days]:
                 print(f"Set optimization initial conditions: {initial_battery_soc=}, {start_time=}")
                 self.initial_conditions.initial_battery_soc = initial_battery_soc
                 self.initial_conditions.start_time = start_time
+
+                if len(days) == 1:
+                    if days[0] == 1:
+                        QMessageBox.warning(self, "Day Selection Error", "Cannot select Day 1 and 3!")
+                        return
+
+                if len(days) == 3:
+                    QMessageBox.warning(self, "Day Selection Error", "Must select at least one day!")
+                    return
+
+                # TODO: Explain this crap because while it looks to be a mess I promise it
+                #   all has a very simple and necessary purpose.
+                selected_days = {0, 1, 2} - set(days)
+                first_selected_day = min(selected_days)
+                minimum_start_time = first_selected_day * 60 * 60 * 24
+                start_time = max(minimum_start_time, self.initial_conditions.start_time)
+
+                skipped_days = list(range(0, first_selected_day))
+                days = [i for i in days if i not in skipped_days]
+
+                print(f"Start Time: {start_time}")
 
                 # Create an InitialConditions config object form the initial conditions PersistentConfig
                 initial_conditions = InitialConditions.build_from(
                     {
                         "current_coord": self.initial_conditions.current_coord,
                         "initial_battery_soc": self.initial_conditions.initial_battery_soc,
-                        "start_time": self.initial_conditions.start_time,
+                        "start_time": start_time,
                     }
                 )
-                self.optimize_simulation(initial_conditions, get_weather)
+                self.optimize_simulation(initial_conditions, get_weather, days)
             else:
                 print("Invalid input.")
 
@@ -104,13 +147,12 @@ class SimulationApp(QWidget):
 
         self.simulation_tab = SimulationTab(run_callback=self.run_simulation)
         self.optimization_tab = OptimizationTab(
-            optimize_callback=self.prompt_for_initial_conditions,
-            lap_callback=self.update_lap,
-            settings_callback=self.open_settings
+            optimize_callback=self.optimize_simulation,
+            lap_callback=self.update_lap
         )
 
-        self.tabs.addTab(self.simulation_tab, "Run Simulation")
-        self.tabs.addTab(self.optimization_tab, "Optimize Simulation")
+        self.tabs.addTab(self.optimization_tab, "Optimization")
+        self.tabs.addTab(self.simulation_tab, "Simulation")
 
         for label, html_path in HTML_TABS:
             viewer_tab = HtmlViewerTab(str(html_path.resolve()))
@@ -119,8 +161,7 @@ class SimulationApp(QWidget):
 
         layout.addWidget(self.tabs)
         self.setLayout(layout)
-        self.setWindowTitle("Simulation MVP")
-        self.resize(1200, 600)
+        self.setWindowTitle("Prescriptive Interface")
 
     def run_simulation(self):
         self.simulation_tab.start_button.setEnabled(False)
@@ -160,7 +201,7 @@ class SimulationApp(QWidget):
         """
         self.optimization_tab.speed_canvas.plot_optimized_speeds(model)
 
-    def optimization_plot(self, model, optimized_speeds, laps_per_index):
+    def optimization_plot(self, model, optimized_speeds, laps_per_index, num_laps):
         """
         Plots optimized speeds on optimization tab. It will then run the simulation with the optimized
         speeds, and display the results in the optimization tab.
@@ -168,23 +209,22 @@ class SimulationApp(QWidget):
         :param model: Optimized simulation model.
         :param optimized_speeds: Array of optimized speeds.
         """
-        self.optimization_tab.speed_canvas.plot_optimized_speeds(optimized_speeds, laps_per_index)
+        self.optimization_tab.speed_canvas.plot_optimized_speeds(optimized_speeds, laps_per_index, num_laps)
 
         # Store optimized speeds
         self.optimized_speeds = optimized_speeds  # Keep as an attribute
 
         # Run simulation with optimized speeds
-        self.simulation_thread = SimulationThread(self.simulation_settings, speeds_filename=None)
+        self.simulation_thread = SimulationThread(self.simulation_settings, model=model, speeds_filename=None)
         self.simulation_thread.update_signal.connect(self.simulation_tab.sim_output_text.append)
         self.simulation_thread.plot_data_signal.connect(self.simulation_tab.sim_canvas.plot_simulation_results)
-        self.simulation_thread.finished.connect(lambda: self.simulation_tab.start_button.setEnabled(True))
 
         # Simulation tab will now have the results using the optimized speeds
         self.simulation_thread.optimized_speeds = optimized_speeds
 
         self.simulation_thread.start()
 
-    def optimize_simulation(self, initial_conditions: InitialConditions, get_weather: bool):
+    def optimize_simulation(self, initial_conditions: InitialConditions, get_weather: bool, days):
         self.optimization_tab.optimize_button.setEnabled(False)
         self.optimization_tab.output_text.clear()
 
@@ -198,13 +238,14 @@ class SimulationApp(QWidget):
             self.default_hyperparameters,
             self.default_environment_config,
             self.default_car_config,
-            get_weather
+            get_weather,
+            days
         )
         self.optimization_tab.progress_bar.setMaximum(maxiter)
         self.optimization_thread.update_signal.connect(self.optimization_tab.output_text.append)
         self.optimization_thread.progress_signal.connect(
-            lambda value: self.optimization_tab.progress_bar.setValue(self.optimization_tab.progress_bar.value() + value))
-        self.optimization_thread.model_signal.connect(self.optimization_plot)
+            lambda value: self.optimization_tab.progress_bar.setValue(value))
+        self.optimization_thread.model_signal.connect(self.optimization_tab.speed_canvas.plot_optimized_speeds)
         self.optimization_thread.finished.connect(lambda: self.optimization_tab.optimize_button.setEnabled(True))
 
         self.optimization_thread.start()
@@ -215,6 +256,15 @@ class SimulationApp(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+
+    apply_stylesheet(app, theme='light_blue.xml', invert_secondary=True)
+
     window = SimulationApp()
+    window.showFullScreen()
     window.show()
+
+    window._splash.showMessage("Crimping connectors...")
+    QTimer.singleShot(500, lambda: window._splash.showMessage("Recrimping connectors..."))
+    QTimer.singleShot(1500, window.finishSplash)
+
     sys.exit(app.exec_())

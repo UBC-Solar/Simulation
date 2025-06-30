@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QVBoxLayout, QSizePolicy, QDialog
+from PyQt5.QtWidgets import QVBoxLayout, QSizePolicy, QDialog, QWidget
 from PyQt5.QtCore import QSize
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
@@ -14,66 +14,72 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import mplcursors
 from prescriptive_interface import SettingsDialog
+import itertools
 
 
-class SimulationCanvas(FigureCanvas):
-    """Canvas to display multiple simulation plots dynamically with better formatting."""
-
+class SimulationCanvas(QWidget):
     def __init__(self, parent=None):
-        self.fig, self.axes = plt.subplots(2, 3, figsize=(16, 12))  # Increased figure size
-        super().__init__(self.fig)
-        self.setParent(parent)
-        # Create a Matplotlib Canvas
+        super().__init__(parent)
+
+        self.fig = plt.Figure(constrained_layout=True)
         self.canvas = FigureCanvas(self.fig)
 
-        # Add Navigation Toolbar
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.toolbar.setStyleSheet("background: none; border: none;")
         self.toolbar.setIconSize(QSize(18, 18))
-        self.toolbar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)  # Prevent expanding into plots
-        # Layout setup
-        layout = QVBoxLayout()
+        self.toolbar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas)
-        layout.setContentsMargins(0, 0, 0, 0)  # Add margins for proper spacing
         self.setLayout(layout)
 
     def plot_simulation_results(self, results_dict):
-        """
-       Plot simulation results across a 3x3 grid of subplots.
+        self.fig.clear()
+        self.fig.set_constrained_layout(True)
 
-       This method takes a dictionary of simulation result data where each key maps to a (timestamps, values) tuple.
-       Each subplot displays a single result over time with appropriate axis labels, titles, and legends.
+        axes = self.fig.subplots(2, 3, sharex=True)
 
-       :param results_dict: A dictionary mapping result labels to (timestamps, data) tuples.
-                            Example: {"speed_kmh": ([...timestamps...], [...values...]), ...}
-       :type results_dict: dict
-       :returns: None
-       :rtype: None
-       """
-        self.fig.clear()  # Clear previous plots
-        axes = self.fig.subplots(2, 3)  # Regenerate subplots with better spacing
+        cmap = plt.get_cmap("tab10")
+        color_cycle = itertools.cycle(cmap.colors)
+
         y_labels = {
             "speed_kmh": "Speed (km/h)",
             "distances": "Distance (km)",
             "state_of_charge": "SOC (%)",
             "delta_energy": "Delta Energy (J)",
             "solar_irradiances": "Solar Irradiance (W/m²)",
-            "wind_speeds": "Wind Speed (km/h)"
+            "wind_speeds": "Wind Speed (km/h)",
+        }
+
+        titles = {
+            "speed_kmh": "Speed",
+            "distances": "Distance Travelled",
+            "state_of_charge": "State of Charge",
+            "delta_energy": "Energy Consumption",
+            "solar_irradiances": "Solar Irradiance",
+            "wind_speeds": "Wind Speed",
         }
 
         for ax, (label, (timestamps, data)) in zip(axes.flat, results_dict.items()):
-            ax.plot(timestamps, data, label=label)
-            ax.set_title(label, fontsize=12, loc="left", pad=10)  # Add spacing below title
-            ax.set_xlabel("Time (s)", fontsize=10, loc="right", labelpad=5)
-            ax.legend(fontsize=9)
-            ax.set_ylabel(y_labels.get(label, "Value"), fontsize=10, fontweight='normal', labelpad=5)
+            ax.plot(timestamps, data, color=next(color_cycle), linewidth=1.5)
+            ax.set_title(titles[label], loc="left", pad=8)
+            ax.set_ylabel(y_labels[label], labelpad=6)
 
-        # Adjust subplot spacing to avoid overlap
-        self.fig.tight_layout(pad=2.0)
-        self.fig.subplots_adjust(hspace=0.4, wspace=0.3)  # Add horizontal & vertical spacing
+        for ax in axes[0]:
+            ax.tick_params(labelbottom=False)
 
-        self.fig.canvas.draw_idle()
+        for ax in axes[1]:
+            ax.set_xlabel("Time (s)", fontsize=10)
+
+        self.fig.subplots_adjust(
+            left=0.06, right=0.98,
+            top=0.93, bottom=0.08,
+            hspace=0.35, wspace=0.25
+        )
+
+        self.canvas.draw_idle()
 
 
 class SpeedPlotCanvas(FigureCanvas):
@@ -87,7 +93,7 @@ class SpeedPlotCanvas(FigureCanvas):
         self.popsize = 6  # default population size
         self.maxiter = 100  # default number of iterations
 
-    def plot_optimized_speeds(self, speeds, laps_per_index):
+    def plot_optimized_speeds(self, speeds, laps_per_index, num_laps):
         """
         Plot optimized speeds vs laps on the optimization tab.
 
@@ -98,6 +104,7 @@ class SpeedPlotCanvas(FigureCanvas):
 
         y = [speed for speed in speeds for _ in
              range(laps_per_index)]  # Make sure that speeds repeat for a certain number of laps
+        y = y[:num_laps]
         x = range(1, len(y) + 1)
 
         [self.line] = self.ax.plot(x, y, marker='o')

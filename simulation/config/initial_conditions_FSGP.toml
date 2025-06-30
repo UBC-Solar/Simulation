@@ -2,5 +2,5 @@ current_coord = [
     38.9281815,
     -95.677021,
 ]
-initial_battery_soc = 0.85
-start_time = 69052
+initial_battery_soc = 0.99
+start_time = 0

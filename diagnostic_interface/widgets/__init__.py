@@ -5,6 +5,7 @@ from .command_output import CommandOutputWidget
 from .map_widget import FoliumMapWidget
 from .realtime_map_widget import RealtimeMapWidget
 from .timed_map_plot import TimedMapPlot
+from .splash_overlay import SplashOverlay
 
 __all__ = [
     "DataSelect",
@@ -14,5 +15,6 @@ __all__ = [
     "FoliumMapWidget",
     "CommandOutputWidget",
     "RealtimeMapWidget",
-    "TimedMapPlot"
+    "TimedMapPlot",
+    "SplashOverlay"
 ]

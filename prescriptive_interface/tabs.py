@@ -39,9 +39,9 @@ class SimulationTab(QWidget):
     def init_ui(self):
         layout = QVBoxLayout()
 
-        self.start_button = QPushButton("Run Simulation")
-        self.start_button.clicked.connect(self.run_callback)
-        layout.addWidget(self.start_button)
+        # self.start_button = QPushButton("Run Simulation")
+        # self.start_button.clicked.connect(self.run_callback)
+        # layout.addWidget(self.start_button)
 
         self.sim_output_text = QTextEdit()
         self.sim_output_text.setReadOnly(True)
