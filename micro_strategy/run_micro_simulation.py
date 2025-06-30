@@ -4,7 +4,6 @@ import tomllib as toml
 from geopy.distance import distance
 import time
 
-from data import get_FSGP_trajectory
 from geometry import get_distances
 from plotting import plot_mesh
 from micro_model_builder import MicroModelBuilder

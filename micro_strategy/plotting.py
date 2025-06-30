@@ -4,7 +4,6 @@ from folium.plugins import MeasureControl
 import numpy as np
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
-from matplotlib.colors import LinearSegmentedColormap
 
 def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, cornering_work, gradients, road_friction_array, drag_forces, g_forces):
     heat_map_options = {"energy", "speed"}

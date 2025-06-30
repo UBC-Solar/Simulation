@@ -88,7 +88,7 @@ class SimulationApp(QWidget):
 
         if dialog.exec_() == QDialog.Accepted:
             initial_battery_soc, start_time, get_weather, days = dialog.get_values()
-            if not None in [initial_battery_soc, start_time, get_weather, days]:
+            if None not in [initial_battery_soc, start_time, get_weather, days]:
                 print(f"Set optimization initial conditions: {initial_battery_soc=}, {start_time=}")
                 self.initial_conditions.initial_battery_soc = initial_battery_soc
                 self.initial_conditions.start_time = start_time

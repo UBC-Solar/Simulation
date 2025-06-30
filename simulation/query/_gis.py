@@ -9,7 +9,6 @@ from timezonefinder import TimezoneFinder
 from zoneinfo import ZoneInfo
 import numpy as np
 from tqdm import tqdm
-import sys
 from datetime import datetime
 from numpy.typing import NDArray
 
