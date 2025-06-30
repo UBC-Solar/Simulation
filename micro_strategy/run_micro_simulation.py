@@ -178,9 +178,8 @@ def run_motor_model(speed_kmh, distances_m, trajectory, environment_config):
         raise RuntimeError("All arrays must have the same length.")
 
     tick_arr = np.zeros(num_elements)
-    wind_speed_arr = np.zeros(num_elements)     # no wind
+    wind_speed_arr = np.zeros(num_elements) # no wind
 
-    # Determine speed array
     if isinstance(speed_kmh, (int, float)):
         speed_kmh_arr = np.full(num_elements, speed_kmh)
     else:
@@ -209,7 +208,15 @@ def run_motor_model(speed_kmh, distances_m, trajectory, environment_config):
     closest_gis_indices = np.arange(num_elements)
     gradients_arr = gis.get_gradients(closest_gis_indices)
 
-    energies, energy_cornering, gradients_arr, road_friction_forces, drag_forces, g_forces = advanced_motor.calculate_energy_in(speed_kmh_arr, gradients_arr, wind_speed_arr, tick_arr, trajectory)
+    energies, energy_cornering, gradients_arr, road_friction_forces, drag_forces, g_forces = advanced_motor.calculate_energy_in(
+        speed_kmh_arr, 
+        gradients_arr, 
+        wind_speed_arr, 
+        tick_arr, 
+        trajectory, 
+        plotting="True"
+    )
+
     return  energies, energy_cornering, road_friction_forces, drag_forces, g_forces, tick_arr, speed_kmh_arr, gradients_arr, advanced_motor
 
 
@@ -236,7 +243,6 @@ if __name__ == '__main__':
         environment_config=environment_config
     )
 
-
     folium_map = plot_mesh(
         "energy",
         random_trajectory,
@@ -256,22 +262,21 @@ if __name__ == '__main__':
     start_time = time.time()
 
     optimized_trajectory, optimized_speeds = optimize_trajectory(
-        iterations=220,
+        iterations=30,
         mesh=mesh,
         gradients=gradients,
         trajectory_length=len(trajectory_FSGP),
         num_lateral_indices=num_lateral_indices,
         motor_model=advanced_motor
     )
-
-    distances_op = get_distances(random_trajectory)
-    distances_m_op = np.array(distances)
+    
+    distances_m_op = np.array(get_distances(random_trajectory))
 
     energy_consumed_op, cornering_work_op, road_friction_array_op, drag_forces_op, g_forces_op, ticks_op, speeds_kmh_op, gradients_op, advanced_motor = run_motor_model(
-        optimized_speeds,
-        distances_m,
-        optimized_trajectory,
-        environment_config,
+        speed_kmh=optimized_speeds,
+        distances_m=distances_m,
+        trajectory=optimized_trajectory,
+        environment_config=environment_config,
     )
 
     folium_map_optimized = plot_mesh(

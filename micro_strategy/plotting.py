@@ -20,17 +20,17 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
     m = folium.Map(location=map_center, zoom_start=15)
 
     m.add_child(MeasureControl()) # adds measurement tool
+    # Use percentiles to suppress the influence of outliers
+    lower = np.percentile(plot_value, 20)  
+    upper = np.percentile(plot_value, 80)
 
-    # Normalize energy values for color mapping
-    norm = mcolors.PowerNorm(gamma=0.15, vmin=min(plot_value), vmax=max(plot_value)) # more gamme = more lower energy colors
+    norm = mcolors.Normalize(vmin=lower, vmax=upper)
     cmap = cm.get_cmap('plasma')  # Clean, perceptual gradient
-    # cmap = cm.get_cmap('turbo')  # Clean, perceptual gradient
-    # cmap = LinearSegmentedColormap.from_list("blue_red", ["blue", "red"])
+
     # Plot the lateral mesh points
     for i, row in enumerate(mesh):
         if len(row) < 2:
-            continue  # Skip rows without valid lateral points
-        # Plot each lateral point
+            continue
         for j, (lat, lon) in enumerate(row):
             folium.CircleMarker(
                 location=(lat, lon),
@@ -40,7 +40,6 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
                 fill_opacity=0.7
             ).add_to(m)
 
-        # Connect lateral points with a polyline (perpendicular cross-section)
         folium.PolyLine(row, color='gray', weight=1, opacity=0.5).add_to(m)
 
     # Plot colored line segments between each pair of points
@@ -48,9 +47,9 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
         latlon_start = trajectory[i]
         latlon_end = trajectory[i + 1]
 
-        # Average energy between the two points
-        avg_energy = (plot_value[i] + plot_value[i + 1]) / 2
-        rgba = cmap(norm(avg_energy))
+        # Average between the two points
+        avg_value = (plot_value[i] + plot_value[i + 1]) / 2
+        rgba = cmap(norm(avg_value))
         hex_color = mcolors.to_hex(rgba)
 
         folium.PolyLine(
@@ -72,7 +71,7 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
             f"<br>Distance (m): {distances[i]:.2f}"
             f"<br>Speed (km/h): {speeds[i]:.2f}"
             f"<br>Time (s): {times[i]:.2f}"
-            f"<br>Incline Angle (°): {incline_angle[i]:.2f}"
+            f"<br>Incline Angle (°): {incline_angles[i]:.2f}"
             f"<hr style='margin:5px 0'>"
             f"<b>⚡ Energy Calculations</b> (J)"
             f"<br>Energy Consumed: {energies[i]:.2f}"
@@ -90,8 +89,8 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
             fill=True,
             fill_color=hex_color,
             fill_opacity=0.8,
-            popup=folium.Popup(metadata, max_width=300),  # Click to see metadata
-            tooltip=f"Lat: {lat:.6f}, Lon: {lon:.6f}"  # Hover to see coordinates
+            popup=folium.Popup(metadata, max_width=300),  
+            tooltip=f"Lat: {lat:.6f}, Lon: {lon:.6f}"
         ).add_to(m)
 
 
