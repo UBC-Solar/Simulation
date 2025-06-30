@@ -9,6 +9,8 @@ from simulation.model.Simulation import Simulation
 from simulation.race import Race, reshape_speed_array, get_granularity_reduced_boolean
 from simulation.config import SimulationReturnType
 
+from micro_strategy import OptimizedSpeedsPath
+
 from physics.models.arrays import BaseArray
 from physics.models.battery import BaseBattery
 from physics.models.lvs import BaseLVS
@@ -21,7 +23,7 @@ from physics.environment.meteorology import BaseMeteorology
 class Model:
     """
     A `Model` is a comprehensive model of a solar-powered vehicle's components within a fully qualified environment,
-    ready for simulation given an input of driving speeds for the vehicle to perform.
+    ready for simulation given an input of driving speeds_directory for the vehicle to perform.
     """
 
     def __init__(
@@ -80,7 +82,7 @@ class Model:
         self.start_time = start_time
         self.num_laps = num_laps
 
-        self.time_of_initialization = self.meteorology.last_updated_time  # Real Time
+        self.time_of_initialization = race.date.timestamp() + self.start_time  # Real Time
 
         self.simulation_duration = race.race_duration - self.start_time
 
@@ -104,14 +106,14 @@ class Model:
     ):
         """
 
-        Given an array of driving speeds, simulate the model by running calculations sequentially for the entire
+        Given an array of driving speeds_directory, simulate the model by running calculations sequentially for the entire
         simulation duration.
         Returns either time taken, distance travelled, or void.
 
         This function is mostly a wrapper
         around `run_simulation_calculations`,
         which is where the magic happens, that deals with processing the driving
-        speeds array as well as plotting and handling the calculation results.
+        speeds_directory array as well as plotting and handling the calculation results.
 
         Note: if the speed remains constant throughout this update, knowing the starting
               time, the cumulative distance at every time can be known.
@@ -136,6 +138,8 @@ class Model:
         Reduces verbosity
             when true.
         """
+        track_speeds = np.load(OptimizedSpeedsPath)
+
         # ----- Reshape speed array -----
         speed_kmh = reshape_speed_array(
             self.race,
@@ -153,7 +157,7 @@ class Model:
 
         # ------ Run calculations and get result and modified speed array -------
         self._simulation = Simulation(self)
-        self._simulation.run_simulation_calculations(speed_kmh)
+        self._simulation.run_simulation_calculations(speed_kmh, track_speeds)
 
         results = self.get_results(
             [
@@ -195,7 +199,7 @@ class Model:
                 "SOC (%)",
                 "Delta energy (J)",
                 "Solar irradiance (W/m^2)",
-                "Wind speeds (km/h)",
+                "Wind speeds_directory (km/h)",
                 "Elevation (m)",
                 "Raw SOC (%)",
                 "Raw Speed (km/h)",

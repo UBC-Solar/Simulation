@@ -74,16 +74,16 @@ class Simulation:
         self.final_soc = None
         self.map_data_indices = None
 
-    def run_simulation_calculations(self, speed_kmh: NDArray) -> None:
+    def run_simulation_calculations(self, speed_kmh: NDArray, track_speeds: NDArray) -> None:
         """
 
         Simulate the model by sequentially running calculations for the entire model duration at once.
 
-        To begin, we use the driving speeds array to obtain the theoretical position of the car at every tick.
+        To begin, we use the driving speeds_directory array to obtain the theoretical position of the car at every tick.
         Then, we map the position of the car at every tick to a GIS coordinate and to a Weather coordinate. Next,
         we use the GIS coordinates to calculate gradients, vehicle bearings, and we also determine the time in which we
         arrive at each position. Then, we use the time and Weather coordinate to map each tick to a weather
-        forecast. From the weather, we can calculate wind speeds, cloud cover, and estimate solar irradiance.
+        forecast. From the weather, we can calculate wind speeds_directory, cloud cover, and estimate solar irradiance.
         From the aforementioned calculations, we can determine the energy needed for the motor, and the energy
         that the solar arrays will collect; from those two, we can determine the delta energy at every tick.
         Then, we use the delta energy to determine how much energy we are drawing or storing from/into the battery
@@ -113,8 +113,11 @@ class Simulation:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        self.closest_gis_indices = self.model.gis.calculate_closest_gis_indices(
-            self.distances
+        track_speeds_normalized = (track_speeds - np.mean(track_speeds)) / 10
+        self.closest_gis_indices, self.speed_kmh = self.model.gis.calculate_speeds_and_position(
+            self.speed_kmh,
+            track_speeds_normalized,
+            self.model.simulation_dt
         )
 
         self.model.meteorology.spatially_localize(
@@ -153,8 +156,9 @@ class Simulation:
         self.time_zones = self.model.gis.get_time_zones(self.closest_gis_indices)
 
         # Local times in UNIX timestamps
+        local_time_of_initialization = self.model.time_of_initialization + self.time_zones[0]
         local_times = adjust_timestamps_to_local_times(
-            self.timestamps, self.model.time_of_initialization, self.time_zones
+            self.timestamps, local_time_of_initialization, self.time_zones
         )
 
         # Get the weather at every location
@@ -165,7 +169,7 @@ class Simulation:
         self.absolute_wind_speeds = self.model.meteorology.wind_speed
         self.wind_directions = self.model.meteorology.wind_direction
 
-        # Get the wind speeds at every location
+        # Get the wind speeds_directory at every location
         self.wind_speeds = get_array_directional_wind_speed(
             self.gis_vehicle_bearings, self.absolute_wind_speeds, self.wind_directions
         )
@@ -178,7 +182,7 @@ class Simulation:
             self.gis_route_elevations_at_each_tick,
         )
 
-        # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
+        # TLDR: we have now obtained solar irradiances, wind speeds_directory, and gradients at each tick
 
         # ----- Energy Calculations -----
 
@@ -186,8 +190,10 @@ class Simulation:
             self.model.simulation_dt
         )
 
+        coords = self.model.gis.get_path()[:self.model.gis.num_unique_coords]
+        coords_at_each_tick = coords[self.closest_gis_indices]
         self.motor_consumed_energy = self.model.motor.calculate_energy_in(
-            self.speed_kmh, self.gradients, self.wind_speeds, self.model.simulation_dt
+            self.speed_kmh, self.gradients, self.wind_speeds, self.model.simulation_dt, coords_at_each_tick
         )
 
         self.array_produced_energy = self.model.solar_array.calculate_produced_energy(
@@ -250,9 +256,6 @@ class Simulation:
 
         self.distance = self.speed_kmh * (self.time_in_motion / 3600)
         self.distances = np.cumsum(self.distance)
-
-        # Car cannot exceed Max distance, and it is not in motion after exceeded
-        self.distances = self.distances.clip(0, self.max_route_distance / 1000)
 
         self.map_data_indices = get_map_data_indices(self.closest_gis_indices)
 

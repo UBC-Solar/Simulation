@@ -10,18 +10,20 @@ import numpy as np
 from data_tools.schema import UnwrappedError
 from data_tools.collections import TimeSeries
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 LOCAL_TZ = datetime.now().astimezone().tzinfo
+MAX_WINDOW = timedelta(minutes=10)
 
 
 class TimedMapPlot(QWidget):
-    def __init__(self, font_size, transformer, reducer, horizontal=True, parent=None):
+    def __init__(self, font_size, transformer, reducer, horizontal=True, units="J", parent=None):
         super().__init__(parent)
 
         self.transformer = transformer
         self.reducer = reducer
         self.map_centroid = None
+        self.units = units
 
         main_layout = QHBoxLayout() if horizontal else QVBoxLayout()
         left = QVBoxLayout()
@@ -34,8 +36,8 @@ class TimedMapPlot(QWidget):
 
         btns = QHBoxLayout()
         for name, slot in (
-                ("Previous Lap", self.prev_lap),
-                ("Next Lap", self.next_lap)
+                ("Previous", self.prev_lap),
+                ("Next", self.next_lap)
         ):
             btn = QPushButton(name)
             btn.clicked.connect(slot)
@@ -162,6 +164,15 @@ class TimedMapPlot(QWidget):
         rel_start = (start_dt - self.initial_time).total_seconds()
         rel_end = (end_dt - self.initial_time).total_seconds()
 
+        delta = end_dt - start_dt
+        if delta > MAX_WINDOW:
+            # clamp end to start + MAX_WINDOW
+            end_dt = start_dt + MAX_WINDOW - timedelta(seconds=1)
+            # update the widget (without retriggering)
+            self.dt_end.blockSignals(True)
+            self.dt_end.setDateTime(self.to_qt(end_dt))
+            self.dt_end.blockSignals(False)
+
         try:
             i0 = self.vertex_data.index_of(rel_start)
             i1 = self.vertex_data.index_of(rel_end)
@@ -182,7 +193,7 @@ class TimedMapPlot(QWidget):
                     transformed,
                     latitudes=lat_seg,
                     longitudes=lon_seg,
-                    units="J",
+                    units=self.units,
                     map_centroid=self.map_centroid
                 )
             except ValueError:

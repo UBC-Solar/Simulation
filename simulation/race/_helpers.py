@@ -46,7 +46,7 @@ def _apply_deceleration(input_speed_array, tick, max_deceleration: float):
 
     Remove sudden drops in speed from input_speed_array
 
-    The modified input_speed_array stays as close to the target speeds as possible such that:
+    The modified input_speed_array stays as close to the target speeds_directory as possible such that:
         1. The decrease between any two consecutive speed values cannot exceed max_deceleration_per_tick km/h
         2. Values of 0km/h remain 0km/h
 
@@ -76,7 +76,7 @@ def _apply_acceleration(input_speed_array, tick, max_acceleration: float):
 
     Remove sudden increases in speed from input_speed_array
 
-    The modified input_speed_array stays as close to the target speeds as possible such that:
+    The modified input_speed_array stays as close to the target speeds_directory as possible such that:
         1. The increase between any two consecutive speed values cannot exceed max_acceleration_per_tick km/h
         2. Values of 0km/h remain 0km/h
         3. The first element cannot exceed MAX_ACCELERATION km/h since the car starts at rest
@@ -227,9 +227,9 @@ def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directi
         bearing of the vehicle
 
     :param np.ndarray vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
-    :param np.ndarray wind_speeds: (float[N]) The absolute speeds in m/s
+    :param np.ndarray wind_speeds: (float[N]) The absolute speeds_directory in m/s
     :param np.ndarray wind_directions: (float[N]) The wind direction in the meteorological convention. To convert from meteorological convention to azimuth angle, use (x + 180) % 360
-    :returns: The wind speeds in the direction opposite to the bearing of the vehicle
+    :returns: The wind speeds_directory in the direction opposite to the bearing of the vehicle
     :rtype: np.ndarray
 
     """

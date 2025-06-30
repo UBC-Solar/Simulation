@@ -42,7 +42,7 @@ class SpeedTab(QWidget):
 
         self.layout = QVBoxLayout()
 
-        self.map_plot_panel = TimedMapPlot(12, lambda x: x, lambda x: f"Average Speed: {np.mean(x):.1f} km/h", horizontal=False)
+        self.map_plot_panel = TimedMapPlot(12, lambda x: x, lambda x: f"Average Speed: {np.mean(x):.1f} m/s", horizontal=False, units="m/s")
 
         self.layout.addWidget(self.map_plot_panel, stretch=3)
 

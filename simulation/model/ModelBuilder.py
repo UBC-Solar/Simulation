@@ -27,7 +27,7 @@ from simulation.config import (
 from physics.models.arrays import BaseArray, BasicArray
 from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel, BatteryModelConfig
 from physics.models.lvs import BaseLVS, BasicLVS
-from physics.models.motor import BaseMotor, BasicMotor
+from physics.models.motor import BaseMotor, BasicMotor, AdvancedMotor
 from physics.models.regen import BaseRegen, BasicRegen
 from physics.environment.gis import BaseGIS, GIS
 from physics.environment.meteorology import (
@@ -165,6 +165,7 @@ class ModelBuilder:
 
         self.current_coord = initial_conditions.current_coord
         self.initial_battery_charge = initial_conditions.initial_battery_soc
+        self.start_time = initial_conditions.start_time
 
     @staticmethod
     def _truncate_hash(hashed: int, num_chars: int = 12) -> str:
@@ -267,6 +268,10 @@ class ModelBuilder:
                 raise KeyError()  # Raise a KeyError so that we go to the except block where we rebuild the cache
 
             route: Route = self._cache.get(route_data_path)
+
+            if hasattr(competition_config, "tiling"):
+                if route.tiling != competition_config.tiling:
+                    raise KeyError
 
         # Generate new route data data
         except KeyError:
@@ -406,10 +411,18 @@ class ModelBuilder:
 
                 self.battery = EquivalentCircuitBatteryModel(battery_config, self.initial_battery_charge)
 
-        self.motor = BasicMotor(
-            vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
-            **self._car_config.motor_config.model_dump(),
-        )
+        match self._car_config.motor_config.motor_type:
+            case "BasicMotor":
+                self.motor = BasicMotor(
+                    vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
+                    **self._car_config.motor_config.model_dump(),
+                )
+
+            case "AdvancedMotor":
+                self.motor = AdvancedMotor(
+                    vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
+                    **self._car_config.motor_config.model_dump()
+                )
 
         self.regen = BasicRegen(self._car_config.vehicle_config.vehicle_mass)
 
