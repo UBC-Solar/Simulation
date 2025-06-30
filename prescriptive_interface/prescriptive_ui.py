@@ -209,7 +209,7 @@ class SimulationApp(QWidget):
         :param model: Optimized simulation model.
         :param optimized_speeds: Array of optimized speeds.
         """
-        self.optimization_tab.speed_canvas.plot_optimized_speeds(optimized_speeds, laps_per_index, num_laps)
+        self.optimization_tab.speed_canvas.plot_optimized_speeds(model, optimized_speeds, laps_per_index, num_laps)
 
         # Store optimized speeds
         self.optimized_speeds = optimized_speeds  # Keep as an attribute
