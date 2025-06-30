@@ -106,7 +106,13 @@ class MicroModelBuilder:
                     raise ValueError(f"Unknown Competition Type: {config.competition_type}")
 
             tz, elev, coords, tiling = query.make()
-            route = Route(speed_limits, elev, tz, coords, tiling)
+            route = Route(
+                speed_limits=speed_limits,
+                path_elevations=elev,
+                path_time_zones=tz,
+                coords=coords,
+                tiling=tiling,
+            )
             self._cache.put(route, route_data_path)
 
         self.route_data = route
