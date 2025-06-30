@@ -1,4 +1,6 @@
 import sys
+import os
+sys.path.insert(0, os.getcwd())
 from typing import Optional
 
 from PyQt5.QtWidgets import (
