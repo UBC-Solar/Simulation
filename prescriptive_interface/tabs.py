@@ -1,8 +1,15 @@
 from typing import Optional
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QTextEdit, QProgressBar, QSizePolicy
-)
 from prescriptive_interface import SimulationCanvas, SpeedPlotCanvas
+from micro_strategy import run_micro_simulation
+from pathlib import Path
+import io
+import sys
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QPushButton, QTextEdit,
+    QSizePolicy, QProgressBar
+)
+from PyQt5.QtCore import QThread, pyqtSignal, QUrl
+from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 
 class SimulationTab(QWidget):
@@ -102,3 +109,85 @@ class OptimizationTab(QWidget):
         layout.addLayout(nav_layout)
 
         self.setLayout(layout)
+
+
+class WorkerThread(QThread):
+    output_signal = pyqtSignal(str)
+    error_signal  = pyqtSignal(str)
+    finished_signal = pyqtSignal()
+
+    def run(self):
+        """This method is called in the new thread."""
+        buffer = io.StringIO()
+        try:
+            # Redirect print() and exceptions into buffer
+            sys_stdout, sys_stderr = sys.stdout, sys.stderr
+            sys.stdout, sys.stderr = buffer, buffer
+
+            run_micro_simulation.main()
+            text = buffer.getvalue().strip()
+            self.output_signal.emit(text or "Script completed successfully.")
+
+        except Exception as e:
+            # Emit the exception text
+            self.error_signal.emit(f"Error running script: {e}")
+
+        finally:
+            # restore
+            sys.stdout, sys.stderr = sys_stdout, sys_stderr
+            self.finished_signal.emit()
+
+
+class HtmlViewerTab(QWidget):
+    """A tab that displays an HTML file and runs a fixed script in a QThread."""
+
+    def __init__(self, html_path: str):
+        super().__init__()
+        self.html_path = html_path
+
+        self.view = None
+        self.run_button = None
+        self.sim_output_text = None
+        self.worker = None
+
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+
+        self.run_button = QPushButton("Run Report Generator")
+        self.run_button.clicked.connect(self.on_run_clicked)
+        layout.addWidget(self.run_button)
+
+        self.sim_output_text = QTextEdit()
+        self.sim_output_text.setReadOnly(True)
+        self.sim_output_text.setFixedHeight(100)
+        layout.addWidget(self.sim_output_text)
+
+        self.view = QWebEngineView()
+        local_url = QUrl.fromLocalFile(str(Path(self.html_path).resolve()))
+        self.view.load(local_url)
+        self.view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout.addWidget(self.view)
+
+    def on_run_clicked(self):
+        self.run_button.setEnabled(False)
+        self.sim_output_text.clear()
+
+        # create the worker thread
+        self.worker = WorkerThread(self)
+        self.worker.output_signal.connect(self.sim_output_text.append)
+        self.worker.error_signal.connect(self.sim_output_text.append)
+        self.worker.finished_signal.connect(self.on_worker_finished)
+
+        self.worker.start()
+
+    def on_worker_finished(self):
+        """Called in the main thread when the worker is done."""
+        self.reload()
+        self.run_button.setEnabled(True)
+
+    def reload(self):
+        """Reload the HTML view."""
+        if self.view:
+            self.view.reload()

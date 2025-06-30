@@ -3,10 +3,11 @@ import numpy as np
 import tomllib as toml
 from geopy.distance import distance
 import time
+from pathlib import Path
 
-from geometry import get_distances
-from plotting import plot_mesh
-from micro_model_builder import MicroModelBuilder
+from micro_strategy.geometry import get_distances
+from micro_strategy.plotting import plot_mesh
+from micro_strategy.micro_model_builder import MicroModelBuilder
 
 from simulation.config import ConfigDirectory
 from simulation.config import (
@@ -68,7 +69,7 @@ def generate_lateral_mesh(trajectory, lateral_distance_meters, lateral_num_point
         # Normalize direction vector
         norm = np.sqrt(dx ** 2 + dy ** 2)
         if norm == 0:  # Avoid division by zero
-            mesh.append([(lat, lon)])  # Append at least the original point
+            lateral_mesh.append([(lat, lon)]) 
             continue
         dx /= norm
         dy /= norm
@@ -113,12 +114,12 @@ def objective_trajectory_energy(
 ):
     n = len(mesh)
 
-    # Intermediate mutations aren't necessarily within optimizer bounds
+    # Mutations aren't necessarily within optimizer bounds
     # Clip this array to avoid invalid speeds messing with the motor model
     speed_kmh = np.clip(x[n:], speed_bounds[0], speed_bounds[1])
     idx = np.rint(x[:n]).astype(int).clip(0, num_lateral_indices - 1)
 
-    # Convert index array to lat/lon trajectory
+    # Convert index array to mesh form
     path = [mesh[i][j] for i, j in enumerate(idx)]
     dists_m = np.array(get_distances(path))
 
@@ -126,40 +127,41 @@ def objective_trajectory_energy(
     ticks = dists_m / v_ms
     winds = np.zeros_like(dists_m)
 
-    energy, *_ = motor_model.calculate_energy_in(
-        speed_kmh, gradients, winds, ticks, path
+    energy = motor_model.calculate_energy_in(
+        speed_kmh, gradients, winds, ticks, path, plotting=False
     )
 
     return np.sum(energy)
 
 
 def optimize_trajectory(
+    iterations,
     mesh,
     gradients,
     trajectory_length,
     num_lateral_indices,
     motor_model,
     speed_range=[.1, 100]
-
 ):
     lateral_index_bounds = [(0, num_lateral_indices - 1)] * trajectory_length
     speed_bounds = [(speed_range[0], speed_range[1])] * trajectory_length
-
     bounds = lateral_index_bounds + speed_bounds
+
+    population_size = 20
 
     result = differential_evolution(
         objective_trajectory_energy,
         bounds,
         args=(mesh, gradients, motor_model, num_lateral_indices, speed_range),
         strategy="best1bin",
-        popsize=15,
-        maxiter=20,
-        mutation=(0.4, 1.2),
-        recombination=0.7,
-        tol=0.01,
-        polish=False,
+        popsize=population_size,
+        maxiter=iterations,
+        mutation=(0.6, 1.2),
+        recombination=0.9,
+        tol=0,                  # no early stopping based on convergence
+        polish=True,
         disp=True,
-        workers=-1,  # parallel evaluation
+        workers=-1,             # parallel evaluation
         seed=42
     )
 
@@ -171,15 +173,14 @@ def optimize_trajectory(
     return best_path, best_speeds
 
 
-def run_motor_model(speed_kmh, distances_m, trajectory, environment_config):
+def run_motor_model(speed_kmh, distances_m, trajectory, environment_config, initial_conditions, car_config):
     num_elements = len(trajectory)
     if len(distances_m) != num_elements:
         raise RuntimeError("All arrays must have the same length.")
 
     tick_arr = np.zeros(num_elements)
-    wind_speed_arr = np.zeros(num_elements)     # no wind
+    wind_speed_arr = np.zeros(num_elements) # no wind
 
-    # Determine speed array
     if isinstance(speed_kmh, (int, float)):
         speed_kmh_arr = np.full(num_elements, speed_kmh)
     else:
@@ -208,11 +209,23 @@ def run_motor_model(speed_kmh, distances_m, trajectory, environment_config):
     closest_gis_indices = np.arange(num_elements)
     gradients_arr = gis.get_gradients(closest_gis_indices)
 
-    energies, energy_cornering, gradients_arr, road_friction_forces, drag_forces, g_forces = advanced_motor.calculate_energy_in(speed_kmh_arr, gradients_arr, wind_speed_arr, tick_arr, trajectory)
+    energies, energy_cornering, gradients_arr, road_friction_forces, drag_forces, g_forces = advanced_motor.calculate_energy_in(
+        speed_kmh_arr, 
+        gradients_arr, 
+        wind_speed_arr, 
+        tick_arr, 
+        trajectory, 
+        plotting="True"
+    )
+
     return  energies, energy_cornering, road_friction_forces, drag_forces, g_forces, tick_arr, speed_kmh_arr, gradients_arr, advanced_motor
 
 
-if __name__ == '__main__':
+def main():
+    project_root = Path(__file__).resolve().parent   
+    output_dir = project_root / "optimization_results"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     mesh_branch_length = 2
 
     initial_conditions, environment_config, car_config = load_configs()
@@ -232,29 +245,15 @@ if __name__ == '__main__':
         speed_kmh=50,
         distances_m=distances_m,
         trajectory=random_trajectory,
-        environment_config=environment_config
+        environment_config=environment_config,
+        initial_conditions=initial_conditions,
+        car_config=car_config,
     )
-
-
-    folium_map = plot_mesh(
-        "energy",
-        random_trajectory,
-        mesh,
-        distances_m,
-        speeds_kmh,
-        energy_consumed,
-        ticks,
-        cornering_work,
-        gradients,
-        road_friction_array,
-        drag_forces,
-        g_forces
-    )
-    folium_map.save("random_trajectory.html")
 
     start_time = time.time()
 
     optimized_trajectory, optimized_speeds = optimize_trajectory(
+        iterations=5,
         mesh=mesh,
         gradients=gradients,
         trajectory_length=len(trajectory_FSGP),
@@ -262,14 +261,15 @@ if __name__ == '__main__':
         motor_model=advanced_motor
     )
 
-    distances_op = get_distances(random_trajectory)
-    distances_m_op = np.array(distances)
+    distances_m_op = np.array(get_distances(random_trajectory))
 
     energy_consumed_op, cornering_work_op, road_friction_array_op, drag_forces_op, g_forces_op, ticks_op, speeds_kmh_op, gradients_op, advanced_motor = run_motor_model(
-        optimized_speeds,
-        distances_m,
-        optimized_trajectory,
-        environment_config,
+        speed_kmh=optimized_speeds,
+        distances_m=distances_m,
+        trajectory=optimized_trajectory,
+        environment_config=environment_config,
+        initial_conditions=initial_conditions,
+        car_config=car_config,
     )
 
     folium_map_optimized = plot_mesh(
@@ -286,7 +286,7 @@ if __name__ == '__main__':
         drag_forces_op,
         g_forces_op)
 
-    folium_map_optimized.save("optimized_trajectory_energy.html")
+    folium_map_optimized.save(output_dir / "optimized_trajectory_energy.html")
 
     folium_map_optimized = plot_mesh(
         "speed",
@@ -302,7 +302,7 @@ if __name__ == '__main__':
         drag_forces_op,
         g_forces_op)
 
-    folium_map_optimized.save("optimized_trajectory_speed.html")
+    folium_map_optimized.save(output_dir / "optimized_trajectory_speed.html")
 
     print("____Optimization Results____\n")
     print(f"Total Energy - Random Route:     {np.sum(energy_consumed):.2f} J")
@@ -320,6 +320,11 @@ if __name__ == '__main__':
     print(f"Optimization Duration:           {minutes} min {seconds} sec")
     print("______________________________\n")
 
-    np.save("optimized_trajectory.npy", np.array(optimized_trajectory))
-    np.save("optimized_speeds.npy", np.array(optimized_speeds))
+    np.save(output_dir / "optimized_trajectory.npy", np.array(optimized_trajectory))
+    np.save(output_dir / "optimized_speeds.npy", np.array(optimized_speeds))
 
+
+
+
+if __name__ == '__main__':
+    main()

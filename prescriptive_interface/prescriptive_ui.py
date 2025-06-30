@@ -10,14 +10,25 @@ from diagnostic_interface.widgets import SplashOverlay
 from simulation.cmd.run_simulation import get_default_settings
 from simulation.config import SimulationReturnType, SimulationHyperparametersConfig, InitialConditions
 from pathlib import Path
-from prescriptive_interface import (SimulationTab, OptimizationTab, SimulationSettingsDict, OptimizationThread,
-                                    SimulationThread, MutableInitialConditions, InitialConditionsDialog)
 from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import Qt
 
 from qt_material import apply_stylesheet
 
 config_dir = Path(__file__).parent.parent / "simulation" / "config"
+
+from pathlib import Path
+from prescriptive_interface import (SimulationTab, OptimizationTab, HtmlViewerTab, SimulationSettingsDict, OptimizationThread,
+                                    SimulationThread, MutableInitialConditions, InitialConditionsDialog)
+
+my_speeds_dir = Path("prescriptive_interface/speeds_directory")
+my_speeds_dir.mkdir(parents=True, exist_ok=True)  # Create it if it doesn't exist
+
+
+HTML_TABS = [
+    ("Speed Heatmap", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_speed.html"),
+    ("Energy Heatmap", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_energy.html"),
+]
 
 
 class SimulationApp(QWidget):
@@ -27,6 +38,7 @@ class SimulationApp(QWidget):
 
         self.simulation_tab: Optional[SimulationTab] = None
         self.optimization_tab: Optional[OptimizationTab] = None
+        self.html_tabs: dict[str, HtmlViewerTab] = {}
         self.simulation_settings: SimulationSettingsDict = {
             "race_type": "FSGP",
             "verbose": True,
@@ -140,6 +152,11 @@ class SimulationApp(QWidget):
         self.tabs.addTab(self.optimization_tab, "Optimization")
         self.tabs.addTab(self.simulation_tab, "Simulation")
 
+        for label, html_path in HTML_TABS:
+            viewer_tab = HtmlViewerTab(str(html_path.resolve()))
+            self.html_tabs[label] = viewer_tab
+            self.tabs.addTab(viewer_tab, label)
+
         layout.addWidget(self.tabs)
         self.setLayout(layout)
         self.setWindowTitle("Prescriptive Interface")
@@ -225,8 +242,8 @@ class SimulationApp(QWidget):
         self.optimization_tab.progress_bar.setMaximum(maxiter)
         self.optimization_thread.update_signal.connect(self.optimization_tab.output_text.append)
         self.optimization_thread.progress_signal.connect(
-            lambda value: self.optimization_tab.progress_bar.setValue(self.optimization_tab.progress_bar.value() + value))
-        self.optimization_thread.model_signal.connect(self.optimization_plot)
+            lambda value: self.optimization_tab.progress_bar.setValue(value))
+        self.optimization_thread.model_signal.connect(self.optimization_tab.speed_canvas.plot_optimized_speeds)
         self.optimization_thread.finished.connect(lambda: self.optimization_tab.optimize_button.setEnabled(True))
 
         self.optimization_thread.start()
