@@ -86,7 +86,7 @@ class InitialConditionsDialog(QDialog):
     def fill_current_time(self):
         """Fill start_time_input with seconds between now and comp_start_date"""
         now = datetime.now(tz=ZoneInfo("America/Chicago"))
-        delta = now - self.comp_start_date
+        delta = max(now - self.comp_start_date, 0)
         self.start_time_input.setText(str(int(delta.total_seconds())))
 
     def get_values(self):
