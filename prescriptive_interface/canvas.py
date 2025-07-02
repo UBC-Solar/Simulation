@@ -15,6 +15,9 @@ from matplotlib.figure import Figure
 import mplcursors
 from prescriptive_interface import SettingsDialog
 import itertools
+import pandas as pd
+from dateutil import tz
+import matplotlib.dates as mdates
 
 
 class SimulationCanvas(QWidget):
@@ -35,7 +38,7 @@ class SimulationCanvas(QWidget):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
 
-    def plot_simulation_results(self, results_dict):
+    def plot_simulation_results(self, results_dict, initial_time, tick):
         self.fig.clear()
         self.fig.set_constrained_layout(True)
 
@@ -62,8 +65,22 @@ class SimulationCanvas(QWidget):
             "wind_speeds": "Wind Speed",
         }
 
+        x_axis = None
+        local_tz = None
+
         for ax, (label, (timestamps, data)) in zip(axes.flat, results_dict.items()):
-            ax.plot(timestamps, data, color=next(color_cycle), linewidth=1.5)
+            if x_axis is None or local_tz is None:
+                start = pd.to_datetime(initial_time, unit="s", utc=True)
+                times = pd.date_range(start=start, periods=len(timestamps), freq=f"{tick}s")
+                local_tz = tz.tzlocal()
+                x_axis = times.tz_convert(local_tz)
+
+            locator = mdates.AutoDateLocator()
+            formatter = mdates.ConciseDateFormatter(locator, tz=local_tz)
+            ax.xaxis.set_major_locator(locator)
+            ax.xaxis.set_major_formatter(formatter)
+
+            ax.plot(x_axis, data, color=next(color_cycle), linewidth=1.5)
             ax.set_title(titles[label], loc="left", pad=8)
             ax.set_ylabel(y_labels[label], labelpad=6)
 

@@ -22,7 +22,7 @@ my_speeds_dir.mkdir(parents=True, exist_ok=True)  # Create it if it doesn't exis
 
 class SimulationThread(QThread):
     update_signal = pyqtSignal(str)
-    plot_data_signal = pyqtSignal(dict)  # Send multiple plots as a dictionary
+    plot_data_signal = pyqtSignal(dict, object, int)  # Send multiple plots as a dictionary
 
     def __init__(self, settings: SimulationSettingsDict, model: Model = None, speeds_filename: Optional[str] = None,
                  optimized_speeds: Optional[np.ndarray] = None):
@@ -74,7 +74,7 @@ class SimulationThread(QThread):
             results_dict = {key: (results_values[0], values) for key, values in
                             zip(results_keys[1:], results_values[1:])}
 
-            self.plot_data_signal.emit(results_dict)
+            self.plot_data_signal.emit(results_dict, simulation_model.time_of_initialization, simulation_model.simulation_dt)
 
             # Format result summary
             results = simulation_model.get_results(

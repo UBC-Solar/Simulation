@@ -223,6 +223,7 @@ class SimulationApp(QWidget):
         self.simulation_thread.optimized_speeds = optimized_speeds
 
         self.simulation_thread.start()
+        self.optimization_tab.optimize_button.setEnabled(True)
 
     def optimize_simulation(self, initial_conditions: InitialConditions, get_weather: bool, days):
         self.optimization_tab.optimize_button.setEnabled(False)
@@ -242,6 +243,7 @@ class SimulationApp(QWidget):
             days
         )
         self.optimization_tab.progress_bar.setMaximum(maxiter)
+        self.optimization_tab.progress_bar.setValue(0)
         self.optimization_thread.update_signal.connect(self.optimization_tab.output_text.append)
         self.optimization_thread.progress_signal.connect(
             lambda value: self.optimization_tab.progress_bar.setValue(

@@ -34,10 +34,10 @@ max_deceleration = 6
 
 [motor_config]
 motor_type = "AdvancedMotor"
-road_friction = 0.02608094844278751
+road_friction = 0.00892422172634327
 tire_radius = 0.2032
 vehicle_frontal_area = 1.1853
-drag_coefficient = 0.4016991160970466
+drag_coefficient = 0.46431813972548227
 
 [motor_config.BasicMotor]
 
