@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QPushButton, QCheckBox, QWidget, QButtonGroup
 )
 from diagnostic_interface.config import PersistentConfig
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from PyQt5.QtCore import Qt
 
@@ -86,7 +86,7 @@ class InitialConditionsDialog(QDialog):
     def fill_current_time(self):
         """Fill start_time_input with seconds between now and comp_start_date"""
         now = datetime.now(tz=ZoneInfo("America/Chicago"))
-        delta = max(now - self.comp_start_date, 0)
+        delta = max(now - self.comp_start_date, timedelta(seconds=0))
         self.start_time_input.setText(str(int(delta.total_seconds())))
 
     def get_values(self):
