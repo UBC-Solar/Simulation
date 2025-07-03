@@ -113,12 +113,14 @@ class Simulation:
             closest_weather_indices is a 1:1 mapping between a weather condition, and its closest point on a map.
         """
 
-        track_speeds_normalized = (track_speeds - np.mean(track_speeds)) / 10
+        track_speeds_normalized = (track_speeds - np.mean(track_speeds)) / 2
         self.closest_gis_indices, self.speed_kmh = self.model.gis.calculate_speeds_and_position(
             self.speed_kmh,
             track_speeds_normalized,
             self.model.simulation_dt
         )
+
+        self.speed_kmh = np.clip(self.speed_kmh, a_min=0.0, a_max=None)
 
         self.model.meteorology.spatially_localize(
             self.cumulative_distances, simplify_weather=True
