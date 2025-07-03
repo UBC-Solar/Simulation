@@ -28,8 +28,8 @@ my_speeds_dir.mkdir(parents=True, exist_ok=True)  # Create it if it doesn't exis
 
 
 HTML_TABS = [
-    ("Speed Heatmap", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_speed.html"),
-    ("Energy Heatmap", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_energy.html"),
+    ("Track Speeds", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_speed_filtered.html"),
+    # ("Energy Heatmap", Path(__file__).parent.parent / "micro_strategy" / "optimization_results" / "optimized_trajectory_energy.html"),
 ]
 
 

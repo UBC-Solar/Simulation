@@ -27,19 +27,19 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
     cmap = cm.get_cmap('plasma')
 
     # Plot the lateral mesh points
-    for i, row in enumerate(mesh):
-        if len(row) < 2:
-            continue
-        for j, (lat, lon) in enumerate(row):
-            folium.CircleMarker(
-                location=(lat, lon),
-                radius=2,
-                color='red',
-                fill=True,
-                fill_opacity=0.7
-            ).add_to(m)
-
-        folium.PolyLine(row, color='gray', weight=1, opacity=0.5).add_to(m)
+    # for i, row in enumerate(mesh):
+    #     if len(row) < 2:
+    #         continue
+    #     for j, (lat, lon) in enumerate(row):
+    #         folium.CircleMarker(
+    #             location=(lat, lon),
+    #             radius=2,
+    #             color='red',
+    #             fill=True,
+    #             fill_opacity=0.7
+    #         ).add_to(m)
+    #
+    #     folium.PolyLine(row, color='gray', weight=1, opacity=0.5).add_to(m)
 
     # Plot colored line segments between each pair of points
     for i in range(len(trajectory) - 1):
@@ -59,6 +59,9 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
         ).add_to(m)
 
     incline_angles = np.degrees(np.arctan(gradients))
+
+    speeds_processed = speeds - np.mean(speeds)
+
     # attach metadata to chosen points
     for i, (lat, lon) in enumerate(trajectory):
         val = plot_value[i]
@@ -68,7 +71,7 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
             f"<b>General Information</b>"
             f"<br>Trajectory Point: {i}"
             f"<br>Distance (m): {distances[i]:.2f}"
-            f"<br>Speed (km/h): {speeds[i]:.2f}"
+            f"<br>Speed (km/h): {speeds_processed[i]:.2f}"
             f"<br>Time (s): {times[i]:.2f}"
             f"<br>Incline Angle (°): {incline_angles[i]:.2f}"
             f"<hr style='margin:5px 0'>"
@@ -89,7 +92,7 @@ def plot_mesh(heat_map, trajectory, mesh, distances, speeds, energies, times, co
             fill_color=hex_color,
             fill_opacity=0.8,
             popup=folium.Popup(metadata, max_width=300),  
-            tooltip=f"Lat: {lat:.6f}, Lon: {lon:.6f}"
+            tooltip=f"Speed: {speeds_processed[i]:.2f}"
         ).add_to(m)
 
 
