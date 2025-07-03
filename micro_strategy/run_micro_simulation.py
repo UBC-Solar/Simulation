@@ -15,8 +15,10 @@ from simulation.config import (
     EnvironmentConfig,
     CarConfig,
 )
-
+import datetime
 from scipy.optimize import differential_evolution
+from scipy import signal
+
 
 def load_configs(competition_name = "FSGP", car_name: str = "BrightSide"):
     config_path = ConfigDirectory / f"initial_conditions_{competition_name}.toml"
@@ -149,6 +151,9 @@ def optimize_trajectory(
 
     population_size = 20
 
+    def callback(*args, **kwargs):
+        print(f"Did generation! {datetime.datetime.now()}")
+
     result = differential_evolution(
         objective_trajectory_energy,
         bounds,
@@ -162,7 +167,8 @@ def optimize_trajectory(
         polish=True,
         disp=True,
         workers=-1,             # parallel evaluation
-        seed=42
+        seed=42,
+        callback=callback
     )
 
     best_idx = np.rint(result.x[:len(mesh)]).astype(int).clip(0, num_lateral_indices - 1)
@@ -253,7 +259,7 @@ def main():
     start_time = time.time()
 
     optimized_trajectory, optimized_speeds = optimize_trajectory(
-        iterations=5,
+        iterations=450,
         mesh=mesh,
         gradients=gradients,
         trajectory_length=len(trajectory_FSGP),
@@ -261,11 +267,11 @@ def main():
         motor_model=advanced_motor
     )
 
-    distances_m_op = np.array(get_distances(random_trajectory))
+    distances_m_op = np.array(get_distances(optimized_trajectory))
 
     energy_consumed_op, cornering_work_op, road_friction_array_op, drag_forces_op, g_forces_op, ticks_op, speeds_kmh_op, gradients_op, advanced_motor = run_motor_model(
         speed_kmh=optimized_speeds,
-        distances_m=distances_m,
+        distances_m=distances_m_op,
         trajectory=optimized_trajectory,
         environment_config=environment_config,
         initial_conditions=initial_conditions,
@@ -304,6 +310,29 @@ def main():
 
     folium_map_optimized.save(output_dir / "optimized_trajectory_speed.html")
 
+    optimized_speeds_clipped = np.clip(
+        speeds_kmh_op,
+        a_min=np.mean(speeds_kmh_op) - np.std(speeds_kmh_op),
+        a_max=np.mean(speeds_kmh_op) + np.std(speeds_kmh_op)
+    )
+    optimized_speeds_filtered = signal.savgol_filter(optimized_speeds_clipped, window_length=10, polyorder=2)
+
+    folium_map_optimized = plot_mesh(
+        "speed",
+        optimized_trajectory,
+        mesh,
+        distances_m_op,
+        optimized_speeds_filtered,
+        energy_consumed_op,
+        ticks_op,
+        cornering_work_op,
+        gradients_op,
+        road_friction_array_op,
+        drag_forces_op,
+        g_forces_op)
+
+    folium_map_optimized.save(output_dir / "optimized_trajectory_speed_filtered.html")
+
     print("____Optimization Results____\n")
     print(f"Total Energy - Random Route:     {np.sum(energy_consumed):.2f} J")
     print(f"Total Energy - Optimized Route:  {np.sum(energy_consumed_op):.2f} J")
@@ -322,8 +351,7 @@ def main():
 
     np.save(output_dir / "optimized_trajectory.npy", np.array(optimized_trajectory))
     np.save(output_dir / "optimized_speeds.npy", np.array(optimized_speeds))
-
-
+    np.save(output_dir / "optimized_speeds_filtered.npy", np.array(optimized_speeds_filtered))
 
 
 if __name__ == '__main__':
