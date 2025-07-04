@@ -8,9 +8,10 @@ from scipy.integrate import cumulative_trapezoid as trapz
 from diagnostic_interface import settings
 from typing import Optional
 import mplcursors
-
+from dateutil import tz
 
 plt.style.use("seaborn-v0_8-darkgrid")
+local_tz = tz.tzlocal()
 
 
 class PlotCanvas(FigureCanvas):
@@ -42,8 +43,13 @@ class PlotCanvas(FigureCanvas):
             self.ax.set_title(title)
             self.ax.set_xlabel("Time")
             self.ax.set_ylabel(y_label)
-            self.ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-            self.ax.xaxis.set_major_locator(mdates.HourLocator())
+
+            locator = mdates.AutoDateLocator()
+            formatter = mdates.DateFormatter("%H:%M", tz=local_tz)
+
+            self.ax.xaxis.set_major_formatter(formatter)
+            self.ax.xaxis.set_major_locator(locator)
+
             self.figure.autofmt_xdate()
 
         else:
@@ -59,7 +65,7 @@ class PlotCanvas(FigureCanvas):
         @cursor.connect("add")
         def _(sel):
             x, y = sel.target  # x is a float (matplotlib date), y is the y-value
-            dt = mdates.num2date(x)
+            dt = mdates.num2date(x, tz=local_tz)
             sel.annotation.set_text(
                 f"{y:.2f} {ts.units} at {dt.strftime('%H:%M')}"
             )
@@ -129,9 +135,10 @@ class PlotCanvas2(FigureCanvas):
                 self.ax.legend([self.line1, self.line2], ["Wind Speed", "Precipitation Rate"])
 
                 locator = mdates.AutoDateLocator()
-                formatter = mdates.ConciseDateFormatter(locator)
-                self.ax.xaxis.set_major_locator(locator)
+                formatter = mdates.DateFormatter("%H:%M", tz=local_tz)
+
                 self.ax.xaxis.set_major_formatter(formatter)
+                self.ax.xaxis.set_major_locator(locator)
 
             else:
                 # Only update data
@@ -154,7 +161,7 @@ class PlotCanvas2(FigureCanvas):
             @cursor.connect("add")
             def _(sel):
                 x, y = sel.target  # x is a float (matplotlib date), y is the y-value
-                dt = mdates.num2date(x)
+                dt = mdates.num2date(x, tz=local_tz)
                 sel.annotation.set_text(
                     f"{y:.2f} at {dt.strftime('%H:%M')}"
                 )
@@ -238,9 +245,10 @@ class IntegralPlot(FigureCanvas):
 
                 # Improve datetime formatting
                 locator = mdates.AutoDateLocator()
-                formatter = mdates.ConciseDateFormatter(locator)
-                self.ax.xaxis.set_major_locator(locator)
+                formatter = mdates.DateFormatter("%H:%M", tz=local_tz)
+
                 self.ax.xaxis.set_major_formatter(formatter)
+                self.ax.xaxis.set_major_locator(locator)
 
             else:
                 # Only update data
@@ -259,7 +267,7 @@ class IntegralPlot(FigureCanvas):
             @cursor.connect("add")
             def _(sel):
                 x, y = sel.target  # x is a float (matplotlib date), y is the y-value
-                dt = mdates.num2date(x)
+                dt = mdates.num2date(x, tz=local_tz)
                 sel.annotation.set_text(
                     f"{y/1e6:.2f} MJ/m^2 at {dt.strftime('%H:%M')}"
                 )

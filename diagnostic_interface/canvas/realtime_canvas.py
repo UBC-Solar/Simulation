@@ -68,7 +68,7 @@ class RealtimeCanvas(FigureCanvas):
         def _(sel):
             xdate, yval = sel.target
             # Interpret xdate as UTC, then convert to local
-            dt_utc = mdates.num2date(xdate, tz=timezone.utc)
+            dt_utc = mdates.num2date(xdate, tz=local_tz)
             dt_local = dt_utc.astimezone(local_tz)
             sel.annotation.set_text(
                 f"{yval:.2f} {ts.units} at {dt_local.strftime('%H:%M:%S')}"

@@ -19,8 +19,7 @@ if __name__ == "__main__":
     window.show()
 
     window._splash.showMessage("Loading...")
-    QTimer.singleShot(500, lambda: window._splash.showMessage("Crimping connectors..."))
-    QTimer.singleShot(1500, lambda: window._splash.showMessage("Recrimping connectors..."))
+    QTimer.singleShot(1500, lambda: window._splash.showMessage("Loading..."))
     QTimer.singleShot(2000, window.finishSplash)
 
     sys.exit(app.exec_())

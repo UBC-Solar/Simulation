@@ -10,6 +10,10 @@ import matplotlib.dates as mdates
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from data_tools import SunbeamClient
 import mplcursors
+from dateutil import tz
+
+
+local_tz = tz.tzlocal()
 
 
 class PlotRefreshWorkerSignals(QObject):
@@ -58,8 +62,8 @@ class ArrayPlot(FigureCanvas):
 
                 self.ax.legend([self.line1, self.line2], ["Array Power", "GHI"])
 
-                locator = mdates.AutoDateLocator()
-                formatter = mdates.ConciseDateFormatter(locator)
+                locator = mdates.AutoDateLocator(tz=local_tz)
+                formatter = mdates.ConciseDateFormatter(locator, tz=local_tz)
                 self.ax.xaxis.set_major_locator(locator)
                 self.ax.xaxis.set_major_formatter(formatter)
 
@@ -84,7 +88,7 @@ class ArrayPlot(FigureCanvas):
             @cursor.connect("add")
             def _(sel):
                 x, y = sel.target  # x is a float (matplotlib date), y is the y-value
-                dt = mdates.num2date(x)
+                dt = mdates.num2date(x, tz=local_tz)
                 sel.annotation.set_text(
                     f"{y:.2f} at {dt.strftime('%H:%M')}"
                 )
