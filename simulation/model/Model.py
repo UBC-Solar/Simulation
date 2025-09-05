@@ -9,10 +9,13 @@ from simulation.model.Simulation import Simulation
 from simulation.race import Race, reshape_speed_array, get_granularity_reduced_boolean
 from simulation.config import SimulationReturnType
 
+from micro_strategy import OptimizedSpeedsPath
+
 from physics.models.arrays import BaseArray
 from physics.models.battery import BaseBattery
 from physics.models.lvs import BaseLVS
 from physics.models.motor import BaseMotor
+from physics.models.aeroshell.aeroshell import Aeroshell
 from physics.models.regen import BaseRegen
 from physics.environment.gis import BaseGIS
 from physics.environment.meteorology import BaseMeteorology
@@ -21,7 +24,7 @@ from physics.environment.meteorology import BaseMeteorology
 class Model:
     """
     A `Model` is a comprehensive model of a solar-powered vehicle's components within a fully qualified environment,
-    ready for simulation given an input of driving speeds for the vehicle to perform.
+    ready for simulation given an input of driving speeds_directory for the vehicle to perform.
     """
 
     def __init__(
@@ -34,6 +37,7 @@ class Model:
         array: BaseArray,
         battery: BaseBattery,
         motor: BaseMotor,
+        aeroshell: Aeroshell,
         regen: BaseRegen,
         lvs: BaseLVS,
         gis: BaseGIS,
@@ -41,6 +45,7 @@ class Model:
         max_acceleration: float,
         max_deceleration: float,
         start_time: int,
+        num_laps: int
     ):
         """
         Instantiate a `Model`.
@@ -53,6 +58,7 @@ class Model:
         :param BaseArray array: An instance of `BaseArray` representing the solar array to be simulated.
         :param BaseBattery battery: An instance of `BaseBattery` representing the batter pack to be simulated.
         :param BaseMotor motor: An instance of `BaseMotor` representing the motor to be simulated.
+        :param Aeroshell aeroshell: An instance of the Aeroshell class that represents the drag and down force calculations
         :param BaseRegen regen: An instance of `BaseRegen` representing the regenerative braking system to be simulated.
         :param BaseLVS lvs: An instance of `BaseLVS` representing the low-voltage systems to be simulated.
         :param BaseGIS gis: An instance of `BaseGIS` which characterizes geographical information about the simulation.
@@ -60,6 +66,7 @@ class Model:
         :param float max_acceleration: Maximum allowed acceleration of the car in km/h.
         :param float max_deceleration: Maximum allowed deceleration of the car in km/h.
         :param int start_time: The initial time, in seconds since midnight of the first day, of the simulation.
+        :param int num_laps: The number of laps that we are simulating/optimizing
         """
         self.return_type = return_type
         self.race = race
@@ -68,6 +75,7 @@ class Model:
         self.simulation_dt = simulation_dt
         self.solar_array = array
         self.motor = motor
+        self.aeroshell = aeroshell
         self.regen = regen
         self.battery = battery
         self.gis = gis
@@ -76,8 +84,9 @@ class Model:
         self.max_acceleration = max_acceleration
         self.max_deceleration = max_deceleration
         self.start_time = start_time
+        self.num_laps = num_laps
 
-        self.time_of_initialization = self.meteorology.last_updated_time  # Real Time
+        self.time_of_initialization = race.date.timestamp() + self.start_time  # Real Time
 
         self.simulation_duration = race.race_duration - self.start_time
 
@@ -101,14 +110,14 @@ class Model:
     ):
         """
 
-        Given an array of driving speeds, simulate the model by running calculations sequentially for the entire
+        Given an array of driving speeds_directory, simulate the model by running calculations sequentially for the entire
         simulation duration.
         Returns either time taken, distance travelled, or void.
 
         This function is mostly a wrapper
         around `run_simulation_calculations`,
         which is where the magic happens, that deals with processing the driving
-        speeds array as well as plotting and handling the calculation results.
+        speeds_directory array as well as plotting and handling the calculation results.
 
         Note: if the speed remains constant throughout this update, knowing the starting
               time, the cumulative distance at every time can be known.
@@ -120,7 +129,7 @@ class Model:
 
         Note 2: currently, the simulation can only be run for times during which weather data is available
 
-        :param np.ndarray speed: Array that specifies the solar car's driving speed at each time step.
+        :param np.ndarray speed: Array that specifies the solar car's avg driving speed per lap.
         :param bool plot_results: Set to True to plot the results of the simulation.
         :param bool verbose: Boolean to control logging and debugging behaviour.
         :param tuple[float] plot_portion: A tuple containing the beginning and end of the portion of the array we'd
@@ -133,23 +142,14 @@ class Model:
         Reduces verbosity
             when true.
         """
-
-        if speed is None:
-            speed = np.array([30] * self.get_driving_time_divisions())
-
-        assert len(speed) == self.get_driving_time_divisions(), (
-            "Input driving speeds array must have length equal to "
-            "get_driving_time_divisions()! Current length is "
-            f"{len(speed)} and length of "
-            f"{self.get_driving_time_divisions()} is needed!"
-        )
+        track_speeds = np.load(OptimizedSpeedsPath)
 
         # ----- Reshape speed array -----
         speed_kmh = reshape_speed_array(
             self.race,
             speed,
-            self.speed_dt,
             self.start_time,
+            self.gis,
             self.simulation_dt,
             self.max_acceleration,
             self.max_deceleration,
@@ -157,11 +157,10 @@ class Model:
 
         # ----- Preserve raw speed -----
         raw_speed = speed_kmh.copy()
-        # speed_kmh = core.constrain_speeds(self.speed_limits.astype(float), speed_kmh, self.simulation_dt)
 
         # ------ Run calculations and get result and modified speed array -------
         self._simulation = Simulation(self)
-        self._simulation.run_simulation_calculations(speed_kmh)
+        self._simulation.run_simulation_calculations(speed_kmh, track_speeds)
 
         results = self.get_results(
             [
@@ -184,7 +183,6 @@ class Model:
             )
 
         # ----- Plotting -----
-
         if plot_results:
             results_arrays = self.get_results(
                 [
@@ -204,7 +202,7 @@ class Model:
                 "SOC (%)",
                 "Delta energy (J)",
                 "Solar irradiance (W/m^2)",
-                "Wind speeds (km/h)",
+                "Wind speeds_directory (km/h)",
                 "Elevation (m)",
                 "Raw SOC (%)",
                 "Raw Speed (km/h)",

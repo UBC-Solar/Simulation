@@ -59,13 +59,11 @@ class BatteryModelConfig(BatteryConfig):
     """
 
     R_0_data: list[float]
-    R_P: float
-    C_P: float
+    R_P_data: list[float]
+    C_P_data: list[float]
     Q_total: float
     SOC_data: list[float]
     Uoc_data: list[float]
-    max_current_capacity: float
-    max_energy_capacity: float
 
 
 class BasicBatteryConfig(BatteryConfig):
@@ -86,7 +84,9 @@ class MotorConfig(Config):
     Configuration object describing the motor of a vehicle.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, subclass_field="motor_type")
+
+    motor_type: str
 
     road_friction: float  # Road friction coefficient, dimensionless
     tire_radius: float  # Tire radius, in m
@@ -94,8 +94,24 @@ class MotorConfig(Config):
     drag_coefficient: float  # Drag coefficient, dimensionless
 
 
+class BasicMotorConfig(MotorConfig):
+    pass
+
+class AdvancedMotorConfig(MotorConfig):
+    cornering_coefficient: float
+
+
+class AeroshellConfig(Config):
+    """
+        Configuration object describing the aerodynamics forces (specifically drag and downforce) of a vehicle.
+    """
+    model_config = ConfigDict(frozen=True) #drag vs down
+
+
 class RegenConfig(Config):
     """
+class RegenConfig(Config):
+
     Configuration object describing the regenerative braking systems of a vehicle.
     """
 
@@ -115,5 +131,6 @@ class CarConfig(Config):
     battery_config: BatteryConfig
     motor_config: MotorConfig
     regen_config: RegenConfig
+    aeroshell_config: AeroshellConfig
 
     name: str

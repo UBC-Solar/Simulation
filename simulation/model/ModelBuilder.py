@@ -25,9 +25,10 @@ from simulation.config import (
 )
 
 from physics.models.arrays import BaseArray, BasicArray
-from physics.models.battery import BaseBattery, BasicBattery, BatteryModel
+from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel, BatteryModelConfig
 from physics.models.lvs import BaseLVS, BasicLVS
-from physics.models.motor import BaseMotor, BasicMotor
+from physics.models.motor import BaseMotor, BasicMotor, AdvancedMotor
+from physics.models.aeroshell.aeroshell import Aeroshell
 from physics.models.regen import BaseRegen, BasicRegen
 from physics.environment.gis import BaseGIS, GIS
 from physics.environment.meteorology import (
@@ -35,7 +36,6 @@ from physics.environment.meteorology import (
     IrradiantMeteorology,
     CloudedMeteorology,
 )
-
 
 load_dotenv()
 
@@ -71,6 +71,7 @@ class ModelBuilder:
         self.gis: Optional[BaseGIS] = None
         self.meteorology: Optional[BaseMeteorology] = None
         self.motor: Optional[BaseMotor] = None
+        self.aeroshell: Optional[Aeroshell] = None
         self.battery: Optional[BaseBattery] = None
         self.regen: Optional[BaseRegen] = None
         self.max_acceleration: Optional[float] = None
@@ -90,6 +91,7 @@ class ModelBuilder:
         self.current_coord: Optional[NDArray] = None
         self.initial_battery_charge: Optional[float] = None
         self.start_time: Optional[int] = None
+        self.num_laps: Optional[int] = None
 
         # Hyperparameters
         self.simulation_period: Optional[int] = None
@@ -269,6 +271,10 @@ class ModelBuilder:
 
             route: Route = self._cache.get(route_data_path)
 
+            if hasattr(competition_config, "tiling"):
+                if route.tiling != competition_config.tiling:
+                    raise KeyError
+
         # Generate new route data data
         except KeyError:
             match competition_config.competition_type:
@@ -305,7 +311,7 @@ class ModelBuilder:
     def _set_weather_data(self):
         environment_config = self._environment_config
 
-        environment_hash = ModelBuilder._truncate_hash(hash(environment_config))
+        environment_hash = ModelBuilder._truncate_hash(hash(environment_config) + hash(environment_config.weather_query_config))
         weather_data_path = WeatherPath / environment_hash
 
         weather_query_config = environment_config.weather_query_config
@@ -395,23 +401,43 @@ class ModelBuilder:
                 self.battery = BasicBattery(self.initial_battery_charge, **arguments)
 
             case "BatteryModel":
-                self.battery = BatteryModel(
-                    self._car_config.battery_config, self.initial_battery_charge
+                battery_config = BatteryModelConfig(
+                    self._car_config.battery_config.R_0_data,
+                    self._car_config.battery_config.SOC_data,
+                    self._car_config.battery_config.R_P_data,
+                    self._car_config.battery_config.C_P_data,
+                    self._car_config.battery_config.Uoc_data,
+                    self._car_config.battery_config.Q_total
+                )
+                # battery_config = BatteryModelConfig(**self._car_config.battery_config.model_dump())
+
+                self.battery = EquivalentCircuitBatteryModel(battery_config, self.initial_battery_charge)
+
+        match self._car_config.motor_config.motor_type:
+            case "BasicMotor":
+                self.motor = BasicMotor(
+                    vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
+                    **self._car_config.motor_config.model_dump(),
                 )
 
-        self.motor = BasicMotor(
-            vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
-            **self._car_config.motor_config.model_dump(),
-        )
+            case "AdvancedMotor":
+                self.motor = AdvancedMotor(
+                    vehicle_mass=self._car_config.vehicle_config.vehicle_mass,
+                    **self._car_config.motor_config.model_dump()
+                )
+
+        match self._car_config.aeroshell_config:
+            case "Aeroshell":
+                self.aeroshell = Aeroshell()
 
         self.regen = BasicRegen(self._car_config.vehicle_config.vehicle_mass)
 
-        tiling = self.route_data.tiling
+        self.num_laps = self.route_data.tiling
         route_data = {
-            "path": np.tile(self.route_data.coords, (tiling, 1)),
+            "path": np.tile(self.route_data.coords, (self.num_laps, 1)),
             "num_unique_coords": len(self.route_data.coords),
-            "time_zones": np.tile(self.route_data.path_time_zones, tiling),
-            "elevations": np.tile(self.route_data.path_elevations, tiling),
+            "time_zones": np.tile(self.route_data.path_time_zones, self.num_laps),
+            "elevations": np.tile(self.route_data.path_elevations, self.num_laps),
         }
 
         self.gis = GIS(route_data, self.origin_coord, self.current_coord)
@@ -454,6 +480,7 @@ class ModelBuilder:
             array=self.array,
             battery=self.battery,
             motor=self.motor,
+            aeroshell = self.aeroshell,
             lvs=self.lvs,
             regen=self.regen,
             gis=self.gis,
@@ -461,4 +488,5 @@ class ModelBuilder:
             max_acceleration=self.max_acceleration,
             max_deceleration=self.max_deceleration,
             start_time=self.start_time,
+            num_laps = self.num_laps
         )

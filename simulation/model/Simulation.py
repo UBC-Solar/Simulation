@@ -51,6 +51,8 @@ class Simulation:
         self.tick_array = None
         self.time_zones = None
         self.distances = None
+        self.drag_force = None
+        self.down_force = None
         self.cumulative_distances = None
         self.closest_gis_indices = None
         self.closest_weather_indices = None
@@ -73,6 +75,7 @@ class Simulation:
         self.time_in_motion = None
         self.final_soc = None
         self.map_data_indices = None
+        self.wind_attack_angles = None
 
     def run_simulation_calculations(self, speed_kmh: NDArray) -> None:
         """
@@ -170,6 +173,15 @@ class Simulation:
             self.gis_vehicle_bearings, self.absolute_wind_speeds, self.wind_directions
         )
 
+        #with calculated wind_speeds, we can not calculate drag and down forces in order to pass into motor model calculations
+        self.drag_force = self.model.aeroshell.calculate_drag_force(self.wind_speeds, self.wind_attack_angles, self.speed_kmh,
+                                                         "drag")
+
+        self.down_force = self.model.aeroshell.calculate_down_force(self.wind_speeds, self.wind_attack_angles, self.speed_kmh,
+                                                         "down")
+
+
+
         # Get an array of solar irradiance at every coordinate and time
         self.solar_irradiances = self.model.meteorology.calculate_solar_irradiances(
             self.model.route_coords[self.closest_gis_indices],
@@ -177,6 +189,8 @@ class Simulation:
             local_times,
             self.gis_route_elevations_at_each_tick,
         )
+
+
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
@@ -187,7 +201,7 @@ class Simulation:
         )
 
         self.motor_consumed_energy = self.model.motor.calculate_energy_in(
-            self.speed_kmh, self.gradients, self.wind_speeds, self.model.simulation_dt
+            self.speed_kmh, self.gradients, self.drag_force, self.down_force, self.model.simulation_dt
         )
 
         self.array_produced_energy = self.model.solar_array.calculate_produced_energy(
@@ -332,6 +346,11 @@ class Simulation:
             "map_data_indices": self.map_data_indices,
             "path_coordinates": self.model.gis.get_path(),
             "raw_soc": self.raw_soc,
+            "drag_force": self.drag_force,
+            "down_force": self.down_force,
+            "wind_attack_angles": self.wind_attack_angles,
+
+
         }
 
         if "default" in requested_properties or requested_properties == "default":
