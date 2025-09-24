@@ -7,14 +7,14 @@ date = "2025-07-03T05:00:00.0Z"
 tiling = 300
 
 [competition_config.time_ranges.charging]
-0 = [36000, 72000]
+0 = [25200, 72000]
 1 = [25200, 72000]
-2 = [25200, 54000]
+2 = [25200, 72000]
 
 [competition_config.time_ranges.driving]
-0 = [36000, 64800]
+0 = [36000, 57600]
 1 = [32400, 61200]
-2 = [32400, 54000]
+2 = [32400, 61200]
 
 [weather_query_config]
 weather_provider = "Solcast"
