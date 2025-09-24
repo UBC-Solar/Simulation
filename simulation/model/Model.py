@@ -15,7 +15,7 @@ from physics.models.arrays import BaseArray
 from physics.models.battery import BaseBattery
 from physics.models.lvs import BaseLVS
 from physics.models.motor import BaseMotor
-from physics.models.aeroshell.aeroshell import Aeroshell
+from physics.models.aeroshell import Aeroshell
 from physics.models.regen import BaseRegen
 from physics.environment.gis import BaseGIS
 from physics.environment.meteorology import BaseMeteorology

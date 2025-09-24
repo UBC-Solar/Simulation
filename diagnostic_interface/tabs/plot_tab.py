@@ -6,7 +6,8 @@ from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSignal, QObject, QTimer
 #from poetry.console.commands import self
 
 from diagnostic_interface import settings
-from diagnostic_interface.canvas import CustomNavigationToolbar, PlotCanvas, PlotCanvas2
+from diagnostic_interface.canvas import (CustomNavigationToolbar, PlotCanvas)
+#PlotCanvas2)
 
 
 HELP_MESSAGES = {

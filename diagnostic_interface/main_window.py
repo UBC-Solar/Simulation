@@ -14,7 +14,7 @@ from PyQt5.QtCore import Qt
 from data_tools import SunbeamClient
 from diagnostic_interface.widgets import DataSelect
 # from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab
-from diagnostic_interface.tabs import PlotTab2, PlotTab, UpdatableTab
+from diagnostic_interface.tabs import PlotTab, UpdatableTab
 
 
 from diagnostic_interface.dialog import SettingsDialog

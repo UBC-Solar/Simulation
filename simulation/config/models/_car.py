@@ -97,6 +97,7 @@ class MotorConfig(Config):
 class BasicMotorConfig(MotorConfig):
     pass
 
+
 class AdvancedMotorConfig(MotorConfig):
     cornering_coefficient: float
 
@@ -105,8 +106,10 @@ class AeroshellConfig(Config):
     """
         Configuration object describing the aerodynamics forces (specifically drag and downforce) of a vehicle.
     """
-    model_config = ConfigDict(frozen=True) #drag vs down
-
+    model_config = ConfigDict(frozen=True)
+    drag_lookup: dict[float:float] #lookup table that corresponds angles to drag force, computed by a CFD
+    down_lookup: dict[float:float] #lookup table that corresponds angles to down force, computed by a CFD
+    wind_reference_speed: float    # a reference wind speed in order to scale aerodynamic force calculations
 
 class RegenConfig(Config):
     """

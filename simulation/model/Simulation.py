@@ -132,7 +132,7 @@ class Simulation:
         self.max_route_distance = self.cumulative_distances[-1]
 
         self.route_length = (
-            self.max_route_distance / 1000.0
+                self.max_route_distance / 1000.0
         )  # store the route length in kilometers
 
         # Array of elevations at every route point
@@ -173,14 +173,9 @@ class Simulation:
             self.gis_vehicle_bearings, self.absolute_wind_speeds, self.wind_directions
         )
 
-        #with calculated wind_speeds, we can not calculate drag and down forces in order to pass into motor model calculations
-        self.drag_force = self.model.aeroshell.calculate_drag_force(self.wind_speeds, self.wind_attack_angles, self.speed_kmh,
-                                                         "drag")
-
-        self.down_force = self.model.aeroshell.calculate_down_force(self.wind_speeds, self.wind_attack_angles, self.speed_kmh,
-                                                         "down")
-
-
+        # with calculated wind_speeds, we can now calculate (aerodynamic) drag and down forces in order to pass into motor model calculations
+        self.drag_force = self.model.aeroshell.calculate_drag(self.wind_speeds, self.wind_attack_angles, self.speed_kmh/3.6)
+        self.down_force = self.model.aeroshell.calculate_down(self.wind_speeds, self.wind_attack_angles, self.speed_kmh/3.6)
 
         # Get an array of solar irradiance at every coordinate and time
         self.solar_irradiances = self.model.meteorology.calculate_solar_irradiances(
@@ -189,8 +184,6 @@ class Simulation:
             local_times,
             self.gis_route_elevations_at_each_tick,
         )
-
-
 
         # TLDR: we have now obtained solar irradiances, wind speeds, and gradients at each tick
 
@@ -212,8 +205,8 @@ class Simulation:
             self.speed_kmh, self.gis_route_elevations_at_each_tick, 0.0, 10000.0
         )
 
-        self.not_charge = self.model.race.charging_boolean[self.model.start_time :]
-        self.not_race = self.model.race.driving_boolean[self.model.start_time :]
+        self.not_charge = self.model.race.charging_boolean[self.model.start_time:]
+        self.not_race = self.model.race.driving_boolean[self.model.start_time:]
 
         if self.model.simulation_dt != 1:
             self.not_charge = self.not_charge[:: self.model.simulation_dt]
@@ -257,7 +250,7 @@ class Simulation:
         # self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
 
         self.time_in_motion = (
-            np.logical_and(self.tick_array, self.speed_kmh) * self.model.simulation_dt
+                np.logical_and(self.tick_array, self.speed_kmh) * self.model.simulation_dt
         )
 
         self.final_soc = self.state_of_charge[-1] * 100 + 0.0
@@ -282,7 +275,7 @@ class Simulation:
         self.calculations_have_happened = True
 
     def get_results(
-        self, requested_properties: Union[list, str]
+            self, requested_properties: Union[list, str]
     ) -> Union[list, np.ndarray, float]:
         """
 
@@ -349,7 +342,6 @@ class Simulation:
             "drag_force": self.drag_force,
             "down_force": self.down_force,
             "wind_attack_angles": self.wind_attack_angles,
-
 
         }
 

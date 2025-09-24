@@ -28,7 +28,7 @@ from physics.models.arrays import BaseArray, BasicArray
 from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel, BatteryModelConfig
 from physics.models.lvs import BaseLVS, BasicLVS
 from physics.models.motor import BaseMotor, BasicMotor, AdvancedMotor
-from physics.models.aeroshell.aeroshell import Aeroshell
+from physics.models.aeroshell import Aeroshell
 from physics.models.regen import BaseRegen, BasicRegen
 from physics.environment.gis import BaseGIS, GIS
 from physics.environment.meteorology import (
@@ -47,7 +47,6 @@ class ModelBuilder:
 
     This class follows the fluid builder pattern, such that its methods return itself allowing for operations like,
     >>> ModelBuilder().set_environment_config(environment_config).set_initial_conditions(initial_conditions).compile()
-
     Once all configuration has been set, `ModelBuilder` can be compiled, and then a `Model` acquired from it with `get`.
     """
 
@@ -123,11 +122,11 @@ class ModelBuilder:
         return self
 
     def set_environment_config(
-        self,
-        environment_config: EnvironmentConfig,
-        rebuild_weather_cache: bool = False,
-        rebuild_competition_cache: bool = False,
-        rebuild_route_cache: bool = False,
+            self,
+            environment_config: EnvironmentConfig,
+            rebuild_weather_cache: bool = False,
+            rebuild_competition_cache: bool = False,
+            rebuild_route_cache: bool = False,
     ):
         """
         Set the environment configuration of the `Model` to be built.
@@ -305,13 +304,14 @@ class ModelBuilder:
         self.origin_coord = route.coords[0]
         self.dest_coord = route.coords[-1]
         self.waypoints = route.coords[
-            1:-1
-        ]  # Get all coords between first and last coordinate
+                         1:-1
+                         ]  # Get all coords between first and last coordinate
 
     def _set_weather_data(self):
         environment_config = self._environment_config
 
-        environment_hash = ModelBuilder._truncate_hash(hash(environment_config) + hash(environment_config.weather_query_config))
+        environment_hash = ModelBuilder._truncate_hash(
+            hash(environment_config) + hash(environment_config.weather_query_config))
         weather_data_path = WeatherPath / environment_hash
 
         weather_query_config = environment_config.weather_query_config
@@ -426,9 +426,7 @@ class ModelBuilder:
                     **self._car_config.motor_config.model_dump()
                 )
 
-        match self._car_config.aeroshell_config:
-            case "Aeroshell":
-                self.aeroshell = Aeroshell()
+        self.aeroshell = Aeroshell(**self._car_config.aeroshell_config.model_dump())
 
         self.regen = BasicRegen(self._car_config.vehicle_config.vehicle_mass)
 
@@ -480,7 +478,7 @@ class ModelBuilder:
             array=self.array,
             battery=self.battery,
             motor=self.motor,
-            aeroshell = self.aeroshell,
+            aeroshell=self.aeroshell,
             lvs=self.lvs,
             regen=self.regen,
             gis=self.gis,
@@ -488,5 +486,5 @@ class ModelBuilder:
             max_acceleration=self.max_acceleration,
             max_deceleration=self.max_deceleration,
             start_time=self.start_time,
-            num_laps = self.num_laps
+            num_laps=self.num_laps
         )
