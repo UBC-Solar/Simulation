@@ -30,7 +30,7 @@ class CompetitionConfig(Config):
     Configuration object which contains the information required to describe a competition
     """
 
-    model_config = ConfigDict(frozen=True, subclass_field="competition_type")
+    model_config = ConfigDict(subclass_field="competition_type")
 
     competition_name: str  # The name of the competition
     competition_type: CompetitionType  # The type of competition

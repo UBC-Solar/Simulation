@@ -1,8 +1,10 @@
 import math
 import numpy as np
 from numba import jit
+
 from simulation.race import Race
 
+LAPS_PER_INDEX = 10
 
 def _reshape_and_repeat(input_array, reshape_length):
     """
@@ -44,7 +46,7 @@ def _apply_deceleration(input_speed_array, tick, max_deceleration: float):
 
     Remove sudden drops in speed from input_speed_array
 
-    The modified input_speed_array stays as close to the target speeds as possible such that:
+    The modified input_speed_array stays as close to the target speeds_directory as possible such that:
         1. The decrease between any two consecutive speed values cannot exceed max_deceleration_per_tick km/h
         2. Values of 0km/h remain 0km/h
 
@@ -74,7 +76,7 @@ def _apply_acceleration(input_speed_array, tick, max_acceleration: float):
 
     Remove sudden increases in speed from input_speed_array
 
-    The modified input_speed_array stays as close to the target speeds as possible such that:
+    The modified input_speed_array stays as close to the target speeds_directory as possible such that:
         1. The increase between any two consecutive speed values cannot exceed max_acceleration_per_tick km/h
         2. Values of 0km/h remain 0km/h
         3. The first element cannot exceed MAX_ACCELERATION km/h since the car starts at rest
@@ -143,11 +145,11 @@ def get_granularity_reduced_boolean(
 def reshape_speed_array(
     race: Race,
     speed,
-    granularity,
     start_time: int,
+    gis_object,
     tick=1,
     max_acceleration: float = 6,
-    max_deceleration: float = 6,
+    max_deceleration: float = 6
 ):
     """
 
@@ -159,10 +161,9 @@ def reshape_speed_array(
         - tick length (time interval between speed array values in seconds)
 
     :param Race race: Race object containing the timing configuration
-    :param np.ndarray speed: A NumPy array representing the speed at each timestamp in km/h
-    :param float granularity: how granular the time divisions for Simulation's speed array should be,
-                              where 1 is hourly and 0.5 is twice per hour.
+    :param np.ndarray speed: A NumPy array representing the average speed at each lap in km/h
     :param int start_time: time since start of the race that simulation is beginning
+    :param GIS gis_object: GIS object that has access to the calculate_driving_speeds method
     :param int tick: The time interval in seconds between each speed in the speed array
     :param float max_acceleration: the maximum allowed acceleration in m/s^2
     :param float max_deceleration: the maximum allowed deceleration in m/s^2
@@ -170,16 +171,28 @@ def reshape_speed_array(
     :rtype: np.ndarray
 
     """
-    speed_boolean_array = race.driving_boolean.astype(int)[start_time:]
+    # Boolean array that tells us whether we are allowed to drive at each tick
+    driving_allowed = race.driving_boolean.astype(int)[start_time::tick]
 
-    speed_mapped = _map_array_to_targets(
-        speed, get_granularity_reduced_boolean(speed_boolean_array, granularity)
+    # Transforming speed array units from km/hr to m/s
+    lap_speeds_ms = np.array(speed) * (1000/3600)
+    
+    # Idle time for 0m/s entries
+    idle_time = 5*60  # seconds of idle time; for now this is set to be equivalent to 5 minutes
+
+    # Get a speed array where each entry is the speed at each time step
+    speed_ms = gis_object.calculate_driving_speeds(
+        lap_speeds_ms,
+        tick,
+        driving_allowed,
+        idle_time,
+        LAPS_PER_INDEX
     )
+    
+    speed_kmh = np.array(speed_ms) * (3600/1000) # Transform back to km/hr
 
-    reshaped_tick_count = math.ceil((race.race_duration - start_time) / float(tick))
-    speed_mapped_per_tick = _reshape_and_repeat(speed_mapped, reshaped_tick_count)
     speed_smoothed_kmh = _apply_deceleration(
-        _apply_acceleration(speed_mapped_per_tick, tick, max_acceleration),
+        _apply_acceleration(speed_kmh, tick, max_acceleration),
         tick,
         max_deceleration,
     )
@@ -214,9 +227,9 @@ def get_array_directional_wind_speed(vehicle_bearings, wind_speeds, wind_directi
         bearing of the vehicle
 
     :param np.ndarray vehicle_bearings: (float[N]) The azimuth angles that the vehicle in, in degrees
-    :param np.ndarray wind_speeds: (float[N]) The absolute speeds in m/s
+    :param np.ndarray wind_speeds: (float[N]) The absolute speeds_directory in m/s
     :param np.ndarray wind_directions: (float[N]) The wind direction in the meteorological convention. To convert from meteorological convention to azimuth angle, use (x + 180) % 360
-    :returns: The wind speeds in the direction opposite to the bearing of the vehicle
+    :returns: The wind speeds_directory in the direction opposite to the bearing of the vehicle
     :rtype: np.ndarray
 
     """
@@ -311,7 +324,6 @@ def get_map_data_indices(closest_gis_indices):
     return map_data_indices
 
 
-@jit(nopython=True)
 def normalize(
     input_array: np.ndarray, max_value: float = None, min_value: float = None
 ) -> np.ndarray:
@@ -322,14 +334,12 @@ def normalize(
     )
 
 
-@jit(nopython=True)
 def denormalize(
     input_array: np.ndarray, max_value: float, min_value: float = 0
 ) -> np.ndarray:
     return input_array * (max_value - min_value) + min_value
 
 
-@jit(nopython=True)
 def rescale(input_array: np.ndarray, upper_bound: float, lower_bound: float = 0):
     normalized_array = normalize(input_array)
     return denormalize(normalized_array, upper_bound, lower_bound)
