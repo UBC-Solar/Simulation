@@ -3,8 +3,6 @@ import matplotlib
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 
-from PyQt5.QtCore import QSize
-
 class CustomNavigationToolbar(NavigationToolbar):
     """Custom toolbar with tooltips for each button."""
 
@@ -22,16 +20,6 @@ class CustomNavigationToolbar(NavigationToolbar):
         self.save_data_action.setToolTip("Save the plotted data as a CSV file.")
         self.save_data_action.triggered.connect(self.canvas.save_data_to_csv)
         self.addAction(self.save_data_action)
-
-
-
-
-        #stuff added:
-
-
-        self.setIconSize(QSize(24, 24))
-        self.setFixedHeight(25)
-
 
         # Define tooltips for each standard tool in the toolbar
         tooltips = {
