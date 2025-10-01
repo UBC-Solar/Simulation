@@ -236,15 +236,14 @@ class Simulation:
 
         # ----- Array calculations -----
 
-        cumulative_delta_energy = np.cumsum(self.delta_energy)
+        
         battery_variables_array = self.model.battery.update_array(
             cumulative_delta_energy
         )
 
         # stores the battery SOC at each time step
         self.state_of_charge = battery_variables_array[0]
-        self.state_of_charge[np.abs(self.state_of_charge) < 1e-03] = 0
-        self.raw_soc = self.model.battery.get_raw_soc(np.cumsum(self.delta_energy))
+        
 
         # # This functionality may want to be removed in the future (speed array gets mangled when SOC <= 0)
         # self.speed_kmh = np.logical_and(self.not_charge, self.state_of_charge) * self.speed_kmh
@@ -253,15 +252,11 @@ class Simulation:
                 np.logical_and(self.tick_array, self.speed_kmh) * self.model.simulation_dt
         )
 
-        self.final_soc = self.state_of_charge[-1] * 100 + 0.0
-
-        self.distance = self.speed_kmh * (self.time_in_motion / 3600)
-        self.distances = np.cumsum(self.distance)
+        
 
         # Car cannot exceed Max distance, and it is not in motion after exceeded
         self.distances = self.distances.clip(0, self.max_route_distance / 1000)
 
-        self.map_data_indices = get_map_data_indices(self.closest_gis_indices)
 
         self.distance_travelled = self.distances[-1]
 
