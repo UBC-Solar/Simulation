@@ -1,5 +1,6 @@
 import threading
 import json
+
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel
 from PyQt5.QtCore import QTimer, Qt, QRunnable, QObject, pyqtSignal, QThreadPool
 from diagnostic_interface.widgets import DockerLogWidget
@@ -17,21 +18,23 @@ class UpdateStatusWorkerSignals(QObject):
 
 
 class UpdateStatusWorker(QRunnable):
-    def __init__(self, docker_stack: "DockerStackTab"):
+    def __init__(self, docker_stack: "DockerStackTab", cmd: list[str]):
         super().__init__()
         self.docker_stack = docker_stack
+        self.cmd = cmd
         self.signals = UpdateStatusWorkerSignals()
 
     def run(self):
         try:
             result = subprocess.run(
-                ["docker", "compose", "ps", "--format", "json"],
+                self.cmd,  # ["docker", "compose", "ps", "--format", "json"]
                 cwd=self.docker_stack.project_directory,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 text=True,
                 timeout=2,
                 check=True,
+                shell=True,
             )
 
             output = result.stdout.strip()
@@ -40,7 +43,7 @@ class UpdateStatusWorker(QRunnable):
             else:
                 services = [json.loads(line) for line in output.splitlines() if line.strip()]
 
-        except (subprocess.TimeoutExpired, subprocess.SubprocessError):
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError):
             QTimer.singleShot(0, self.docker_stack.stop_timer)
             QTimer.singleShot(0, self.docker_stack.raise_docker_error)
             services = []
@@ -64,14 +67,14 @@ class DockerStackTab(QWidget):
         self.toggle_button = QPushButton("Start Stack")
         self.toggle_button.clicked.connect(self.toggle_stack)
 
-        self.log_output = DockerLogWidget()
+        self.log_output = DockerLogWidget(self.start_stack_command)
         self.log_output.setReadOnly(True)
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.status_label)
-        layout.addWidget(self.toggle_button)
-        layout.addWidget(self.log_output)
-        self.setLayout(layout)
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.status_label)
+        self.layout.addWidget(self.toggle_button)
+        self.layout.addWidget(self.log_output)
+        self.setLayout(self.layout)
 
     @property
     @abstractmethod
@@ -93,33 +96,54 @@ class DockerStackTab(QWidget):
         else:
             self.start_stack()
 
+    @staticmethod
+    @abstractmethod
+    def start_stack_command():
+        raise NotImplementedError
+
+    @staticmethod
+    @abstractmethod
+    def stop_stack_command():
+        raise NotImplementedError
+
     def start_stack(self):
         def run():
+            cmd = self.start_stack_command()
             subprocess.run(
-                ["docker", "compose", "up", "-d"],
+                cmd,
                 cwd=self.project_directory,
+                shell=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 check=True,
             )
             QTimer.singleShot(0, self.do_update_status)
-
+        print(self.start_stack_command())
         threading.Thread(target=run, daemon=True).start()
 
     def stop_stack(self):
         def run():
+            cmd = self.stop_stack_command()
             subprocess.run(
-                ["docker", "compose", "down"],
+                cmd,
                 cwd=self.project_directory,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                shell=True
             )
             QTimer.singleShot(0, self.do_update_status)
 
         threading.Thread(target=run, daemon=True).start()
 
+    def get_docker_cmd(self):
+        cmd: str = self.start_stack_command()
+
+        docker_cmd = cmd.replace("up -d", "ps --format json")
+
+        return docker_cmd
+
     def do_update_status(self):
-        worker = UpdateStatusWorker(self)
+        worker = UpdateStatusWorker(self, self.get_docker_cmd())
         worker.signals.services.connect(self.update_status)
         self._thread_pool.start(worker)
 
@@ -137,7 +161,7 @@ class DockerStackTab(QWidget):
         self.evaluate_readiness(num_running_containers)
 
         self.toggle_button.setText("Stop Stack")
-        self.log_output.fetch_ansi_logs(self.project_directory)
+        self.log_output.fetch_logs(self.project_directory)
 
     @abstractmethod
     def evaluate_readiness(self, num_running_containers: int):

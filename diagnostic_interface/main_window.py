@@ -1,45 +1,34 @@
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QMainWindow, QWidget, QLabel, QVBoxLayout
+from diagnostic_interface.dialog import SettingsDialog
+from diagnostic_interface import settings
+from diagnostic_interface.tabs import PlotTab, UpdatableTab
+
 import pathlib
 
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (
-    QMainWindow,
-    QWidget,
-    QPushButton,
-    QLabel,
-    QVBoxLayout,
-    QTabWidget,
-)
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QPushButton, QTabWidget
 from data_tools import SunbeamClient
-from diagnostic_interface.widgets import DataSelect
-# from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, PlotTab, UpdatableTab, TelemetryTab
-from diagnostic_interface.tabs import PlotTab, UpdatableTab
-
-
-from diagnostic_interface.dialog import SettingsDialog
-from diagnostic_interface import settings
-
+from diagnostic_interface.widgets import DataSelect, SplashOverlay
 
 # Interface aesthetic parameters
 WINDOW_TITLE = "Diagnostic Interface"
-X_COORD = 100  # Sets the x-coord where the interface will be created
-Y_COORD = 100  # Sets the y-coord where the interface will be created
-WIDTH = 800  # Sizing of window
-HEIGHT = 600  # Size of window
 
 
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super().__init__()
         self.setWindowTitle(WINDOW_TITLE)
-        self.setGeometry(X_COORD, Y_COORD, WIDTH, HEIGHT)
+
+        from diagnostic_interface.tabs import SunbeamTab, SunlinkTab, TelemetryTab, SOCTab, PowerTab, WeatherTab, SpeedTab, ArrayTab
+
         self.tabs = QTabWidget()
         self.tabs.currentChanged.connect(self.on_tab_changed)
 
         self.setCentralWidget(self.tabs)
         home_widget = QWidget()
+
         layout = QVBoxLayout()
 
         self.client = SunbeamClient(settings.sunbeam_api_url)
@@ -63,9 +52,6 @@ class MainWindow(QMainWindow):
         # Button to load the plot
         submit_button = QPushButton("Load Data")
         submit_button.clicked.connect(self.create_plot_tab)
-
-
-
         layout.addWidget(submit_button)
 
         #Settings button
@@ -76,23 +62,40 @@ class MainWindow(QMainWindow):
         home_widget.setLayout(layout)
         self.tabs.addTab(home_widget, "Home")
 
-        # self.sunbeam_gui = SunbeamTab()
-        # self.tabs.addTab(self.sunbeam_gui, "Sunbeam")
-        #
-        # self.sunlink_gui = SunlinkTab()
-        # self.tabs.addTab(self.sunlink_gui, "Sunlink")
-        #
-        # self.telemetry_tab = TelemetryTab()
-        # self.tabs.addTab(self.telemetry_tab, "Telemetry")
+        self.sunbeam_gui = SunbeamTab()
+        self.tabs.addTab(self.sunbeam_gui, "Sunbeam")
 
+        self.sunlink_gui = SunlinkTab()
+        self.tabs.addTab(self.sunlink_gui, "Sunlink")
+
+        self.telemetry_tab = TelemetryTab()
+        self.tabs.addTab(self.telemetry_tab, "Telemetry")
+
+        self.soc_tab = SOCTab()
+        self.tabs.addTab(self.soc_tab, "SOC")
+
+        self.power_tab = PowerTab()
+        self.tabs.addTab(self.power_tab, "Power")
+
+        self.weather_tab = WeatherTab()
+        self.tabs.addTab(self.weather_tab, "Weather")
+
+        self.speed_tab = SpeedTab()
+        self.tabs.addTab(self.speed_tab, "Speed")
+
+        self.array_tab = ArrayTab()
+        self.tabs.addTab(self.array_tab, "Array")
+
+        pix = QPixmap("Solar_Sun.png").scaled(200, 200, Qt.KeepAspectRatio)
+        self._splash = SplashOverlay(self, pix, interval=20)
+
+    def finishSplash(self):
+        self._splash.hide()
 
     def create_plot_tab(self):
         """Creates a PlotTab object. This object contains plots and the toolbar to interact with them.
         This method contains a connection to the request_close method of the PlotTab class to receive
         the signal to close a tab."""
-
-        plot_tab2 = PlotTab2()
-        self.tabs.addTab(plot_tab2, f"packpower_and_motorpower")
 
         # Getting the values that we will query.
         origin: str = self.data_select_form.selected_origin
@@ -100,19 +103,11 @@ class MainWindow(QMainWindow):
         event: str = self.data_select_form.selected_event
         data_name: str = self.data_select_form.selected_data
 
-
-
         # Creating PlotTab object and adding it to the list of tabs.
-
-
         plot_tab = PlotTab(origin, source, event, data_name)
         self.tabs.addTab(plot_tab, f"{data_name}")
 
-
         plot_tab.close_requested.connect(self.close_tab)
-
-
-
 
     def close_tab(self, widget) -> None:
         """
@@ -133,22 +128,35 @@ class MainWindow(QMainWindow):
         current_client_address = settings.sunbeam_api_url
         current_sunbeam_path = settings.sunbeam_path
         current_sunlink_path = settings.sunlink_path
+        current_realtime_event = settings.realtime_event
+        current_realtime_pipeline = settings.realtime_pipeline
 
         dialog = SettingsDialog(
             current_interval,
             current_client_address,
             current_sunbeam_path,
             current_sunlink_path,
+            current_realtime_event,
+            current_realtime_pipeline,
             self
         )
 
         if dialog.exec_():  # if user pressed OK
-            new_plot_interval, new_client_address, sunbeam_path, sunlink_path = dialog.get_settings()
+            (
+                new_plot_interval,
+                new_client_address,
+                sunbeam_path,
+                sunlink_path,
+                realtime_event,
+                realtime_pipeline
+            ) = dialog.get_settings()
 
             settings.plot_timer_interval = new_plot_interval
             settings.sunbeam_api_url = new_client_address
             settings.sunbeam_path = sunbeam_path
             settings.sunlink_path = sunlink_path
+            settings.realtime_event = realtime_event
+            settings.realtime_pipeline = realtime_pipeline
 
             # Refresh settings
             self.client = SunbeamClient(settings.sunbeam_api_url)
@@ -159,4 +167,3 @@ class MainWindow(QMainWindow):
             widget = self.tabs.widget(i)
             if isinstance(widget, UpdatableTab):
                 widget.set_tab_active(i == index)
-
