@@ -43,3 +43,5 @@ drag_coefficient = 1.166e-01
 
 [motor_config.AdvancedMotor]
 cornering_coefficient = 1.0
+
+[motor_config.Aeroshell]
