@@ -100,8 +100,7 @@ class BasicMotorConfig(MotorConfig):
 
 class AdvancedMotorConfig(MotorConfig):
     cornering_coefficient: float
-
-
+    
 class AeroshellConfig(Config):
     """
         Configuration object describing the aerodynamics forces (specifically drag and downforce) of a vehicle.
@@ -112,8 +111,6 @@ class AeroshellConfig(Config):
 
 class RegenConfig(Config):
     """
-class RegenConfig(Config):
-
     Configuration object describing the regenerative braking systems of a vehicle.
     """
 
