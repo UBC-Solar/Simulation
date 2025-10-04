@@ -203,7 +203,6 @@ class Simulation:
         coords_at_each_tick = coords[self.closest_gis_indices]
         
         self.motor_consumed_energy = self.model.motor.calculate_energy_in(
-            self.speed_kmh, self.gradients, self.wind_speeds, self.model.simulation_dt, coords_at_each_tick
             self.speed_kmh, self.gradients, self.drag_force, self.down_force, self.model.simulation_dt
         )
 
