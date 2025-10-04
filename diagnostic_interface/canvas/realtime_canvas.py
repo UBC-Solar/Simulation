@@ -6,7 +6,6 @@ from data_tools import SunbeamClient, TimeSeries
 from diagnostic_interface import settings
 from PyQt5.QtWidgets import QMessageBox
 import mplcursors
-from datetime import timezone
 from dateutil import tz
 
 

@@ -306,9 +306,6 @@ class GeneticOptimization(BaseOptimization):
         # Bind the value of each gene to be between 0 and 1 as chromosomes should be normalized.
         gene_space = {"low": 0.0, "high": 1.0}
 
-        # Add a time delay between generations (used for debug purposes)
-        delay_after_generation = 0.0
-
         # Store diversity of generation per optimization iteration
         self.diversity = []
 
@@ -392,7 +389,7 @@ class GeneticOptimization(BaseOptimization):
 
         """
 
-        population_file = population_directory / "initial_population.npz"
+        population_file = "initial_population.npz"
         arrays_from_cache = 0
         new_initial_population = None
 
