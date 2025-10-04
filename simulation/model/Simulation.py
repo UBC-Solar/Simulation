@@ -178,6 +178,8 @@ class Simulation:
         self.wind_speeds = get_array_directional_wind_speed(
             self.gis_vehicle_bearings, self.absolute_wind_speeds, self.wind_directions
         )
+        #get the wind attack angles
+        self.wind_attack_angles = self.model.meteorology.wind_direction - (self.gis_vehicle_bearings + 180) #convert azimuthal angle to meteorological convention
 
         # with calculated wind_speeds, we can now calculate (aerodynamic) drag and down forces in order to pass into motor model calculations
         self.drag_force = self.model.aeroshell.calculate_drag(self.wind_speeds, self.wind_attack_angles, self.speed_kmh/3.6)
