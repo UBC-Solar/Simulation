@@ -11,17 +11,17 @@ from diagnostic_interface.config import PersistentConfig
 from diagnostic_interface.widgets import SplashOverlay
 from simulation.cmd.run_simulation import get_default_settings
 from simulation.config import SimulationReturnType, SimulationHyperparametersConfig, InitialConditions
-from pathlib import Path
 from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import Qt
 
 from qt_material import apply_stylesheet
 
-config_dir = Path(__file__).parent.parent / "simulation" / "config"
 
 from pathlib import Path
 from prescriptive_interface import (SimulationTab, OptimizationTab, HtmlViewerTab, SimulationSettingsDict, OptimizationThread,
                                     SimulationThread, MutableInitialConditions, InitialConditionsDialog)
+
+config_dir = Path(__file__).parent.parent / "simulation" / "config"
 
 my_speeds_dir = Path("prescriptive_interface/speeds_directory")
 my_speeds_dir.mkdir(parents=True, exist_ok=True)  # Create it if it doesn't exist

@@ -33,7 +33,7 @@ max_acceleration = 6
 max_deceleration = 6
 
 [motor_config]
-motor_type = "AdvancedMotor"
+motor_type = "BasicMotor"
 road_friction = 2.340e-02
 tire_radius = 0.2032
 vehicle_frontal_area = 1.1853
@@ -43,3 +43,10 @@ drag_coefficient = 1.166e-01
 
 [motor_config.AdvancedMotor]
 cornering_coefficient = 1.0
+
+[aeroshell_config]
+drag_lookup = {0 = 0.137601477, 18 =  0.2335363083, 36 =  0.5965968882, 54= 1.224448936, 72= 1.861868971, 90= 2.38148208, 108= 2.073196244, 126= 1.587471653, 144= 0.5564901716, 162= 0.2141437734, 180= 0.1386601712 }
+down_lookup = {0=0.37526598, 18= 0.3378390168, 36= 0.576439927, 54= 0.8675973423, 72= 1.19551954, 90= 2.683269654, 108= 2.223002744, 126= 1.581662338, 144= 0.17190782, 162= 0.1882638387, 180= 0.2153506426 }
+
+
+

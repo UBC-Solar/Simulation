@@ -102,6 +102,15 @@ class AdvancedMotorConfig(MotorConfig):
     cornering_coefficient: float
 
 
+class AeroshellConfig(Config):
+    """
+        Configuration object describing the aerodynamics forces (specifically drag and downforce) of a vehicle.
+    """
+    model_config = ConfigDict(frozen=True)
+    drag_lookup: dict[float, float]  #lookup table that corresponds angles to drag force, computed by a CFD
+    down_lookup: dict[float, float]  #lookup table that corresponds angles to down force, computed by a CFD
+
+
 class RegenConfig(Config):
     """
     Configuration object describing the regenerative braking systems of a vehicle.
@@ -123,5 +132,6 @@ class CarConfig(Config):
     battery_config: BatteryConfig
     motor_config: MotorConfig
     regen_config: RegenConfig
+    aeroshell_config: AeroshellConfig
 
     name: str

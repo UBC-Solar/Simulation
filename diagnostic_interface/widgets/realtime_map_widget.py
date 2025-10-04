@@ -45,7 +45,8 @@ class RealtimeMapWidget(QWebEngineView):
             touchZoom=False,
         )
 
-        get_coord = lambda x: [latitudes[x], longitudes[x]]
+        def get_coord(x):
+            return [latitudes[x], longitudes[x]]
 
         for i, (latitude, longitude, vertex_value) in enumerate(zip(latitudes, longitudes, vertex_values)):
             color = mcolors.to_hex(cmap(norm(vertex_value)))

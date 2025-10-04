@@ -15,6 +15,7 @@ from physics.models.arrays import BaseArray
 from physics.models.battery import BaseBattery
 from physics.models.lvs import BaseLVS
 from physics.models.motor import BaseMotor
+from physics.models.aeroshell import Aeroshell
 from physics.models.regen import BaseRegen
 from physics.environment.gis import BaseGIS
 from physics.environment.meteorology import BaseMeteorology
@@ -36,6 +37,7 @@ class Model:
         array: BaseArray,
         battery: BaseBattery,
         motor: BaseMotor,
+        aeroshell: Aeroshell,
         regen: BaseRegen,
         lvs: BaseLVS,
         gis: BaseGIS,
@@ -56,6 +58,7 @@ class Model:
         :param BaseArray array: An instance of `BaseArray` representing the solar array to be simulated.
         :param BaseBattery battery: An instance of `BaseBattery` representing the batter pack to be simulated.
         :param BaseMotor motor: An instance of `BaseMotor` representing the motor to be simulated.
+        :param Aeroshell aeroshell: An instance of the Aeroshell class that represents the drag and down force calculations
         :param BaseRegen regen: An instance of `BaseRegen` representing the regenerative braking system to be simulated.
         :param BaseLVS lvs: An instance of `BaseLVS` representing the low-voltage systems to be simulated.
         :param BaseGIS gis: An instance of `BaseGIS` which characterizes geographical information about the simulation.
@@ -72,6 +75,7 @@ class Model:
         self.simulation_dt = simulation_dt
         self.solar_array = array
         self.motor = motor
+        self.aeroshell = aeroshell
         self.regen = regen
         self.battery = battery
         self.gis = gis

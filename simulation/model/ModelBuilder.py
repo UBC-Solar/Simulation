@@ -28,6 +28,7 @@ from physics.models.arrays import BaseArray, BasicArray
 from physics.models.battery import BaseBattery, BasicBattery, EquivalentCircuitBatteryModel, BatteryModelConfig
 from physics.models.lvs import BaseLVS, BasicLVS
 from physics.models.motor import BaseMotor, BasicMotor, AdvancedMotor
+from physics.models.aeroshell import Aeroshell
 from physics.models.regen import BaseRegen, BasicRegen
 from physics.environment.gis import BaseGIS, GIS
 from physics.environment.meteorology import (
@@ -70,6 +71,7 @@ class ModelBuilder:
         self.gis: Optional[BaseGIS] = None
         self.meteorology: Optional[BaseMeteorology] = None
         self.motor: Optional[BaseMotor] = None
+        self.aeroshell: Optional[Aeroshell] = None
         self.battery: Optional[BaseBattery] = None
         self.regen: Optional[BaseRegen] = None
         self.max_acceleration: Optional[float] = None
@@ -424,6 +426,8 @@ class ModelBuilder:
                     **self._car_config.motor_config.model_dump()
                 )
 
+        self.aeroshell = Aeroshell(**self._car_config.aeroshell_config.model_dump())
+
         self.regen = BasicRegen(self._car_config.vehicle_config.vehicle_mass)
 
         self.num_laps = self.route_data.tiling
@@ -474,6 +478,7 @@ class ModelBuilder:
             array=self.array,
             battery=self.battery,
             motor=self.motor,
+            aeroshell=self.aeroshell,
             lvs=self.lvs,
             regen=self.regen,
             gis=self.gis,
