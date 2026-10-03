@@ -130,7 +130,6 @@ class OptimizationThread(QThread):
                 ModelBuilder()
                 .set_environment_config(
                     self.environment_config,
-                    rebuild_weather_cache=self.get_weather,
                     rebuild_route_cache=False,
                     rebuild_competition_cache=False,
                 )

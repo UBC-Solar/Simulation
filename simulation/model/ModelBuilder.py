@@ -7,18 +7,14 @@ from dotenv import load_dotenv
 from simulation.race import Race, Route
 from haversine import haversine, Unit
 from simulation.model.Model import Model
-from simulation.cache import SimulationCache, Cache, RoutePath, RacePath, WeatherPath
-from simulation.config import CarConfig, WeatherProvider, SimulationReturnType
+from simulation.cache import SimulationCache, Cache, RoutePath, RacePath
+from simulation.config import CarConfig, SimulationReturnType
 from simulation.query import (
-    OpenweatherQuery,
-    SolcastQuery,
     TrackRouteQuery,
     RoadRouteQuery,
 )
 from simulation.config import (
     SimulationHyperparametersConfig,
-    OpenweatherConfig,
-    SolcastConfig,
     EnvironmentConfig,
     InitialConditions,
     CompetitionType,
@@ -33,8 +29,6 @@ from physics.models.regen import BaseRegen, BasicRegen
 from physics.environment.gis import BaseGIS, GIS
 from physics.environment.meteorology import (
     BaseMeteorology,
-    IrradiantMeteorology,
-    CloudedMeteorology,
 )
 
 load_dotenv()
@@ -42,8 +36,23 @@ load_dotenv()
 
 class ModelBuilder:
     """
+    This class assembles a `Model` from the requisite configuration (settings_FSGP.toml, Brightside.toml,
+    initial_conditions_FSGP.toml, SimulationHyperparameterConfig).
 
-    This class assembles a `Model` from the requisite configuration.
+    SimulationHyperparameterConfig data consists of the same hardcoded block in four different files:
+        hyperparameters = SimulationHyperparametersConfig.build_from(
+        {
+            "simulation_period": 10,
+            "return_type": SimulationReturnType.distance_and_time,
+            "speed_dt": speed_dt,
+        }
+    )
+    in:
+    - simulation/cmd/run_simulation.py:
+    - simulation/cmd/optimize_simulation.py:
+    - simulation/cmd/hyperparameter_search.py:
+    - prescriptive_interface/prescriptive_ui.py:
+    hmmm...
 
     This class follows the fluid builder pattern, such that its methods return itself allowing for operations like,
     >>> ModelBuilder().set_environment_config(environment_config).set_initial_conditions(initial_conditions).compile()
@@ -80,12 +89,9 @@ class ModelBuilder:
         # Environment
         self.race_data: Optional[Race] = None
         self.route_data: Optional[Route] = None
-        self.weather_forecasts: Optional[NDArray] = None
         self.origin_coord: Optional[NDArray] = None
         self.dest_coord: Optional[NDArray] = None
         self.waypoints: Optional[NDArray] = None
-        self.race_duration: Optional[int] = None
-        self.weather_provider: Optional[WeatherProvider] = None
 
         # Initial Conditions
         self.current_coord: Optional[NDArray] = None
@@ -100,7 +106,6 @@ class ModelBuilder:
 
         # Flags
         self._rebuild_route_cache: bool = False
-        self._rebuild_weather_cache: bool = False
         self._rebuild_competition_cache: bool = False
 
     def set_initial_conditions(self, initial_conditions: InitialConditions):
@@ -125,7 +130,6 @@ class ModelBuilder:
     def set_environment_config(
         self,
         environment_config: EnvironmentConfig,
-        rebuild_weather_cache: bool = False,
         rebuild_competition_cache: bool = False,
         rebuild_route_cache: bool = False,
     ):
@@ -141,12 +145,10 @@ class ModelBuilder:
         data.
 
         :param EnvironmentConfig environment_config: An `EnvironmentConfig` configuration object
-        :param rebuild_weather_cache: Set to `True` to rebuild the weather data cache, even if it exists.
         :param rebuild_competition_cache: Set to `True` to rebuild the race data cache, even if it exists.
         :param rebuild_route_cache: Set to `True` to rebuild the route data cache, even if it exists.
         """
         self._environment_config = environment_config
-        self._rebuild_weather_cache = rebuild_weather_cache
         self._rebuild_competition_cache = rebuild_competition_cache
         self._rebuild_route_cache = rebuild_route_cache
 
@@ -308,43 +310,6 @@ class ModelBuilder:
             1:-1
         ]  # Get all coords between first and last coordinate
 
-    def _set_weather_data(self):
-        environment_config = self._environment_config
-
-        environment_hash = ModelBuilder._truncate_hash(hash(environment_config) + hash(environment_config.weather_query_config))
-        weather_data_path = WeatherPath / environment_hash
-
-        weather_query_config = environment_config.weather_query_config
-        competition_config = environment_config.competition_config
-
-        # Try to find cached weather data
-        try:
-            if self._rebuild_weather_cache:
-                raise KeyError()  # Raise a KeyError so that we go to the except block where we rebuild the cache
-
-            weather_data = self._cache.get(weather_data_path)
-
-        # Generate new weather data
-        except KeyError:
-            if isinstance(weather_query_config, OpenweatherConfig):
-                query = OpenweatherQuery(environment_config)
-            elif isinstance(weather_query_config, SolcastConfig):
-                query = SolcastQuery(environment_config)
-            else:
-                raise ValueError(
-                    f"WeatherConfig type {type(weather_query_config).__name__} "
-                    f"does not have a supported querying method!"
-                )
-
-            weather_data = query.make()
-            self._cache.put(weather_data, weather_data_path)
-
-            print("Queried weather data")
-
-        self.weather_forecasts = weather_data
-        self.race_duration = len(competition_config.time_ranges.keys())
-        self.weather_provider = weather_query_config.weather_provider
-
     def compile(self):
         """
         Compile the configuration provided to this `ModelBuilder`, building or accessing the necessary caches and
@@ -361,7 +326,6 @@ class ModelBuilder:
                 "You are trying to compile before setting environment configuration! Please"
                 "use `set_environment_config` first!"
             )
-        self._set_weather_data()
         self._set_route_data()
         self._set_competition_data()
 
@@ -439,17 +403,6 @@ class ModelBuilder:
         }
 
         self.gis = GIS(route_data, self.origin_coord, self.current_coord)
-
-        match self.weather_provider:
-            case WeatherProvider.Solcast:
-                self.meteorology = IrradiantMeteorology(
-                    race=self.race_data, weather_forecasts=self.weather_forecasts
-                )
-
-            case WeatherProvider.Openweather:
-                self.meteorology = CloudedMeteorology(
-                    race=self.race_data, weather_forecasts=self.weather_forecasts
-                )
 
         self._compiled = True
 
