@@ -66,6 +66,7 @@ dependencies = [
     "tomli-w>=1.2.0",
     "qt-material>=2.17",
     "ubc-solar-physics==1.9.1",
+    "geopy>=2.5.0",
 ]
 
 [project.urls]
@@ -79,7 +80,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["simulation"]
+packages = ["simulation", "micro_strategy"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
