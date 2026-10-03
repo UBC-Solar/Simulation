@@ -160,3 +160,6 @@ simulation/config/speeds/*.npy
 
 # OS Stuff
 .DS_Store
+
+# AI agent
+AGENTS.md
