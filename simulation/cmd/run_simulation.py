@@ -67,7 +67,7 @@ def run_simulation(
 
 
 def get_default_settings(
-    competition_name: str = "FSGP", car_name: str = "BrightSide"
+    competition_name: str = "FSGP", car_name: str = "Brightside"
 ) -> tuple[InitialConditions, EnvironmentConfig, CarConfig]:
     #  ----- Load initial conditions -----
     config_path = ConfigDirectory / f"initial_conditions_{competition_name}.toml"
@@ -101,7 +101,6 @@ def build_model(
         ModelBuilder()
         .set_environment_config(
             environment,
-            rebuild_weather_cache=False,
             rebuild_route_cache=False,
             rebuild_competition_cache=False,
         )
