@@ -3,38 +3,40 @@ import json
 import requests
 import numpy as np
 
-from simulation.config import CompetitionType
-from simulation.config import (
-    SolcastConfig,
-    OpenweatherConfig,
-    OpenweatherPeriod,
-    EnvironmentConfig,
-    CompetitionConfig,
-)
+from simulation.config import CompetitionType, OpenweatherPeriod
 from numpy.typing import NDArray, ArrayLike
 from simulation.race import Coordinate
-from simulation.query import Query
 from data_tools.query import SolcastClient, SolcastOutput, SolcastPeriod
 import pandas as pd
-from datetime import timedelta, datetime
+from datetime import datetime
 from zoneinfo import ZoneInfo
 from timezonefinder import TimezoneFinder
 
 
-class SolcastQuery(Query[SolcastConfig]):
+class SolcastQuery:
     """
     `SolcastQuery` encapsulates the access to the Solcast API required to acquire
     weather forecasting information required to complete the meteorological description
-    of the environment described by an `EnvironmentConfig`.
+    of the environment.
+
+    The coordinates, forecast period, and time range are supplied explicitly at construction, so a
+    caller can request a forecast for any route and date rather than only the configured competition.
     """
 
-    def __init__(self, config: EnvironmentConfig):
-        super().__init__(config)
+    def __init__(
+        self,
+        coords: list[tuple[float, float]],
+        period: SolcastPeriod,
+        start_time: datetime,
+        end_time: datetime,
+        competition_type: CompetitionType,
+    ):
 
-        self._competition_config: CompetitionConfig = self._config.competition_config
-        self._weather_query_config: SolcastConfig = (
-            self._config.weather_query_config
-        )
+        self._coords = [coords[0]] if competition_type == CompetitionType.TrackCompetition else coords
+        self._period = period
+        self._start_time = start_time
+        self._end_time = end_time
+
 
     @staticmethod
     def update_path_weather_forecast_solcast(
@@ -134,51 +136,41 @@ class SolcastQuery(Query[SolcastConfig]):
         The last dimension contains the data like [Time (UTC), Latitude, Longitude, Wind Speed (m/s),
         Wind Direction (degrees meteorological), GHI (W/m^2)].
         """
-        coords = self._competition_config.route_config.coordinates
-
-        if self._competition_config.competition_type == CompetitionType.TrackCompetition:
-            coords = [coords[0]]
-
-        period = self._weather_query_config.weather_period
-        start_time = self._competition_config.date
-        end_time = self._competition_config.date + timedelta(days=self._competition_config.duration)
-
-        weather_forecast = SolcastQuery.update_path_weather_forecast_solcast(
-            coords,
-            period,
-            start_time,
-            end_time
+        return SolcastQuery.update_path_weather_forecast_solcast(
+            self._coords,
+            self._period,
+            self._start_time,
+            self._end_time
         )
 
-        return weather_forecast
 
-
-class OpenweatherQuery(Query[OpenweatherConfig]):
+class OpenweatherQuery:
     """
     `OpenweatherQuery` encapsulates the access to the Openweathermap API required to acquire
     weather forecasting information required to complete the meteorological description
-    of the environment described by an `EnvironmentConfig`.
+    of the environment.
+
+    The coordinates, forecast period, and duration are supplied explicitly at construction, so a
+    caller can request a forecast for any route rather than only the configured competition.
     """
 
-    def __init__(self, config: EnvironmentConfig):
-        super().__init__(config)
-        self._competition_config: CompetitionConfig = self._config.competition_config
-        self._weather_query_config: OpenweatherConfig = (
-            self._config.weather_query_config
-        )
+    def __init__(
+        self,
+        coords: ArrayLike,
+        period: OpenweatherPeriod,
+        duration_days: int,
+    ):
+
+        self._coords = coords
+        self._period = period
+        self._duration_days = duration_days
 
     def make(self) -> NDArray:
-        num_days = self._competition_config.duration
-        simulation_duration = num_days * 24  # Duration of simulation in hours
+        simulation_duration = self._duration_days * 24  # Duration of simulation in hours
 
-        coords = self._competition_config.route_config.coordinates
-        forecast_period: OpenweatherPeriod = self._weather_query_config.weather_period
-
-        weather_forecast = self._update_path_weather_forecast_openweather(
-            coords, forecast_period, simulation_duration
+        return OpenweatherQuery._update_path_weather_forecast_openweather(
+            self._coords, self._period, simulation_duration
         )
-
-        return weather_forecast
 
     @staticmethod
     def _update_path_weather_forecast_openweather(

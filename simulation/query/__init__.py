@@ -8,8 +8,10 @@ which can then be invoked with the `make` method to acquire data necessary, as d
 Existing implementations of the `Query` interface include,
     - `TrackRouteQuery`: to query data for a track race as described by a `CompetitionConfig` using the Google Maps API.
     - `RoadRouteQuery`: to query data for a road race as described by a `CompetitionConfig` using the Google Maps API.
-    - `SolcastQuery`: to query weather forecasts as described by a `EnvironmentConfig` using the Solcast API.
-    - `OpenweatherQuery`: to query weather forecasts as described by a `EnvironmentConfig` using the Openweathermap API.
+
+The weather queries do not inherit from `Query`; they take explicit arguments rather than a `Config`,
+    - `SolcastQuery`: to query weather forecasts for explicit coordinates and a time range using the Solcast API.
+    - `OpenweatherQuery`: to query weather forecasts for explicit coordinates and a duration using the Openweathermap API.
 """
 
 from ._query import Query, ConfigType
