@@ -7,7 +7,7 @@ from simulation.utils.Plotting import GraphPage
 from simulation.utils.Plotting import Plotting
 from simulation.model.Simulation import Simulation
 from simulation.race import Race, reshape_speed_array, get_granularity_reduced_boolean
-from simulation.config import SimulationReturnType
+from simulation.config import SimulationReturnType, WeatherProvider
 
 from micro_strategy import OptimizedSpeedsPath
 
@@ -18,7 +18,7 @@ from physics.models.motor import BaseMotor
 from physics.models.aeroshell import Aeroshell
 from physics.models.regen import BaseRegen
 from physics.environment.gis import BaseGIS
-from physics.environment.meteorology import BaseMeteorology
+from physics.environment.meteorology import (BaseMeteorology, CloudedMeteorology, IrradiantMeteorology)
 
 
 class Model:
@@ -98,6 +98,29 @@ class Model:
         # NOTE: All attributes ABOVE this comment should be IMMUTABLE and UNMODIFIED during a simulation.
 
         self._simulation = None
+
+    def set_weather(self, forecast: NDArray, provider: WeatherProvider) -> None:
+        """
+        Attach a weather forecast to this model by building the matching meteorology object.
+
+        Call this before `run_model` to pick the conditions a run sees. You can call it again with a
+        different forecast and run again, so one `Model` can serve many runs without being rebuilt.
+
+        :param NDArray forecast: The raw weather forecast array for this run.
+        :param WeatherProvider provider: Which provider the forecast came from. A Solcast forecast
+            already contains solar irradiance; an Openweather forecast contains cloud cover that we
+            turn into irradiance ourselves.
+        """
+
+        match provider:
+            case WeatherProvider.Solcast:
+                self.meteorology = IrradiantMeteorology(
+                    race=self.race, weather_forecasts=forecast
+                )
+            case WeatherProvider.Openweather:
+                self.meteorology = CloudedMeteorology(
+                    race=self.race, weather_forecasts=forecast
+                )
 
     def run_model(
         self,
