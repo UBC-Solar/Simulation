@@ -4,6 +4,7 @@ import tomllib as toml
 from simulation.config import SimulationReturnType, ConfigDirectory
 from simulation.model.Model import Model
 from simulation.model.ModelBuilder import ModelBuilder
+from simulation.query import fetch_competition_weather
 from simulation.config import (
     EnvironmentConfig,
     SimulationHyperparametersConfig,
@@ -19,6 +20,7 @@ def run_simulation(
     speed_dt: int,
     car: str,
     speeds: NDArray[float] = None,
+    weather=None,
 ):
     """
     This is the entry point to Simulation.
@@ -50,6 +52,9 @@ def run_simulation(
         environment, hyperparameters, initial_conditions, car_config
     )
 
+    if weather is None:
+        weather = fetch_competition_weather(environment.competition_config)
+
     # Initialize a "guess" speed array
     driving_laps = simulation_model.num_laps
     if speeds is None:
@@ -61,6 +66,7 @@ def run_simulation(
         plot_results=plot_results,
         verbose=verbose,
         route_visualization=False,
+        weather = weather,
     )
 
     return simulation_model

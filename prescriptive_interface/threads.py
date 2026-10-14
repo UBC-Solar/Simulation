@@ -3,6 +3,7 @@ import string
 from typing import Optional
 from PyQt5.QtCore import QThread, pyqtSignal
 from simulation.cmd.run_simulation import run_simulation
+from simulation.query import fetch_competition_weather
 from simulation.config import SimulationHyperparametersConfig, InitialConditions, CarConfig, EnvironmentConfig
 from simulation.model import Model
 from simulation.utils import InputBounds
@@ -25,12 +26,13 @@ class SimulationThread(QThread):
     plot_data_signal = pyqtSignal(dict, object, int)  # Send multiple plots as a dictionary
 
     def __init__(self, settings: SimulationSettingsDict, model: Model = None, speeds_filename: Optional[str] = None,
-                 optimized_speeds: Optional[np.ndarray] = None):
+                 optimized_speeds: Optional[np.ndarray] = None, weather=None):
         super().__init__()
         self.settings = settings
         self.speeds_filename = speeds_filename
         self.optimized_speeds = optimized_speeds
         self.model = model
+        self.weather = weather
 
     def run(self):
         self.update_signal.emit("Starting simulation...")
@@ -48,7 +50,8 @@ class SimulationThread(QThread):
                         plot_results=False,
                         verbose=self.settings["verbose"],
                         speed_dt=self.settings["granularity"],
-                        car=self.settings["car"]
+                        car=self.settings["car"],
+                        weather = self.weather
                     )
                     driving_hours = dummy_model.get_driving_time_divisions()
                     speeds = np.array([45] * driving_hours)
@@ -60,7 +63,8 @@ class SimulationThread(QThread):
                     verbose=self.settings["verbose"],
                     speed_dt=self.settings["granularity"],
                     car=self.settings["car"],
-                    speeds=speeds
+                    speeds=speeds,
+                    weather=self.weather,
                 )
 
             else:
@@ -116,6 +120,7 @@ class OptimizationThread(QThread):
         self.car_config = car_config
         self.get_weather = get_weather
         self.days = days
+        self.weather = None
 
     def run(self):
         self.update_signal.emit("Starting optimization...")
@@ -125,6 +130,11 @@ class OptimizationThread(QThread):
                 for range_name, time_range in self.environment_config.competition_config.time_ranges.items():
                     if day in time_range.keys():
                         del self.environment_config.competition_config.time_ranges[range_name][day]
+
+            if self.get_weather or self.weather is None:
+                self.weather = fetch_competition_weather(
+                    self.environment_config.competition_config
+                )
 
             simulation_builder = (
                 ModelBuilder()
@@ -156,7 +166,8 @@ class OptimizationThread(QThread):
                 speed=input_speed,
                 plot_results=False,
                 verbose=self.settings["verbose"],
-                route_visualization=False
+                route_visualization=False,
+                weather=self.weather
             )
 
             genetic_optimization = DifferentialEvolutionOptimization(base_model, bounds, maxiter=self.maxiter,
@@ -172,7 +183,8 @@ class OptimizationThread(QThread):
                 speed=optimized_speed_array,
                 plot_results=False,
                 verbose=self.settings["verbose"],
-                route_visualization=False
+                route_visualization=False,
+                weather=self.weather,
             )
 
             num_laps_completed = math.floor(base_model.get_results("distance_travelled") * 1000 / base_model.gis.path_length)

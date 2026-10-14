@@ -3,12 +3,12 @@ import json
 import requests
 import numpy as np
 
-from simulation.config import CompetitionType, OpenweatherPeriod
+from simulation.config import CompetitionType, OpenweatherPeriod, WeatherProvider
 from numpy.typing import NDArray, ArrayLike
 from simulation.race import Coordinate
 from data_tools.query import SolcastClient, SolcastOutput, SolcastPeriod
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from timezonefinder import TimezoneFinder
 
@@ -312,3 +312,45 @@ class OpenweatherQuery:
             weather_array[i][8] = weather_data_dict["weather"][0]["id"]
 
         return weather_array
+
+    
+# TODO: constants hardcoded here
+DEFAULT_WEATHER_PROVIDER = WeatherProvider.Solcast
+DEFAULT_SOLCAST_PERIOD = SolcastPeriod.PT5M
+DEFAULT_OPENWEATHER_PERIOD = OpenweatherPeriod.Daily
+
+
+def fetch_competition_weather(
+    competition_config,
+    provider: WeatherProvider = DEFAULT_WEATHER_PROVIDER,
+) -> tuple[NDArray, WeatherProvider]:
+    """
+    Fetch a forecast for a competition using the default provider and period.
+
+    This is the run-time replacement for the fetch that used to happen during the build. Callers
+    with no forecast of their own use it to get one; callers that already have a forecast pass that
+    to ``run_model`` instead and skip this entirely.
+
+    :param competition_config: The competition to fetch for.
+    :param WeatherProvider provider: Which provider to query. Defaults to Solcast.
+    :returns: A ``(forecast, provider)`` pair ready to pass to ``run_model`` as ``weather=``.
+    """
+
+    if provider == WeatherProvider.Solcast:
+        query = SolcastQuery(
+            coords=competition_config.route_config.coordinates,
+            period=DEFAULT_SOLCAST_PERIOD,
+            start_time=competition_config.date,
+            end_time=competition_config.date + timedelta(days=competition_config.duration),
+            competition_type=competition_config.competition_type,
+        )
+    elif provider == WeatherProvider.Openweather:
+        query = OpenweatherQuery(
+            coords=competition_config.route_config.coordinates,
+            period=DEFAULT_OPENWEATHER_PERIOD,
+            duration_days=competition_config.duration,
+        )
+    else:
+        raise ValueError(f"Unknown weather provider: {provider}")
+
+    return query.make(), provider

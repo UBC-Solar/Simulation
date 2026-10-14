@@ -8,11 +8,12 @@ from simulation.optimization.genetic import GeneticOptimization
 from simulation.data.results import results_directory
 from simulation.data.assemble import Assembler
 from simulation.cmd.run_simulation import build_model, get_default_settings
+from simulation.query import fetch_competition_weather
 from simulation.config import SimulationHyperparametersConfig, SimulationReturnType
 from tqdm import tqdm
 
 
-def main(competition_name: str, car_name: str, speed_dt: int):
+def main(competition_name: str, car_name: str, speed_dt: int, weather=None):
     """
 
     This method parses initial conditions for the simulation and store them in a simulationState object. Then, begin
@@ -40,6 +41,9 @@ def main(competition_name: str, car_name: str, speed_dt: int):
         environment, hyperparameters, initial_conditions, car_config
     )
 
+    if weather is None:
+        weather = fetch_competition_weather(environment.competition_config)
+
     # Initialize a "guess" speed array
     driving_hours = simulation_model.get_driving_time_divisions()
 
@@ -54,7 +58,7 @@ def main(competition_name: str, car_name: str, speed_dt: int):
     input_speed = np.array([60] * driving_hours)
 
     # Run simulation model with the "guess" speed array
-    simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False)
+    simulation_model.run_model(speed=input_speed, plot_results=False, verbose=False, weather=weather)
 
     run_hyperparameter_search(simulation_model, bounds)
 

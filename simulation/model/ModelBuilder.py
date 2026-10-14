@@ -39,7 +39,7 @@ class ModelBuilder:
     This class assembles a `Model` from the requisite configuration (settings_FSGP.toml, Brightside.toml,
     initial_conditions_FSGP.toml, SimulationHyperparameterConfig).
 
-    SimulationHyperparameterConfig data consists of the same hardcoded block in four different files:
+    TODO: SimulationHyperparameterConfig data consists of the same hardcoded block in four different files:
         hyperparameters = SimulationHyperparametersConfig.build_from(
         {
             "simulation_period": 10,
