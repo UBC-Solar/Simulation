@@ -163,3 +163,4 @@ simulation/config/speeds/*.npy
 
 # AI agent
 AGENTS.md
+/logs/
