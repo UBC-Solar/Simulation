@@ -1,14 +1,16 @@
 import os
+import hashlib
 import json
 import requests
 import numpy as np
 
 from simulation.config import CompetitionType, OpenweatherPeriod, WeatherProvider
+from simulation.cache import SimulationCache, WeatherPath
 from numpy.typing import NDArray, ArrayLike
 from simulation.race import Coordinate
 from data_tools.query import SolcastClient, SolcastOutput, SolcastPeriod
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from timezonefinder import TimezoneFinder
 
@@ -318,6 +320,48 @@ class OpenweatherQuery:
 DEFAULT_WEATHER_PROVIDER = WeatherProvider.Solcast
 DEFAULT_SOLCAST_PERIOD = SolcastPeriod.PT5M
 DEFAULT_OPENWEATHER_PERIOD = OpenweatherPeriod.Daily
+DEFAULT_WEATHER_TTL = timedelta(days=999) #TODO: adjust weather requery time
+
+
+def _weather_cache_key(
+    provider: WeatherProvider,
+    coords: ArrayLike,
+    period,
+    start_time: datetime,
+    end_time: datetime,
+    competition_type: CompetitionType,
+) -> os.PathLike:
+    """
+    Build the deterministic on-disk cache key for a weather query.
+
+    Keys on the query inputs rather than any config object, because Python salts string hashing
+    per process, so a config hash differs every run. The coordinates are collapsed exactly as
+    ``SolcastQuery`` collapses them, so the key describes the query actually sent to the API.
+    """
+
+    queried_coords = coords
+    if (
+        provider == WeatherProvider.Solcast
+        and competition_type == CompetitionType.TrackCompetition
+    ):
+        queried_coords = [coords[0]]
+
+    canonical = json.dumps(
+        {
+            "provider": str(provider),
+            "coords": [[float(lat), float(lon)] for lat, lon in queried_coords],
+            "period": str(period),
+            "start_time": start_time.isoformat(),
+            "end_time": end_time.isoformat(),
+        },
+        sort_keys=True,
+    )
+    digest = hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+    return WeatherPath / digest
+
+
+
 
 
 def fetch_competition_weather(
@@ -335,22 +379,47 @@ def fetch_competition_weather(
     :param WeatherProvider provider: Which provider to query. Defaults to Solcast.
     :returns: A ``(forecast, provider)`` pair ready to pass to ``run_model`` as ``weather=``.
     """
+    
+    coords = competition_config.route_config.coordinates
+    competition_type = competition_config.competition_type
+    start_time = competition_config.date
+    end_time = competition_config.date + timedelta(days=competition_config.duration)
 
     if provider == WeatherProvider.Solcast:
-        query = SolcastQuery(
-            coords=competition_config.route_config.coordinates,
-            period=DEFAULT_SOLCAST_PERIOD,
-            start_time=competition_config.date,
-            end_time=competition_config.date + timedelta(days=competition_config.duration),
-            competition_type=competition_config.competition_type,
-        )
+        period = DEFAULT_SOLCAST_PERIOD
     elif provider == WeatherProvider.Openweather:
-        query = OpenweatherQuery(
-            coords=competition_config.route_config.coordinates,
-            period=DEFAULT_OPENWEATHER_PERIOD,
-            duration_days=competition_config.duration,
-        )
+        period = DEFAULT_OPENWEATHER_PERIOD
     else:
         raise ValueError(f"Unknown weather provider: {provider}")
 
-    return query.make(), provider
+    cache_key = _weather_cache_key(
+        provider, coords, period, start_time, end_time, competition_type
+    )
+
+    try:
+        forecast, fetched_at = SimulationCache.get(cache_key)
+    except KeyError:
+        forecast, fetched_at = None, None
+
+    if forecast is not None and datetime.now(timezone.utc) - fetched_at < DEFAULT_WEATHER_TTL:
+        return forecast, provider
+
+    if provider == WeatherProvider.Solcast:
+        query = SolcastQuery(
+            coords=coords,
+            period=period,
+            start_time=start_time,
+            end_time=end_time,
+            competition_type=competition_type,
+        )
+    else:  # Openweather
+        query = OpenweatherQuery(
+            coords=coords,
+            period=period,
+            duration_days=competition_config.duration,
+        )
+
+    forecast = query.make()
+    SimulationCache.put((forecast, datetime.now(timezone.utc)), cache_key)
+
+    return forecast, provider

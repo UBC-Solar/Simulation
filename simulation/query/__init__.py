@@ -18,7 +18,7 @@ from ._query import Query, ConfigType
 
 from ._gis import RoadRouteQuery, TrackRouteQuery
 
-from ._weather import SolcastQuery, OpenweatherQuery
+from ._weather import SolcastQuery, OpenweatherQuery, fetch_competition_weather
 
 __all__ = [
     "Query",
@@ -27,4 +27,5 @@ __all__ = [
     "TrackRouteQuery",
     "SolcastQuery",
     "OpenweatherQuery",
+    "fetch_competition_weather"
 ]
