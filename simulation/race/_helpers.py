@@ -5,6 +5,7 @@ from numba import jit
 from simulation.race import Race
 
 LAPS_PER_INDEX = 10
+IDLE_TIME = 5 * 60  # seconds the car waits when a planned speed is 0 (tick mode and lap mode)
 
 def _reshape_and_repeat(input_array, reshape_length):
     """
@@ -177,15 +178,13 @@ def reshape_speed_array(
     # Transforming speed array units from km/hr to m/s
     lap_speeds_ms = np.array(speed) * (1000/3600)
     
-    # Idle time for 0m/s entries
-    idle_time = 5*60  # seconds of idle time; for now this is set to be equivalent to 5 minutes
 
     # Get a speed array where each entry is the speed at each time step
     speed_ms = gis_object.calculate_driving_speeds(
         lap_speeds_ms,
         tick,
         driving_allowed,
-        idle_time,
+        IDLE_TIME,
         LAPS_PER_INDEX
     )
     

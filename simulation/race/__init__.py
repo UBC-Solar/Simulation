@@ -8,6 +8,7 @@ from ._race import Race
 from ._route import Route
 
 from ._helpers import (
+    IDLE_TIME,
     reshape_speed_array,
     adjust_timestamps_to_local_times,
     get_array_directional_wind_speed,
@@ -24,6 +25,7 @@ Coordinate = tuple[float, float]
 __all__ = [
     "Race",
     "Route",
+    "IDLE_TIME",
     "reshape_speed_array",
     "adjust_timestamps_to_local_times",
     "get_array_directional_wind_speed",
