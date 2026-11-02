@@ -4,7 +4,7 @@ from typing import Optional, Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-from simulation.model.LapProfile import LapProfile
+from simulation.model.LapGIS import LapGIS
 from simulation.race import IDLE_TIME
 
 # Lap mode divides by speed, so no stretch may be 0 km/h. Tick mode clips to 0 instead (it never
@@ -19,7 +19,7 @@ class ScheduledLap:
 
     The schedule produces these and the energy step reads them, so the timing is worked out once
     and can be checked on its own. Times are seconds since midnight on day 0. Per-stretch arrays
-    follow `LapProfile`'s convention and are all zeros for a wait.
+    follow `LapGIS`'s convention and are all zeros for a wait.
     """
 
     plan_index: int  # which entry of the speed plan this came from
@@ -40,7 +40,7 @@ class ScheduledLap:
 
 
 def schedule_laps(
-    profile: LapProfile,
+    gis: LapGIS,
     speeds_kmh: Sequence[float],
     windows: list[tuple[int, float, float]],
     within_lap_kmh: Optional[NDArray[np.float64]] = None,
@@ -61,7 +61,7 @@ def schedule_laps(
     :param windows: driving hours as `(day, start, end)`, from `Race.driving_windows`.
     :param within_lap_kmh: optional km/h added to each stretch (the micro-strategy pattern).
     """
-    num_points = len(profile.segment_lengths)
+    num_points = len(gis.segment_lengths)
     if within_lap_kmh is None:
         within_lap_kmh = np.zeros(num_points)
     elif len(within_lap_kmh) != num_points:
@@ -71,7 +71,7 @@ def schedule_laps(
     plan_index = 0
 
     for day, window_start, window_end in windows:
-        clock = window_startb
+        clock = window_start
 
         while True:
             if plan_index >= len(speeds_kmh):
@@ -85,7 +85,7 @@ def schedule_laps(
             else:
                 segment_kmh = np.maximum(speed_kmh + within_lap_kmh, MIN_SEGMENT_SPEED_KMH)
                 segment_speeds = segment_kmh / 3.6
-                segment_times = profile.segment_lengths / segment_speeds
+                segment_times = gis.segment_lengths / segment_speeds
                 duration = float(segment_times.sum())
 
             if clock + duration > window_end:
