@@ -32,12 +32,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
 from micro_strategy import OptimizedSpeedsPath
 from simulation.cmd.run_simulation import build_model, get_default_settings
 from simulation.config import SimulationHyperparametersConfig, SimulationReturnType
-from simulation.model import LapGIS, schedule_laps
+from simulation.model import LapGIS, LapSchedule
 from scripts.tick_laps import laps_from_ticks
 from simulation.race import DAY_LENGTH, reshape_speed_array
 from simulation.race._helpers import LAPS_PER_INDEX
@@ -112,47 +111,40 @@ def run_scenario(model, lap_gis, scenario, pattern_kmh):
 
     # Lap mode: the same speeds, one per lap
     lap_speeds = np.repeat(blocks, LAPS_PER_INDEX)
-    windows = model.race.driving_windows(model.start_time)
-    scheduled = [lap for lap in schedule_laps(lap_gis, lap_speeds, windows, pattern) if not lap.is_wait]
-    lap_laps = pd.DataFrame({"lap": range(len(scheduled)), "day": [lap.day for lap in scheduled],
-                             "start": [lap.start for lap in scheduled], "end": [lap.end for lap in scheduled],
-                             "duration": [lap.duration for lap in scheduled]})
+    schedule = LapSchedule(lap_gis, model.race, lap_speeds, model.start_time, pattern)
 
-    # Where each car is at every tick: tick mode's running distance, lap mode's laps interpolated
+    # Where each car is at every tick: tick mode's running distance, and lap mode's position
     tick_position_m = np.cumsum(tick_distance) * 1000
-    knot_times = np.ravel(np.column_stack([lap_laps["start"], lap_laps["end"]]))
-    knot_positions = np.ravel(np.column_stack([np.arange(len(lap_laps)), np.arange(1, len(lap_laps) + 1)]))
-    lap_position_m = np.interp(tick_times, knot_times, knot_positions * lap_gis.path_length,
-                               left=0.0) if len(lap_laps) else np.zeros_like(tick_times)
+    lap_position_m = schedule.position_at(tick_times)
 
     return {
         "scenario": scenario,
         "tick_laps": tick_laps,
-        "lap_laps": lap_laps,
+        "schedule": schedule,
         "tick_times": tick_times,
         "tick_distance_km": tick_distance,
         "gap_m": tick_position_m - lap_position_m,
-        "windows": windows,
+        "windows": model.race.driving_windows(model.start_time),
         "lap_length_km": lap_length_km,
     }
 
 
 def summarise(result):
     """Rows of (measure, tick mode, lap mode, difference, ok, note) for one scenario."""
-    tick_laps, lap_laps = result["tick_laps"], result["lap_laps"]
+    tick_laps, schedule = result["tick_laps"], result["schedule"]
     lap_km = result["lap_length_km"]
     tick_day = (result["tick_times"] // DAY_LENGTH).astype(int)
     rows = []
 
     tick_same_day = tick_laps[tick_laps["complete"] & ~tick_laps["crosses_night"]]
-    t_mean, l_mean = tick_same_day["moving_time"].mean(), lap_laps["duration"].mean()
+    t_mean, l_mean = tick_same_day["moving_time"].mean(), schedule.duration[~schedule.is_wait].mean()
     diff = (t_mean - l_mean) / l_mean
     rows.append(("Average lap time", f"{t_mean:.1f} s", f"{l_mean:.1f} s", f"{diff:+.2%}",
                  abs(diff) <= LAP_TIME_TOLERANCE, "Tick mode: complete laps that don't cross a night."))
 
     for day, _, _ in result["windows"]:
         t_done = int(((tick_laps["complete"]) & (((tick_laps["end"] - 1e-6) // DAY_LENGTH) == day)).sum())
-        l_done = int((lap_laps["day"] == day).sum())
+        l_done = int(((schedule.day == day) & ~schedule.is_wait).sum())
         rows.append((f"Laps finished on day {day}", str(t_done), str(l_done), f"{t_done - l_done:+d}",
                      abs(t_done - l_done) <= LAPS_PER_DAY_TOLERANCE,
                      "Tick mode counts a lap on the day it finishes."))
@@ -166,12 +158,12 @@ def summarise(result):
 
     gap, times = result["gap_m"], result["tick_times"]
     drift = 0.0
-    lap_laps_by_day = result["lap_laps"].groupby("day")["end"].max()
     for day, start, _ in result["windows"]:
-        if day not in lap_laps_by_day:
+        lap_ends = schedule.end[(schedule.day == day) & ~schedule.is_wait]
+        if not len(lap_ends):
             continue
         # Up to the end of lap mode's last lap that day, so tick mode's unfinished lap isn't counted
-        in_day = (times >= start) & (times <= lap_laps_by_day[day])
+        in_day = (times >= start) & (times <= lap_ends.max())
         if in_day.any():
             day_gap = gap[in_day]
             drift = max(drift, float(np.max(np.abs(day_gap - day_gap[0]))))
@@ -278,11 +270,13 @@ def scenario_html(result, rows):
                           "Hours since midnight on day 0", "Tick mode ahead (m)", (0, hours[-1]),
                           bands=nights, zero_line=True)
 
-    tl, ll = result["tick_laps"], result["lap_laps"]
+    tl = result["tick_laps"]
     tl = tl[tl["complete"] & ~tl["crosses_night"]]
-    n = max(len(ll), int(tl["lap"].max()) + 1 if len(tl) else 1)
+    schedule = result["schedule"]
+    lap_durations = schedule.duration[~schedule.is_wait]
+    n = max(len(lap_durations), int(tl["lap"].max()) + 1 if len(tl) else 1)
     lap_chart = svg_chart([("Tick mode", tl["lap"], tl["moving_time"], "--tick"),
-                           ("Lap mode", ll["lap"], ll["duration"], "--lap")],
+                           ("Lap mode", np.arange(len(lap_durations)), lap_durations, "--lap")],
                           "Lap number", "Lap time (s)", (0, n))
 
     return f"""
@@ -294,7 +288,7 @@ def scenario_html(result, rows):
   <p class="why">{html.escape(s.why)}</p>
   <p class="settings">Speeds per 10 laps: {", ".join(f"{v:g}" for v in s.block_speeds)} km/h (repeated) ·
     tick {s.tick} s · pattern {"on" if s.pattern else "off"} ·
-    {len(result["lap_laps"])} laps in lap mode, {int(result["tick_laps"]["complete"].sum())} complete in tick mode</p>
+    {int((~schedule.is_wait).sum())} laps in lap mode, {int(result["tick_laps"]["complete"].sum())} complete in tick mode</p>
   {"".join(table)}
   <div class="charts">
     <figure><figcaption>How far apart the two cars are through the race. Shaded: no driving allowed.</figcaption>{gap_chart}</figure>
