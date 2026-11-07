@@ -44,14 +44,7 @@ class Race:
         return boolean
 
     def driving_windows(self, start_time: float = 0) -> list[tuple[int, float, float]]:
-        """
-        The race's driving hours as a list of `(day, start, end)`, in seconds since midnight on
-        day 0. Windows that are over by `start_time` are dropped, and one that has already begun
-        is trimmed to start there.
-
-        Tick mode reads the same hours as a per-second yes/no array (`driving_boolean`). Lap mode
-        needs them as windows, to tell whether a whole lap fits before driving stops.
-        """
+        """Driving hours as `(day, start, end)` in seconds since midnight on day 0, from `start_time` on."""
         windows = []
         for day, (begin, end) in sorted(self.driving_times.items()):
             window_start, window_end = day * DAY_LENGTH + begin, day * DAY_LENGTH + end

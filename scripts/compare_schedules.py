@@ -1,24 +1,8 @@
 """
-Compare tick mode's schedule with lap mode's schedule over the full race. Timing only, no physics.
+Compare tick mode's and lap mode's timing over the full race (no physics), and write a report.
 
-Both modes get the same model (car, track, race hours), the same speeds and the same within-lap
-pattern. The script then checks that they drive the same laps at the same times: laps per day,
-distance per day, lap times, and how far apart the two cars are at every moment of the race.
-
-Output: a summary table in the terminal, and an HTML report with charts. The top of the report
-records exactly what was run (git commit, uncommitted changes, command, settings).
-
-Run from the repo root:
-
-    .venv/bin/python -m scripts.compare_schedules --wsl-cache
-
-`--wsl-cache` is only needed on WSL/Linux while the route cache has Windows-style keys (see
-`logs/bugs.md`). It reads the cache, never writes it.
-
-Tick mode's timing is reproduced here line for line from `Model.run_model` and
-`Simulation.run_simulation_calculations` (speed plan → speed every tick → track position → distance),
-without the weather and energy steps. So it covers the whole race and doesn't stop when the battery
-would run out. `--check-against-run-model` confirms the copy matches a real `run_model`.
+Run from the repo root: `.venv/bin/python -m scripts.compare_schedules --wsl-cache`
+(`--wsl-cache` only while the route cache has Windows-style keys; see `logs/bugs.md`).
 """
 
 import argparse
@@ -81,11 +65,7 @@ DEFAULT_SCENARIOS = [
 # ----- Running both modes -----
 
 def tick_mode_timing(model, block_speeds, pattern_kmh):
-    """
-    Tick mode's timing steps, copied from `Model.run_model` and `Simulation.run_simulation_calculations`
-    with nothing else. Returns per-tick start times (seconds since midnight on day 0), speeds (km/h)
-    and distances (km).
-    """
+    """Tick mode's timing steps, copied from `Simulation.py`: per-tick start times, speeds (km/h), distances (km)."""
     dt = model.simulation_dt
     speed_kmh = reshape_speed_array(model.race, block_speeds, model.start_time, model.gis, dt,
                                     model.max_acceleration, model.max_deceleration)
@@ -201,7 +181,7 @@ def provenance(args, models):
 
 
 def svg_chart(series, x_label, y_label, x_range, bands=(), height=240, zero_line=False):
-    """A small line chart as inline SVG. `series` is [(label, xs, ys, css colour var)]."""
+    """Line chart as inline SVG. `series` is [(label, xs, ys, css colour var)]."""
     width, left, right, top, bottom = 760, 64, 16, 14, 40
     plot_w, plot_h = width - left - right, height - top - bottom
     ys_all = np.concatenate([np.asarray(s[2], dtype=float) for s in series]) if series else np.array([0.0])
@@ -392,11 +372,7 @@ figcaption {{ font-size: .85em; color: var(--fg-soft); margin-bottom: 4px; }}
 # ----- Setup and main -----
 
 def use_windows_cache_keys(tiling):
-    """
-    Read-only workaround for WSL/Linux: the route cache was written on Windows, so its keys use '\\'.
-    Also relabel the cached route's tiling to the config's (tiling doesn't change the route data).
-    Never writes to the cache. Remove once the cache bug in `logs/bugs.md` is fixed.
-    """
+    """Read the Windows-written route cache on WSL (read-only). Remove once the cache bug is fixed."""
     import copy
     import pickle
 
@@ -431,7 +407,7 @@ def build(args, tick):
 
 
 def check_against_run_model(args, pattern_kmh):
-    """Run real tick mode once (with a flat made-up forecast) and compare its distances with the copy."""
+    """Check `tick_mode_timing` against a real `run_model` (flat made-up forecast)."""
     from simulation.config import WeatherProvider
 
     model = build(args, 10)

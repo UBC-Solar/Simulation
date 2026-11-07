@@ -5,32 +5,17 @@ from physics.environment.gis import GIS
 
 class LapGIS(GIS):
     """
-    Lap mode's track: a `GIS` holding exactly one lap, plus that lap's data in one consistent shape.
+    Lap mode's track: a `GIS` holding one lap, with that lap's data as read-only arrays.
+    Tick mode keeps the plain `GIS`; lap mode builds this with `LapGIS.from_gis(model.gis)`.
 
-    Tick mode keeps using the plain `GIS` that `ModelBuilder` builds. Lap mode makes its own `LapGIS`
-    from it with `LapGIS.from_gis(model.gis)`, so nothing lap mode does can affect tick mode.
+    One entry per track point. `segment_lengths` (m), `gradients` and `headings` (degrees) are for the
+    stretch arriving at point i (index 0 = last point back to the start line). `elevations` (m) and
+    `coords` are for point i itself.
 
-    Why build on `GIS` rather than a separate data class: a `LapGIS` is still a full `GIS`, so lap
-    mode can use any `GIS` method it needs (time zones, path, and so on) on a track with no tiled
-    copies. On top of that, its one-lap arrays fix three things about the plain `GIS`: every array
-    covers exactly one lap (the `GIS` mixes one-lap arrays with arrays covering every tiled copy;
-    TODO:THIS SHOULD BE FIXED LATER ON WHEN TILING IS REMOVED), slopes and headings describe the same
-    stretch (the `GIS` numbers them differently), and `headings` closes the loop itself (the `GIS`'s
-    heading calculation needs a tiled copy to get the last stretch right; TODO:AGAIN FIX WHEN REMOVE
-    TILING).
+    Don't call `calculate_current_heading_array` on it (wrong on one lap); use `headings`.
 
-    The one-lap arrays, one entry per track point:
-
-    - `segment_lengths` (m), `gradients` (rise over run) and `headings` (compass degrees) describe the
-      stretch of track **arriving** at point `i`, from point `i - 1`. Index 0 is the stretch from the
-      last point back to the start line.
-    - `elevations` (m) and `coords` ([latitude, longitude]) describe point `i` itself.
-
-    They're read-only copies.
-
-    Don't call `calculate_current_heading_array` on a `LapGIS`: the inherited `GIS` version needs a
-    next tiled copy, so on one lap it gets the last heading wrong. Use `headings`.
-    
+    TODO:THIS SHOULD BE FIXED LATER ON WHEN TILING IS REMOVED (the `GIS` mixes one-lap and tiled arrays)
+    TODO:AGAIN FIX WHEN REMOVE TILING (the `GIS` heading calculation needs a tiled copy)
     TODO:Currently, GIS built always (for per-tick), LapGIS built after. once remove tiling, deal with this duplication 
     (as lap mode does not use GIS). Like right now Lap GIS also duplicates some of GIS's fields (coords, segment lengths...)
     """
@@ -51,11 +36,7 @@ class LapGIS(GIS):
 
     @classmethod
     def from_gis(cls, gis: GIS) -> "LapGIS":
-        """
-        Build a one-lap `LapGIS` from any `GIS`, such as the tiled one `ModelBuilder` makes for tick
-        mode. Only the first lap is kept, so there are no tiled copies. The arrays are copied, so the
-        two never share data and the original can't be changed through the `LapGIS`.
-        """
+        """One-lap `LapGIS` from any `GIS` (e.g. tick mode's tiled one). Copies the data, so they never share arrays."""
         n = gis.num_unique_coords
         route_data = {
             "path": gis.path[:n].copy(),
@@ -69,20 +50,14 @@ class LapGIS(GIS):
 
     @staticmethod
     def _locked(array) -> NDArray[np.float64]:
-        """A read-only copy of `array`, so writing to it raises instead of changing shared data."""
+        """Read-only copy of `array`."""
         copy = np.array(array, dtype=np.float64)
         copy.setflags(write=False)
         return copy
 
     @staticmethod
     def _arriving_headings(coords: NDArray[np.float64]) -> NDArray[np.float64]:
-        """
-        The compass direction (in degrees) of each stretch, going from point `i - 1` to point `i`.
-        The lap is a loop, so point 0's stretch comes from the last point.
-
-        It's the same formula the `GIS` uses, which allows for the Earth being round. This version
-        does the whole lap in one go and needs no tiled copies to get the last stretch right.
-        """
+        """Compass heading (degrees) of each stretch, point i-1 to i, looping at the start. Same formula as `GIS`."""
         lat, lon = np.radians(coords[:, 0]), np.radians(coords[:, 1])
         prev_lat, prev_lon = np.roll(lat, 1), np.roll(lon, 1)
         y = np.sin(lon - prev_lon) * np.cos(lat)
