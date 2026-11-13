@@ -6,9 +6,8 @@ from simulation.race import DAY_LENGTH
 
 def laps_from_ticks(start_times, speed_kmh, distance_km, lap_length_km, dt) -> pd.DataFrame:
     """
-    Cut tick-mode timing into laps, to compare with lap mode. Laps are found by distance (tick mode's
-    track point moves 3.6x too fast); only moving ticks count; a tick that crosses the line counts
-    for the lap it started in.
+    Cut tick-mode timing into laps, to compare with lap mode. Laps are found by distance; only moving
+    ticks count; a tick that crosses the line counts for the lap it started in.
 
     Columns: `lap`, `day`, `start`, `end` (s since midnight day 0), `moving_time` (s), `complete`
     (reached the end of the lap), `crosses_night` (tick mode carries an unfinished lap overnight).

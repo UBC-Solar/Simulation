@@ -49,12 +49,10 @@ DEFAULT_SCENARIOS = [
     Scenario("Steady 30 km/h, no pattern, 1 s ticks", [30.0], 1, False,
              "The simplest case. Expect a match, apart from the day-end rule."),
     Scenario("Steady 30 km/h, with pattern, 1 s ticks", [30.0], 1, True,
-             "Adds the within-lap pattern. At 1 s ticks tick mode reads it in nearly the right place, "
-             "so expect a match."),
+             "Adds the within-lap pattern. Expect a match, apart from the day-end rule."),
     Scenario("Steady 30 km/h, with pattern, 10 s ticks (today's default)", [30.0], 10, True,
-             "Expected to fail. Tick mode's track position moves 3.6x too fast (logs/bugs.md), so at "
-             "10 s ticks it reads the pattern at the wrong points, and its laps come out about 2.6% "
-             "quicker. This is the bug showing, not lap mode."),
+             "Tick mode's default tick size. Expect a match: the position bug that used to make this "
+             "fail is fixed in physics 1.9.3."),
     Scenario("Changing speeds every 10 laps, with pattern, 1 s ticks", [28.0, 34.0, 40.0, 31.0], 1, True,
              "Expected to drift after day 0. When driving stops mid-block, tick mode drops the rest of "
              "that 10-lap block and starts the next speed in the morning; lap mode carries on with the "
@@ -358,9 +356,8 @@ figcaption {{ font-size: .85em; color: var(--fg-soft); margin-bottom: 4px; }}
       <li>One scenario: <code>--speeds 30,40 --tick 1</code> (km/h per 10 laps), <code>--no-pattern</code> to turn the pattern off.</li>
       <li><code>--check-against-run-model</code> also checks the tick-mode timing copy against a real run.</li>
       <li>Expected differences: tick mode keeps driving an unfinished lap until driving stops, then
-        finishes it the next morning; lap mode doesn't start a lap that won't finish. With 10 s ticks and
-        the pattern, tick mode reads the pattern at the wrong track point (the 3.6x bug in
-        <code>logs/bugs.md</code>), so its lap times drift.</li>
+        finishes it the next morning; lap mode doesn't start a lap that won't finish. Needs physics 1.9.3
+        or later (earlier versions put tick mode's position 3.6x off).</li>
     </ul>
   </section>
 </main>
