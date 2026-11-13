@@ -24,14 +24,20 @@ NUM_BLOCKS = 30  # tick mode takes one speed per 10 laps; 30 is more than any ra
 LAPS_TOLERANCE = 1  # tick mode finishes the lap it carried over from the night before; lap mode never starts one
 DRIFT_TOLERANCE_LAPS = 0.1  # how far apart the two cars may drift during one day
 
-# (name, km/h per 10 laps (repeated), within-lap pattern on, days to check; None means every day)
+# The "within-lap speed pattern" is the micro-strategy file (`micro_strategy/optimization_results/`):
+# 289 small km/h adjustments, one per track point, so the car speeds up and slows down around each lap
+# while averaging the lap's planned speed. Tick mode always applies it.
+
+# (name, note printed under it, km/h per 10 laps (repeated), pattern on, days to check; None = every day)
 TESTS = [
-    ("Steady 30 km/h, with pattern", [30.0], True, None),
-    # No pattern: with it, tick mode ends each 10-lap block early (it times blocks from the plan's
-    # speed, but the pattern makes laps slower; logs/bugs.md), so it changes speed before lap 10.
-    # Day 0 only: when driving stops mid-block, tick mode drops the rest of that block and lap mode
-    # carries on with the same plan, so from day 1 they drive different speeds on some laps.
-    ("Speed changes every 10 laps (28, 34, 40, 31 km/h), no pattern", [28.0, 34.0, 40.0, 31.0], False, [0]),
+    ("Steady 30 km/h, with the within-lap speed pattern",
+     "Checks every day.",
+     [30.0], True, None),
+    ("Speed changes every 10 laps (28, 34, 40, 31 km/h), without the within-lap speed pattern",
+     "Checks day 0 only, on purpose. At the end of each day tick mode drops the rest of its 10-lap\n"
+     "  block and lap mode doesn't, so from day 1 they drive different speeds. Pattern off because with it\n"
+     "  tick mode changes speed a little before lap 10, 20, 30 (a tick-mode bug in logs/bugs.md).",
+     [28.0, 34.0, 40.0, 31.0], False, [0]),
 ]
 
 
@@ -138,8 +144,8 @@ def main():
     model = build_model(environment, hyperparameters, initial_conditions, car)
     lap_gis = LapGIS.from_gis(model.gis)
 
-    for name, block_speeds, pattern, days in TESTS:
-        print(f"\n{name}")
+    for name, note, block_speeds, pattern, days in TESTS:
+        print(f"\n{name}\n  {note}")
         print(f"  {'Measure':<26}{'Tick mode':>12}{'Lap mode':>12}")
         for measure, tick, lap, ok in compare(model, lap_gis, block_speeds, pattern, days):
             print(f"  {measure:<26}{tick:>12}{lap:>12}  {'ok' if ok else 'CHECK'}")
