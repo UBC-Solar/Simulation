@@ -14,10 +14,8 @@ class LapGIS(GIS):
 
     Don't call `calculate_current_heading_array` on it (wrong on one lap); use `headings`.
 
-    TODO:THIS SHOULD BE FIXED LATER ON WHEN TILING IS REMOVED (the `GIS` mixes one-lap and tiled arrays)
-    TODO:AGAIN FIX WHEN REMOVE TILING (the `GIS` heading calculation needs a tiled copy)
-    TODO:Currently, GIS built always (for per-tick), LapGIS built after. once remove tiling, deal with this duplication 
-    (as lap mode does not use GIS). Like right now Lap GIS also duplicates some of GIS's fields (coords, segment lengths...)
+    TODO: when tiling is removed, revisit this class. The plain `GIS` would then hold one lap too, and the
+    renamed copies here (`coords`, `segment_lengths`, ...) could go.
     """
 
     def __init__(self, route_data, origin_coord, current_coord=None):
@@ -45,8 +43,6 @@ class LapGIS(GIS):
             "num_unique_coords": n,
         }
         return cls(route_data, gis.launch_point)
-
-  
 
     @staticmethod
     def _locked(array) -> NDArray[np.float64]:
