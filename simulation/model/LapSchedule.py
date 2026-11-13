@@ -33,8 +33,8 @@ class LapSchedule:
         elif len(within_lap_kmh) != num_points:
             raise ValueError("within_lap_kmh needs one value per track point.")
 
-        laps = []  # (plan_index, day, start, duration, speed, segment_speeds, segment_times)
-        plan_index = 0
+        laps = []  # (day, start, duration, speed, segment_speeds, segment_times)
+        plan_index = 0  # next entry of speeds_kmh to drive
         for day, window_start, window_end in race.driving_windows(start_time):
             clock = window_start
             while plan_index < len(speeds_kmh):
@@ -44,13 +44,12 @@ class LapSchedule:
                 if clock + duration > window_end:
                     break  # doesn't fit today: same plan entry, next day
 
-                laps.append((plan_index, day, clock, duration, speed_kmh, segment_speeds, segment_times))
+                laps.append((day, clock, duration, speed_kmh, segment_speeds, segment_times))
                 clock += duration
                 plan_index += 1
 
-        plan_index, day, start, duration, speed, segment_speeds, segment_times = zip(*laps) if laps else [()] * 7
+        day, start, duration, speed, segment_speeds, segment_times = zip(*laps) if laps else [()] * 6
         self.lap_length_m = gis.path_length
-        self.plan_index = np.array(plan_index, dtype=int)  # which entry of the speed plan this came from
         self.day = np.array(day, dtype=int)  # race day (starting from 0)
         self.start = np.array(start, dtype=float)  # start time in seconds since midnight day 0
         self.duration = np.array(duration, dtype=float)  # seconds
