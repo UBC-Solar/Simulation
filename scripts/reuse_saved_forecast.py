@@ -5,6 +5,8 @@ Forecasts saved before task 1 sit under `weather/<config hash>` (or `weather\\<c
 Windows) as a bare array. `fetch_competition_weather` now looks under a digest of the query, and
 expects `(forecast, fetched_at)`. This finds an old Solcast forecast that covers the race dates in
 `settings_<race>.toml` and copies it to the new key. Nothing is downloaded.
+
+TODO: checke if TTL is implemented, so cache expires after some time?
 """
 import argparse
 import pickle
