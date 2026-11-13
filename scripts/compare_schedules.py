@@ -3,7 +3,7 @@ Check that lap mode's timing matches tick mode's: same model, same speeds, same 
 Timing only, no energy or battery. Prints one table per test.
 
 Run from the repo root: `.venv/bin/python -m scripts.compare_schedules --wsl-cache`
-(`--wsl-cache` only while the route cache has Windows-style keys; see `logs/bugs.md`).
+(`--wsl-cache` uses the saved route without a Google Maps key; see `scripts/README.md`).
 """
 
 import argparse
@@ -102,7 +102,7 @@ def compare(model, lap_gis, block_speeds, micro_strategy, days):
 
 
 def use_windows_cache_keys(tiling):
-    """Read the Windows-written route cache on WSL (read-only). Remove once the cache bug is fixed."""
+    """Use the saved route as is: accept Windows-style keys and a different `tiling`, and never write. Remove once the cache is rebuilt."""
     import copy
     import pickle
 
@@ -129,7 +129,7 @@ def use_windows_cache_keys(tiling):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--wsl-cache", action="store_true",
-                        help="Read the Windows-written route cache on WSL/Linux (read-only).")
+                        help="Use the saved route as is: accept Windows-style keys and its tiling (read-only).")
     args = parser.parse_args()
 
     initial_conditions, environment, car = get_default_settings("FSGP", "Brightside")

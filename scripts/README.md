@@ -10,5 +10,6 @@ Run them from the repo root, as modules:
 | --- | --- | --- |
 | `compare_schedules.py` | Runs tick mode and lap mode with the same speeds and prints, per day, how many laps each finished and how far apart the two cars drift. Timing only. | `.venv/bin/python -m scripts.compare_schedules --wsl-cache` |
 
-`--wsl-cache` is only needed on WSL/Linux while the route cache has Windows-style keys (see
-`logs/bugs.md`).
+`--wsl-cache` lets it use the saved route without a Google Maps key. The saved route has Windows-style
+keys (a problem on Mac and Linux) and was built with a different `tiling` than the config, which
+makes the build try to download it again. The flag works around both and never writes to the cache.
