@@ -52,12 +52,22 @@ class FSCache(Cache):
         self._shelve_dir = shelve_dir / "cache"
 
     def get(self, file_path: os.PathLike):
+        key = FSCache._key(file_path)
         with DillShelf(self._shelve_dir, protocol=pickle.HIGHEST_PROTOCOL) as db:
-            return db[str(file_path)]
+            try:
+                return db[key]
+            except KeyError:
+                # Entries saved on Windows before keys were made the same everywhere use "\".
+                return db[key.replace("/", "\\")]
 
     def put(self, obj: Any, file_path: os.PathLike):
         with DillShelf(self._shelve_dir, protocol=pickle.HIGHEST_PROTOCOL) as db:
-            db[str(file_path)] = obj
+            db[FSCache._key(file_path)] = obj
+
+    @staticmethod
+    def _key(file_path: os.PathLike) -> str:
+        """The key for `file_path`, with "/" on every system so a cache works across Windows, Mac and Linux."""
+        return pathlib.PurePath(file_path).as_posix()
 
 
 SimulationCache: Cache = FSCache(pathlib.Path(__file__).parent)
