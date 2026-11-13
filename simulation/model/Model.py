@@ -1,13 +1,13 @@
 import numpy as np
 
-from typing import Union
+from typing import Optional, Union
 from numpy.typing import NDArray
 
 from simulation.utils.Plotting import GraphPage
 from simulation.utils.Plotting import Plotting
 from simulation.model.Simulation import Simulation
 from simulation.race import Race, reshape_speed_array, get_granularity_reduced_boolean
-from simulation.config import SimulationReturnType
+from simulation.config import SimulationReturnType, WeatherProvider
 
 from micro_strategy import OptimizedSpeedsPath
 
@@ -18,7 +18,7 @@ from physics.models.motor import BaseMotor
 from physics.models.aeroshell import Aeroshell
 from physics.models.regen import BaseRegen
 from physics.environment.gis import BaseGIS
-from physics.environment.meteorology import BaseMeteorology
+from physics.environment.meteorology import (BaseMeteorology, CloudedMeteorology, IrradiantMeteorology)
 
 
 class Model:
@@ -99,6 +99,31 @@ class Model:
 
         self._simulation = None
 
+    def _set_weather(self, forecast: NDArray, provider: WeatherProvider) -> None:
+        """
+        Attach a weather forecast to this model by building the matching meteorology object.
+
+        Called by `run_model` when it is handed a `weather` argument, so a caller picks the
+        conditions a run sees through `run_model` rather than directly. Calling it again with a
+        different forecast replaces the previous one, so one `Model` can serve many runs without
+        being rebuilt.
+
+        :param NDArray forecast: The raw weather forecast array for this run.
+        :param WeatherProvider provider: Which provider the forecast came from. A Solcast forecast
+            already contains solar irradiance; an Openweather forecast contains cloud cover that we
+            turn into irradiance ourselves.
+        """
+
+        match provider:
+            case WeatherProvider.Solcast:
+                self.meteorology = IrradiantMeteorology(
+                    race=self.race, weather_forecasts=forecast
+                )
+            case WeatherProvider.Openweather:
+                self.meteorology = CloudedMeteorology(
+                    race=self.race, weather_forecasts=forecast
+                )
+
     def run_model(
         self,
         speed=None,
@@ -106,11 +131,12 @@ class Model:
         verbose=False,
         plot_portion=(0.0, 1.0),
         is_optimizer: bool = False,
+        weather: Optional[tuple[NDArray, WeatherProvider]] = None,
         **kwargs,
     ):
         """
 
-        Given an array of driving speeds_directory, simulate the model by running calculations sequentially for the entire
+        TODO:Given an array of driving speeds_directory, simulate the model by running calculations sequentially for the entire
         simulation duration.
         Returns either time taken, distance travelled, or void.
 
@@ -138,10 +164,23 @@ class Model:
             Overrides the speed parameter.
         :param plot_portion: A tuple containing the beginning and end of the portion of the array we'd
         like to plot as percentages.
+        :param Optional[tuple[NDArray, WeatherProvider]] weather: Optional ``(forecast, provider)``
+            pair to run with. When given, it is attached with ``_set_weather`` first. When omitted,
+            the weather already attached to this model is reused.
         :param bool is_optimizer: Flag to set whether this method is being run by an optimizer.
         Reduces verbosity
             when true.
         """
+        if weather is not None:
+            forecast, provider = weather
+            self._set_weather(forecast, provider)
+
+        if self.meteorology is None:
+            raise ValueError(
+                "This model has no weather attached. Pass weather=(forecast, provider) to "
+                "run_model."
+            )
+
         track_speeds = np.load(OptimizedSpeedsPath)
 
         # ----- Reshape speed array -----

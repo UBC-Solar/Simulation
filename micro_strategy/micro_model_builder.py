@@ -47,7 +47,6 @@ class MicroModelBuilder:
     def set_environment_config(
         self,
         environment_config: EnvironmentConfig,
-        rebuild_weather_cache: bool = False,
         rebuild_competition_cache: bool = False,
         rebuild_route_cache: bool = False,
     ):

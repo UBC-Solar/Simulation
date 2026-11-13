@@ -202,7 +202,6 @@ def run_motor_model(speed_kmh, distances_m, trajectory, environment_config, init
         MicroModelBuilder()
         .set_environment_config(
             environment_config,
-            rebuild_weather_cache=False,
             rebuild_route_cache=False,
             rebuild_competition_cache=False,
         )

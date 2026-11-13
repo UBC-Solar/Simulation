@@ -1,40 +1,44 @@
 import os
+import hashlib
 import json
 import requests
 import numpy as np
 
-from simulation.config import CompetitionType
-from simulation.config import (
-    SolcastConfig,
-    OpenweatherConfig,
-    OpenweatherPeriod,
-    EnvironmentConfig,
-    CompetitionConfig,
-)
+from simulation.config import CompetitionType, OpenweatherPeriod, WeatherProvider
+from simulation.cache import SimulationCache, WeatherPath
 from numpy.typing import NDArray, ArrayLike
 from simulation.race import Coordinate
-from simulation.query import Query
 from data_tools.query import SolcastClient, SolcastOutput, SolcastPeriod
 import pandas as pd
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from timezonefinder import TimezoneFinder
 
 
-class SolcastQuery(Query[SolcastConfig]):
+class SolcastQuery:
     """
     `SolcastQuery` encapsulates the access to the Solcast API required to acquire
     weather forecasting information required to complete the meteorological description
-    of the environment described by an `EnvironmentConfig`.
+    of the environment.
+
+    The coordinates, forecast period, and time range are supplied explicitly at construction, so a
+    caller can request a forecast for any route and date rather than only the configured competition.
     """
 
-    def __init__(self, config: EnvironmentConfig):
-        super().__init__(config)
+    def __init__(
+        self,
+        coords: list[tuple[float, float]],
+        period: SolcastPeriod,
+        start_time: datetime,
+        end_time: datetime,
+        competition_type: CompetitionType,
+    ):
 
-        self._competition_config: CompetitionConfig = self._config.competition_config
-        self._weather_query_config: SolcastConfig = (
-            self._config.weather_query_config
-        )
+        self._coords = [coords[0]] if competition_type == CompetitionType.TrackCompetition else coords
+        self._period = period
+        self._start_time = start_time
+        self._end_time = end_time
+
 
     @staticmethod
     def update_path_weather_forecast_solcast(
@@ -134,51 +138,41 @@ class SolcastQuery(Query[SolcastConfig]):
         The last dimension contains the data like [Time (UTC), Latitude, Longitude, Wind Speed (m/s),
         Wind Direction (degrees meteorological), GHI (W/m^2)].
         """
-        coords = self._competition_config.route_config.coordinates
-
-        if self._competition_config.competition_type == CompetitionType.TrackCompetition:
-            coords = [coords[0]]
-
-        period = self._weather_query_config.weather_period
-        start_time = self._competition_config.date
-        end_time = self._competition_config.date + timedelta(days=self._competition_config.duration)
-
-        weather_forecast = SolcastQuery.update_path_weather_forecast_solcast(
-            coords,
-            period,
-            start_time,
-            end_time
+        return SolcastQuery.update_path_weather_forecast_solcast(
+            self._coords,
+            self._period,
+            self._start_time,
+            self._end_time
         )
 
-        return weather_forecast
 
-
-class OpenweatherQuery(Query[OpenweatherConfig]):
+class OpenweatherQuery:
     """
     `OpenweatherQuery` encapsulates the access to the Openweathermap API required to acquire
     weather forecasting information required to complete the meteorological description
-    of the environment described by an `EnvironmentConfig`.
+    of the environment.
+
+    The coordinates, forecast period, and duration are supplied explicitly at construction, so a
+    caller can request a forecast for any route rather than only the configured competition.
     """
 
-    def __init__(self, config: EnvironmentConfig):
-        super().__init__(config)
-        self._competition_config: CompetitionConfig = self._config.competition_config
-        self._weather_query_config: OpenweatherConfig = (
-            self._config.weather_query_config
-        )
+    def __init__(
+        self,
+        coords: ArrayLike,
+        period: OpenweatherPeriod,
+        duration_days: int,
+    ):
+
+        self._coords = coords
+        self._period = period
+        self._duration_days = duration_days
 
     def make(self) -> NDArray:
-        num_days = self._competition_config.duration
-        simulation_duration = num_days * 24  # Duration of simulation in hours
+        simulation_duration = self._duration_days * 24  # Duration of simulation in hours
 
-        coords = self._competition_config.route_config.coordinates
-        forecast_period: OpenweatherPeriod = self._weather_query_config.weather_period
-
-        weather_forecast = self._update_path_weather_forecast_openweather(
-            coords, forecast_period, simulation_duration
+        return OpenweatherQuery._update_path_weather_forecast_openweather(
+            self._coords, self._period, simulation_duration
         )
-
-        return weather_forecast
 
     @staticmethod
     def _update_path_weather_forecast_openweather(
@@ -320,3 +314,112 @@ class OpenweatherQuery(Query[OpenweatherConfig]):
             weather_array[i][8] = weather_data_dict["weather"][0]["id"]
 
         return weather_array
+
+    
+# TODO: constants hardcoded here
+DEFAULT_WEATHER_PROVIDER = WeatherProvider.Solcast
+DEFAULT_SOLCAST_PERIOD = SolcastPeriod.PT5M
+DEFAULT_OPENWEATHER_PERIOD = OpenweatherPeriod.Daily
+DEFAULT_WEATHER_TTL = timedelta(days=999) #TODO: adjust weather requery time
+
+
+def _weather_cache_key(
+    provider: WeatherProvider,
+    coords: ArrayLike,
+    period,
+    start_time: datetime,
+    end_time: datetime,
+    competition_type: CompetitionType,
+) -> os.PathLike:
+    """
+    Build the deterministic on-disk cache key for a weather query.
+
+    Keys on the query inputs rather than any config object, because Python salts string hashing
+    per process, so a config hash differs every run. The coordinates are collapsed exactly as
+    ``SolcastQuery`` collapses them, so the key describes the query actually sent to the API.
+    """
+
+    queried_coords = coords
+    if (
+        provider == WeatherProvider.Solcast
+        and competition_type == CompetitionType.TrackCompetition
+    ):
+        queried_coords = [coords[0]]
+
+    canonical = json.dumps(
+        {
+            "provider": str(provider),
+            "coords": [[float(lat), float(lon)] for lat, lon in queried_coords],
+            "period": str(period),
+            "start_time": start_time.isoformat(),
+            "end_time": end_time.isoformat(),
+        },
+        sort_keys=True,
+    )
+    digest = hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+    return WeatherPath / digest
+
+
+
+
+
+def fetch_competition_weather(
+    competition_config,
+    provider: WeatherProvider = DEFAULT_WEATHER_PROVIDER,
+) -> tuple[NDArray, WeatherProvider]:
+    """
+    Fetch a forecast for a competition using the default provider and period.
+
+    This is the run-time replacement for the fetch that used to happen during the build. Callers
+    with no forecast of their own use it to get one; callers that already have a forecast pass that
+    to ``run_model`` instead and skip this entirely.
+
+    :param competition_config: The competition to fetch for.
+    :param WeatherProvider provider: Which provider to query. Defaults to Solcast.
+    :returns: A ``(forecast, provider)`` pair ready to pass to ``run_model`` as ``weather=``.
+    """
+    
+    coords = competition_config.route_config.coordinates
+    competition_type = competition_config.competition_type
+    start_time = competition_config.date
+    end_time = competition_config.date + timedelta(days=competition_config.duration)
+
+    if provider == WeatherProvider.Solcast:
+        period = DEFAULT_SOLCAST_PERIOD
+    elif provider == WeatherProvider.Openweather:
+        period = DEFAULT_OPENWEATHER_PERIOD
+    else:
+        raise ValueError(f"Unknown weather provider: {provider}")
+
+    cache_key = _weather_cache_key(
+        provider, coords, period, start_time, end_time, competition_type
+    )
+
+    try:
+        forecast, fetched_at = SimulationCache.get(cache_key)
+    except KeyError:
+        forecast, fetched_at = None, None
+
+    if forecast is not None and datetime.now(timezone.utc) - fetched_at < DEFAULT_WEATHER_TTL:
+        return forecast, provider
+
+    if provider == WeatherProvider.Solcast:
+        query = SolcastQuery(
+            coords=coords,
+            period=period,
+            start_time=start_time,
+            end_time=end_time,
+            competition_type=competition_type,
+        )
+    else:  # Openweather
+        query = OpenweatherQuery(
+            coords=coords,
+            period=period,
+            duration_days=competition_config.duration,
+        )
+
+    forecast = query.make()
+    SimulationCache.put((forecast, datetime.now(timezone.utc)), cache_key)
+
+    return forecast, provider

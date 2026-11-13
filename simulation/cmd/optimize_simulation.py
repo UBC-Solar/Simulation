@@ -9,11 +9,12 @@ from simulation.utils.InputBounds import InputBounds
 from simulation.config import speeds_directory
 from simulation.optimization.genetic import OptimizationSettings, DifferentialEvolutionOptimization
 from simulation.cmd.run_simulation import build_model, get_default_settings
+from simulation.query import fetch_competition_weather
 from simulation.config import SimulationHyperparametersConfig, SimulationReturnType
 from tqdm import tqdm
 
 
-def main(competition_name: str, car_name: str, speed_dt: int):
+def main(competition_name: str, car_name: str, speed_dt: int, weather=None):
     """
 
     This method parses initial conditions for the simulation and store them in a simulationState object. Then, begin
@@ -39,6 +40,9 @@ def main(competition_name: str, car_name: str, speed_dt: int):
             "speed_dt": speed_dt,
         }
     )
+
+    if weather is None:
+        weather = fetch_competition_weather(environment.competition_config)
 
     # Initialize a "guess" speed array
     driving_laps = environment.competition_config.tiling
@@ -83,7 +87,7 @@ def main(competition_name: str, car_name: str, speed_dt: int):
                 initial_population = genetic_optimization.bestinput
                 driving_laps += 20
 
-    simulation_model.run_model(results_genetic, plot_results=True)
+    simulation_model.run_model(results_genetic, plot_results=True, weather=weather)
 
     filename = get_random_string(7) + ".npy"
     np.save(speeds_directory / filename, results_genetic)
