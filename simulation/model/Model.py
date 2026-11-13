@@ -251,6 +251,21 @@ class Model:
                 GraphPage(results_arrays, results_labels, page_name="Results")
             )
 
+            # Drag inputs and output. The drag table covers wind angles 0 to 180 degrees only.
+            drag_arrays = self.get_results(
+                ["wind_attack_angles", "drag_force", "wind_directions", "gis_vehicle_bearings", "speed_kmh"]
+            )
+            drag_labels = [
+                "Wind attack angle (deg)",
+                "Drag force (N)",
+                "Wind direction (deg)",
+                "Vehicle bearing (deg)",
+                "Speed (km/h)",
+            ]
+            self.plotting.add_graph_page_to_queue(
+                GraphPage(drag_arrays, drag_labels, page_name="Drag")
+            )
+
             if verbose:
                 # Plot energy arrays
                 energy_arrays = self.get_results(
