@@ -74,6 +74,8 @@ def main(competition_name: str, car_name: str, speed_dt: int, weather=None):
             simulation_model = build_model(
                 environment, hyperparameters, initial_conditions, car_config
             )
+            # Attach the weather once, so the optimizer's runs all reuse it.
+            simulation_model._set_weather(*weather)
 
             genetic_optimization = DifferentialEvolutionOptimization(
                 simulation_model, bounds, pbar, popsize=6
